@@ -1,11 +1,6 @@
 import { json } from "@/lib/server/http";
+import { getServerStatus } from "@/lib/server/config";
 
 export function GET() {
-  return json({
-    mode: process.env.DATABASE_URL ? "online" : "local",
-    ready:
-      !process.env.VERCEL ||
-      Boolean(process.env.DATABASE_URL && process.env.TEACHER_ACCESS_KEY),
-    keyRequired: Boolean(process.env.VERCEL || process.env.TEACHER_ACCESS_KEY),
-  });
+  return json(getServerStatus());
 }

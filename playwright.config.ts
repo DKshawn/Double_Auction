@@ -25,7 +25,8 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+        // Match normal `npm run dev` startup while visiting the numeric loopback URL.
+        command: "npm run dev -- --port 3100",
         url: "http://127.0.0.1:3100",
         reuseExistingServer: !process.env.CI,
         env: {

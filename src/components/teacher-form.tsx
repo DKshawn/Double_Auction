@@ -1,30 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, FlaskConical, Info } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
+import type { ServerStatus } from "@/lib/server/config";
 import { Spinner } from "./shell";
 
-export function TeacherForm({ initialCode = "" }: { initialCode?: string }) {
+export function TeacherForm({
+  initialCode = "",
+  status,
+}: {
+  initialCode?: string;
+  status: ServerStatus;
+}) {
   const router = useRouter();
   const [tab, setTab] = useState(initialCode ? "reenter" : "create");
-  const [status, setStatus] = useState<{
-    mode: string;
-    ready: boolean;
-    keyRequired: boolean;
-  } | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => {
-    api<{ mode: string; ready: boolean; keyRequired: boolean }>("/api/status")
-      .then(setStatus)
-      .catch(() =>
-        setError(
-          "サーバーの設定を確認できません。ページを再読み込みしてください。",
-        ),
-      );
-  }, []);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -156,7 +149,7 @@ export function TeacherForm({ initialCode = "" }: { initialCode?: string }) {
             別の端末から管理画面に戻る際に必要です。学生には共有しないでください。
           </span>
         </label>
-        {tab === "create" && status?.keyRequired && (
+        {tab === "create" && status.keyRequired && (
           <label className="field">
             教員用キー
             <input
@@ -170,7 +163,7 @@ export function TeacherForm({ initialCode = "" }: { initialCode?: string }) {
             </span>
           </label>
         )}
-        {status && !status.ready && (
+        {tab === "create" && !status.ready && (
           <p className="error-message" role="alert">
             アプリの接続設定が完了していません。管理者がデータベースと教員用キーを設定してください。
           </p>
@@ -182,7 +175,7 @@ export function TeacherForm({ initialCode = "" }: { initialCode?: string }) {
         )}
         <button
           className="button primary full"
-          disabled={pending || (tab === "create" && (!status || !status.ready))}
+          disabled={pending || (tab === "create" && !status.ready)}
         >
           {pending ? (
             <Spinner />
@@ -201,7 +194,7 @@ export function TeacherForm({ initialCode = "" }: { initialCode?: string }) {
             </p>
           </div>
         )}
-        {status?.mode === "local" && (
+        {status.mode === "local" && (
           <p className="local-note">
             <FlaskConical size={14} />
             ローカル環境で実行中。データはこのコンピューターに保存されます。

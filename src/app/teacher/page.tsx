@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 import { Header, Footer } from "@/components/shell";
 import { TeacherForm } from "@/components/teacher-form";
+import { getServerStatus } from "@/lib/server/config";
 
 export default async function Teacher({
   searchParams,
@@ -25,7 +26,7 @@ export default async function Teacher({
           <h1>授業に、小さな市場を。</h1>
           <p>3つの市場で、価格と取引数量の変化を観察します。</p>
         </div>
-        <TeacherForm initialCode={code} />
+        <TeacherForm initialCode={code} status={getServerStatus()} />
       </main>
       <Footer />
     </>

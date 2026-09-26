@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
+  // Allow the numeric loopback URL when `next dev` starts with localhost.
+  allowedDevOrigins: ["127.0.0.1"],
   poweredByHeader: false,
   serverExternalPackages: ["@electric-sql/pglite"],
   outputFileTracingExcludes: {

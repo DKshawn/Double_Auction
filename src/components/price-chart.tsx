@@ -56,10 +56,13 @@ export function PriceChart({
         role="img"
         aria-label={
           equilibrium
-            ? "ラウンドごとの取引価格。色付きの帯は理論上の均衡価格区間です。"
-            : "今ラウンドの取引価格を約定順に表示したグラフ"
+            ? "ラウンドごとの取引価格（円）。色付きの帯は理論上の均衡価格区間です。"
+            : "今ラウンドの取引価格（円）を約定順に表示したグラフ"
         }
       >
+        <text x={left - 10} y={12} textAnchor="end">
+          円
+        </text>
         {[0, 1, 2, 3, 4].map((tick) => {
           const p = min + ((max - min) * tick) / 4;
           return (
@@ -156,7 +159,7 @@ export function PriceChart({
             className="chart-dot"
           >
             <title>
-              ラウンド{t.round}：{t.price} ポイント
+              ラウンド{t.round}：{t.price}円
             </title>
           </circle>
         ))}

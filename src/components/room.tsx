@@ -185,8 +185,8 @@ export function Room({ code }: { code: string }) {
                   : view.phase === "paused"
                     ? "注文はそのまま保管され、教員の操作で再開します。"
                     : view.phase === "review"
-                      ? `今ラウンドの利益は ${view.me.roundProfit} ポイントです。次のラウンドの開始をお待ちください。`
-                      : `あなたの累積利益は ${view.me.profit} ポイントです。取引履歴から結果を振り返りましょう。`}
+                      ? `今ラウンドの利益は ${view.me.roundProfit} 円です。次のラウンドの開始をお待ちください。`
+                      : `あなたの累積利益は ${view.me.profit} 円です。取引履歴から結果を振り返りましょう。`}
               </p>
             </div>
           </div>

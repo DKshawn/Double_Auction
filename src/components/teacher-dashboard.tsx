@@ -168,7 +168,7 @@ export function TeacherDashboard({
                     <b>
                       {eq.low}〜{eq.high}
                     </b>
-                    <span> ポイント</span>
+                    <span> 円</span>
                   </p>
                 </div>
               </div>
@@ -188,11 +188,11 @@ export function TeacherDashboard({
                   </b>
                 </div>
                 <div>
-                  <span>平均価格</span>
+                  <span>平均価格（円）</span>
                   <b>{decimal(current?.mean)}</b>
                 </div>
                 <div>
-                  <span>均衡区間からの距離</span>
+                  <span>均衡区間からの距離（円）</span>
                   <b>{decimal(current?.deviation)}</b>
                 </div>
                 <div>
@@ -227,8 +227,8 @@ export function TeacherDashboard({
                   <th>商品</th>
                   <th>ラウンド</th>
                   <th>取引数量</th>
-                  <th>平均価格</th>
-                  <th>均衡からの距離</th>
+                  <th>平均価格（円）</th>
+                  <th>均衡からの距離（円）</th>
                   <th>効率</th>
                 </tr>
               </thead>
@@ -275,10 +275,10 @@ export function TeacherDashboard({
                 {GOODS.map((g) => (
                   <th key={g.id}>
                     {g.name}
-                    <small>価値 / 費用</small>
+                    <small>価値 / 費用（円）</small>
                   </th>
                 ))}
-                <th>累積利益</th>
+                <th>累積利益（円）</th>
               </tr>
             </thead>
             <tbody>
@@ -383,8 +383,12 @@ export function TeacherDashboard({
           {GOODS.map((g) => (
             <div className="schedule-row" key={g.id}>
               <b>{g.name}</b>
-              <p>買い手の価値：{teacher.schedules[g.id].values.join("、")}</p>
-              <p>売り手の費用：{teacher.schedules[g.id].costs.join("、")}</p>
+              <p>
+                買い手の価値（円）：{teacher.schedules[g.id].values.join("、")}
+              </p>
+              <p>
+                売り手の費用（円）：{teacher.schedules[g.id].costs.join("、")}
+              </p>
             </div>
           ))}
         </div>

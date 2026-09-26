@@ -84,7 +84,7 @@ export function StudentMarket({
               <span className="product-last">
                 <small>最終取引価格</small>
                 <strong>{last?.price ?? "—"}</strong>
-                <small>ポイント</small>
+                <small>円</small>
               </span>
             </button>
           );
@@ -133,7 +133,7 @@ export function StudentMarket({
                     <div key={t.id}>
                       <span>{timeLabel(t.at)}</span>
                       <b>
-                        {t.price} <small>ポイント</small>
+                        {t.price} <small>円</small>
                       </b>
                       <span>
                         {t.buyerAlias} ↔ {t.sellerAlias}
@@ -177,8 +177,8 @@ export function StudentMarket({
                   <th>ラウンド</th>
                   <th>商品</th>
                   <th>時刻</th>
-                  <th>取引価格</th>
-                  <th>利益</th>
+                  <th>取引価格（円）</th>
+                  <th>利益（円）</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,7 +231,7 @@ function Book({
         <span>{quotes.length}件</span>
       </div>
       <div className="book-labels">
-        <span>価格</span>
+        <span>価格（円）</span>
         <span>数量</span>
         <span>参加者</span>
       </div>
@@ -271,7 +271,7 @@ function Book({
             void command({ type: "accept", quoteId: quotes[0].id })
           }
         >
-          {quotes[0].price}で{buyer ? "売る" : "買う"}
+          {quotes[0].price}円で{buyer ? "売る" : "買う"}
           <ArrowUpRight size={15} />
         </button>
       )}
@@ -334,7 +334,7 @@ function OrderForm({
           </span>
           <div>
             <strong>{limit}</strong>
-            <span>ポイント / 単位</span>
+            <span>円 / 単位</span>
           </div>
           <small>
             {buyer
@@ -347,7 +347,7 @@ function OrderForm({
             <CheckCircle2 size={32} />
             <h3>今ラウンドの取引完了</h3>
             <p>
-              {myTrade?.price} ポイントで{buyer ? "購入" : "販売"}しました。
+              {myTrade?.price}円で{buyer ? "購入" : "販売"}しました。
             </p>
             <span>ほかの商品を選んで取引できます。</span>
           </div>
@@ -369,7 +369,7 @@ function OrderForm({
                   required
                   disabled={disabled}
                 />
-                <span>ポイント</span>
+                <span>円</span>
               </span>
             </label>
             <div className="expected-profit">
@@ -381,7 +381,7 @@ function OrderForm({
               >
                 {expected !== null && expected >= 0 ? "+" : ""}
                 {decimal(expected)}
-                <small> ポイント</small>
+                <small> 円</small>
               </b>
             </div>
             <button
@@ -404,7 +404,7 @@ function OrderForm({
           <div className="standing-order">
             <div>
               <span className="pulse-dot" />
-              <span>{current.price} ポイントで注文中</span>
+              <span>{current.price}円で注文中</span>
             </div>
             <button
               className="icon-button"
@@ -421,14 +421,14 @@ function OrderForm({
             <span>今ラウンドの利益</span>
             <b>
               {me.roundProfit}
-              <small> ポイント</small>
+              <small> 円</small>
             </b>
           </div>
           <div>
             <span>累積利益</span>
             <b>
               {me.profit}
-              <small> ポイント</small>
+              <small> 円</small>
             </b>
           </div>
         </div>

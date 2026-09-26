@@ -134,10 +134,10 @@ test("12 independent students trade, recover, finish rounds and export with serv
       .fill("30");
     await sellerPage.getByRole("button", { name: "注文を出す" }).click();
     await expect(
-      buyerPage.getByRole("button", { name: "30で買う", exact: true }),
+      buyerPage.getByRole("button", { name: "30円で買う", exact: true }),
     ).toBeEnabled();
     await buyerPage
-      .getByRole("button", { name: "30で買う", exact: true })
+      .getByRole("button", { name: "30円で買う", exact: true })
       .click();
     await expect(
       buyerPage.getByRole("heading", { name: "今ラウンドの取引完了" }),

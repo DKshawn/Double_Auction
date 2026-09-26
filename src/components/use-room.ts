@@ -136,7 +136,7 @@ export function useRoom(code: string) {
       setNotice({
         round: next!.round,
         message: newTrade
-          ? `${goodName(newTrade.good)}を ${newTrade.price} ポイントで取引しました。`
+          ? `${goodName(newTrade.good)}を ${newTrade.price} 円で取引しました。`
           : command.type === "quote"
             ? "注文を受け付けました。"
             : command.type === "cancel"

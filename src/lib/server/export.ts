@@ -48,7 +48,7 @@ export function exportData(
             fixedRoles: true,
             fixedSchedules: true,
             lossMakingQuotesAllowed: false,
-            currency: "points",
+            currency: "JPY",
           },
           schedules: teacher.schedules,
           equilibria: teacher.equilibria,
@@ -62,7 +62,7 @@ export function exportData(
   let rows: unknown[][];
   if (kind === "events") {
     rows = [
-      ["連番", "日時_UTC", "ラウンド", "種類", "参加者ID", "内容_JSON"],
+      ["連番", "日時_UTC", "ラウンド", "種類", "参加者ID", "内容_JSON", "通貨"],
       ...events.map((e) => [
         e.sequence,
         new Date(e.at).toISOString(),
@@ -70,6 +70,7 @@ export function exportData(
         e.type,
         e.actor,
         JSON.stringify(e.detail),
+        "JPY",
       ]),
     ];
   } else if (kind === "metrics") {
@@ -78,11 +79,11 @@ export function exportData(
         "商品",
         "ラウンド",
         "約定数量",
-        "平均価格",
-        "均衡区間からの平均距離",
+        "平均価格_円",
+        "均衡区間からの平均距離_円",
         "効率_%",
-        "均衡下限",
-        "均衡上限",
+        "均衡下限_円",
+        "均衡上限_円",
         "均衡数量",
         "均衡数量上限",
       ],
@@ -109,16 +110,16 @@ export function exportData(
         "日時_UTC",
         "ラウンド",
         "商品",
-        "価格",
+        "価格_円",
         "数量",
         "買い手ID",
         "売り手ID",
         "買い手",
         "売り手",
-        "買い手価値",
-        "売り手費用",
-        "買い手利益",
-        "売り手利益",
+        "買い手価値_円",
+        "売り手費用_円",
+        "買い手利益_円",
+        "売り手利益_円",
       ],
       ...room.trades.map((t) => {
         const buyer = room.participants.find((p) => p.id === t.buyerId)!;

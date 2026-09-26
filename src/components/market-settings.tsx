@@ -62,7 +62,7 @@ function EquilibriumPreview({
     <output className="settings-preview" aria-label={`${name}の均衡プレビュー`}>
       <span>
         均衡価格 <b>{eq.low === eq.high ? eq.low : `${eq.low}〜${eq.high}`}</b>{" "}
-        ポイント
+        円
       </span>
       <span>
         均衡数量 <b>{equilibriumQuantity(scaled)}</b> 単位
@@ -154,8 +154,8 @@ function MarketSettingsEditor({
               <ProductHeading good={good} />
               <div className="settings-input-headings" aria-hidden="true">
                 <span>条件</span>
-                <span>買い手の価値</span>
-                <span>売り手の費用</span>
+                <span>買い手の価値（円）</span>
+                <span>売り手の費用（円）</span>
               </div>
               {Array.from({ length: 6 }, (_, index) => (
                 <div className="settings-input-row" key={index}>
@@ -274,7 +274,7 @@ export function MarketSettingsPanel({
           各商品に6組の条件を設定します。{view.config.capacity}
           人の実験では、各条件を買い手・売り手にそれぞれ
           {view.config.capacity / 12}
-          人ずつランダムに割り当てます。値は1〜999の整数（ポイント）です。実験開始後は全ラウンドを通して固定されます。
+          人ずつランダムに割り当てます。値は1〜999円の範囲で、整数で設定します。実験開始後は全ラウンドを通して固定されます。
         </p>
         {editing && editable ? (
           <MarketSettingsEditor
@@ -291,13 +291,13 @@ export function MarketSettingsPanel({
                 <ProductHeading good={good} />
                 <dl className="settings-values">
                   <div>
-                    <dt>買い手の価値</dt>
+                    <dt>買い手の価値（円）</dt>
                     <dd>
                       {teacher.marketSettings[good.id].values.join(" · ")}
                     </dd>
                   </div>
                   <div>
-                    <dt>売り手の費用</dt>
+                    <dt>売り手の費用（円）</dt>
                     <dd>{teacher.marketSettings[good.id].costs.join(" · ")}</dd>
                   </div>
                 </dl>

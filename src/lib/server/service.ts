@@ -10,7 +10,7 @@ import {
 } from "./auth";
 import { database, databaseTime, type Database, type Sql } from "./database";
 import { execute, settleDeadline, toView } from "./engine";
-import { limitsForSeat } from "./experiment";
+import { defaultMarketSettings, limitsForSeat } from "./experiment";
 import { AuctionError, emit, type AuditEvent, type Room } from "./model";
 
 type Outcome<T> =
@@ -53,6 +53,8 @@ export class AuctionService {
         const room: Room = {
           code,
           config,
+          marketSettings: defaultMarketSettings(),
+          settingsRevision: 0,
           phase: "waiting",
           round: 0,
           version: 1,
@@ -71,7 +73,10 @@ export class AuctionService {
           receipts: [],
         };
         const events: AuditEvent[] = [];
-        emit(room, events, now, "room-created", "teacher", { config });
+        emit(room, events, now, "room-created", "teacher", {
+          config,
+          marketSettings: room.marketSettings,
+        });
         const inserted = await tx.query(
           "INSERT INTO auction_rooms (code, state) VALUES ($1, $2::jsonb) ON CONFLICT DO NOTHING RETURNING code",
           [code, JSON.stringify(room)],
@@ -188,7 +193,11 @@ export class AuctionService {
           nickname,
           role,
           seat,
-          limits: limitsForSeat(seat, room.config.capacity),
+          limits: limitsForSeat(
+            seat,
+            room.config.capacity,
+            room.marketSettings,
+          ),
           tokenHash: digest(token),
           pinHash: passwordHash(pin),
           failedLogins: 0,

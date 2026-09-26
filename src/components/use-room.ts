@@ -141,7 +141,9 @@ export function useRoom(code: string) {
             ? "注文を受け付けました。"
             : command.type === "cancel"
               ? "注文を取り消しました。"
-              : "実験の状態を更新しました。",
+              : command.type === "update-markets"
+                ? "価値と費用を保存しました。入室済みの学生にも反映されます。"
+                : "実験の状態を更新しました。",
       });
       return true;
     } catch (e) {

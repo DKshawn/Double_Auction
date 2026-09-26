@@ -1,5 +1,12 @@
 import type { GoodId } from "../catalog";
-import type { Phase, Quote, Role, RoomConfig, Trade } from "../types";
+import type {
+  MarketSettings,
+  Phase,
+  Quote,
+  Role,
+  RoomConfig,
+  Trade,
+} from "../types";
 
 export type Participant = {
   id: string;
@@ -24,6 +31,9 @@ export type AuditEvent = {
 export type Room = {
   code: string;
   config: RoomConfig;
+  // Optional only for rooms saved before editable market settings were added.
+  marketSettings?: MarketSettings;
+  settingsRevision?: number;
   phase: Phase;
   round: number;
   version: number;

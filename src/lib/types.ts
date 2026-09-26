@@ -2,6 +2,10 @@ import type { GoodId } from "./catalog";
 
 export type Role = "buyer" | "seller";
 export type Phase = "waiting" | "running" | "paused" | "review" | "finished";
+export type MarketSettings = Record<
+  GoodId,
+  { values: number[]; costs: number[] }
+>;
 export type RoomConfig = {
   title: string;
   capacity: number;
@@ -35,6 +39,7 @@ export type Equilibrium = {
   low: number;
   high: number;
   quantity: number;
+  quantityMax: number;
   surplus: number;
 };
 export type RoundMetric = {
@@ -42,7 +47,7 @@ export type RoundMetric = {
   quantity: number;
   mean: number | null;
   deviation: number | null;
-  efficiency: number;
+  efficiency: number | null;
 };
 export type RoomView = {
   code: string;
@@ -68,6 +73,8 @@ export type RoomView = {
     roundProfit: number;
   };
   teacher?: {
+    marketSettings: MarketSettings;
+    settingsRevision: number;
     participants: {
       id: string;
       alias: string;
@@ -83,6 +90,11 @@ export type RoomView = {
 };
 
 export type Command =
+  | {
+      type: "update-markets";
+      settings: MarketSettings;
+      expectedRevision: number;
+    }
   | { type: "quote"; good: GoodId; price: number }
   | { type: "cancel"; good: GoodId }
   | { type: "accept"; quoteId: string }

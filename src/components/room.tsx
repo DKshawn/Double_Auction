@@ -181,7 +181,7 @@ export function Room({ code }: { code: string }) {
               </b>
               <p>
                 {view.phase === "waiting"
-                  ? `現在 ${view.participantCount} / ${view.config.capacity} 人が参加しています。自分の価値・費用とルールを確認しましょう。`
+                  ? `現在 ${view.participantCount} / ${view.config.capacity} 人が参加しています。開始前は教員が条件を変更する場合があります。開始時に自分の価値・費用を確認しましょう。`
                   : view.phase === "paused"
                     ? "注文はそのまま保管され、教員の操作で再開します。"
                     : view.phase === "review"

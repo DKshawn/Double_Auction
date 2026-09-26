@@ -67,18 +67,21 @@ test("three independent markets have correct equilibrium intervals, quantities a
     low: 29,
     high: 31,
     quantity: 4,
+    quantityMax: 4,
     surplus: 91,
   });
   assert.deepEqual(equilibrium(base.banana.values, base.banana.costs), {
     low: 49,
     high: 51,
     quantity: 5,
+    quantityMax: 5,
     surplus: 152,
   });
   assert.deepEqual(equilibrium(base.orange.values, base.orange.costs), {
     low: 69,
     high: 71,
     quantity: 3,
+    quantityMax: 3,
     surplus: 125,
   });
   const larger = schedules(24);

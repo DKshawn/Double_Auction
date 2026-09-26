@@ -1,7 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { GOODS, type GoodId } from "../catalog";
 import type { CommandRequest, RoomView } from "../types";
-import { equilibrium, schedules } from "./experiment";
+import {
+  defaultMarketSettings,
+  equilibrium,
+  limitsForSeat,
+  schedules,
+} from "./experiment";
+import { marketSettingsSchema } from "./market-settings";
 import {
   AuctionError,
   emit,
@@ -112,7 +118,39 @@ export function execute(
       409,
     );
   const cmd = request.command;
-  if (["start", "pause", "resume", "end-round", "finish"].includes(cmd.type)) {
+  if (cmd.type === "update-markets") {
+    if (actor !== "teacher")
+      throw new AuctionError("この操作は教員のみ利用できます。", 403);
+    if (room.phase !== "waiting" || room.round !== 0)
+      throw new AuctionError(
+        "価値と費用を変更できるのは、実験開始前だけです。",
+        409,
+      );
+    if (cmd.expectedRevision !== (room.settingsRevision ?? 0))
+      throw new AuctionError(
+        "別の画面で設定が更新されました。最新の設定を確認して編集し直してください。",
+        409,
+      );
+    const parsed = marketSettingsSchema.safeParse(cmd.settings);
+    if (!parsed.success)
+      throw new AuctionError(
+        "各商品の価値と費用を6つずつ、1〜999の整数で設定してください。",
+      );
+    room.marketSettings = parsed.data;
+    room.settingsRevision = (room.settingsRevision ?? 0) + 1;
+    for (const participant of room.participants)
+      participant.limits = limitsForSeat(
+        participant.seat,
+        room.config.capacity,
+        room.marketSettings,
+      );
+    emit(room, events, now, "market-settings-updated", actorId, {
+      marketSettings: room.marketSettings,
+      settingsRevision: room.settingsRevision,
+    });
+  } else if (
+    ["start", "pause", "resume", "end-round", "finish"].includes(cmd.type)
+  ) {
     if (actor !== "teacher")
       throw new AuctionError("この操作は教員のみ利用できます。", 403);
     if (cmd.type === "start") {
@@ -329,7 +367,7 @@ export function toView(
           },
   };
   if (actor === "teacher") {
-    const schedule = schedules(room.config.capacity);
+    const schedule = schedules(room.config.capacity, room.marketSettings);
     const equilibria = Object.fromEntries(
       GOODS.map(({ id }) => [
         id,
@@ -364,12 +402,14 @@ export function toView(
                   0,
                 ) / trades.length
               : null,
-            efficiency: eq.surplus ? (surplus / eq.surplus) * 100 : 0,
+            efficiency: eq.surplus ? (surplus / eq.surplus) * 100 : null,
           };
         }),
       ]),
     ) as NonNullable<RoomView["teacher"]>["metrics"];
     view.teacher = {
+      marketSettings: room.marketSettings ?? defaultMarketSettings(),
+      settingsRevision: room.settingsRevision ?? 0,
       participants: room.participants.map((p) => ({
         id: p.id,
         alias: p.alias,

@@ -16,8 +16,10 @@ import {
 import { GOODS } from "@/lib/catalog";
 import type { Command, RoomView } from "@/lib/types";
 import { decimal } from "@/lib/client";
+import { equilibriumQuantity } from "@/lib/equilibrium";
 import { PriceChart } from "./price-chart";
 import { ConfirmDialog } from "./confirm-dialog";
+import { MarketSettingsPanel } from "./market-settings";
 
 export function TeacherDashboard({
   view,
@@ -32,6 +34,7 @@ export function TeacherDashboard({
   const [copied, setCopied] = useState(false);
   const [confirm, setConfirm] = useState<"end-round" | "finish" | null>(null);
   const [copyError, setCopyError] = useState("");
+  const [editingMarkets, setEditingMarkets] = useState(false);
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(
@@ -63,7 +66,9 @@ export function TeacherDashboard({
             <button
               className="button primary"
               disabled={
-                disabled || view.participantCount !== view.config.capacity
+                disabled ||
+                view.participantCount !== view.config.capacity ||
+                (view.phase === "waiting" && editingMarkets)
               }
               onClick={() => void command({ type: "start" })}
             >
@@ -120,10 +125,17 @@ export function TeacherDashboard({
           <Info size={17} />
           <p>
             参加者が{view.config.capacity}
-            人そろうと開始できます。買い手・売り手は同数で、価値と費用はあらかじめ設定された組み合わせが割り当てられます。
+            人そろうと開始できます。開始前に下の「価値・費用の設定」を確認してください。編集中は保存またはキャンセルしてから開始できます。
           </p>
         </div>
       )}
+      <MarketSettingsPanel
+        view={view}
+        command={command}
+        disabled={disabled}
+        editing={editingMarkets}
+        onEditingChange={setEditingMarkets}
+      />
       <div className="section-heading">
         <div>
           <h2>
@@ -172,7 +184,7 @@ export function TeacherDashboard({
                   <span>取引数量 / 均衡数量</span>
                   <b>
                     {current?.quantity ?? 0}
-                    <small> / {eq.quantity}</small>
+                    <small> / {equilibriumQuantity(eq)}</small>
                   </b>
                 </div>
                 <div>
@@ -186,8 +198,10 @@ export function TeacherDashboard({
                 <div>
                   <span>取引効率</span>
                   <b>
-                    {decimal(current?.efficiency ?? 0)}
-                    <small> %</small>
+                    {decimal(
+                      current ? current.efficiency : eq.surplus ? 0 : null,
+                    )}
+                    {eq.surplus > 0 && <small> %</small>}
                   </b>
                 </div>
               </div>
@@ -204,7 +218,7 @@ export function TeacherDashboard({
         </summary>
         <div className="details-content">
           <p className="muted small">
-            「距離」は各取引価格から均衡区間までの距離の平均です。区間内なら0です。「取引効率」は実現した買い手・売り手の合計利益を、理論上の最大利益で割った割合です。取引のないラウンドの価格・距離は「—」で表示します。
+            「距離」は各取引価格から均衡区間までの距離の平均です。区間内なら0です。「取引効率」は実現した買い手・売り手の合計利益を、理論上の最大利益で割った割合です。取引のないラウンドの価格・距離と、最大利益が0の場合の効率は「—」で表示します。価値と費用が等しい限界の取引がある場合、均衡数量は範囲で表示します。
           </p>
           <div className="table-scroll">
             <table>
@@ -227,7 +241,10 @@ export function TeacherDashboard({
                       <td>{m.quantity}</td>
                       <td>{decimal(m.mean)}</td>
                       <td>{decimal(m.deviation)}</td>
-                      <td>{decimal(m.efficiency)}%</td>
+                      <td>
+                        {decimal(m.efficiency)}
+                        {m.efficiency === null ? "" : "%"}
+                      </td>
                     </tr>
                   )),
                 )}

@@ -37,6 +37,8 @@ export function exportData(
           exportedAt: new Date(now).toISOString(),
           code: room.code,
           config: room.config,
+          marketSettings: teacher.marketSettings,
+          settingsRevision: teacher.settingsRevision,
           currentRound: room.round,
           phase: room.phase,
           rules: {
@@ -82,6 +84,7 @@ export function exportData(
         "均衡下限",
         "均衡上限",
         "均衡数量",
+        "均衡数量上限",
       ],
       ...GOODS.flatMap(({ id, name }) =>
         teacher.metrics[id].map((m) => [
@@ -94,6 +97,7 @@ export function exportData(
           teacher.equilibria[id].low,
           teacher.equilibria[id].high,
           teacher.equilibria[id].quantity,
+          teacher.equilibria[id].quantityMax,
         ]),
       ),
     ];

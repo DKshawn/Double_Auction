@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuctionError } from "./model";
+import { marketSettingsSchema } from "./market-settings";
 
 export const NO_STORE = {
   "Cache-Control": "private, no-store, max-age=0",
@@ -107,6 +108,13 @@ export const commandSchema = z
     requestId: z.uuid(),
     expectedRound: z.number().int().min(0).max(12),
     command: z.discriminatedUnion("type", [
+      z
+        .object({
+          type: z.literal("update-markets"),
+          settings: marketSettingsSchema,
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
       z
         .object({
           type: z.literal("quote"),

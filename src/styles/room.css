@@ -1,0 +1,1767 @@
+.connection {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--green);
+  font-size: 10px;
+}
+.connection.disconnected {
+  color: var(--red);
+}
+.header-room-code {
+  color: var(--muted);
+  font-size: 10px;
+}
+.header-room-code b {
+  color: var(--ink);
+  font-size: 12px;
+  margin-left: 5px;
+  letter-spacing: 0.09em;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  background: var(--lavender);
+  color: var(--accent);
+  border-radius: 50%;
+  width: 33px;
+  height: 33px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.role-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font-size: 10px;
+  line-height: 1.8;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.role-tag.buyer {
+  color: var(--buy);
+  background: var(--buy-bg);
+}
+.role-tag.seller {
+  color: var(--sell);
+  background: var(--sell-bg);
+}
+.role-tag.teacher {
+  color: var(--accent);
+  background: var(--lavender);
+}
+.room-main {
+  max-width: 1240px;
+  padding: 35px 32px 0;
+  margin: auto;
+}
+.room-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.room-heading .eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.room-heading h1 {
+  font-size: 26px;
+  margin: 5px 0 6px;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+.room-heading p {
+  font-size: 11px;
+  color: var(--muted);
+}
+.round-display {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 11px 20px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  flex-shrink: 0;
+}
+.round-display > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.round-display strong {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.round-display strong b {
+  font-size: 18px;
+  font-weight: 650;
+  margin-left: 5px;
+}
+.round-display strong small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.phase-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: var(--muted);
+}
+.phase-label i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.phase-running {
+  color: var(--green);
+}
+.phase-paused {
+  color: var(--sell);
+}
+.phase-finished {
+  color: var(--accent);
+}
+.vertical-line {
+  width: 1px;
+  height: 32px;
+  background: var(--line);
+}
+.timer > span {
+  color: var(--muted);
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.timer > b {
+  font-variant-numeric: tabular-nums;
+  font-family: system-ui, sans-serif;
+  font-size: 25px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+.timer-warning > b {
+  color: var(--red);
+}
+.local-banner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  margin: -8px 0 19px;
+}
+.phase-banner {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 20px;
+  background: var(--lavender);
+  border: 1px solid #e1e0f6;
+  border-radius: 10px;
+  margin-bottom: 22px;
+}
+.phase-banner-icon {
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.phase-banner b {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f518c;
+}
+.phase-banner p {
+  font-size: 11px;
+  margin-top: 3px;
+  color: #696b8c;
+}
+.finished-banner {
+  background: var(--buy-bg);
+  border-color: #d6ebe3;
+}
+.finished-banner b,
+.finished-banner .phase-banner-icon {
+  color: var(--green);
+}
+.connection-alert {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 18px;
+}
+.connection-alert > span {
+  flex: 1;
+}
+.feedback-area:empty {
+  display: none;
+}
+.feedback-area > p {
+  margin: 0 0 16px;
+}
+.product-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 22px;
+}
+.product-tab {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 18px 12px 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: left;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.product-tab:hover {
+  border-color: #c4c3e8;
+}
+.product-tab.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: #f8f7ff;
+}
+.product-photo {
+  width: 71px;
+  height: 71px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #fff;
+}
+.product-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  mix-blend-mode: multiply;
+}
+.product-title {
+  min-width: 0;
+  flex: 1;
+}
+.product-title > b {
+  display: block;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.product-title > small {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.product-last {
+  text-align: right;
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.product-last > small:first-child {
+  font-size: 8px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+.product-last > strong {
+  font-variant-numeric: tabular-nums;
+  font-family: system-ui, sans-serif;
+  font-size: 29px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.product-last > small:last-child {
+  font-size: 8px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.market-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 308px;
+  gap: 21px;
+  align-items: start;
+}
+.market-column {
+  display: flex;
+  flex-direction: column;
+  gap: 19px;
+  min-width: 0;
+}
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 19px 22px 15px;
+}
+.panel-heading h2 {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  letter-spacing: 0;
+}
+.panel-heading h2 svg {
+  color: var(--muted);
+}
+.subtle-tag {
+  color: var(--muted);
+  font-size: 9px;
+  padding: 3px 7px;
+  background: var(--bg);
+  border-radius: 5px;
+}
+.book-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 2px 22px 20px;
+  gap: 27px;
+}
+.book-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-size: 11px;
+}
+.book-title b {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+.book-title > span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.bid-side .book-title {
+  color: var(--buy);
+}
+.ask-side .book-title {
+  color: var(--sell);
+}
+.book-labels,
+.book-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 45px 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+.book-labels {
+  font-size: 9px;
+  color: var(--muted);
+  padding-bottom: 7px;
+}
+.book-row {
+  min-height: 37px;
+  border-bottom: 1px solid #f0f1f6;
+  font-size: 11px;
+}
+.book-row b {
+  font-family: system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+.book-row > span {
+  color: var(--muted);
+}
+.book-row > span:last-child {
+  text-align: right;
+}
+.book-labels > span:last-child {
+  text-align: right;
+}
+.bid-side .best {
+  background: var(--buy-bg);
+  border-radius: 6px;
+  color: var(--buy);
+  border-bottom-color: transparent;
+}
+.ask-side .best {
+  background: var(--sell-bg);
+  border-radius: 6px;
+  color: var(--sell);
+  border-bottom-color: transparent;
+}
+.own-order > span:last-child {
+  color: var(--accent);
+  font-size: 10px;
+}
+.book-rows {
+  min-height: 160px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+.book-empty {
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.empty-book-icon {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  width: 41px;
+  height: 41px;
+  background: var(--bg);
+  color: #b0b7ca;
+  margin-bottom: 10px;
+}
+.book-empty p {
+  font-size: 10px;
+  color: var(--muted);
+}
+.book-empty small {
+  color: #939aae;
+  font-size: 9px;
+  margin-top: 3px;
+}
+.accept-button {
+  font-size: 10px;
+  padding: 8px 12px;
+  display: flex;
+  width: 100%;
+  margin-top: 12px;
+  justify-content: space-between;
+  background: #fff;
+}
+.bid-accept {
+  border-color: #cce7df;
+  color: var(--buy);
+}
+.bid-accept:not(:disabled):hover {
+  background: var(--buy-bg);
+}
+.ask-accept {
+  border-color: #f3dbbd;
+  color: var(--sell);
+}
+.ask-accept:not(:disabled):hover {
+  background: var(--sell-bg);
+}
+.panel-note {
+  padding: 11px 22px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: var(--muted);
+  background: #fdfdff;
+}
+.private-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 9px;
+  background: var(--lavender);
+  border-radius: 4px;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+.private-panel .panel-heading {
+  padding-bottom: 18px;
+}
+.private-content {
+  padding: 0 22px 18px;
+}
+.private-value {
+  background: #f2f1fd;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.private-value > span {
+  color: #6f6c94;
+  font-size: 11px;
+}
+.private-value > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 2px 0 3px;
+}
+.private-value strong {
+  font-size: 35px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: system-ui, sans-serif;
+  letter-spacing: -0.04em;
+}
+.private-value > div > span {
+  font-size: 9px;
+  color: #817e9c;
+}
+.private-value > small {
+  color: #817e9c;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.order-price-label {
+  margin-top: 23px;
+  font-size: 11px;
+}
+.price-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dfe2ed;
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: #fff;
+}
+.field .price-input-wrap > input {
+  padding: 0;
+  font-size: 26px;
+  border: 0;
+  border-radius: 2px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.4;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.price-input-wrap input::-webkit-inner-spin-button {
+  display: none;
+}
+.field .price-input-wrap > input::placeholder {
+  font-size: 17px;
+  font-weight: 400;
+  color: #c0c3d0;
+}
+.price-input-wrap > span {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.expected-profit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin: 15px 0 20px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.expected-profit b {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.expected-profit b small {
+  font-size: 9px;
+  font-weight: 400;
+}
+.form-hint {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+}
+.standing-order {
+  margin-top: 15px;
+  background: var(--bg);
+  padding: 9px 6px 9px 11px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.standing-order > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+.pulse-dot {
+  height: 5px;
+  width: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.profit-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  border-top: 1px solid var(--line);
+  padding-top: 17px;
+  margin-top: 24px;
+}
+.profit-summary span {
+  font-size: 9px;
+  color: var(--muted);
+}
+.profit-summary b {
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 25px;
+  font-weight: 550;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.profit-summary b small {
+  font-size: 8px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.formula-note {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 15px;
+  text-align: center;
+}
+.completed-trade {
+  text-align: center;
+  padding: 28px 0 10px;
+  color: var(--green);
+}
+.completed-trade h3 {
+  font-size: 12px;
+  margin-top: 12px;
+}
+.completed-trade p {
+  font-size: 11px;
+  margin: 8px 0;
+}
+.completed-trade > span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.price-chart {
+  padding: 0 12px 0;
+}
+.price-chart svg {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+.price-chart text {
+  fill: var(--muted);
+  font-family: inherit;
+  font-size: 10px;
+}
+.chart-grid {
+  stroke: #eceef5;
+  stroke-width: 1;
+}
+.chart-series {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.chart-dot {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 2;
+}
+.price-chart .chart-empty {
+  font-size: 12px;
+  fill: #959db0;
+}
+.chart-round-line {
+  stroke: #eceef5;
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+}
+.equilibrium-band {
+  fill: #e2e2fa;
+}
+.equilibrium-line {
+  stroke: #9b97d9;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+.recent-trades {
+  border-top: 1px solid var(--line);
+  padding: 8px 22px;
+}
+.recent-trades > div {
+  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.recent-trades > div b {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--ink);
+  font-size: 12px;
+}
+.recent-trades > div b small {
+  font-size: 9px;
+  color: var(--muted);
+}
+.recent-trades > p {
+  font-size: 10px;
+  text-align: center;
+  color: var(--muted);
+  padding: 9px;
+}
+.history-panel {
+  margin-top: 21px;
+}
+.history-heading {
+  border: 0;
+  background: #fff;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+}
+.history-heading > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.history-heading b {
+  font-size: 12px;
+}
+.history-heading svg {
+  color: var(--muted);
+}
+.count-tag {
+  background: var(--bg);
+  padding: 2px 7px;
+  font-size: 10px;
+  color: var(--muted);
+  border-radius: 5px;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  min-width: 520px;
+}
+th {
+  background: #fafbfe;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 10px;
+  white-space: nowrap;
+}
+th,
+td {
+  padding: 12px 22px;
+  border-top: 1px solid var(--line);
+}
+td b {
+  font-size: 11px;
+}
+th small,
+td small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 400;
+  margin-top: 2px;
+}
+.empty-state {
+  padding: 30px 20px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+.empty-state > svg {
+  color: #b8bfd3;
+}
+.empty-state p {
+  margin: 10px 0 5px;
+}
+.empty-state small {
+  font-size: 10px;
+}
+.room-bottom-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 23px;
+}
+.room-bottom-note a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+.teacher-controls {
+  padding: 19px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.room-invite {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+.invite-label {
+  color: var(--muted);
+  font-size: 10px;
+}
+.room-invite > strong {
+  font-family: system-ui, sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.1em;
+  font-weight: 550;
+}
+.teacher-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.participant-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-right: 3px;
+}
+.participant-count b {
+  color: var(--ink);
+  font-size: 15px;
+}
+.teacher-actions .button {
+  padding: 9px 14px;
+  font-size: 11px;
+}
+.teacher-actions .text-button {
+  font-size: 10px;
+}
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 30px 0 16px;
+}
+.section-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 16px;
+}
+.section-heading p {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.teacher-markets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 20px;
+}
+.teacher-product-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 17px 10px;
+}
+.teacher-product-heading img {
+  object-fit: cover;
+  border-radius: 9px;
+  width: 54px;
+  height: 54px;
+}
+.teacher-product-heading h3 {
+  font-size: 15px;
+  margin-bottom: 4px;
+  letter-spacing: 0;
+}
+.teacher-product-heading p {
+  font-size: 9px;
+  color: var(--muted);
+}
+.teacher-product-heading p b {
+  color: var(--accent);
+  font-size: 13px;
+}
+.teacher-product-heading p span {
+  font-size: 8px;
+}
+.price-chart.compact {
+  padding: 0 7px;
+}
+.chart-axis-caption {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: -4px;
+}
+.market-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px 20px;
+  padding: 18px 22px 13px;
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+}
+.market-metrics > div > span {
+  font-size: 9px;
+  display: block;
+  color: var(--muted);
+}
+.market-metrics b {
+  font-family: system-ui, sans-serif;
+  font-size: 23px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  display: block;
+  margin-top: 3px;
+}
+.market-metrics b small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.metric-caption {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: right;
+  padding: 0 22px 13px;
+}
+.details-panel {
+  margin-bottom: 20px;
+}
+.details-panel summary {
+  padding: 16px 22px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  list-style: none;
+}
+.details-panel summary::-webkit-details-marker {
+  display: none;
+}
+.details-panel summary > span {
+  color: var(--muted);
+}
+.details-panel[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+.details-content {
+  padding: 18px 22px;
+}
+.details-content > p {
+  margin-bottom: 16px;
+  line-height: 1.9;
+}
+.details-content th,
+.details-content td {
+  padding: 10px 15px;
+}
+.teacher-bottom-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  margin: 20px 0;
+}
+.export-panel > p {
+  font-size: 10px;
+  color: var(--muted);
+  padding: 0 22px;
+}
+.export-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 18px 22px 22px;
+}
+.export-buttons a {
+  font-size: 10px;
+  padding: 8px 11px;
+}
+.file-type {
+  font-size: 8px;
+  color: var(--muted);
+}
+.experiment-summary dl {
+  margin: 0;
+  padding: 0 22px 20px;
+  font-size: 11px;
+}
+.experiment-summary dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 7px 0;
+}
+.experiment-summary dt {
+  color: var(--muted);
+}
+.experiment-summary dd {
+  margin: 0;
+  text-align: right;
+}
+.schedule-row {
+  padding: 10px 0;
+}
+.schedule-row b {
+  font-size: 12px;
+}
+.schedule-row p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.confirm-dialog {
+  padding: 27px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  max-width: 450px;
+  width: calc(100% - 40px);
+  box-shadow: 0 20px 80px #15154329;
+  color: var(--ink);
+}
+.confirm-dialog::backdrop {
+  background: #24294366;
+  backdrop-filter: blur(3px);
+}
+.confirm-dialog h2 {
+  font-size: 17px;
+}
+.confirm-dialog p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 14px;
+  line-height: 1.9;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 25px;
+}
+@media (max-width: 1100px) {
+  .product-tab {
+    gap: 8px;
+    padding: 11px;
+  }
+  .product-photo {
+    width: 58px;
+    height: 58px;
+  }
+  .product-title > b {
+    font-size: 14px;
+  }
+  .product-title > small {
+    font-size: 8px;
+  }
+  .product-last > strong {
+    font-size: 25px;
+  }
+  .market-workspace {
+    grid-template-columns: minmax(0, 1fr) 284px;
+    gap: 17px;
+  }
+  .book-columns {
+    gap: 15px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .panel-heading {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .private-content {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .book-labels,
+  .book-row {
+    grid-template-columns: minmax(0, 1fr) 27px 47px;
+    gap: 4px;
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+  .teacher-controls {
+    gap: 15px;
+  }
+  .teacher-markets {
+    gap: 13px;
+  }
+  .market-metrics {
+    padding-left: 16px;
+    padding-right: 16px;
+    gap: 12px;
+  }
+  .market-metrics > div > span {
+    font-size: 8px;
+  }
+}
+@media (max-width: 860px) {
+  .room-main {
+    padding: 27px 22px 0;
+  }
+  .product-title > small {
+    font-size: 8px;
+  }
+  .product-tab {
+    flex-wrap: wrap;
+    gap: 7px;
+    position: relative;
+  }
+  .product-last {
+    margin-left: auto;
+  }
+  .product-photo {
+    width: 53px;
+    height: 53px;
+  }
+  .product-title {
+    flex: 1;
+  }
+  .product-title > b {
+    font-size: 13px;
+  }
+  .product-last > small:first-child {
+    display: none;
+  }
+  .product-last > strong {
+    font-size: 23px;
+  }
+  .product-last > small:last-child {
+    font-size: 7px;
+  }
+  .market-workspace {
+    grid-template-columns: minmax(0, 1fr) 255px;
+    gap: 15px;
+  }
+  .private-value {
+    padding: 11px 12px;
+  }
+  .private-value > small {
+    font-size: 8px;
+  }
+  .book-columns {
+    gap: 12px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .book-labels,
+  .book-row {
+    font-size: 9px;
+    grid-template-columns: minmax(0, 1fr) 24px 39px;
+    gap: 2px;
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+  .book-row b {
+    font-size: 16px;
+  }
+  .book-empty p {
+    font-size: 9px;
+  }
+  .book-empty small {
+    font-size: 8px;
+  }
+  .panel-note {
+    font-size: 8px;
+    padding: 10px 14px;
+  }
+  .panel-heading h2 {
+    font-size: 12px;
+  }
+  .subtle-tag {
+    font-size: 8px;
+  }
+  .teacher-markets {
+    grid-template-columns: 1fr;
+  }
+  .teacher-market {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+  .teacher-product-heading {
+    grid-column: 1;
+  }
+  .teacher-market > .price-chart {
+    grid-column: 2;
+    grid-row: 1/4;
+  }
+  .teacher-market > .chart-axis-caption {
+    display: none;
+  }
+  .teacher-market > .market-metrics {
+    margin-top: 0;
+    grid-column: 1;
+    border-top: none;
+    padding-top: 6px;
+  }
+  .teacher-market > .metric-caption {
+    grid-column: 1;
+    text-align: left;
+    padding-left: 17px;
+  }
+  .teacher-bottom-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .teacher-controls {
+    padding: 17px;
+  }
+  .teacher-actions {
+    gap: 10px;
+  }
+  .room-invite {
+    gap: 12px;
+  }
+  .connection {
+    font-size: 9px;
+  }
+  .header-room-code {
+    display: none;
+  }
+}
+@media (max-width: 680px) {
+  .room-main {
+    padding: 25px 16px 0;
+  }
+  .room-heading {
+    align-items: flex-start;
+    gap: 15px;
+    flex-direction: column;
+    margin-bottom: 20px;
+  }
+  .room-heading h1 {
+    font-size: 25px;
+  }
+  .round-display {
+    width: 100%;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 16px;
+  }
+  .round-display > div:first-child {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+  }
+  .round-display .vertical-line {
+    margin-left: auto;
+  }
+  .timer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .timer > b {
+    font-size: 23px;
+  }
+  .timer > span {
+    font-size: 8px;
+  }
+  .header-right {
+    gap: 7px;
+  }
+  .header-right .connection {
+    display: none;
+  }
+  .role-tag {
+    font-size: 9px;
+    padding: 3px 7px;
+  }
+  .avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 9px;
+  }
+  .product-tabs {
+    gap: 8px;
+    margin-bottom: 17px;
+  }
+  .product-tab {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    padding: 11px 5px 9px;
+    border-radius: 10px;
+  }
+  .product-photo {
+    width: 64px;
+    height: 64px;
+  }
+  .product-title > b {
+    font-size: 13px;
+    margin-top: 1px;
+  }
+  .product-title > small {
+    font-size: 8px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+  .product-last {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 3px;
+    margin: auto;
+    line-height: 1.4;
+    margin-top: 3px;
+  }
+  .product-last > strong {
+    font-size: 21px;
+  }
+  .product-last > small:last-child {
+    font-size: 7px;
+  }
+  .market-workspace {
+    grid-template-columns: 1fr;
+    gap: 17px;
+  }
+  .private-panel {
+    grid-row: 1;
+  }
+  .private-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 20px;
+    align-items: start;
+    padding-bottom: 15px;
+  }
+  .private-value {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 12px 13px;
+  }
+  .private-value strong {
+    font-size: 31px;
+  }
+  .private-value > div {
+    display: block;
+  }
+  .private-value > div > span {
+    display: block;
+    margin-top: -3px;
+    font-size: 8px;
+  }
+  .private-value > small {
+    white-space: normal;
+    display: block;
+    margin-top: 5px;
+    line-height: 1.7;
+    font-size: 8px;
+  }
+  .private-content > form {
+    grid-column: 2;
+    grid-row: 1/3;
+  }
+  .order-price-label {
+    margin-top: 0;
+    font-size: 10px;
+  }
+  .price-input-wrap {
+    padding: 8px;
+  }
+  .field .price-input-wrap > input {
+    font-size: 22px;
+  }
+  .field .price-input-wrap > input::placeholder {
+    font-size: 12px;
+  }
+  .price-input-wrap > span {
+    font-size: 8px;
+  }
+  .expected-profit {
+    font-size: 8px;
+    gap: 5px;
+    margin: 11px 0;
+  }
+  .expected-profit b {
+    font-size: 14px;
+  }
+  .expected-profit b small {
+    font-size: 8px;
+  }
+  .private-content .primary {
+    font-size: 10px;
+    padding: 11px 8px;
+    gap: 5px;
+  }
+  .private-content .primary svg {
+    width: 13px;
+  }
+  .form-hint {
+    font-size: 8px;
+  }
+  .profit-summary {
+    grid-column: 1/3;
+    margin-top: 15px;
+    padding-top: 11px;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .profit-summary > div {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    justify-content: space-between;
+  }
+  .profit-summary span {
+    font-size: 8px;
+  }
+  .profit-summary b {
+    font-size: 20px;
+    margin: 0;
+  }
+  .profit-summary b small {
+    font-size: 7px;
+  }
+  .formula-note {
+    grid-column: 1/3;
+    margin-top: 8px;
+    font-size: 8px;
+  }
+  .standing-order {
+    grid-column: 1/3;
+    margin-top: 13px;
+  }
+  .completed-trade {
+    grid-column: 2;
+    grid-row: 1;
+    padding-top: 5px;
+  }
+  .completed-trade h3 {
+    font-size: 10px;
+    margin-top: 8px;
+  }
+  .completed-trade p,
+  .completed-trade > span {
+    font-size: 9px;
+  }
+  .private-panel .panel-heading {
+    padding-bottom: 13px;
+  }
+  .panel-heading {
+    padding: 17px 18px 14px;
+  }
+  .book-columns {
+    gap: 20px;
+    padding: 0 18px 16px;
+  }
+  .book-labels,
+  .book-row {
+    grid-template-columns: minmax(0, 1fr) 33px 43px;
+    padding-left: 9px;
+    padding-right: 9px;
+    font-size: 10px;
+  }
+  .book-labels {
+    font-size: 9px;
+  }
+  .book-row {
+    min-height: 35px;
+  }
+  .book-row b {
+    font-size: 18px;
+  }
+  .book-empty p {
+    font-size: 10px;
+  }
+  .book-empty small {
+    font-size: 8px;
+  }
+  .book-rows {
+    min-height: 145px;
+  }
+  .book-empty {
+    min-height: 145px;
+  }
+  .panel-note {
+    padding: 10px 18px;
+    font-size: 8px;
+  }
+  .market-column {
+    gap: 17px;
+  }
+  .phase-banner {
+    padding: 14px;
+    margin-bottom: 17px;
+    align-items: flex-start;
+  }
+  .phase-banner-icon {
+    padding-top: 3px;
+  }
+  .phase-banner b {
+    font-size: 11px;
+  }
+  .phase-banner p {
+    font-size: 10px;
+  }
+  .room-bottom-note {
+    font-size: 9px;
+  }
+  .history-heading {
+    padding: 17px 18px;
+  }
+  .history-heading b {
+    font-size: 11px;
+  }
+  .history-heading .small {
+    font-size: 10px;
+  }
+  .history-heading > span:first-child {
+    gap: 7px;
+  }
+  .teacher-controls {
+    gap: 15px;
+    padding: 16px;
+  }
+  .room-invite {
+    gap: 10px;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .invite-label {
+    font-size: 9px;
+  }
+  .room-invite > strong {
+    font-size: 21px;
+  }
+  .room-invite .button {
+    font-size: 10px;
+    padding: 7px 9px;
+  }
+  .teacher-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .teacher-actions .button {
+    font-size: 10px;
+    padding: 9px 11px;
+  }
+  .participant-count {
+    font-size: 10px;
+  }
+  .participant-count b {
+    font-size: 13px;
+  }
+  .teacher-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .section-heading {
+    gap: 10px;
+  }
+  .section-heading h2 {
+    font-size: 14px;
+  }
+  .section-heading p {
+    font-size: 9px;
+  }
+  .teacher-product-heading {
+    padding: 14px 12px;
+    gap: 7px;
+  }
+  .teacher-product-heading img {
+    width: 40px;
+    height: 40px;
+  }
+  .teacher-product-heading h3 {
+    font-size: 13px;
+  }
+  .teacher-product-heading p {
+    font-size: 8px;
+  }
+  .teacher-product-heading p b {
+    font-size: 11px;
+  }
+  .teacher-product-heading p span {
+    font-size: 7px;
+  }
+  .teacher-market > .market-metrics {
+    grid-row: 3;
+    grid-template-columns: repeat(2, 1fr);
+    padding: 14px 20px;
+    gap: 12px;
+  }
+  .market-metrics b {
+    font-size: 20px;
+  }
+  .market-metrics > div > span {
+    font-size: 9px;
+  }
+  .teacher-market > .metric-caption {
+    font-size: 8px;
+    padding-left: 12px;
+  }
+  .teacher-market > .price-chart {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 0 10px;
+  }
+  .teacher-market {
+    grid-template-columns: 1fr;
+  }
+  .participants-table {
+    min-width: 680px;
+  }
+  .price-chart .chart-empty {
+    font-size: 11px;
+  }
+  .details-panel summary {
+    padding: 15px 17px;
+    font-size: 10px;
+  }
+  .details-content {
+    padding: 16px;
+  }
+  .details-content > p {
+    font-size: 10px;
+  }
+  .teacher-dashboard table {
+    min-width: 570px;
+  }
+  .experiment-summary dl {
+    font-size: 10px;
+  }
+}
+@media (max-width: 380px) {
+  .room-main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .round-display {
+    padding: 10px 12px;
+  }
+  .round-display > div:first-child {
+    gap: 9px;
+  }
+  .round-display strong {
+    font-size: 10px;
+  }
+  .round-display strong b {
+    font-size: 16px;
+  }
+  .timer {
+    gap: 7px;
+  }
+  .timer > b {
+    font-size: 22px;
+  }
+  .timer > span {
+    font-size: 7px;
+  }
+  .product-title > small {
+    font-size: 7px;
+  }
+  .private-content {
+    column-gap: 12px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .expected-profit {
+    font-size: 7px;
+  }
+  .profit-summary span {
+    font-size: 7px;
+  }
+  .profit-summary b small {
+    display: none;
+  }
+  .book-columns {
+    padding-left: 13px;
+    padding-right: 13px;
+    gap: 12px;
+  }
+  .book-labels,
+  .book-row {
+    grid-template-columns: minmax(0, 1fr) 28px 38px;
+    font-size: 9px;
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+  .book-labels {
+    font-size: 8px;
+  }
+  .book-empty p {
+    font-size: 9px;
+  }
+  .book-empty small {
+    font-size: 7px;
+  }
+  .teacher-market {
+    grid-template-columns: 1fr;
+  }
+  .teacher-market > .price-chart {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .teacher-market > .market-metrics {
+    grid-row: 3;
+    grid-template-columns: repeat(2, 1fr);
+    padding: 14px 20px;
+  }
+  .market-metrics > div > span {
+    font-size: 9px;
+  }
+  .teacher-product-heading {
+    padding: 16px 18px;
+  }
+  .teacher-product-heading img {
+    width: 47px;
+    height: 47px;
+  }
+  .teacher-market > .metric-caption {
+    padding-left: 20px;
+  }
+  .room-invite {
+    gap: 7px;
+  }
+  .room-invite > strong {
+    font-size: 19px;
+  }
+  .invite-label {
+    font-size: 8px;
+  }
+}

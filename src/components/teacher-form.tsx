@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, FlaskConical, Info } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
 import type { ServerStatus } from "@/lib/server/config";
@@ -14,7 +13,6 @@ export function TeacherForm({
   initialCode?: string;
   status: ServerStatus;
 }) {
-  const router = useRouter();
   const [tab, setTab] = useState(initialCode ? "reenter" : "create");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -40,7 +38,9 @@ export function TeacherForm({
               `/api/rooms/${String(form.get("code")).toUpperCase()}/teacher`,
               { password: form.get("password") },
             );
-      router.push(`/room/${result.code}`);
+      // Re-entry may switch back from a student's session in the same browser.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Discard the previous user's client-side room state.
+      window.location.assign(`/room/${result.code}`);
     } catch (e) {
       setError(errorMessage(e));
     } finally {

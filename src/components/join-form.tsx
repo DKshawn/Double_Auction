@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, KeyRound, LockKeyhole } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
 import { Spinner } from "./shell";
 
 export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
-  const router = useRouter();
   const [code, setCode] = useState(initialCode);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -21,10 +19,9 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
         `/api/rooms/${code.toUpperCase()}/join`,
         { nickname: String(data.get("nickname")).trim(), pin: data.get("pin") },
       );
-      const destination = `/room/${result.code}`;
-      // Re-entry on the same URL must discard the previous authentication state.
-      if (window.location.pathname === destination) window.location.reload();
-      else router.push(destination);
+      // Start with fresh room state after the authentication cookie changes.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Discard the previous user's client-side room state.
+      window.location.assign(`/room/${result.code}`);
     } catch (e) {
       setError(errorMessage(e));
     } finally {

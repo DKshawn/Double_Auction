@@ -144,16 +144,8 @@ export class AuctionService {
     currentToken?: string,
   ) {
     return this.locked(code, (room, now, events) => {
-      if (currentToken) {
-        try {
-          authenticate(room, currentToken);
-          return { code, token: currentToken };
-        } catch {
-          /* Re-entry can recover a lost or superseded cookie. */
-        }
-      }
       let participant = room.participants.find((p) => p.nickname === nickname);
-      const token = newToken();
+      let token = newToken();
       if (participant) {
         if (participant.lockedUntil > now)
           throw new AuctionError(
@@ -171,6 +163,10 @@ export class AuctionService {
             403,
           );
         }
+        // Reuse a cookie only for this student, after checking their PIN.
+        // A teacher or another student's session must not override the form.
+        if (currentToken && equal(digest(currentToken), participant.tokenHash))
+          token = currentToken;
         participant.tokenHash = digest(token);
         participant.failedLogins = 0;
         participant.lockedUntil = 0;

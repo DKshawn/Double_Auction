@@ -5,6 +5,10 @@ const config: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   poweredByHeader: false,
   serverExternalPackages: ["@electric-sql/pglite"],
+  outputFileTracingIncludes: {
+    // Next.js 16.3 omits this startup dependency from per-route traces.
+    "/*": ["./node_modules/next/dist/lib/framework/boundary-constants.js"],
+  },
   outputFileTracingExcludes: {
     "/*": [
       "./.data/**/*",

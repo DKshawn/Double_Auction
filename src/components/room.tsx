@@ -15,6 +15,7 @@ import { JoinForm } from "./join-form";
 import { StudentMarket } from "./student-market";
 import { TeacherDashboard } from "./teacher-dashboard";
 import { useRoom } from "./use-room";
+import { StudyRoom } from "./study-room";
 import type { Phase } from "@/lib/types";
 
 const labels: Record<Phase, string> = {
@@ -74,6 +75,19 @@ export function Room({ code }: { code: string }) {
           <Link href="/">ホームに戻る</Link>
         </main>
       </>
+    );
+  if (view.study)
+    return (
+      <StudyRoom
+        view={view}
+        now={now}
+        command={command}
+        disabled={pending || !connected}
+        connected={connected}
+        error={error}
+        notice={notice ?? ""}
+        retry={retry}
+      />
     );
   const teacher = view.me.role === "teacher";
   const remaining =
@@ -213,7 +227,7 @@ export function Room({ code }: { code: string }) {
         )}
         <div className="room-bottom-note">
           <span>表示は約1秒ごとに更新されます。</span>
-          <Link href="/guide" target="_blank">
+          <Link href="/guide?legacy=1" target="_blank">
             <CircleHelp size={15} />
             実験のルール
           </Link>

@@ -1,13 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowUpRight,
-  Layers3,
-  UsersRound,
-  RefreshCcw,
-  ArrowRight,
-} from "lucide-react";
-import { GOODS } from "@/lib/catalog";
+import { Layers3, UsersRound, RefreshCcw, ArrowRight } from "lucide-react";
+import { INSTITUTIONS } from "@/lib/study-rules";
 import { Footer, Header } from "@/components/shell";
 import { JoinForm } from "@/components/join-form";
 
@@ -33,43 +27,40 @@ export default async function Home({
               <em>市場</em>を学ぼう。
             </h1>
             <p className="hero-description">
-              買い手と売り手になって、価格を提示。
+              同じ商品を、3つの制度で取引する。
               <br />
               みんなの取引が、ひとつの市場をつくります。
             </p>
-            <div className="fruit-showcase">
-              {GOODS.map((good, i) => (
-                <div className={`fruit-tile fruit-${good.id}`} key={good.id}>
-                  <span className="fruit-index">0{i + 1}</span>
-                  <Image
-                    src={good.image}
-                    alt={good.name}
-                    width={170}
-                    height={170}
-                    priority
-                  />
-                  <div>
-                    <b>{good.name}</b>
-                    <span>
-                      独立した市場
-                      <ArrowUpRight size={13} />
-                    </span>
+            <div className="study-home-product">
+              <Image
+                src="/fruits/apple.jpg"
+                alt="取引する商品：りんご"
+                width={150}
+                height={150}
+                priority
+              />
+              <div>
+                <p>りんご · 各自2単位／期</p>
+                {Object.entries(INSTITUTIONS).map(([id, institution]) => (
+                  <div className="study-home-protocol" key={id}>
+                    <b>{institution.short}</b>
+                    <span>{institution.name}</span>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
             <div className="hero-facts">
               <span>
                 <Layers3 size={17} />
-                3つの商品
+                3つの制度
               </span>
               <span>
                 <UsersRound size={17} />
-                2つの役割
+                1市場16人
               </span>
               <span>
                 <RefreshCcw size={16} />
-                繰り返して学ぶ
+                各5期・全15期
               </span>
             </div>
           </div>
@@ -94,12 +85,12 @@ export default async function Home({
             [
               "02",
               "価格を提示する",
-              "取引したい商品を選び、注文を出します。相手の価格を受け入れて取引することもできます。",
+              "画面に表示される制度のルールに沿って注文・購入します。同じ商品を毎期2単位まで取引できます。",
             ],
             [
               "03",
               "結果を振り返る",
-              "各ラウンドの利益や価格の動きを確認。取引を繰り返すと、市場はどう変わるでしょうか。",
+              "各期の利益や全期間の価格の動きを確認。制度や経験によって、市場はどう変わるでしょうか。",
             ],
           ].map(([number, title, text]) => (
             <article key={number}>

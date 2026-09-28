@@ -8,11 +8,13 @@ export function PriceChart({
   equilibrium,
   rounds = 1,
   compact = false,
+  periodAxis = false,
 }: {
   trades: Trade[];
   equilibrium?: Equilibrium;
   rounds?: number;
   compact?: boolean;
+  periodAxis?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [w, setWidth] = useState(compact ? 360 : 640);
@@ -39,8 +41,9 @@ export function PriceChart({
   const y = (price: number) =>
     top + ((max - price) / (max - min || 1)) * (h - top - bottom);
   const width = w - left - right;
+  const byPeriod = Boolean(equilibrium || periodAxis);
   const point = (trade: Trade, index: number) => {
-    if (!equilibrium)
+    if (!byPeriod)
       return left + ((index + 0.5) / Math.max(6, trades.length)) * width;
     const sameRound = trades.filter((t) => t.round === trade.round);
     const n = sameRound.findIndex((t) => t.id === trade.id);
@@ -57,7 +60,9 @@ export function PriceChart({
         aria-label={
           equilibrium
             ? "ラウンドごとの取引価格（円）。色付きの帯は理論上の均衡価格区間です。"
-            : "今ラウンドの取引価格（円）を約定順に表示したグラフ"
+            : periodAxis
+              ? "全期間の取引価格（円）を期ごとに表示したグラフ"
+              : "今ラウンドの取引価格（円）を約定順に表示したグラフ"
         }
       >
         <text x={left - 10} y={12} textAnchor="end">
@@ -98,7 +103,7 @@ export function PriceChart({
             />
           </>
         )}
-        {equilibrium ? (
+        {byPeriod ? (
           Array.from({ length: rounds }, (_, i) => (
             <g key={i}>
               <text
@@ -130,7 +135,7 @@ export function PriceChart({
           </>
         )}
         {trades.length > 1 &&
-          (equilibrium ? (
+          (byPeriod ? (
             Array.from({ length: rounds }, (_, i) => (
               <polyline
                 key={i}
@@ -159,7 +164,9 @@ export function PriceChart({
             className="chart-dot"
           >
             <title>
-              ラウンド{t.round}：{t.price}円
+              {periodAxis ? "第" : "ラウンド"}
+              {t.round}
+              {periodAxis ? "期" : ""}：{t.price}円
             </title>
           </circle>
         ))}

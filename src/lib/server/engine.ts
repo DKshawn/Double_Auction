@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { GOODS, type GoodId } from "../catalog";
-import type { CommandRequest, RoomView } from "../types";
+import type { CommandRequest, LegacyCommand, RoomView } from "../types";
+import { executeStudy, settleStudy } from "./study";
+import { studyView } from "./study-view";
 import {
   defaultMarketSettings,
   equilibrium,
@@ -17,6 +19,7 @@ import {
 } from "./model";
 
 export function settleDeadline(room: Room, now: number, events: AuditEvent[]) {
+  if (room.study) return settleStudy(room, now, events);
   if (
     room.phase === "running" &&
     room.deadline !== null &&
@@ -104,6 +107,7 @@ export function execute(
   now: number,
   events: AuditEvent[],
 ) {
+  if (room.study) return executeStudy(room, actor, request, now, events);
   const actorId = actor === "teacher" ? "teacher" : actor.id;
   // Retries return the current authorized snapshot, without replaying the mutation.
   if (
@@ -117,7 +121,21 @@ export function execute(
       "ラウンドが切り替わりました。画面を確認して操作し直してください。",
       409,
     );
-  const cmd = request.command;
+  if (
+    ![
+      "quote",
+      "cancel",
+      "accept",
+      "update-markets",
+      "start",
+      "pause",
+      "resume",
+      "end-round",
+      "finish",
+    ].includes(request.command.type)
+  )
+    throw new AuctionError("この実験では利用できない操作です。");
+  const cmd = request.command as LegacyCommand;
   if (cmd.type === "update-markets") {
     if (actor !== "teacher")
       throw new AuctionError("この操作は教員のみ利用できます。", 403);
@@ -327,6 +345,7 @@ export function toView(
   now: number,
   mode: "local" | "online",
 ): RoomView {
+  if (room.study) return studyView(room, actor, now, mode);
   const view: RoomView = {
     code: room.code,
     config: room.config,

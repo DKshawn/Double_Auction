@@ -27,7 +27,10 @@ test("teacher can create and reenter a room with an eight-digit password without
   const code = page.url().split("/").at(-1)!;
   const response = await page.request.get(`/api/rooms/${code}`);
   expect(response.ok()).toBe(true);
-  expect((await response.json()).me.role).toBe("teacher");
+  const snapshot = await response.json();
+  expect(snapshot.me.role).toBe("teacher");
+  expect(snapshot.config.capacity).toBe(16);
+  expect(snapshot.study.protocol).toBe("institutions-v1");
 
   const returningTeacher = await browser.newContext({ baseURL });
   try {

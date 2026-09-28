@@ -7,9 +7,9 @@ import { getServerStatus } from "@/lib/server/config";
 export default async function Teacher({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string }>;
+  searchParams: Promise<{ code?: string; legacy?: string }>;
 }) {
-  const { code } = await searchParams;
+  const { code, legacy } = await searchParams;
   return (
     <>
       <Header />
@@ -24,9 +24,13 @@ export default async function Teacher({
             教員用ページ
           </span>
           <h1>授業に、小さな市場を。</h1>
-          <p>3つの市場で、価格と取引数量の変化を観察します。</p>
+          <p>同じ需要と供給のもとで、3つの取引制度を比較します。</p>
         </div>
-        <TeacherForm initialCode={code} status={getServerStatus()} />
+        <TeacherForm
+          initialCode={code}
+          status={getServerStatus()}
+          legacy={legacy === "1"}
+        />
       </main>
       <Footer />
     </>

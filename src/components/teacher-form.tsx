@@ -9,9 +9,11 @@ import { Spinner } from "./shell";
 export function TeacherForm({
   initialCode = "",
   status,
+  legacy = false,
 }: {
   initialCode?: string;
   status: ServerStatus;
+  legacy?: boolean;
 }) {
   const [tab, setTab] = useState(initialCode ? "reenter" : "create");
   const [pending, setPending] = useState(false);
@@ -25,12 +27,21 @@ export function TeacherForm({
       const result =
         tab === "create"
           ? await api<{ code: string }>("/api/rooms", {
-              config: {
-                title: form.get("title"),
-                capacity: Number(form.get("capacity")),
-                rounds: Number(form.get("rounds")),
-                duration: Number(form.get("duration")),
-              },
+              config: legacy
+                ? {
+                    title: form.get("title"),
+                    capacity: Number(form.get("capacity")),
+                    rounds: Number(form.get("rounds")),
+                    duration: Number(form.get("duration")),
+                  }
+                : {
+                    protocol: "institutions-v1",
+                    title: form.get("title"),
+                    markets: Number(form.get("markets")),
+                    capacity: Number(form.get("markets")) * 16,
+                    rounds: 15,
+                    duration: 180,
+                  },
               password: form.get("password"),
               accessKey: form.get("accessKey") || "",
             })
@@ -76,42 +87,74 @@ export function TeacherForm({
               実験名
               <input
                 name="title"
-                defaultValue="ダブルオークション実験"
+                defaultValue={
+                  legacy ? "ダブルオークション実験" : "実験1：市場制度の比較"
+                }
                 maxLength={60}
                 required
               />
             </label>
-            <div className="form-grid">
-              <label className="field">
-                参加人数
-                <select name="capacity" defaultValue="12">
-                  <option value="12">12人（買6・売6）</option>
-                  <option value="24">24人（買12・売12）</option>
-                  <option value="36">36人（買18・売18）</option>
-                </select>
-              </label>
-              <label className="field">
-                ラウンド数
-                <input
-                  type="number"
-                  name="rounds"
-                  defaultValue={6}
-                  min={1}
-                  max={12}
-                  required
-                />
-              </label>
-            </div>
-            <label className="field">
-              1ラウンドの取引時間
-              <select name="duration" defaultValue="180">
-                <option value="60">1分</option>
-                <option value="120">2分</option>
-                <option value="180">3分</option>
-                <option value="300">5分</option>
-                <option value="600">10分</option>
-              </select>
-            </label>
+            {legacy ? (
+              <>
+                <div className="form-grid">
+                  <label className="field">
+                    参加人数
+                    <select name="capacity" defaultValue="12">
+                      <option value="12">12人（買6・売6）</option>
+                      <option value="24">24人（買12・売12）</option>
+                      <option value="36">36人（買18・売18）</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    ラウンド数
+                    <input
+                      type="number"
+                      name="rounds"
+                      defaultValue={6}
+                      min={1}
+                      max={12}
+                      required
+                    />
+                  </label>
+                </div>
+                <label className="field">
+                  1ラウンドの取引時間
+                  <select name="duration" defaultValue="180">
+                    <option value="60">1分</option>
+                    <option value="120">2分</option>
+                    <option value="180">3分</option>
+                    <option value="300">5分</option>
+                    <option value="600">10分</option>
+                  </select>
+                </label>
+              </>
+            ) : (
+              <>
+                <label className="field">
+                  市場数・参加人数
+                  <select name="markets" defaultValue="1">
+                    <option value="1">1市場・16人（授業・動作確認）</option>
+                    <option value="6">
+                      6市場・96人（6通りの順序を1市場ずつ）
+                    </option>
+                    <option value="12">
+                      12市場・192人（6通りの順序を2市場ずつ）
+                    </option>
+                  </select>
+                </label>
+                <div className="callout">
+                  <Info size={18} />
+                  <p>
+                    各市場は買い手8人・売り手8人。1商品を各自2単位、3制度を各5期、計15期実施します。市場・役割は自動割当です。1市場の場合はCDA
+                    → Call → Posted Offerの順です。
+                  </p>
+                </div>
+                <p className="field-help">
+                  CDA：180秒／Call：30秒×4回／Posted
+                  Offer：価格提示60秒＋買い手1人10秒。価格・費用の条件は全市場で共通です。
+                </p>
+              </>
+            )}
           </>
         ) : (
           <label className="field">
@@ -190,7 +233,10 @@ export function TeacherForm({
           <div className="callout">
             <Info size={17} />
             <p>
-              ルーム作成後、教員用画面で各商品の価値と費用を変更できます。参加人数がそろうと開始でき、実験開始後は条件が固定されます。
+              {legacy
+                ? "ルーム作成後、教員用画面で各商品の価値と費用を変更できます。"
+                : "ルーム作成後、教員用画面で8人×2単位の価値・費用を確認・変更できます。"}
+              参加人数がそろうと開始でき、実験開始後は条件が固定されます。
             </p>
           </div>
         )}

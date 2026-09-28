@@ -110,6 +110,7 @@ export function useRoom(code: string) {
     const request: CommandRequest = {
       requestId: crypto.randomUUID(),
       expectedRound: view.round,
+      expectedStage: view.study?.market.stageKey,
       command,
     };
     try {

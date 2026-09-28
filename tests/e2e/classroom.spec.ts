@@ -52,7 +52,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
   const errors: string[] = [];
   teacherPage.on("pageerror", (e) => errors.push(e.message));
   await teacherPage.setViewportSize({ width: 1440, height: 1080 });
-  await teacherPage.goto("/teacher");
+  await teacherPage.goto("/teacher?legacy=1");
   await teacherPage
     .getByLabel("実験名", { exact: true })
     .fill("市場と価格の実験");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuctionError } from "./model";
 import { marketSettingsSchema } from "./market-settings";
+import { studySettingsSchema } from "./study";
 
 export const NO_STORE = {
   "Cache-Control": "private, no-store, max-age=0",
@@ -94,7 +95,7 @@ export function failure(error: unknown) {
   );
 }
 
-export const configSchema = z
+const legacyConfigSchema = z
   .object({
     title: z.string().trim().min(1).max(60),
     capacity: z.union([z.literal(12), z.literal(24), z.literal(36)]),
@@ -102,12 +103,62 @@ export const configSchema = z
     duration: z.number().int().min(30).max(900),
   })
   .strict();
+export const configSchema = z.union([
+  legacyConfigSchema,
+  z
+    .object({
+      protocol: z.literal("institutions-v1"),
+      title: z.string().trim().min(1).max(60),
+      markets: z.union([z.literal(1), z.literal(6), z.literal(12)]),
+      capacity: z.number().int().min(16).max(192),
+      rounds: z.literal(15),
+      duration: z.literal(180),
+    })
+    .strict(),
+]);
 const good = z.enum(["apple", "banana", "orange"]);
 export const commandSchema = z
   .object({
     requestId: z.uuid(),
-    expectedRound: z.number().int().min(0).max(12),
+    expectedRound: z.number().int().min(0).max(15),
+    expectedStage: z.string().max(50).optional(),
     command: z.discriminatedUnion("type", [
+      z
+        .object({
+          type: z.literal("study-settings"),
+          settings: studySettingsSchema,
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal("study-quote"),
+          price: z.number().int().min(1).max(999),
+        })
+        .strict(),
+      z.object({ type: z.literal("study-cancel") }).strict(),
+      z.object({ type: z.literal("study-accept"), orderId: z.uuid() }).strict(),
+      z
+        .object({
+          type: z.literal("call-submit"),
+          prices: z.array(z.number().int().min(1).max(999)).min(1).max(2),
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal("posted-offer"),
+          price: z.number().int().min(1).max(999),
+          quantity: z.number().int().min(0).max(2),
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal("posted-buy"),
+          offerId: z.uuid(),
+          quantity: z.number().int().min(1).max(2),
+        })
+        .strict(),
+      z.object({ type: z.literal("posted-pass") }).strict(),
       z
         .object({
           type: z.literal("update-markets"),

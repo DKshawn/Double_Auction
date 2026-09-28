@@ -1,4 +1,5 @@
 import type { GoodId } from "./catalog";
+import type { StudyCommand, StudyView } from "./study-types";
 
 export type Role = "buyer" | "seller";
 export type Phase = "waiting" | "running" | "paused" | "review" | "finished";
@@ -7,6 +8,8 @@ export type MarketSettings = Record<
   { values: number[]; costs: number[] }
 >;
 export type RoomConfig = {
+  protocol?: "institutions-v1";
+  markets?: number;
   title: string;
   capacity: number;
   rounds: number;
@@ -50,6 +53,7 @@ export type RoundMetric = {
   efficiency: number | null;
 };
 export type RoomView = {
+  study?: StudyView;
   code: string;
   config: RoomConfig;
   phase: Phase;
@@ -89,7 +93,7 @@ export type RoomView = {
   };
 };
 
-export type Command =
+export type LegacyCommand =
   | {
       type: "update-markets";
       settings: MarketSettings;
@@ -99,8 +103,10 @@ export type Command =
   | { type: "cancel"; good: GoodId }
   | { type: "accept"; quoteId: string }
   | { type: "start" | "pause" | "resume" | "end-round" | "finish" };
+export type Command = LegacyCommand | StudyCommand;
 export type CommandRequest = {
   requestId: string;
   expectedRound: number;
+  expectedStage?: string;
   command: Command;
 };

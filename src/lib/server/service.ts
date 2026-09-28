@@ -12,6 +12,7 @@ import { database, databaseTime, type Database, type Sql } from "./database";
 import { execute, settleDeadline, toView } from "./engine";
 import { defaultMarketSettings, limitsForSeat } from "./experiment";
 import { AuctionError, emit, type AuditEvent, type Room } from "./model";
+import { newStudy, unitLimits } from "./study";
 
 type Outcome<T> =
   { value: T; error?: never } | { error: AuctionError; value?: never };
@@ -28,6 +29,16 @@ export class AuctionService {
   constructor(private db: Database) {}
 
   async create(config: RoomConfig, password: string, accessKey: string) {
+    if (config.protocol === "institutions-v1") {
+      if (![1, 6, 12].includes(config.markets ?? 0))
+        throw new AuctionError("市場数は1、6、12から選んでください。");
+      config = {
+        ...config,
+        capacity: config.markets! * 16,
+        rounds: 15,
+        duration: 180,
+      };
+    }
     if (process.env.VERCEL && !process.env.TEACHER_ACCESS_KEY)
       throw new AuctionError("管理者による教員用キーの設定が必要です。", 503);
     if (
@@ -51,6 +62,9 @@ export class AuctionService {
       const saved = await this.db.transaction(async (tx) => {
         const now = await databaseTime(tx);
         const room: Room = {
+          ...(config.protocol === "institutions-v1"
+            ? { study: newStudy(config.markets!) }
+            : {}),
           code,
           config,
           marketSettings: defaultMarketSettings(),
@@ -76,6 +90,16 @@ export class AuctionService {
         emit(room, events, now, "room-created", "teacher", {
           config,
           marketSettings: room.marketSettings,
+          ...(room.study
+            ? {
+                protocol: room.study.protocol,
+                settings: room.study.settings,
+                orders: room.study.markets.map((m) => ({
+                  market: m.id,
+                  order: m.order,
+                })),
+              }
+            : {}),
         });
         const inserted = await tx.query(
           "INSERT INTO auction_rooms (code, state) VALUES ($1, $2::jsonb) ON CONFLICT DO NOTHING RETURNING code",
@@ -180,9 +204,19 @@ export class AuctionService {
         if (room.participants.length >= room.config.capacity)
           throw new AuctionError("このルームは満員です。", 409);
         const seat = room.seats[room.participants.length];
-        const role = seat < room.config.capacity / 2 ? "buyer" : "seller";
+        const role = room.study
+          ? seat % 16 < 8
+            ? "buyer"
+            : "seller"
+          : seat < room.config.capacity / 2
+            ? "buyer"
+            : "seller";
         const number =
-          (role === "buyer" ? seat : seat - room.config.capacity / 2) + 1;
+          (room.study
+            ? seat % 8
+            : role === "buyer"
+              ? seat
+              : seat - room.config.capacity / 2) + 1;
         participant = {
           id: randomUUID(),
           alias: `${role === "buyer" ? "買" : "売"}${String(number).padStart(2, "0")}`,
@@ -200,11 +234,23 @@ export class AuctionService {
           lockedUntil: 0,
         };
         room.participants.push(participant);
+        if (room.study)
+          participant.limits = {
+            apple: unitLimits(room, participant)[0],
+            banana: 0,
+            orange: 0,
+          };
         emit(room, events, now, "joined", participant.id, {
           alias: participant.alias,
           role,
           seat,
           limits: participant.limits,
+          ...(room.study
+            ? {
+                market: Math.floor(seat / 16) + 1,
+                unitLimits: unitLimits(room, participant),
+              }
+            : {}),
         });
       }
       return { code, token };
@@ -294,6 +340,17 @@ export class AuctionService {
       const room = row.rows[0].state;
       if (authenticate(room, token) !== "teacher")
         throw new AuctionError("データ出力は教員のみ利用できます。", 403);
+      const now = await databaseTime(tx);
+      const pendingEvents: AuditEvent[] = [];
+      settleDeadline(room, now, pendingEvents);
+      if (pendingEvents.length) {
+        room.version++;
+        await tx.query(
+          "UPDATE auction_rooms SET state = $2::jsonb, updated_at = clock_timestamp() WHERE code = $1",
+          [code, JSON.stringify(room)],
+        );
+        await writeEvents(tx, code, pendingEvents);
+      }
       const events = await tx.query<{ event: AuditEvent }>(
         "SELECT event FROM auction_events WHERE room_code = $1 ORDER BY sequence",
         [code],
@@ -301,7 +358,7 @@ export class AuctionService {
       return {
         room,
         events: events.rows.map((r) => r.event),
-        now: await databaseTime(tx),
+        now,
       };
     });
   }

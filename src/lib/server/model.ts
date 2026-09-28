@@ -1,4 +1,5 @@
 import type { GoodId } from "../catalog";
+import type { Study } from "./study";
 import type {
   MarketSettings,
   Phase,
@@ -29,6 +30,7 @@ export type AuditEvent = {
   detail: Record<string, unknown>;
 };
 export type Room = {
+  study?: Study;
   code: string;
   config: RoomConfig;
   // Optional only for rooms saved before editable market settings were added.

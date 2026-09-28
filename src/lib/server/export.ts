@@ -1,6 +1,7 @@
 import { GOODS } from "../catalog";
 import { toView } from "./engine";
 import type { AuditEvent, Room } from "./model";
+import { studyExport } from "./study-export";
 
 export function csv(rows: unknown[][]) {
   return (
@@ -11,7 +12,8 @@ export function csv(rows: unknown[][]) {
           .map((value) => {
             let text = String(value ?? "");
             // Protect spreadsheet users from formulas in participant-controlled names.
-            if (/^[\s]*[=+\-@\t\r]/.test(text)) text = "'" + text;
+            if (typeof value === "string" && /^[\s]*[=+\-@\t\r]/.test(text))
+              text = "'" + text;
             return `"${text.replaceAll('"', '""')}"`;
           })
           .join(","),
@@ -26,6 +28,7 @@ export function exportData(
   now: number,
   kind: string,
 ) {
+  if (room.study) return studyExport(room, events, now, kind, csv);
   const teacher = toView(room, "teacher", now, "online").teacher!;
   if (kind === "settings")
     return {

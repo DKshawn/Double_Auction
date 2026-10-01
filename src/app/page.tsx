@@ -73,6 +73,13 @@ export default async function Home({
                 <ArrowRight size={15} />
               </Link>
             </div>
+            <div className="demo-entry-link">
+              <span>ひとりで操作を確認したい方へ</span>
+              <Link href="/demo">
+                ひとりデモを試す <ArrowRight size={15} />
+              </Link>
+              <small>ログイン不要・仮想参加者15人と取引</small>
+            </div>
           </div>
         </section>
         <section className="home-steps" aria-label="実験の流れ">

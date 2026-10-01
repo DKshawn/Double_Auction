@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Clock3,
   LockKeyhole,
@@ -30,6 +30,8 @@ type Props = {
   error: string;
   notice: string;
   retry: () => void;
+  demo?: boolean;
+  toolbar?: ReactNode;
 };
 type MarketProps = {
   view: RoomView;
@@ -56,6 +58,8 @@ export function StudyRoom({
   error,
   notice,
   retry,
+  demo = false,
+  toolbar,
 }: Props) {
   const study = view.study!,
     teacher = study.teacher;
@@ -81,18 +85,25 @@ export function StudyRoom({
   return (
     <>
       <Header>
-        <span className={`connection ${connected ? "" : "disconnected"}`}>
-          {connected ? <Wifi size={14} /> : <WifiOff size={14} />}{" "}
-          {connected ? "接続中" : "再接続中"}
-        </span>
-        <span className="header-room-code">
-          ルーム <b>{view.code}</b>
-        </span>
+        {demo ? (
+          <span className="demo-header-tag">ひとりデモ</span>
+        ) : (
+          <>
+            <span className={`connection ${connected ? "" : "disconnected"}`}>
+              {connected ? <Wifi size={14} /> : <WifiOff size={14} />}{" "}
+              {connected ? "接続中" : "再接続中"}
+            </span>
+            <span className="header-room-code">
+              ルーム <b>{view.code}</b>
+            </span>
+          </>
+        )}
         <span className={`role-tag ${teacher ? "teacher" : view.me.role}`}>
           {teacher ? "教員" : view.me.role === "buyer" ? "買い手" : "売り手"}
         </span>
       </Header>
       <main className="room-main study-main">
+        {toolbar}
         <div className="room-heading">
           <div>
             <div className="eyebrow">
@@ -125,7 +136,7 @@ export function StudyRoom({
             </div>
           </div>
         </div>
-        {view.mode === "local" && (
+        {view.mode === "local" && !demo && (
           <p className="local-banner">ローカル環境での実験</p>
         )}
         {!connected && (
@@ -145,7 +156,7 @@ export function StudyRoom({
             <p className="success-message">{notice}</p>
           ) : null}
         </div>
-        {teacher && (
+        {teacher && !demo && (
           <TeacherControls view={view} command={command} disabled={disabled} />
         )}
         {teacher && (
@@ -222,7 +233,9 @@ export function StudyRoom({
             <div>
               <b>
                 {view.phase === "waiting"
-                  ? "教員が実験を開始するまでお待ちください"
+                  ? demo
+                    ? "上の「デモを開始」から始めましょう"
+                    : "教員が実験を開始するまでお待ちください"
                   : view.phase === "paused"
                     ? "取引は一時停止中です"
                     : view.phase === "finished"
@@ -235,8 +248,10 @@ export function StudyRoom({
                   : view.phase === "finished"
                     ? `累積利益は ${money(view.me.profit)} です。`
                     : view.phase === "paused"
-                      ? "教員が再開するまでお待ちください。残り時間は止まっています。"
-                      : `今期の利益：${money(view.me.roundProfit)}。次の期は教員が開始します。`}
+                      ? demo
+                        ? "上の「再開」で取引に戻れます。残り時間は止まっています。"
+                        : "教員が再開するまでお待ちください。残り時間は止まっています。"
+                      : `今期の利益：${money(view.me.roundProfit)}。${demo ? "上のボタンから次の期を開始できます。" : "次の期は教員が開始します。"}`}
               </p>
             </div>
           </div>
@@ -437,11 +452,13 @@ export function StudyRoom({
         {teacher && (
           <>
             <TeacherMetrics view={view} market={market} />
-            <StudySettingsEditor
-              view={view}
-              command={command}
-              disabled={disabled}
-            />
+            {!demo && (
+              <StudySettingsEditor
+                view={view}
+                command={command}
+                disabled={disabled}
+              />
+            )}
             <section className="panel study-section">
               <h2>参加者と条件</h2>
               <div className="study-table-wrap">
@@ -473,33 +490,37 @@ export function StudyRoom({
                 </table>
               </div>
             </section>
-            <section className="panel study-section">
-              <h2>実験データを保存</h2>
-              <p className="muted">
-                すべての市場・15期の記録を、制度・市場番号・単位番号とともに保存します。
-              </p>
-              <div className="study-actions">
-                {[
-                  ["trades", "取引履歴 CSV"],
-                  ["metrics", "市場・期別集計 CSV"],
-                  ["events", "操作ログ CSV"],
-                  ["settings", "実験条件 JSON"],
-                ].map(([kind, name]) => (
-                  <a
-                    className="button secondary"
-                    href={`/api/rooms/${view.code}/export?kind=${kind}`}
-                    key={kind}
-                  >
-                    <Download size={15} />
-                    {name}
-                  </a>
-                ))}
-              </div>
-            </section>
+            {!demo && (
+              <section className="panel study-section">
+                <h2>実験データを保存</h2>
+                <p className="muted">
+                  すべての市場・15期の記録を、制度・市場番号・単位番号とともに保存します。
+                </p>
+                <div className="study-actions">
+                  {[
+                    ["trades", "取引履歴 CSV"],
+                    ["metrics", "市場・期別集計 CSV"],
+                    ["events", "操作ログ CSV"],
+                    ["settings", "実験条件 JSON"],
+                  ].map(([kind, name]) => (
+                    <a
+                      className="button secondary"
+                      href={`/api/rooms/${view.code}/export?kind=${kind}`}
+                      key={kind}
+                    >
+                      <Download size={15} />
+                      {name}
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
           </>
         )}
         <p className="room-bottom-note">
-          表示は約1秒ごとに更新されます。
+          {demo
+            ? "デモはこのブラウザー内だけで動作します。"
+            : "表示は約1秒ごとに更新されます。"}
           <Link href="/guide" target="_blank">
             実験のルール
           </Link>

@@ -31,6 +31,11 @@ export default async function Teacher({
           status={getServerStatus()}
           legacy={legacy === "1"}
         />
+        <div className="demo-entry-link">
+          <span>授業の前に、ひとりで操作を確認</span>
+          <Link href="/demo">ひとりデモを試す</Link>
+          <small>ルームの作成や参加者の入室は不要です。</small>
+        </div>
       </main>
       <Footer />
     </>

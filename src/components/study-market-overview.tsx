@@ -149,7 +149,7 @@ export function StudyMarketOverview({
       </div>
       {demo && (
         <p className="study-overview-note">
-          デモは1市場です。正式実験では全市場の結果がここに並びます。
+          市場1はあなた＋仮想参加者15人。他市場は全員が仮想参加者です。
         </p>
       )}
     </section>

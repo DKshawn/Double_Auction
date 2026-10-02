@@ -78,7 +78,7 @@ export default async function Home({
               <Link href="/demo">
                 ひとりデモを試す <ArrowRight size={15} />
               </Link>
-              <small>ログイン不要・仮想参加者15人と取引</small>
+              <small>ログイン不要・12市場192人の実験を体験</small>
             </div>
           </div>
         </section>

@@ -3,21 +3,37 @@ import assert from "node:assert/strict";
 import { DemoSession, DEMO_SETTINGS } from "../src/lib/demo";
 import { newStudy } from "../src/lib/server/study";
 
-test("solo demo supplies 15 virtual participants, keeps formal conditions separate and preserves state when switching views", async () => {
+test("demo supplies 12 balanced markets and 191 virtual participants, keeps formal conditions separate and preserves the human when switching views", async () => {
   const demo = new DemoSession("cda", "buyer", 1000);
   assert.notDeepEqual(DEMO_SETTINGS, newStudy(1).settings);
   const human = demo.getSnapshot().view.me.id;
-  assert.equal(demo.getSnapshot().view.participantCount, 16);
+  assert.equal(demo.getSnapshot().view.participantCount, 192);
   assert.equal(demo.getSnapshot().view.study!.teacher, undefined);
   demo.toggleTeacher();
-  const people = demo.getSnapshot().view.study!.teacher!.participants;
-  assert.equal(people.filter((p) => p.role === "buyer").length, 8);
-  assert.equal(people.filter((p) => p.role === "seller").length, 8);
+  const teacher = demo.getSnapshot().view.study!.teacher!;
+  const people = teacher.participants;
+  assert.equal(teacher.markets.length, 12);
+  assert.equal(people.filter((p) => p.role === "buyer").length, 96);
+  assert.equal(people.filter((p) => p.role === "seller").length, 96);
   assert.equal(
     people.filter((p) => p.nickname.startsWith("仮想参加者")).length,
-    15,
+    191,
   );
   assert.equal(people.find((p) => p.id === human)!.nickname, "あなた");
+  assert.equal(people.find((p) => p.id === human)!.market, 1);
+  const orders = new Map<string, number>();
+  for (const market of teacher.markets) {
+    const participants = people.filter((p) => p.market === market.id);
+    assert.equal(participants.filter((p) => p.role === "buyer").length, 8);
+    assert.equal(participants.filter((p) => p.role === "seller").length, 8);
+    assert.equal(
+      participants.filter((p) => p.nickname.startsWith("仮想参加者")).length,
+      market.id === 1 ? 15 : 16,
+    );
+    orders.set(market.order.join(), (orders.get(market.order.join()) ?? 0) + 1);
+  }
+  assert.equal(orders.size, 6);
+  assert.ok([...orders.values()].every((count) => count === 2));
   await demo.command({ type: "start" }, true);
   demo.toggleTeacher();
   assert.equal(demo.getSnapshot().view.me.id, human);
@@ -90,10 +106,60 @@ test("Call demo keeps orders sealed, clears uniformly, retains unit limits acros
     false,
   );
   for (let i = 0; i < 3; i++) demo.skipStage();
+  assert.equal(demo.getSnapshot().view.study!.market.stage, "done");
+  assert.equal(demo.getSnapshot().view.phase, "running");
+  demo.finishPeriod();
   assert.equal(demo.getSnapshot().view.phase, "review");
   await demo.command({ type: "start" }, true);
   assert.equal(demo.getSnapshot().view.study!.unitsUsed, 0);
   assert.equal(demo.getSnapshot().view.study!.market.call, 1);
+});
+
+test("all 12 demo markets finish 15 periods with isolated trades and all Call clearings, without submitting orders for the human", async () => {
+  const demo = new DemoSession("cda", "buyer", 1000);
+  const human = demo.getSnapshot().view.me.id;
+  demo.toggleTeacher();
+  for (let round = 1; round <= 15; round++) {
+    assert.equal(await demo.command({ type: "start" }), true);
+    demo.finishPeriod();
+    const view = demo.getSnapshot().view;
+    assert.equal(view.phase, round === 15 ? "finished" : "review");
+    assert.equal(view.round, round);
+    const teacher = view.study!.teacher!;
+    assert.equal(teacher.metrics.length, 12 * round);
+    const people = new Map(teacher.participants.map((p) => [p.id, p]));
+    for (const market of teacher.markets) {
+      assert.equal(market.stage, "done");
+      const metric = teacher.metrics.find(
+        (row) => row.market === market.id && row.round === round,
+      )!;
+      assert.equal(metric.completion, "complete");
+      assert.ok(metric.quantity > 0);
+      const trades = market.trades.filter((trade) => trade.round === round);
+      assert.equal(metric.quantity, trades.length);
+      for (const trade of trades) {
+        assert.equal(people.get(trade.buyerId)!.market, market.id);
+        assert.equal(people.get(trade.sellerId)!.market, market.id);
+        assert.notEqual(trade.buyerId, human);
+        assert.notEqual(trade.sellerId, human);
+      }
+      if (market.institution === "call") {
+        const clearings = market.clearings.filter((row) => row.round === round);
+        assert.deepEqual(
+          clearings.map((row) => row.call),
+          [1, 2, 3, 4],
+        );
+        assert.equal(
+          metric.quantity,
+          clearings.reduce((sum, row) => sum + row.quantity, 0),
+        );
+      }
+    }
+  }
+  demo.toggleTeacher();
+  assert.equal(demo.getSnapshot().view.me.id, human);
+  assert.equal(demo.getSnapshot().view.study!.unitsUsed, 0);
+  assert.deepEqual(demo.getSnapshot().view.study!.myTrades, []);
 });
 
 test("Posted demo skips preceding bot buyers, preserves human stock and uses actual published offers", async () => {

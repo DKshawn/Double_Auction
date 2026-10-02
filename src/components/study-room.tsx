@@ -271,7 +271,7 @@ export function StudyRoom({
                   />
                 )}
                 <section className="panel study-section">
-                  <h2>参加者と条件</h2>
+                  <h2>市場{market.id}の参加者と条件（買い手・売り手）</h2>
                   <div className="study-table-wrap">
                     <table>
                       <thead>

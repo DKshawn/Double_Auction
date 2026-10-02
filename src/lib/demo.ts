@@ -5,6 +5,7 @@ import { randomUUID } from "./random";
 import {
   createStudy,
   executeStudy,
+  marketFor,
   settleStudy,
   stageKey,
   unitLimits,
@@ -12,6 +13,8 @@ import {
 } from "./study-core";
 import { studyView } from "./study-view";
 
+export const DEMO_MARKETS = 12;
+export const DEMO_CAPACITY = DEMO_MARKETS * 16;
 // Public practice conditions, deliberately separate from the classroom schedules.
 export const DEMO_SETTINGS: StudySettings = {
   values: Array.from({ length: 8 }, (_, i) => [160 - i * 8, 140 - i * 8]),
@@ -37,8 +40,7 @@ export class DemoSession {
   private teacher = false;
   private error = "";
   private generation = 0;
-  private nextBotAt = 0;
-  private botIndex = 0;
+  private botClocks = new Map<number, { nextAt: number; index: number }>();
   private listeners = new Set<() => void>();
   private snapshot!: DemoSnapshot;
 
@@ -93,22 +95,32 @@ export class DemoSession {
     this.institution = institution;
     this.role = role;
     this.error = "";
-    this.botIndex = 0;
-    this.nextBotAt = this.now;
+    this.botClocks.clear();
     this.generation++;
-    const study = createStudy(1, DEMO_SETTINGS);
-    study.markets[0].order = [
+    const study = createStudy(DEMO_MARKETS, DEMO_SETTINGS);
+    const firstOrder = [
       institution,
       ...(["cda", "call", "posted"] as const).filter((i) => i !== institution),
     ];
+    // Let the human choose market 1's first institution without changing the
+    // balanced assignment: each of the six sequences still has two markets.
+    const preferred = study.markets.find(
+      (market) => market.order.join() === firstOrder.join(),
+    )!;
+    [study.markets[0].order, preferred.order] = [
+      preferred.order,
+      study.markets[0].order,
+    ];
+    for (const market of study.markets)
+      this.botClocks.set(market.id, { nextAt: this.now, index: 0 });
     this.room = {
       code: "DEMO",
       study,
       config: {
         title: "ひとりデモ",
         protocol: "institutions-v1",
-        markets: 1,
-        capacity: 16,
+        markets: DEMO_MARKETS,
+        capacity: DEMO_CAPACITY,
         rounds: 15,
         duration: 180,
       },
@@ -129,8 +141,9 @@ export class DemoSession {
       sequence: 0,
       receipts: [],
     };
-    for (let seat = 0; seat < 16; seat++) {
-      const side = seat < 8 ? "buyer" : "seller";
+    for (let seat = 0; seat < DEMO_CAPACITY; seat++) {
+      const side = seat % 16 < 8 ? "buyer" : "seller";
+      const market = Math.floor(seat / 16) + 1;
       const alias = `${side === "buyer" ? "買" : "売"}${String((seat % 8) + 1).padStart(2, "0")}`;
       const human = seat === (role === "buyer" ? 0 : 8);
       const id = randomUUID();
@@ -140,7 +153,7 @@ export class DemoSession {
         seat,
         role: side,
         alias,
-        nickname: human ? "あなた" : `仮想参加者 ${alias}`,
+        nickname: human ? "あなた" : `仮想参加者 市場${market}・${alias}`,
         limits: { apple: 0, banana: 0, orange: 0 },
         tokenHash: "",
         pinHash: "",
@@ -160,24 +173,43 @@ export class DemoSession {
   private send(actor: Participant | "teacher", command: Command) {
     // Match the server's transactional behavior: rejected commands cannot partially mutate the room.
     const candidate = structuredClone(this.room);
+    this.applyCommand(candidate, actor, command);
+    this.room = candidate;
+  }
+
+  private applyCommand(
+    room: Room,
+    actor: Participant | "teacher",
+    command: Command,
+  ) {
     const person =
       actor === "teacher"
         ? actor
-        : candidate.participants.find((p) => p.id === actor.id)!;
+        : room.participants.find((p) => p.id === actor.id)!;
     executeStudy(
-      candidate,
+      room,
       person,
       {
         requestId: randomUUID(),
-        expectedRound: candidate.round,
-        expectedStage: stageKey(candidate, candidate.study!.markets[0]),
+        expectedRound: room.round,
+        expectedStage: stageKey(
+          room,
+          person === "teacher"
+            ? room.study!.markets[0]
+            : marketFor(room, person),
+        ),
         command,
       },
       this.now,
       [],
     );
-    candidate.version++;
-    this.room = candidate;
+    room.version++;
+  }
+
+  private sendBot(bot: Participant, command: Command) {
+    // Bots build valid commands from the current state, synchronously. They use
+    // the same validating engine without copying all 192 participants per order.
+    this.applyCommand(this.room, bot, command);
   }
 
   command = async (command: Command, asTeacher = this.teacher) => {
@@ -185,8 +217,10 @@ export class DemoSession {
     try {
       this.send(asTeacher ? "teacher" : this.human, command);
       if (command.type === "start") {
-        this.botIndex = 0;
-        this.nextBotAt = this.now;
+        for (const clock of this.botClocks.values()) {
+          clock.index = 0;
+          clock.nextAt = this.now;
+        }
       }
       this.runBots();
       this.publish();
@@ -211,11 +245,34 @@ export class DemoSession {
     if (this.room.phase !== "running" || this.market.deadline === null) return;
     this.error = "";
     this.submitSealedBots();
-    this.now = this.market.deadline;
-    settleStudy(this.room, this.now, []);
+    this.advanceTo(this.market.deadline);
     // Leave the next buyer's full ten seconds available after a manual jump.
-    this.nextBotAt = this.now + 2000;
+    this.botClocks.get(this.market.id)!.nextAt = this.now + 2000;
     this.submitSealedBots();
+    this.publish();
+  };
+
+  // Advance every market through its own deadlines so intermediate Call
+  // clearings and Posted Offer purchases still run through the real engine.
+  private advanceTo(target: number) {
+    while (this.now < target && this.room.phase === "running") {
+      this.now = Math.min(target, this.now + 1000);
+      settleStudy(this.room, this.now, []);
+      if (this.now < target) this.runBots();
+    }
+  }
+
+  finishPeriod = () => {
+    if (this.room.phase !== "running") return;
+    this.error = "";
+    while (this.room.phase === "running") {
+      this.runBots();
+      const deadlines = this.room.study!.markets.flatMap((market) =>
+        market.deadline === null ? [] : [market.deadline],
+      );
+      if (!deadlines.length) break;
+      this.advanceTo(Math.min(...deadlines));
+    }
     this.publish();
   };
 
@@ -228,26 +285,28 @@ export class DemoSession {
       if (id === this.humanId) break;
       this.buyAsBot(this.room.participants.find((p) => p.id === id)!);
     }
-    this.nextBotAt = this.now + 2000;
+    this.botClocks.get(this.market.id)!.nextAt = this.now + 2000;
     this.publish();
   };
 
   private submitSealedBots() {
     if (this.room.phase !== "running") return;
     for (const bot of this.bots) {
-      if (this.market.submitted.includes(bot.id)) continue;
+      const market = marketFor(this.room, bot);
+      if (!["call", "offer"].includes(market.stage)) continue;
+      if (market.submitted.includes(bot.id)) continue;
       const used = unitsUsed(this.room, bot);
       if (used >= 2) continue;
       const limits = unitLimits(this.room, bot);
-      if (this.market.stage === "call") {
-        this.send(bot, {
+      if (market.stage === "call") {
+        this.sendBot(bot, {
           type: "call-submit",
           prices: limits
             .slice(used)
             .map((limit) => (bot.role === "buyer" ? limit - 12 : limit + 12)),
         });
-      } else if (this.market.stage === "offer" && bot.role === "seller") {
-        this.send(bot, {
+      } else if (market.stage === "offer" && bot.role === "seller") {
+        this.sendBot(bot, {
           type: "posted-offer",
           price: limits[1] + 12,
           quantity: 2 - used,
@@ -260,11 +319,11 @@ export class DemoSession {
     if (bot.id === this.humanId) return;
     const used = unitsUsed(this.room, bot);
     const limit = unitLimits(this.room, bot)[used];
-    const offer = this.market.offers
-      .filter((o) => o.remaining > 0 && o.price <= limit)
+    const offer = marketFor(this.room, bot)
+      .offers.filter((o) => o.remaining > 0 && o.price <= limit)
       .sort((a, b) => a.price - b.price)[0];
     if (!offer) {
-      this.send(bot, { type: "posted-pass" });
+      this.sendBot(bot, { type: "posted-pass" });
       return;
     }
     const quantity =
@@ -273,33 +332,46 @@ export class DemoSession {
       offer.price <= unitLimits(this.room, bot)[1]
         ? 2
         : 1;
-    this.send(bot, { type: "posted-buy", offerId: offer.id, quantity });
+    this.sendBot(bot, { type: "posted-buy", offerId: offer.id, quantity });
   }
 
   private runBots() {
     if (this.room.phase !== "running") return;
     this.submitSealedBots();
-    if (this.now < this.nextBotAt) return;
-    this.nextBotAt = this.now + 2000;
-    if (this.market.stage === "purchase") {
-      const bot = this.bots.find(
-        (p) => p.id === this.market.buyerOrder[this.market.buyerIndex],
-      );
-      if (bot) this.buyAsBot(bot);
-    } else if (this.market.stage === "cda") {
-      const bots = this.bots.sort(
-        (a, b) => Number(a.role === this.role) - Number(b.role === this.role),
-      );
-      for (let i = 0; i < bots.length; i++) {
-        const bot = bots[this.botIndex++ % bots.length];
-        const used = unitsUsed(this.room, bot);
-        if (used >= 2) continue;
-        const limit = unitLimits(this.room, bot)[used];
-        this.send(bot, {
-          type: "study-quote",
-          price: bot.role === "buyer" ? limit - 12 : limit + 12,
-        });
-        break;
+    for (const id of this.botClocks.keys()) {
+      const clock = this.botClocks.get(id)!;
+      if (this.now < clock.nextAt) continue;
+      clock.nextAt = this.now + 2000;
+      const market = this.room.study!.markets.find((m) => m.id === id)!;
+      const bots = this.bots.filter((p) => marketFor(this.room, p).id === id);
+      if (market.stage === "purchase") {
+        const bot = bots.find(
+          (p) => p.id === market.buyerOrder[market.buyerIndex],
+        );
+        if (bot) this.buyAsBot(bot);
+      } else if (market.stage === "cda") {
+        const lastSide = id === 1 ? this.role : id % 2 ? "buyer" : "seller";
+        bots.sort(
+          (a, b) => Number(a.role === lastSide) - Number(b.role === lastSide),
+        );
+        for (let i = 0; i < bots.length; i++) {
+          const bot = bots[clock.index++ % bots.length];
+          const used = unitsUsed(this.room, bot);
+          if (used >= 2) continue;
+          const limit = unitLimits(this.room, bot)[used];
+          const price = bot.role === "buyer" ? limit - 12 : limit + 12;
+          if (
+            market.orders.some(
+              (o) => o.participantId === bot.id && o.price === price,
+            )
+          )
+            continue;
+          this.sendBot(bot, {
+            type: "study-quote",
+            price,
+          });
+          break;
+        }
       }
     }
   }

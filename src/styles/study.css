@@ -48,6 +48,11 @@
   width: auto;
   background: #fff;
 }
+.demo-panel .demo-options select:disabled {
+  color: var(--muted);
+  background: #f3f4f8;
+  cursor: not-allowed;
+}
 .demo-panel .button {
   padding: 8px 12px;
   font-size: 12px;

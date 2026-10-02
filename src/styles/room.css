@@ -409,9 +409,13 @@
   font-size: 10px;
 }
 .book-rows {
-  min-height: 160px;
-  max-height: 250px;
+  height: 250px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.book-action {
+  height: 60px;
 }
 .book-empty {
   min-height: 160px;
@@ -1660,9 +1664,6 @@ td small {
   }
   .book-empty small {
     font-size: 8px;
-  }
-  .book-rows {
-    min-height: 145px;
   }
   .book-empty {
     min-height: 145px;

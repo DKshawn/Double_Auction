@@ -258,17 +258,13 @@ svg {
   border-top: 1px solid var(--line);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 20px;
   color: var(--muted);
   font-size: 11px;
 }
 .site-footer a {
   color: var(--muted);
-}
-.footer-separator {
-  margin: 0 14px;
-  color: #b2b5c6;
 }
 .home-main {
   max-width: 1160px;
@@ -892,9 +888,6 @@ svg {
   .site-footer {
     margin-left: 16px;
     margin-right: 16px;
-  }
-  .footer-separator {
-    margin: 0 7px;
   }
   .form-grid {
     gap: 12px;

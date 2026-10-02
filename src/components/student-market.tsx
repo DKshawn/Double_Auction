@@ -257,24 +257,26 @@ function Book({
           </div>
         )}
       </div>
-      {view.me.role !== side && quotes[0] && (
-        <button
-          className={`button accept-button ${buyer ? "bid-accept" : "ask-accept"}`}
-          disabled={
-            disabled ||
-            view.me.used.includes(quotes[0].good) ||
-            (view.me.role === "buyer"
-              ? quotes[0].price > view.me.limits![quotes[0].good]
-              : quotes[0].price < view.me.limits![quotes[0].good])
-          }
-          onClick={() =>
-            void command({ type: "accept", quoteId: quotes[0].id })
-          }
-        >
-          {quotes[0].price}円で{buyer ? "売る" : "買う"}
-          <ArrowUpRight size={15} />
-        </button>
-      )}
+      <div className="book-action">
+        {view.me.role !== side && quotes[0] && (
+          <button
+            className={`button accept-button ${buyer ? "bid-accept" : "ask-accept"}`}
+            disabled={
+              disabled ||
+              view.me.used.includes(quotes[0].good) ||
+              (view.me.role === "buyer"
+                ? quotes[0].price > view.me.limits![quotes[0].good]
+                : quotes[0].price < view.me.limits![quotes[0].good])
+            }
+            onClick={() =>
+              void command({ type: "accept", quoteId: quotes[0].id })
+            }
+          >
+            {quotes[0].price}円で{buyer ? "売る" : "買う"}
+            <ArrowUpRight size={15} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

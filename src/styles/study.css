@@ -308,8 +308,31 @@
 .study-book > div {
   min-width: 0;
 }
-.study-book table {
-  margin: 10px 0 16px;
+.study-book-scroll {
+  height: 260px;
+  margin-top: 10px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.study-book-scroll table {
+  margin: 0;
+  table-layout: fixed;
+}
+.study-book-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.study-book-action {
+  height: 100px;
+  padding-top: 16px;
+}
+.study-book-action small {
+  display: block;
+  margin-top: 8px;
 }
 .study-book th,
 .study-book td {

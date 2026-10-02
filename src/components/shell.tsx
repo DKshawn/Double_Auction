@@ -29,10 +29,6 @@ export function Header({ children }: { children?: React.ReactNode }) {
 export function Footer() {
   return (
     <footer className="site-footer">
-      <span>
-        市場実験室<span className="footer-separator">/</span>
-        取引を通して、経済を学ぶ。
-      </span>
       <Link href="/guide">実験のルール</Link>
     </footer>
   );

@@ -643,7 +643,7 @@ function TeacherControls({
 
 function OrderBook({ view, market, command, disabled }: MarketProps) {
   return (
-    <section className="panel study-section">
+    <section className="panel study-section study-order-book">
       <h2>りんごの注文板</h2>
       <p className="muted">
         価格優先・時間優先。先に板にあった注文の価格で約定します。
@@ -662,48 +662,60 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
               <h3 className={side === "buyer" ? "buy-text" : "sell-text"}>
                 {side === "buyer" ? "買い注文" : "売り注文"}
               </h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>価格（円）</th>
-                    <th>数量</th>
-                    <th>参加者</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((o) => (
-                    <tr key={o.id}>
-                      <td>{o.price}</td>
-                      <td>1</td>
-                      <td>{o.alias}</td>
+              <div
+                className="study-book-scroll"
+                role="region"
+                aria-label={side === "buyer" ? "買い注文一覧" : "売り注文一覧"}
+                tabIndex={0}
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th>価格（円）</th>
+                      <th>数量</th>
+                      <th>参加者</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!rows.length ? (
-                <p className="study-empty">まだ注文はありません</p>
-              ) : side !== view.me.role && view.me.role !== "teacher" ? (
-                <>
-                  <button
-                    className="button secondary full"
-                    disabled={disabled || view.study!.unitsUsed >= 2}
-                    onClick={() =>
-                      void command({
-                        type: "study-accept",
-                        orderId: rows[0].id,
-                      })
-                    }
-                  >
-                    {money(rows[0].price)}で
-                    {side === "seller" ? "買う" : "売る"}
-                  </button>
-                  <ExpectedProfit
-                    view={view}
-                    price={rows[0].price}
-                    quantity={1}
-                  />
-                </>
-              ) : null}
+                  </thead>
+                  <tbody>
+                    {rows.map((o) => (
+                      <tr key={o.id}>
+                        <td>{o.price}</td>
+                        <td>1</td>
+                        <td>{o.alias}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!rows.length && (
+                  <p className="study-empty">まだ注文はありません</p>
+                )}
+              </div>
+              <div className="study-book-action">
+                {rows.length > 0 &&
+                  side !== view.me.role &&
+                  view.me.role !== "teacher" && (
+                    <>
+                      <button
+                        className="button secondary full"
+                        disabled={disabled || view.study!.unitsUsed >= 2}
+                        onClick={() =>
+                          void command({
+                            type: "study-accept",
+                            orderId: rows[0].id,
+                          })
+                        }
+                      >
+                        {money(rows[0].price)}で
+                        {side === "seller" ? "買う" : "売る"}
+                      </button>
+                      <ExpectedProfit
+                        view={view}
+                        price={rows[0].price}
+                        quantity={1}
+                      />
+                    </>
+                  )}
+              </div>
             </div>
           );
         })}

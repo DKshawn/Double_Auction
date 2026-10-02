@@ -159,7 +159,7 @@ test("export atomically clears expired Call orders without a polling browser, in
   assert.equal(again.events.length, exported.events.length);
 });
 
-test("zero-unit Call requests pass API validation, persist across reloads and log abstention exactly once", async () => {
+test("Call rejects empty submissions without locking the participant and accepts one or two units", async () => {
   const { teacher, students, send } = await classroom();
   const snapshot = await service.export(teacher.code, teacher.token);
   snapshot.room.study!.markets[0].order = ["call", "cda", "posted"];
@@ -170,11 +170,36 @@ test("zero-unit Call requests pass API validation, persist across reloads and lo
   await send(teacher.token, { type: "start" });
   const student = students.find((p) => p.view.me.role === "buyer")!;
   const view = await service.view(teacher.code, student.token);
-  const request = commandSchema.parse({
+  const emptyRequest = {
     requestId: randomUUID(),
     expectedRound: view.round,
     expectedStage: view.study!.market.stageKey,
-    command: { type: "call-submit", prices: [] },
+    command: { type: "call-submit" as const, prices: [] },
+  };
+  assert.equal(commandSchema.safeParse(emptyRequest).success, false);
+  await assert.rejects(
+    service.command(teacher.code, student.token, emptyRequest),
+    /残りの取引可能数/,
+  );
+  const afterEmpty = await new AuctionService(db).view(
+    teacher.code,
+    student.token,
+  );
+  assert.equal(afterEmpty.study!.market.submitted, false);
+  assert.equal(afterEmpty.study!.unitsUsed, 0);
+  assert.deepEqual(afterEmpty.study!.market.myOrders, []);
+  for (const prices of [[100], [100, 80]])
+    assert.equal(
+      commandSchema.safeParse({
+        ...emptyRequest,
+        command: { type: "call-submit", prices },
+      }).success,
+      true,
+    );
+  const request = commandSchema.parse({
+    ...emptyRequest,
+    requestId: randomUUID(),
+    command: { type: "call-submit", prices: [100, 80] },
   });
   await service.command(teacher.code, student.token, request);
   await service.command(teacher.code, student.token, request);
@@ -183,7 +208,10 @@ test("zero-unit Call requests pass API validation, persist across reloads and lo
     student.token,
   );
   assert.equal(reloaded.study!.market.submitted, true);
-  assert.deepEqual(reloaded.study!.market.myOrders, []);
+  assert.deepEqual(
+    reloaded.study!.market.myOrders.map((o) => o.price),
+    [100, 80],
+  );
   assert.equal(reloaded.study!.unitsUsed, 0);
   await assert.rejects(
     send(student.token, { type: "call-submit", prices: [80] }),
@@ -191,12 +219,12 @@ test("zero-unit Call requests pass API validation, persist across reloads and lo
   );
   const exported = await service.export(teacher.code, teacher.token);
   const passes = exported.events.filter((e) => e.type === "call-pass");
-  assert.equal(passes.length, 1);
-  assert.equal(passes[0].actor, student.view.me.id);
-  assert.equal(passes[0].round, 1);
-  assert.equal(passes[0].detail.call, 1);
-  assert.equal(passes[0].detail.quantity, 0);
-  assert.equal(exported.room.study!.markets[0].orders.length, 0);
+  assert.equal(passes.length, 0);
+  assert.equal(
+    exported.events.filter((e) => e.type === "call-order").length,
+    2,
+  );
+  assert.equal(exported.room.study!.markets[0].orders.length, 2);
 });
 
 test("teacher opens admission before anyone joins; each full market starts once and late arrivals begin in period one", async () => {

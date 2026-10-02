@@ -510,7 +510,7 @@ function MarketActivity(props: MarketProps) {
     <section className="panel study-section">
       <h2>一括約定・第{market.call || 1}回 / 4回</h2>
       <p className="muted">
-        注文は締切まで非公開です。各回の未約定注文は失効し、残り数量を次の受付で再注文できます。
+        注文は締切まで非公開です。締切までに送信しない場合、その回は注文なしとして進みます。未約定注文は各回で失効し、残り数量を次の回で再注文できます。
       </p>
       <p className="field-help">
         送信は各回1回。2単位目の買値は1単位目以下、売値は1単位目以上にしてください。
@@ -885,7 +885,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             ? market.myOrders
                 .map((o) => `${o.unit}単位目：${o.price}円`)
                 .join("、")
-            : "今回は注文しない（0単位）を選択しました。"}
+            : "今回は注文していません。"}
         {market.institution === "call"
           ? "この回の選択は変更できません。"
           : "この提示は変更できません。"}
@@ -935,11 +935,9 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             onChange={(e) => setQuantity(Number(e.target.value))}
             disabled={formDisabled}
           >
-            <option value={0}>
-              {market.institution === "call"
-                ? "0単位（今回は注文しない）"
-                : "0単位（出品しない）"}
-            </option>
+            {market.institution === "posted" && (
+              <option value={0}>0単位（出品しない）</option>
+            )}
             {Array.from({ length: remaining }, (_, i) => (
               <option key={i} value={i + 1}>
                 {i + 1}単位
@@ -991,11 +989,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
         </label>
       )}
       {quantity === 0 ? (
-        <p className="field-help">
-          {market.institution === "call"
-            ? "この選択は今回の清算だけに適用されます。"
-            : "今期は出品しません。"}
-        </p>
+        <p className="field-help">今期は出品しません。</p>
       ) : (
         <>
           <p
@@ -1022,9 +1016,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
         {market.institution === "cda"
           ? "注文を出す"
           : market.institution === "call"
-            ? quantity === 0
-              ? "今回は注文しない"
-              : "今回の注文を確定"
+            ? "今回の注文を確定"
             : "価格と数量を確定"}
       </button>
       {market.institution === "cda" && market.myOrders.length > 0 && (

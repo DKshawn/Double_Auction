@@ -40,7 +40,7 @@ export const STUDY_RULES = {
   inventoryReset: "period-only",
   callUnfilledOrders: "expire-at-each-call",
   callSubmission: "one-final-monotone-schedule-per-participant-per-call",
-  callAbstention: "explicit-zero-units-recorded-as-call-pass",
+  callAbstention: "no-submission-by-deadline",
   callTieBreak: "random-participant-priority-per-call-then-unit",
   cdaPriority: "price-then-time",
   cdaExecutionPrice: "resting-order",

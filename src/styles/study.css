@@ -206,8 +206,8 @@
 }
 .study-trading-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(280px, 0.72fr);
-  grid-template-areas: "market prices personal";
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.72fr) minmax(0, 1fr);
+  grid-template-areas: "market personal prices";
   gap: 16px;
   align-items: stretch;
 }

@@ -380,6 +380,46 @@ export function StudyRoom({
               />
             )}
           </div>
+          {!teacher && (
+            <aside className="panel study-section private-panel">
+              <h2>
+                <LockKeyhole size={16} /> あなたの条件 <small>非公開</small>
+              </h2>
+              <p>
+                {view.me.role === "buyer"
+                  ? "購入する単位ごとの価値"
+                  : "販売する単位ごとの費用"}
+              </p>
+              <div className="study-values">
+                {study.unitLimits!.map((v, i) => (
+                  <div
+                    key={i}
+                    className={i < study.unitsUsed ? "used-unit" : ""}
+                  >
+                    <span>
+                      {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
+                    </span>
+                    <b>{money(v)}</b>
+                  </div>
+                ))}
+              </div>
+              <p className="muted">
+                役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b>{" "}
+                単位です。
+              </p>
+              <StudentOrder
+                key={`${view.round}-${market.stageKey}-${study.unitsUsed}`}
+                view={view}
+                market={market}
+                command={command}
+                disabled={blocked}
+              />
+              <StudyPersonalHistory
+                key={`${view.code}-${view.me.id}-${study.myTrades.at(-1)?.id ?? "empty"}`}
+                trades={study.myTrades}
+              />
+            </aside>
+          )}
           <section className="panel study-section study-price-panel">
             <h2>
               {teacher
@@ -452,46 +492,6 @@ export function StudyRoom({
               </div>
             )}
           </section>
-          {!teacher && (
-            <aside className="panel study-section private-panel">
-              <h2>
-                <LockKeyhole size={16} /> あなたの条件 <small>非公開</small>
-              </h2>
-              <p>
-                {view.me.role === "buyer"
-                  ? "購入する単位ごとの価値"
-                  : "販売する単位ごとの費用"}
-              </p>
-              <div className="study-values">
-                {study.unitLimits!.map((v, i) => (
-                  <div
-                    key={i}
-                    className={i < study.unitsUsed ? "used-unit" : ""}
-                  >
-                    <span>
-                      {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
-                    </span>
-                    <b>{money(v)}</b>
-                  </div>
-                ))}
-              </div>
-              <p className="muted">
-                役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b>{" "}
-                単位です。
-              </p>
-              <StudentOrder
-                key={`${view.round}-${market.stageKey}-${study.unitsUsed}`}
-                view={view}
-                market={market}
-                command={command}
-                disabled={blocked}
-              />
-              <StudyPersonalHistory
-                key={`${view.code}-${view.me.id}-${study.myTrades.at(-1)?.id ?? "empty"}`}
-                trades={study.myTrades}
-              />
-            </aside>
-          )}
         </div>
         {!demo && (
           <p className="room-bottom-note">表示は約1秒ごとに更新されます。</p>

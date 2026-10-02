@@ -806,13 +806,93 @@
 }
 .study-teacher-tools {
   display: flex;
+  flex-wrap: wrap;
   gap: 18px;
   align-items: center;
   margin-bottom: 12px;
 }
 .study-trading-grid.teacher-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   grid-template-areas: "market prices";
+}
+.study-overview-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.study-overview-heading h2 {
+  margin: 0;
+}
+.study-overview-heading h2 small {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.study-overview-heading .field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.study-overview-heading .field select {
+  width: auto;
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+.study-overview-table {
+  margin-top: 10px;
+  overflow-x: auto;
+}
+.study-overview-table th,
+.study-overview-table td {
+  padding: 3px 8px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.study-overview-table thead th {
+  font-size: 10px;
+}
+.study-overview-table th:nth-child(n + 5),
+.study-overview-table td:nth-child(n + 5) {
+  text-align: right;
+}
+.study-overview-table tbody th {
+  background: transparent;
+}
+.study-overview-table .text-button {
+  padding: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.study-overview-table [aria-pressed="true"] {
+  font-weight: 700;
+}
+.study-overview-status {
+  color: var(--muted);
+  font-size: 10px;
+}
+.study-overview-status.complete {
+  color: var(--green);
+}
+.study-overview-status.paused,
+.study-overview-status.running {
+  color: var(--accent);
+}
+.study-overview-status.interrupted {
+  color: var(--red);
+}
+.study-overview-note {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 10px;
 }
 .study-main > .study-teacher-controls {
   display: flex;
@@ -825,6 +905,11 @@
 .study-teacher-controls .study-section-heading {
   gap: 20px;
   margin: 0;
+}
+.study-teacher-controls .study-section-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .study-teacher-controls .study-code {
   font-size: 20px;
@@ -880,6 +965,10 @@
   margin: 0;
 }
 @media (max-width: 1199px) {
+  .study-trading-grid.teacher-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "market" "prices";
+  }
   .study-trading-grid {
     grid-template-columns: minmax(0, 1fr) 320px;
     grid-template-areas: "market personal" "prices prices";

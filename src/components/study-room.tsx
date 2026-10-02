@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Header } from "./shell";
 import { StudyDetailDialog } from "./study-detail-dialog";
+import { StudyMarketOverview } from "./study-market-overview";
 import {
   StudyPersonalHistory,
   StudyTradeFeedback,
@@ -194,6 +195,17 @@ export function StudyRoom({
         )}
         {teacher && (
           <div className="study-teacher-tools">
+            <StudyDetailDialog
+              label={`市場${market.id}の注文・清算`}
+              title={`市場${market.id}・第${view.round || 1}期の注文・清算`}
+            >
+              <MarketActivity
+                view={view}
+                market={market}
+                command={command}
+                disabled
+              />
+            </StudyDetailDialog>
             {teacher && (
               <StudyDetailDialog label="市場と制度の順序">
                 <section className="panel study-section">
@@ -349,66 +361,31 @@ export function StudyRoom({
           className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${market.institution === "posted" && view.me.role === "buyer" ? "purchase-layout" : ""}`}
         >
           <div className="study-market-column">
-            {market.institution === "cda" ? (
-              <OrderBook
-                view={view}
-                market={market}
-                command={command}
-                disabled={blocked || Boolean(teacher)}
-              />
-            ) : market.institution === "posted" ? (
-              <OfferBoard
-                view={view}
-                market={market}
-                command={command}
-                disabled={blocked || Boolean(teacher)}
+            {teacher ? (
+              <StudyMarketOverview
+                key={view.code}
+                teacher={teacher}
+                currentRound={view.round}
+                phase={view.phase}
+                selected={market.id}
+                onSelect={setSelected}
+                demo={demo}
               />
             ) : (
-              <section className="panel study-section">
-                <h2>一括約定・第{market.call || 1}回 / 4回</h2>
-                <p className="muted">
-                  注文は締切まで非公開です。各回の未約定注文は失効し、残り数量を次の受付で再注文できます。
-                </p>
-                <p className="field-help">
-                  送信は各回1回。2単位目の買値は1単位目以下、売値は1単位目以上にしてください。
-                  実際の利益は清算価格で決まります。
-                </p>
-                <div className="study-table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>期</th>
-                        <th>清算回</th>
-                        <th>共通の取引価格</th>
-                        <th>約定数量</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {market.clearings
-                        .filter((c) => c.round === view.round)
-                        .map((c) => (
-                          <tr key={`${c.round}-${c.call}`}>
-                            <td>{c.round}</td>
-                            <td>{c.call}</td>
-                            <td>
-                              {c.price === null ? "成立なし" : money(c.price)}
-                            </td>
-                            <td>{c.quantity}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-                {!market.clearings.some((c) => c.round === view.round) && (
-                  <p className="study-empty">
-                    締切後に清算結果が表示されます。
-                  </p>
-                )}
-              </section>
+              <MarketActivity
+                view={view}
+                market={market}
+                command={command}
+                disabled={blocked}
+              />
             )}
           </div>
           <section className="panel study-section study-price-panel">
-            <h2>全期間の取引価格</h2>
+            <h2>
+              {teacher
+                ? `市場${market.id}の全期間の取引価格`
+                : "全期間の取引価格"}
+            </h2>
             <p className="muted">
               市場{market.id}の履歴を全期間表示します。
               {market.order
@@ -521,6 +498,51 @@ export function StudyRoom({
         )}
       </main>
     </div>
+  );
+}
+
+function MarketActivity(props: MarketProps) {
+  const { view, market } = props;
+  if (market.institution === "cda") return <OrderBook {...props} />;
+  if (market.institution === "posted") return <OfferBoard {...props} />;
+  return (
+    <section className="panel study-section">
+      <h2>一括約定・第{market.call || 1}回 / 4回</h2>
+      <p className="muted">
+        注文は締切まで非公開です。各回の未約定注文は失効し、残り数量を次の受付で再注文できます。
+      </p>
+      <p className="field-help">
+        送信は各回1回。2単位目の買値は1単位目以下、売値は1単位目以上にしてください。
+        実際の利益は清算価格で決まります。
+      </p>
+      <div className="study-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>期</th>
+              <th>清算回</th>
+              <th>共通の取引価格</th>
+              <th>約定数量</th>
+            </tr>
+          </thead>
+          <tbody>
+            {market.clearings
+              .filter((c) => c.round === view.round)
+              .map((c) => (
+                <tr key={`${c.round}-${c.call}`}>
+                  <td>{c.round}</td>
+                  <td>{c.call}</td>
+                  <td>{c.price === null ? "成立なし" : money(c.price)}</td>
+                  <td>{c.quantity}</td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
+      {!market.clearings.some((c) => c.round === view.round) && (
+        <p className="study-empty">締切後に清算結果が表示されます。</p>
+      )}
+    </section>
   );
 }
 

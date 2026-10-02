@@ -14,6 +14,10 @@ import {
 } from "lucide-react";
 import { Header } from "./shell";
 import { StudyDetailDialog } from "./study-detail-dialog";
+import {
+  StudyPersonalHistory,
+  StudyTradeFeedback,
+} from "./study-personal-trades";
 import { PriceChart } from "./price-chart";
 import { ConfirmDialog } from "./confirm-dialog";
 import { StudySettingsEditor } from "./study-settings";
@@ -85,6 +89,13 @@ export function StudyRoom({
     market.stage === "done";
   return (
     <div className={`study-shell ${demo ? "study-demo" : ""}`}>
+      {!teacher && (
+        <StudyTradeFeedback
+          key={`${view.code}-${view.me.id}`}
+          trades={study.myTrades}
+          buyer={view.me.role === "buyer"}
+        />
+      )}
       <Header>
         {demo ? (
           <span className="demo-header-tag">ひとりデモ</span>
@@ -358,6 +369,10 @@ export function StudyRoom({
                 <p className="muted">
                   注文は締切まで非公開です。各回の未約定注文は失効し、残り数量を次の受付で再注文できます。
                 </p>
+                <p className="field-help">
+                  送信は各回1回。2単位目の買値は1単位目以下、売値は1単位目以上にしてください。
+                  実際の利益は清算価格で決まります。
+                </p>
                 <div className="study-table-wrap">
                   <table>
                     <thead>
@@ -457,39 +472,6 @@ export function StudyRoom({
                     </b>
                   </span>
                 </div>
-                <div className="study-personal-history">
-                  <StudyDetailDialog
-                    label={`あなたの取引履歴（${study.myTrades.length}件）`}
-                    title="あなたの取引履歴"
-                  >
-                    {!study.myTrades.length ? (
-                      <p className="muted">まだ取引はありません。</p>
-                    ) : (
-                      <div className="study-table-wrap">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>期</th>
-                              <th>単位</th>
-                              <th>価格</th>
-                              <th>利益</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {study.myTrades.map((t) => (
-                              <tr key={t.id}>
-                                <td>{t.round}</td>
-                                <td>{t.unit}</td>
-                                <td>{decimal(t.price)}</td>
-                                <td>{decimal(t.profit)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </StudyDetailDialog>
-                </div>
               </div>
             )}
           </section>
@@ -527,14 +509,16 @@ export function StudyRoom({
                 command={command}
                 disabled={blocked}
               />
+              <StudyPersonalHistory
+                key={`${view.code}-${view.me.id}-${study.myTrades.at(-1)?.id ?? "empty"}`}
+                trades={study.myTrades}
+              />
             </aside>
           )}
         </div>
-        <p className="room-bottom-note">
-          {demo
-            ? "デモはこのブラウザー内だけで動作します。"
-            : "表示は約1秒ごとに更新されます。"}
-        </p>
+        {!demo && (
+          <p className="room-bottom-note">表示は約1秒ごとに更新されます。</p>
+        )}
       </main>
     </div>
   );
@@ -933,7 +917,9 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
         >
           {market.institution === "posted"
             ? "1単位あたりの販売価格"
-            : `${study.unitsUsed + 1}単位目の${buyer ? "買いたい" : "売りたい"}価格`}
+            : market.institution === "call"
+              ? `${study.unitsUsed + 1}単位目の${buyer ? "買値" : "売値"}`
+              : `${study.unitsUsed + 1}単位目の${buyer ? "買いたい" : "売りたい"}価格`}
           <div className="study-price-input">
             <input
               type="number"
@@ -951,7 +937,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
       )}
       {market.institution === "call" && quantity === 2 && (
         <label className="field study-call-price">
-          2単位目の{buyer ? "買いたい" : "売りたい"}価格
+          2単位目の{buyer ? "買値" : "売値"}
           <div className="study-price-input">
             <input
               type="number"
@@ -973,12 +959,12 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
         }
       >
         {market.institution === "call"
-          ? "入力価格で成立した場合の利益（実際は清算価格で決定）"
+          ? "入力価格で成立した場合の利益"
           : "この提示価格での利益"}
         ：{money(expected)}
       </p>
       <p className="field-help">
-        損失が出る取引も可能です。ご自身の条件を確認して判断してください。
+        損失が出る場合もあります。条件を確認してください。
       </p>
       {validation && (
         <p role="alert" className="error-message">
@@ -992,11 +978,6 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             ? "今回の注文を確定"
             : "価格と数量を確定"}
       </button>
-      {market.institution === "call" && (
-        <p className="field-help">
-          送信は各回1回。2単位目の買値は1単位目以下、売値は1単位目以上にしてください。
-        </p>
-      )}
       {market.institution === "cda" && market.myOrders.length > 0 && (
         <>
           <p className="field-help">

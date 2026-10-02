@@ -566,13 +566,19 @@
 }
 .study-trading-grid > .private-panel {
   grid-area: personal;
+  display: flex;
+  flex-direction: column;
 }
 .study-trading-grid .study-values {
-  margin: 8px 0;
+  margin: 6px 0;
   gap: 8px;
 }
 .study-trading-grid .study-values > div {
-  padding: 7px 12px;
+  padding: 5px 10px;
+}
+.study-trading-grid .study-values b {
+  font-size: 20px;
+  line-height: 1.3;
 }
 .study-trading-grid .study-profit {
   flex-direction: row;
@@ -595,18 +601,99 @@
   margin-top: 12px;
 }
 .study-personal-history {
-  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+  padding-top: 8px;
 }
-.study-personal-history > .study-detail-trigger {
-  padding: 0;
+.study-trading-grid .study-order-form {
+  margin-bottom: 8px;
+}
+.study-history-heading,
+.study-history-pages {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.study-history-heading {
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.study-history-heading h3 {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.study-history-pages {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+.study-history-pages .text-button {
+  display: inline-flex;
+  padding: 3px;
+}
+.study-personal-history th,
+.study-personal-history td {
+  padding: 4px 5px;
+  font-size: 11px;
+}
+.study-personal-history td small {
+  display: inline;
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.study-personal-history > p {
+  font-size: 11px;
+}
+.study-trade-feedback {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 24px);
+  width: max-content;
+  z-index: 50;
+}
+.study-trade-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #a5d4c1;
+  border-radius: 12px;
+  background: #f1fcf6;
+  color: #22654f;
+  box-shadow: 0 8px 28px #183f2526;
+}
+.study-trade-notice > svg,
+.study-trade-notice > button {
+  flex-shrink: 0;
+}
+.study-trade-notice b {
+  font-size: 14px;
+}
+.study-trade-notice p {
+  font-size: 12px;
+  margin-top: 3px;
+}
+.study-trade-notice p span {
+  display: inline-block;
+  margin-left: 12px;
+  font-weight: 600;
+}
+.study-trade-notice .text-button {
+  display: inline-flex;
+  color: inherit;
+  padding: 2px;
 }
 .study-trading-grid .study-order-form .field {
-  margin-top: 4px;
-  margin-bottom: 6px;
-  gap: 5px;
+  margin: 0;
+  gap: 4px;
 }
 .study-trading-grid .study-order-form {
   margin-top: 8px;
+  display: grid;
+  row-gap: 4px;
 }
 .study-trading-grid .study-order-form input,
 .study-trading-grid .study-order-form select {
@@ -617,7 +704,10 @@
   top: 8px;
 }
 .study-trading-grid .study-order-form > p {
-  margin: 5px 0;
+  margin: 0;
+}
+.study-trading-grid .study-order-form > .button {
+  margin-top: 4px;
 }
 .study-call-form {
   display: grid;

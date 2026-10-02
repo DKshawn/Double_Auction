@@ -288,6 +288,13 @@
 }
 .study-price-input input {
   padding-right: 42px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.study-price-input input::-webkit-inner-spin-button,
+.study-price-input input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .study-price-input span {
   position: absolute;
@@ -295,6 +302,7 @@
   top: 11px;
   font-size: 13px;
   color: var(--muted);
+  pointer-events: none;
 }
 .study-loss {
   padding: 10px 12px;
@@ -704,6 +712,9 @@
 .study-trading-grid .study-order-form select {
   min-height: 38px;
   padding: 8px 12px;
+}
+.study-trading-grid .study-price-input input {
+  padding-right: 42px;
 }
 .study-trading-grid .study-price-input span {
   top: 8px;

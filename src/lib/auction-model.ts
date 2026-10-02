@@ -71,11 +71,12 @@ export function emit(
   type: string,
   actor: string,
   detail: Record<string, unknown> = {},
+  round = room.round,
 ) {
   const event = {
     sequence: ++room.sequence,
     at,
-    round: room.round,
+    round,
     type,
     actor,
     detail,

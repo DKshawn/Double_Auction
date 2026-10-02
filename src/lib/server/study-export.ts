@@ -1,5 +1,6 @@
 import { STUDY_RULES } from "../study-rules";
 import { studyView } from "./study-view";
+import { marketRound } from "./study";
 import type { AuditEvent, Room } from "./model";
 
 export function studyExport(
@@ -21,7 +22,10 @@ export function studyExport(
           exportedAt: new Date(now).toISOString(),
           code: room.code,
           config: room.config,
-          currentPeriod: room.round,
+          latestPeriod: teacher.markets.reduce(
+            (n, m) => Math.max(n, m.round),
+            0,
+          ),
           phase: room.phase,
           rules: STUDY_RULES,
           settingsRevision: study.revision,
@@ -30,6 +34,7 @@ export function studyExport(
           participants: teacher.participants,
           markets: study.markets.map((m) => ({
             market: m.id,
+            currentPeriod: marketRound(room, m),
             order: m.order,
             stage: m.stage,
             periods: m.periods,

@@ -98,7 +98,11 @@ export function StudySettingsEditor({
                                 onChange={(e) =>
                                   update(side, row, unit, e.target.value)
                                 }
-                                disabled={disabled || view.round > 0}
+                                disabled={
+                                  disabled ||
+                                  view.phase !== "waiting" ||
+                                  view.round > 0
+                                }
                               />
                             ) : (
                               n
@@ -136,7 +140,13 @@ export function StudySettingsEditor({
           <div className="study-actions">
             <button
               className="button primary"
-              disabled={disabled || !valid || Boolean(stale) || view.round > 0}
+              disabled={
+                disabled ||
+                !valid ||
+                Boolean(stale) ||
+                view.phase !== "waiting" ||
+                view.round > 0
+              }
               onClick={async () => {
                 if (
                   await command({

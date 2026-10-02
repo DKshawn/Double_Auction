@@ -157,3 +157,95 @@ test("export atomically clears expired Call orders without a polling browser, in
   const again = await service.export(teacher.code, teacher.token);
   assert.equal(again.events.length, exported.events.length);
 });
+
+test("teacher opens admission before anyone joins; each full market starts once and late arrivals begin in period one", async () => {
+  const teacher = await service.create(
+    {
+      title: "独立進行",
+      protocol: "institutions-v1",
+      markets: 6,
+      capacity: 96,
+      rounds: 15,
+      duration: 180,
+    },
+    "Test-Teacher-2026",
+    "",
+  );
+  const snapshot = await service.export(teacher.code, teacher.token);
+  snapshot.room.seats = Array.from({ length: 96 }, (_, i) => i);
+  snapshot.room.study!.markets[0].order = ["cda", "call", "posted"];
+  snapshot.room.study!.markets[1].order = ["call", "cda", "posted"];
+  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
+    teacher.code,
+    JSON.stringify(snapshot.room),
+  ]);
+  const opened = await service.command(teacher.code, teacher.token, {
+    requestId: randomUUID(),
+    expectedRound: 0,
+    command: { type: "start" },
+  });
+  assert.equal(opened.phase, "running");
+  assert.equal(opened.deadline, null);
+  assert.ok(opened.study!.teacher!.markets.every((m) => m.round === 0));
+  for (let i = 0; i < 15; i++)
+    await service.join(teacher.code, `先着${i}`, "123456");
+  assert.equal(
+    (await service.view(teacher.code, teacher.token)).study!.market.round,
+    0,
+  );
+  await service.join(teacher.code, "16人目", "123456");
+  const started = await service.export(teacher.code, teacher.token);
+  assert.equal(started.room.study!.markets[0].round, 1);
+  assert.equal(
+    started.events.filter((e) => e.type === "period-started").length,
+    1,
+  );
+  started.room.deadline = Date.now() - 10;
+  started.room.study!.markets[0].deadline = started.room.deadline;
+  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
+    teacher.code,
+    JSON.stringify(started.room),
+  ]);
+  assert.equal(
+    (await service.view(teacher.code, teacher.token)).study!.market.round,
+    2,
+  );
+  let buyerToken = "";
+  for (let i = 0; i < 16; i++) {
+    const joined = await service.join(teacher.code, `後着${i}`, "123456");
+    if (!i) buyerToken = joined.token;
+  }
+  const buyer = await service.view(teacher.code, buyerToken);
+  assert.equal(buyer.round, 1);
+  assert.equal(buyer.study!.market.id, 2);
+  const submitted = await service.command(teacher.code, buyerToken, {
+    requestId: randomUUID(),
+    expectedRound: 1,
+    expectedStage: buyer.study!.market.stageKey,
+    command: { type: "call-submit", prices: [90, 80] },
+  });
+  assert.equal(submitted.study!.market.submitted, true);
+  assert.equal(submitted.study!.market.round, 1);
+  const final = await service.export(teacher.code, teacher.token);
+  assert.equal(final.room.study!.markets[2].round, 0);
+  assert.equal(
+    final.events.filter(
+      (e) => e.type === "period-started" && e.detail.market === 2,
+    ).length,
+    1,
+  );
+  assert.equal(final.events.findLast((e) => e.type === "call-order")!.round, 1);
+  assert.ok(
+    final.events
+      .filter((e) => e.type === "joined" && e.detail.market === 2)
+      .every((e) => e.round === 0),
+  );
+  await service.join(teacher.code, "後着0", "123456", buyerToken);
+  const rejoined = await service.export(teacher.code, teacher.token);
+  assert.equal(rejoined.events.at(-1)!.type, "rejoined");
+  assert.equal(rejoined.events.at(-1)!.round, 1);
+  assert.ok(
+    final.room.study!.markets[1].periods[0].startedAt >
+      final.room.study!.markets[0].periods[0].startedAt,
+  );
+});

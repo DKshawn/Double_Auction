@@ -55,6 +55,7 @@ export const STUDY_RULES = {
     "OLS-alpha-on-period-1-to-5-within-market-and-institution-complete-periods-only",
   grouping: "random-balanced-seat-assignment",
   comparisonUnit: "market",
-  periodProgression: "teacher-starts-each-period-after-all-markets-finish",
+  marketStart: "after-teacher-opens-and-16-participants-join-the-market",
+  periodProgression: "independent-per-market-auto-start-next-period-through-15",
   earlyEnd: "pending-orders-cancelled-period-marked-interrupted",
 } as const;

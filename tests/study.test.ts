@@ -4,7 +4,13 @@ import { randomUUID } from "node:crypto";
 import type { Command } from "../src/lib/types";
 import type { AuditEvent, Participant, Room } from "../src/lib/server/model";
 import { execute, settleDeadline, toView } from "../src/lib/server/engine";
-import { newStudy, stageKey, unitLimits } from "../src/lib/server/study";
+import {
+  newStudy,
+  marketFor,
+  marketRound,
+  stageKey,
+  unitLimits,
+} from "../src/lib/server/study";
 import { csv, exportData } from "../src/lib/server/export";
 import {
   studyEquilibrium,
@@ -67,7 +73,10 @@ function classroom(count = 1, first: "cda" | "call" | "posted" = "cda") {
       actor,
       {
         requestId: randomUUID(),
-        expectedRound: room.round,
+        expectedRound:
+          actor === "teacher"
+            ? room.round
+            : marketRound(room, marketFor(room, actor)),
         expectedStage:
           actor === "teacher"
             ? undefined
@@ -221,7 +230,8 @@ test("Call hides submitted orders, clears all trades at 97.5, expires unfilled o
   assert.equal(study.markets[0].trades.at(-1)!.buyerUnit, 2);
   assert.equal(study.markets[0].trades.at(-1)!.value, 104);
   settleDeadline(room, 121000, events);
-  assert.equal(room.phase, "review");
+  assert.equal(room.phase, "running");
+  assert.equal(study.markets[0].round, 2);
   assert.equal(study.markets[0].clearings.length, 4);
   assert.equal(study.markets[0].clearings.at(-1)!.price, null);
 });
@@ -288,7 +298,8 @@ test("Posted Offer locks offers, hides them before 60s and enforces random buyer
     0,
   );
   settleDeadline(room, 141000, events);
-  assert.equal(room.phase, "review");
+  assert.equal(room.phase, "running");
+  assert.equal(m.round, 2);
   assert.equal(m.periods[0].completion, "complete");
 });
 
@@ -302,23 +313,26 @@ test("pause freezes substage timers, deadlines catch up without browsers, and ne
   assert.equal(study.markets[0].deadline, 120000);
   settleDeadline(room, 210000, events);
   assert.equal(study.markets[0].clearings.length, 4);
-  assert.equal(room.phase, "review");
-  send("teacher", { type: "start" }, 220000);
+  assert.equal(room.phase, "running");
   assert.equal(room.round, 2);
   assert.equal(study.markets[0].call, 1);
+  assert.equal(study.markets[0].deadline, 240000);
   assert.equal(study.markets[0].orders.length, 0);
 });
 
 test("15 periods switch institutions every 5 periods, and interrupted periods are excluded from slopes", () => {
   const { room, study, send, events } = classroom();
+  send("teacher", { type: "start" }, 1000);
+  settleDeadline(room, 5000000, events);
   for (let period = 1; period <= 15; period++) {
-    send("teacher", { type: "start" }, period * 300000);
-    settleDeadline(room, period * 300000 + 200000, events);
     assert.equal(
-      study.markets[0].periods.at(-1)!.institution,
+      study.markets[0].periods[period - 1].institution,
       ["cda", "call", "posted"][Math.floor((period - 1) / 5)],
     );
   }
+  assert.equal(study.markets[0].round, 15);
+  assert.equal(study.markets[0].periods.length, 15);
+  assert.equal(study.markets[0].deadline, null);
   assert.equal(room.phase, "finished");
   assert.equal(studyMetrics(room, 5000000).length, 15);
   assert.ok(
@@ -407,27 +421,33 @@ test("research exports preserve negative numeric profits, protocol assumptions a
 
 test("convergence slope uses institution-local periods and omits interrupted and no-trade periods", () => {
   const { room, study, send, buyers, sellers, events } = classroom();
+  send("teacher", { type: "start" }, 1000);
   for (let i = 1; i <= 5; i++) {
-    const start = i * 300000;
-    send("teacher", { type: "start" }, start);
+    const start = study.markets[0].periods.at(-1)!.startedAt;
     if (i !== 4) {
       send(sellers[0], { type: "study-quote", price: 120 - 8 * i }, start + 10);
       send(buyers[0], { type: "study-quote", price: 120 }, start + 20);
     }
     if (i === 3) send("teacher", { type: "end-round" }, start + 30);
-    else settleDeadline(room, start + 200000, events);
+    else settleDeadline(room, study.markets[0].deadline!, events);
   }
-  assert.equal(study.markets[0].periods.length, 5);
+  assert.equal(
+    study.markets[0].periods.filter((p) => p.institution === "cda").length,
+    5,
+  );
   const slope = convergenceSlopes(studyMetrics(room, 2000000))[0];
   assert.equal(slope.n, 3);
   assert.ok(Math.abs(slope.slope! + 0.1) < 1e-10);
 });
 
-test("mixed institutions finish independently and a global pause never restarts completed markets", () => {
+test("mixed institutions advance independently and resume each market's own remaining time", () => {
   const { room, study, send, events } = classroom(6);
   send("teacher", { type: "start" }, 1000);
   settleDeadline(room, 121000, events);
-  assert.equal(study.markets.filter((m) => m.stage === "done").length, 2);
+  assert.equal(study.markets.filter((m) => m.round === 2).length, 2);
+  assert.ok(
+    study.markets.filter((m) => m.round === 2).every((m) => m.stage === "call"),
+  );
   assert.equal(room.phase, "running");
   assert.throws(
     () => send("teacher", { type: "start" }, 121000),
@@ -436,10 +456,127 @@ test("mixed institutions finish independently and a global pause never restarts 
   send("teacher", { type: "pause" }, 121000);
   send("teacher", { type: "resume" }, 200000);
   settleDeadline(room, 220000, events);
-  assert.equal(study.markets.filter((m) => m.stage === "done").length, 4);
+  assert.equal(study.markets.filter((m) => m.round === 2).length, 4);
   assert.equal(room.phase, "running");
   settleDeadline(room, 260000, events);
-  assert.equal(room.phase, "review");
+  assert.equal(room.phase, "running");
+  assert.ok(study.markets.every((m) => m.round === 2));
   assert.ok(study.markets.every((m) => m.periods[0].completion === "complete"));
-  assert.equal(studyMetrics(room, 260000).length, 6);
+  assert.equal(studyMetrics(room, 260000).length, 12);
+});
+
+test("a market starts when its own 16th student arrives after the teacher opens, including after a pause", () => {
+  const { room, study, send, events } = classroom(6);
+  const participants = [...room.participants];
+  room.participants = participants.filter((p) => p.seat < 31);
+  send("teacher", { type: "start" }, 1000);
+  assert.equal(study.markets[0].round, 1);
+  assert.equal(study.markets[1].round, 0);
+  assert.equal(study.markets[1].deadline, null);
+  send("teacher", { type: "pause" }, 2000);
+  room.participants.push(participants[31]);
+  settleDeadline(room, 3000, events);
+  assert.equal(study.markets[1].round, 0);
+  send("teacher", { type: "resume" }, 10000);
+  assert.equal(study.markets[1].round, 1);
+  assert.equal(study.markets[1].periods[0].startedAt, 10000);
+  assert.equal(study.markets[2].round, 0);
+  assert.equal(study.markets[2].deadline, null);
+});
+
+test("other markets changing periods never invalidate a student's orders or reset their inventory and profit", () => {
+  const { room, study, send, buyers, sellers, events } = classroom(6);
+  study.markets[0].order = ["cda", "call", "posted"];
+  study.markets[1].order = ["call", "cda", "posted"];
+  send("teacher", { type: "start" }, 1000);
+  send(sellers[0], { type: "study-quote", price: 80 }, 2000);
+  send(buyers[0], { type: "study-quote", price: 80 }, 2000);
+  const before = toView(room, buyers[0], 2000, "local");
+  const req = {
+    requestId: randomUUID(),
+    expectedRound: before.round,
+    expectedStage: before.study!.market.stageKey,
+    command: { type: "study-quote", price: 70 } as Command,
+  };
+  settleDeadline(room, 121000, events);
+  assert.equal(room.round, 2);
+  execute(room, buyers[0], req, 121000, events);
+  const view = toView(room, buyers[0], 121000, "local");
+  assert.equal(view.round, 1);
+  assert.equal(view.me.roundProfit, 40);
+  assert.equal(view.study!.unitsUsed, 1);
+  assert.equal(view.study!.market.myOrders[0].unit, 2);
+  const quote = events.findLast(
+    (e) => e.type === "quote" && e.actor === buyers[0].id,
+  )!;
+  assert.equal(quote.round, 1);
+  settleDeadline(room, 181000, events);
+  assert.throws(
+    () =>
+      execute(
+        room,
+        buyers[0],
+        { ...req, requestId: randomUUID() },
+        181000,
+        events,
+      ),
+    /期が切り替わりました/,
+  );
+  const next = toView(room, buyers[0], 181000, "local");
+  assert.equal(next.study!.unitsUsed, 0);
+  assert.equal(next.me.roundProfit, 0);
+  assert.equal(next.me.profit, 40);
+  assert.equal(next.study!.myTrades.length, 1);
+});
+
+test("finishing one market does not end unstarted markets, and global finish never starts another period", () => {
+  const { room, study, send, events } = classroom(6);
+  room.participants = room.participants.filter((p) => p.seat < 16);
+  send("teacher", { type: "start" }, 1000);
+  settleDeadline(room, 5000000, events);
+  assert.equal(study.markets[0].round, 15);
+  assert.equal(study.markets[0].stage, "done");
+  assert.equal(study.markets[1].round, 0);
+  assert.equal(room.phase, "running");
+  assert.equal(room.deadline, null);
+  send("teacher", { type: "finish" }, 5000001);
+  assert.equal(room.phase, "finished");
+  assert.equal(study.markets[1].periods.length, 0);
+  const single = classroom();
+  single.send("teacher", { type: "start" });
+  single.send("teacher", { type: "finish" }, 2000);
+  assert.equal(single.study.markets[0].periods.length, 1);
+  assert.equal(single.study.markets[0].periods[0].completion, "interrupted");
+  assert.equal(single.study.markets[0].deadline, null);
+});
+
+test("legacy saved rooms recover per-market periods and a completed market never resumes", () => {
+  const { room, study, send, events } = classroom(6);
+  send("teacher", { type: "start" });
+  for (const market of study.markets) delete market.round;
+  assert.equal(
+    toView(room, "teacher", 1000, "local").study!.teacher!.markets[0].round,
+    1,
+  );
+  settleDeadline(room, 5000000, events);
+  assert.ok(study.markets.every((m) => m.round === 15 && m.stage === "done"));
+  const count = events.length;
+  settleDeadline(room, 6000000, events);
+  assert.equal(events.length, count);
+});
+
+test("interrupting periods while paused preserves the pause and excludes interrupted metrics", () => {
+  const { room, study, send, events } = classroom(6);
+  send("teacher", { type: "start" }, 1000);
+  send("teacher", { type: "pause" }, 2000);
+  send("teacher", { type: "end-round" }, 3000);
+  assert.equal(room.phase, "paused");
+  assert.ok(study.markets.every((m) => m.round === 2 && m.deadline === null));
+  assert.ok(
+    study.markets.every((m) => m.periods[0].completion === "interrupted"),
+  );
+  settleDeadline(room, 300000, events);
+  assert.ok(study.markets.every((m) => m.round === 2));
+  send("teacher", { type: "resume" }, 400000);
+  assert.ok(study.markets.every((m) => m.deadline! > 400000));
 });

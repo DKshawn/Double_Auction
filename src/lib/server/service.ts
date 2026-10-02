@@ -12,7 +12,13 @@ import { database, databaseTime, type Database, type Sql } from "./database";
 import { execute, settleDeadline, toView } from "./engine";
 import { defaultMarketSettings, limitsForSeat } from "./experiment";
 import { AuctionError, emit, type AuditEvent, type Room } from "./model";
-import { newStudy, unitLimits } from "./study";
+import {
+  marketFor,
+  marketRound,
+  newStudy,
+  settleStudy,
+  unitLimits,
+} from "./study";
 
 type Outcome<T> =
   { value: T; error?: never } | { error: AuctionError; value?: never };
@@ -194,11 +200,23 @@ export class AuctionService {
         participant.tokenHash = digest(token);
         participant.failedLogins = 0;
         participant.lockedUntil = 0;
-        emit(room, events, now, "rejoined", participant.id);
+        emit(
+          room,
+          events,
+          now,
+          "rejoined",
+          participant.id,
+          room.study ? { market: marketFor(room, participant).id } : {},
+          room.study
+            ? marketRound(room, marketFor(room, participant))
+            : room.round,
+        );
       } else {
-        if (room.phase !== "waiting")
+        if (room.study ? room.phase === "finished" : room.phase !== "waiting")
           throw new AuctionError(
-            "実験開始後は新しく参加できません。以前の名前と暗証番号で再入室してください。",
+            room.study
+              ? "実験は終了しています。記録を確認する場合は以前の名前と暗証番号で再入室してください。"
+              : "実験開始後は新しく参加できません。以前の名前と暗証番号で再入室してください。",
             409,
           );
         if (room.participants.length >= room.config.capacity)
@@ -240,18 +258,29 @@ export class AuctionService {
             banana: 0,
             orange: 0,
           };
-        emit(room, events, now, "joined", participant.id, {
-          alias: participant.alias,
-          role,
-          seat,
-          limits: participant.limits,
-          ...(room.study
-            ? {
-                market: Math.floor(seat / 16) + 1,
-                unitLimits: unitLimits(room, participant),
-              }
-            : {}),
-        });
+        emit(
+          room,
+          events,
+          now,
+          "joined",
+          participant.id,
+          {
+            alias: participant.alias,
+            role,
+            seat,
+            limits: participant.limits,
+            ...(room.study
+              ? {
+                  market: Math.floor(seat / 16) + 1,
+                  unitLimits: unitLimits(room, participant),
+                }
+              : {}),
+          },
+          room.study
+            ? marketRound(room, marketFor(room, participant))
+            : room.round,
+        );
+        if (room.study) settleStudy(room, now, events);
       }
       return { code, token };
     });
@@ -291,7 +320,11 @@ export class AuctionService {
     const room = row.rows[0].state;
     const actor = authenticate(room, token);
     const now = Number(row.rows[0].now);
-    if (room.phase === "running" && room.deadline! <= now) {
+    if (
+      room.phase === "running" &&
+      room.deadline !== null &&
+      room.deadline <= now
+    ) {
       await this.locked(code, () => undefined);
       return this.view(code, token);
     }

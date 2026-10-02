@@ -5,6 +5,7 @@ import type { Participant, Room } from "./auction-model";
 import {
   institutionFor,
   marketFor,
+  marketRound,
   stageKey,
   studyProfit,
   unitLimits,
@@ -107,9 +108,10 @@ function publicMarket(
     id = isTeacher ? "teacher" : actor.id;
   return {
     id: m.id,
+    round: marketRound(room, m),
     order: m.order,
     institution: institutionFor(room, m),
-    institutionPeriod: ((Math.max(1, room.round) - 1) % 5) + 1,
+    institutionPeriod: ((Math.max(1, marketRound(room, m)) - 1) % 5) + 1,
     stage: m.stage,
     stageKey: stageKey(room, m),
     deadline: m.deadline,
@@ -167,10 +169,12 @@ export function studyView(
     code: room.code,
     config: room.config,
     phase: room.phase,
-    round: room.round,
+    round: teacher
+      ? Math.max(...study.markets.map((m) => marketRound(room, m)))
+      : publicState.round,
     version: room.version,
-    deadline: room.deadline,
-    remainingMs: room.remainingMs,
+    deadline: teacher ? room.deadline : publicState.deadline,
+    remainingMs: teacher ? room.remainingMs : publicState.remainingMs,
     serverTime: now,
     participantCount: room.participants.length,
     quotes: [],
@@ -195,7 +199,7 @@ export function studyView(
           limits: null,
           used: [],
           profit: studyProfit(room, actor),
-          roundProfit: studyProfit(room, actor, room.round),
+          roundProfit: studyProfit(room, actor, publicState.round),
         },
     study: {
       protocol: study.protocol,

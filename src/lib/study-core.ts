@@ -21,6 +21,8 @@ import type { CommandRequest } from "./types";
 
 export type StudyMarket = {
   id: number;
+  // Older saved rooms derive their period from the existing period records.
+  round?: number;
   order: Institution[];
   stage: StudyStage;
   epoch: number;
@@ -94,6 +96,7 @@ export function createStudy(count: number, settings: StudySettings): Study {
     settings: structuredClone(settings),
     markets: orders.map((order, i) => ({
       id: i + 1,
+      round: 0,
       order: [...order],
       stage: "waiting",
       epoch: 0,
@@ -115,17 +118,20 @@ export function createStudy(count: number, settings: StudySettings): Study {
 }
 export const marketFor = (room: Room, p: Participant) =>
   room.study!.markets[Math.floor(p.seat / 16)];
+export const marketRound = (room: Room, market: StudyMarket) =>
+  market.round ?? market.periods.at(-1)?.round ?? room.round;
 export const institutionFor = (room: Room, market: StudyMarket) =>
-  market.order[Math.floor((Math.max(1, room.round) - 1) / 5)];
+  market.order[Math.floor((Math.max(1, marketRound(room, market)) - 1) / 5)];
 export const unitLimits = (room: Room, p: Participant) =>
   room.study!.settings[p.role === "buyer" ? "values" : "costs"][p.seat % 8];
 export const unitsUsed = (room: Room, p: Participant) =>
   marketFor(room, p).trades.filter(
     (t) =>
-      t.round === room.round && (t.buyerId === p.id || t.sellerId === p.id),
+      t.round === marketRound(room, marketFor(room, p)) &&
+      (t.buyerId === p.id || t.sellerId === p.id),
   ).length;
 export const stageKey = (room: Room, m: StudyMarket) =>
-  `${room.round}:${m.epoch}`;
+  `${marketRound(room, m)}:${m.epoch}`;
 export const studyProfit = (room: Room, p: Participant, round?: number) =>
   marketFor(room, p)
     .trades.filter(
@@ -148,13 +154,21 @@ function log(
   actor: string,
   detail: Record<string, unknown> = {},
 ) {
-  return emit(room, events, at, type, actor, {
-    market: m.id,
-    institution: institutionFor(room, m),
-    stage: m.stage,
-    call: m.call || null,
-    ...detail,
-  });
+  return emit(
+    room,
+    events,
+    at,
+    type,
+    actor,
+    {
+      market: m.id,
+      institution: institutionFor(room, m),
+      stage: m.stage,
+      call: m.call || null,
+      ...detail,
+    },
+    marketRound(room, m),
+  );
 }
 function spreadAccumulate(m: StudyMarket, at: number) {
   const period = m.periods.at(-1);
@@ -195,12 +209,52 @@ function schedule(
   m.deadline = at + m.remainingMs;
 }
 function sync(room: Room) {
+  room.round = Math.max(
+    ...room.study!.markets.map((m) => marketRound(room, m)),
+  );
   const active = room.study!.markets.filter((m) => m.deadline !== null);
   room.deadline = active.length
     ? Math.min(...active.map((m) => m.deadline!))
     : null;
-  if (room.phase === "running" && !active.length)
-    room.phase = room.round >= 15 ? "finished" : "review";
+  if (
+    ["running", "paused"].includes(room.phase) &&
+    room.study!.markets.every(
+      (m) => m.stage === "done" && marketRound(room, m) === 15,
+    )
+  )
+    room.phase = "finished";
+}
+function startMarket(
+  room: Room,
+  m: StudyMarket,
+  events: AuditEvent[],
+  at: number,
+) {
+  m.round = marketRound(room, m) + 1;
+  m.orders = [];
+  m.offers = [];
+  m.submitted = [];
+  m.buyerOrder = [];
+  m.buyerIndex = 0;
+  m.call = 0;
+  m.spreadAt = at;
+  m.spreadValue = null;
+  const institution = institutionFor(room, m);
+  m.periods.push({
+    round: m.round,
+    institution,
+    completion: "running",
+    startedAt: at,
+    endedAt: null,
+    spreadArea: 0,
+    spreadMs: 0,
+  });
+  if (institution === "cda") schedule(m, "cda", at, STUDY_RULES.cdaSeconds);
+  else if (institution === "call") {
+    m.call = 1;
+    schedule(m, "call", at, STUDY_RULES.callSeconds);
+  } else schedule(m, "offer", at, STUDY_RULES.offerSeconds);
+  log(room, m, events, at, "period-started", "system");
 }
 function finishMarket(
   room: Room,
@@ -213,7 +267,7 @@ function finishMarket(
   const period = m.periods.at(-1);
   if (
     period &&
-    period.round === room.round &&
+    period.round === marketRound(room, m) &&
     period.completion === "running"
   ) {
     period.endedAt = at;
@@ -229,6 +283,8 @@ function finishMarket(
   m.deadline = null;
   m.remainingMs = 0;
   m.spreadValue = null;
+  if (completion === "complete" && marketRound(room, m) < 15)
+    startMarket(room, m, events, at);
 }
 function checkPrice(price: number) {
   if (!Number.isInteger(price) || price < 1 || price > 999)
@@ -254,7 +310,7 @@ function trade(
     id: randomUUID(),
     sequence: room.sequence + 1,
     at,
-    round: room.round,
+    round: marketRound(room, m),
     market: m.id,
     institution: institutionFor(room, m),
     call,
@@ -301,7 +357,13 @@ function clearCall(
   )
     q++;
   const price = q ? (bids[q - 1].price + asks[q - 1].price) / 2 : null;
-  const result = { round: room.round, call: m.call, at, price, quantity: q };
+  const result = {
+    round: marketRound(room, m),
+    call: m.call,
+    at,
+    price,
+    quantity: q,
+  };
   m.clearings.push(result);
   log(room, m, events, at, "call-cleared", "system", {
     ...result,
@@ -342,6 +404,15 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
   if (room.phase !== "running") return false;
   let changed = false;
   for (const m of room.study!.markets) {
+    if (
+      ["waiting", "done"].includes(m.stage) &&
+      marketRound(room, m) < 15 &&
+      room.participants.filter((p) => marketFor(room, p).id === m.id).length ===
+        16
+    ) {
+      startMarket(room, m, events, now);
+      changed = true;
+    }
     while (m.deadline !== null && now >= m.deadline) {
       changed = true;
       const at = m.deadline;
@@ -389,7 +460,10 @@ export function executeStudy(
     )
   )
     return;
-  if (request.expectedRound !== room.round)
+  if (
+    actor !== "teacher" &&
+    request.expectedRound !== marketRound(room, marketFor(room, actor))
+  )
     throw new AuctionError(
       "期が切り替わりました。最新の画面を確認してください。",
       409,
@@ -423,42 +497,11 @@ export function executeStudy(
     if (actor !== "teacher")
       throw new AuctionError("この操作は教員のみ利用できます。", 403);
     if (cmd.type === "start") {
-      if (!["waiting", "review"].includes(room.phase) || room.round >= 15)
-        throw new AuctionError("今は次の期を開始できません。", 409);
-      if (room.participants.length !== room.config.capacity)
-        throw new AuctionError(
-          `参加者が${room.config.capacity}人そろうと開始できます。`,
-          409,
-        );
-      room.round++;
+      if (!["waiting", "review"].includes(room.phase))
+        throw new AuctionError("今は実験を開始できません。", 409);
       room.phase = "running";
-      for (const m of study.markets) {
-        m.orders = [];
-        m.offers = [];
-        m.submitted = [];
-        m.buyerOrder = [];
-        m.buyerIndex = 0;
-        m.call = 0;
-        m.spreadAt = now;
-        m.spreadValue = null;
-        const institution = institutionFor(room, m);
-        m.periods.push({
-          round: room.round,
-          institution,
-          completion: "running",
-          startedAt: now,
-          endedAt: null,
-          spreadArea: 0,
-          spreadMs: 0,
-        });
-        if (institution === "cda")
-          schedule(m, "cda", now, STUDY_RULES.cdaSeconds);
-        else if (institution === "call") {
-          m.call = 1;
-          schedule(m, "call", now, STUDY_RULES.callSeconds);
-        } else schedule(m, "offer", now, STUDY_RULES.offerSeconds);
-        log(room, m, events, now, "period-started", actorId);
-      }
+      emit(room, events, now, "experiment-started", actorId);
+      settleStudy(room, now, events);
     } else if (cmd.type === "pause") {
       if (room.phase !== "running")
         throw new AuctionError("取引中のみ一時停止できます。", 409);
@@ -474,27 +517,32 @@ export function executeStudy(
       if (room.phase !== "paused")
         throw new AuctionError("現在は一時停止していません。", 409);
       for (const m of study.markets)
-        if (m.stage !== "done") {
+        if (!["done", "waiting"].includes(m.stage)) {
           m.deadline = now + m.remainingMs;
           m.spreadAt = now;
         }
       room.phase = "running";
       emit(room, events, now, "resumed", actorId);
+      settleStudy(room, now, events);
     } else {
       if (
         cmd.type === "end-round" &&
-        !["running", "paused"].includes(room.phase)
+        (!["running", "paused"].includes(room.phase) ||
+          !study.markets.some((m) => !["done", "waiting"].includes(m.stage)))
       )
         throw new AuctionError("進行中の期がありません。", 409);
       if (room.phase === "finished")
         throw new AuctionError("実験は終了しています。", 409);
       for (const m of study.markets)
-        if (m.stage !== "done") {
+        if (!["done", "waiting"].includes(m.stage)) {
           if (room.phase === "paused") m.spreadAt = now;
           finishMarket(room, m, events, now, "interrupted");
+          if (cmd.type === "end-round" && marketRound(room, m) < 15) {
+            startMarket(room, m, events, now);
+            if (room.phase === "paused") m.deadline = null;
+          }
         }
-      room.phase =
-        cmd.type === "finish" || room.round >= 15 ? "finished" : "review";
+      if (cmd.type === "finish") room.phase = "finished";
       emit(
         room,
         events,
@@ -507,7 +555,7 @@ export function executeStudy(
     if (actor === "teacher")
       throw new AuctionError("教員は取引できません。", 403);
     const m = marketFor(room, actor);
-    if (room.phase !== "running" || m.stage === "done")
+    if (room.phase !== "running" || ["done", "waiting"].includes(m.stage))
       throw new AuctionError("現在は取引時間外です。", 409);
     if (request.expectedStage !== stageKey(room, m))
       throw new AuctionError(

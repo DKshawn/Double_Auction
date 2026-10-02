@@ -106,11 +106,8 @@ test("Call demo keeps orders sealed, clears uniformly, retains unit limits acros
     false,
   );
   for (let i = 0; i < 3; i++) demo.skipStage();
-  assert.equal(demo.getSnapshot().view.study!.market.stage, "done");
+  assert.equal(demo.getSnapshot().view.study!.market.round, 2);
   assert.equal(demo.getSnapshot().view.phase, "running");
-  demo.finishPeriod();
-  assert.equal(demo.getSnapshot().view.phase, "review");
-  await demo.command({ type: "start" }, true);
   assert.equal(demo.getSnapshot().view.study!.unitsUsed, 0);
   assert.equal(demo.getSnapshot().view.study!.market.call, 1);
 });
@@ -119,17 +116,18 @@ test("all 12 demo markets finish 15 periods with isolated trades and all Call cl
   const demo = new DemoSession("cda", "buyer", 1000);
   const human = demo.getSnapshot().view.me.id;
   demo.toggleTeacher();
+  assert.equal(await demo.command({ type: "start" }), true);
+  demo.advanceTime(3000);
+  const view = demo.getSnapshot().view;
+  assert.equal(view.phase, "finished");
+  assert.equal(view.round, 15);
+  const teacher = view.study!.teacher!;
+  assert.equal(teacher.metrics.length, 180);
+  const people = new Map(teacher.participants.map((p) => [p.id, p]));
   for (let round = 1; round <= 15; round++) {
-    assert.equal(await demo.command({ type: "start" }), true);
-    demo.finishPeriod();
-    const view = demo.getSnapshot().view;
-    assert.equal(view.phase, round === 15 ? "finished" : "review");
-    assert.equal(view.round, round);
-    const teacher = view.study!.teacher!;
-    assert.equal(teacher.metrics.length, 12 * round);
-    const people = new Map(teacher.participants.map((p) => [p.id, p]));
     for (const market of teacher.markets) {
       assert.equal(market.stage, "done");
+      assert.equal(market.round, 15);
       const metric = teacher.metrics.find(
         (row) => row.market === market.id && row.round === round,
       )!;
@@ -143,7 +141,7 @@ test("all 12 demo markets finish 15 periods with isolated trades and all Call cl
         assert.notEqual(trade.buyerId, human);
         assert.notEqual(trade.sellerId, human);
       }
-      if (market.institution === "call") {
+      if (metric.institution === "call") {
         const clearings = market.clearings.filter((row) => row.round === round);
         assert.deepEqual(
           clearings.map((row) => row.call),
@@ -186,9 +184,31 @@ test("Posted demo skips preceding bot buyers, preserves human stock and uses act
         true,
       );
     }
-    assert.equal(demo.getSnapshot().view.study!.unitsUsed, 2);
+    assert.equal(demo.getSnapshot().view.study!.myTrades.length, 2);
+    assert.equal(
+      demo.getSnapshot().view.study!.unitsUsed,
+      demo.getSnapshot().view.study!.market.round === 1 ? 2 : 0,
+    );
     assert.notEqual(demo.getSnapshot().view.study!.market.activeBuyer, "買01");
   }
+});
+
+test("demo shows different market periods and clocks without rejecting a human in a slower market", async () => {
+  const demo = new DemoSession("cda", "buyer", 1000);
+  await demo.command({ type: "start" }, true);
+  demo.advanceTime(120);
+  assert.equal(demo.getSnapshot().view.round, 1);
+  assert.equal(await demo.command({ type: "study-quote", price: 100 }), true);
+  demo.toggleTeacher();
+  const markets = demo.getSnapshot().view.study!.teacher!.markets;
+  assert.equal(markets.find((m) => m.id === 1)!.round, 1);
+  assert.ok(markets.some((m) => m.round === 2));
+  assert.ok(new Set(markets.map((m) => m.remainingMs)).size > 1);
+  await demo.command({ type: "pause" });
+  const paused = demo.getSnapshot();
+  demo.advanceTime(30);
+  demo.tick(1000);
+  assert.equal(demo.getSnapshot(), paused);
 });
 
 test("Posted seller can sell both units to bots; pause stops the clock and bot actions; reset removes all prior data", async () => {

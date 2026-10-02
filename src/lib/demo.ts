@@ -6,6 +6,7 @@ import {
   createStudy,
   executeStudy,
   marketFor,
+  marketRound,
   settleStudy,
   stageKey,
   unitLimits,
@@ -191,7 +192,10 @@ export class DemoSession {
       person,
       {
         requestId: randomUUID(),
-        expectedRound: room.round,
+        expectedRound:
+          person === "teacher"
+            ? room.round
+            : marketRound(room, marketFor(room, person)),
         expectedStage: stageKey(
           room,
           person === "teacher"
@@ -262,17 +266,12 @@ export class DemoSession {
     }
   }
 
-  finishPeriod = () => {
+  advanceTime = (seconds = 30) => {
     if (this.room.phase !== "running") return;
     this.error = "";
-    while (this.room.phase === "running") {
-      this.runBots();
-      const deadlines = this.room.study!.markets.flatMap((market) =>
-        market.deadline === null ? [] : [market.deadline],
-      );
-      if (!deadlines.length) break;
-      this.advanceTo(Math.min(...deadlines));
-    }
+    this.runBots();
+    this.advanceTo(this.now + seconds * 1000);
+    this.runBots();
     this.publish();
   };
 

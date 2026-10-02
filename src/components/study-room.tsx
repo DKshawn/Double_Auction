@@ -51,7 +51,7 @@ const stages: Record<StudyStage, string> = {
   call: "非公開注文の受付",
   offer: "売り手の価格提示",
   purchase: "順番に購入",
-  done: "今期終了",
+  done: "実験終了",
 };
 const money = (n: number | null | undefined) => `${decimal(n)} 円`;
 
@@ -78,10 +78,10 @@ export function StudyRoom({
       : market.remainingMs;
   const seconds = Math.ceil(remaining / 1000);
   const stageLabel =
-    view.phase === "paused"
-      ? "一時停止中"
-      : view.phase === "finished"
-        ? "実験終了"
+    view.phase === "finished" || market.stage === "done"
+      ? "実験終了"
+      : view.phase === "paused"
+        ? "一時停止中"
         : stages[market.stage];
   const blocked =
     disabled ||
@@ -148,27 +148,29 @@ export function StudyRoom({
             </div>
             <span className="study-units">1商品・各自2単位／期</span>
           </section>
-          <div className="round-display">
-            <div>
-              <span className="phase-label">{stageLabel}</span>
-              <strong>
-                第 <b>{view.round || "—"}</b> 期 <small>/ 15</small>
-              </strong>
+          {!teacher && (
+            <div className="round-display">
+              <div>
+                <span className="phase-label">{stageLabel}</span>
+                <strong>
+                  第 <b>{market.round || "—"}</b> 期 <small>/ 15</small>
+                </strong>
+              </div>
+              <span className="vertical-line" />
+              <div className="timer">
+                <span>
+                  <Clock3 size={13} />
+                  この段階の残り時間
+                </span>
+                <b>{`${Math.floor(seconds / 60)
+                  .toString()
+                  .padStart(
+                    2,
+                    "0",
+                  )}:${(seconds % 60).toString().padStart(2, "0")}`}</b>
+              </div>
             </div>
-            <span className="vertical-line" />
-            <div className="timer">
-              <span>
-                <Clock3 size={13} />
-                この段階の残り時間
-              </span>
-              <b>{`${Math.floor(seconds / 60)
-                .toString()
-                .padStart(
-                  2,
-                  "0",
-                )}:${(seconds % 60).toString().padStart(2, "0")}`}</b>
-            </div>
-          </div>
+          )}
         </div>
         {view.mode === "local" && !demo && (
           <p className="local-banner">ローカル環境での実験</p>
@@ -197,7 +199,7 @@ export function StudyRoom({
           <div className="study-teacher-tools">
             <StudyDetailDialog
               label={`市場${market.id}の注文・清算`}
-              title={`市場${market.id}・第${view.round || 1}期の注文・清算`}
+              title={`市場${market.id}・第${market.round || 1}期の注文・清算`}
             >
               <MarketActivity
                 view={view}
@@ -332,27 +334,26 @@ export function StudyRoom({
         )}
         {!teacher &&
           !demo &&
-          (view.phase !== "running" || market.stage === "done") && (
+          (view.phase !== "running" ||
+            ["waiting", "done"].includes(market.stage)) && (
             <div className="phase-banner">
               <Clock3 size={19} />
               <div>
                 <b>
-                  {view.phase === "waiting"
-                    ? "教員が実験を開始するまでお待ちください"
-                    : view.phase === "paused"
-                      ? "取引は一時停止中です"
-                      : view.phase === "finished"
-                        ? "おつかれさまでした。実験は終了です"
-                        : "今期の取引は終了しました"}
+                  {view.phase === "finished" || market.stage === "done"
+                    ? "おつかれさまでした。実験は終了です"
+                    : view.phase === "waiting"
+                      ? "教員が実験を開始するまでお待ちください"
+                      : view.phase === "paused"
+                        ? "取引は一時停止中です"
+                        : "この市場の参加者を待っています"}
                 </b>
                 <p>
-                  {view.phase === "waiting"
-                    ? `この市場は ${market.participantCount} / 16人が入室しています。役割と2単位の条件を確認してください。`
-                    : view.phase === "finished"
-                      ? `累積利益は ${money(view.me.profit)} です。`
-                      : view.phase === "paused"
-                        ? "教員が再開するまでお待ちください。残り時間は止まっています。"
-                        : `今期の利益：${money(view.me.roundProfit)}。次の期は教員が開始します。`}
+                  {view.phase === "finished" || market.stage === "done"
+                    ? `累積利益は ${money(view.me.profit)} です。`
+                    : view.phase === "paused"
+                      ? "教員が再開するまでお待ちください。残り時間は止まっています。"
+                      : `この市場は ${market.participantCount} / 16人が入室しています。教員が実験を開始し、16人そろうと自動で始まります。`}
                 </p>
               </div>
             </div>
@@ -365,8 +366,8 @@ export function StudyRoom({
               <StudyMarketOverview
                 key={view.code}
                 teacher={teacher}
-                currentRound={view.round}
                 phase={view.phase}
+                now={now}
                 selected={market.id}
                 onSelect={setSelected}
                 demo={demo}
@@ -408,7 +409,7 @@ export function StudyRoom({
                 単位です。
               </p>
               <StudentOrder
-                key={`${view.round}-${market.stageKey}-${study.unitsUsed}`}
+                key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
                 view={view}
                 market={market}
                 command={command}
@@ -502,7 +503,7 @@ export function StudyRoom({
 }
 
 function MarketActivity(props: MarketProps) {
-  const { view, market } = props;
+  const { market } = props;
   if (market.institution === "cda") return <OrderBook {...props} />;
   if (market.institution === "posted") return <OfferBoard {...props} />;
   return (
@@ -527,7 +528,7 @@ function MarketActivity(props: MarketProps) {
           </thead>
           <tbody>
             {market.clearings
-              .filter((c) => c.round === view.round)
+              .filter((c) => c.round === market.round)
               .map((c) => (
                 <tr key={`${c.round}-${c.call}`}>
                   <td>{c.round}</td>
@@ -539,7 +540,7 @@ function MarketActivity(props: MarketProps) {
           </tbody>
         </table>
       </div>
-      {!market.clearings.some((c) => c.round === view.round) && (
+      {!market.clearings.some((c) => c.round === market.round) && (
         <p className="study-empty">締切後に清算結果が表示されます。</p>
       )}
     </section>
@@ -589,12 +590,10 @@ function TeacherControls({
         {["waiting", "review"].includes(view.phase) && (
           <button
             className="button primary"
-            disabled={
-              disabled || view.participantCount !== view.config.capacity
-            }
+            disabled={disabled}
             onClick={() => void command({ type: "start" })}
           >
-            {view.round ? `第${view.round + 1}期を開始` : "実験を開始"}
+            実験を開始
           </button>
         )}
         {view.phase === "running" && (
@@ -618,10 +617,15 @@ function TeacherControls({
         {["running", "paused"].includes(view.phase) && (
           <button
             className="button secondary"
-            disabled={disabled}
+            disabled={
+              disabled ||
+              !view.study!.teacher!.markets.some(
+                (m) => !["done", "waiting"].includes(m.stage),
+              )
+            }
             onClick={() => setConfirm("end-round")}
           >
-            今期を途中終了
+            各市場の今期を終了
           </button>
         )}
         {view.phase !== "finished" && (
@@ -635,16 +639,20 @@ function TeacherControls({
         )}
       </div>
       <p className="field-help">
-        全員が入室してから開始できます。各市場の時間切れ・清算・購入順は自動で進行します。全市場の終了後、次の期を開始してください。
+        実験を開始すると、各市場は16人そろい次第、取引を開始します。各期の終了後は自動で次の期へ進み、15期で終了します。
       </p>
       {confirm && (
         <ConfirmDialog
           title={
             confirm === "finish"
               ? "実験を終了しますか？"
-              : "今期を途中終了しますか？"
+              : "各市場の進行中の期を終了しますか？"
           }
-          message="受付中の注文は取り消され、未完了の期は「途中終了」として記録されます。Callの未清算注文は約定しません。"
+          message={
+            confirm === "finish"
+              ? "すべての市場を終了します。受付中の注文は取り消され、未完了の期は「途中終了」として記録されます。"
+              : "各市場の進行中の期を「途中終了」として記録し、次の期へ進みます。一時停止中は次の期も停止したままです。Callの未清算注文は約定しません。"
+          }
           onCancel={() => setConfirm(null)}
           onConfirm={async () => {
             await command({ type: confirm });

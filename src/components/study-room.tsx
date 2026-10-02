@@ -12,7 +12,8 @@ import {
   WifiOff,
   Copy,
 } from "lucide-react";
-import { Header, Footer } from "./shell";
+import { Header } from "./shell";
+import { StudyDetailDialog } from "./study-detail-dialog";
 import { PriceChart } from "./price-chart";
 import { ConfirmDialog } from "./confirm-dialog";
 import { StudySettingsEditor } from "./study-settings";
@@ -83,7 +84,7 @@ export function StudyRoom({
     remaining <= 0 ||
     market.stage === "done";
   return (
-    <>
+    <div className={`study-shell ${demo ? "study-demo" : ""}`}>
       <Header>
         {demo ? (
           <span className="demo-header-tag">ひとりデモ</span>
@@ -101,10 +102,13 @@ export function StudyRoom({
         <span className={`role-tag ${teacher ? "teacher" : view.me.role}`}>
           {teacher ? "教員" : view.me.role === "buyer" ? "買い手" : "売り手"}
         </span>
+        <Link href="/guide" target="_blank" className="quiet-link">
+          実験のルール
+        </Link>
       </Header>
       <main className="room-main study-main">
         {toolbar}
-        <div className="room-heading">
+        <div className="room-heading study-room-context">
           <div>
             <div className="eyebrow">
               {teacher
@@ -112,8 +116,26 @@ export function StudyRoom({
                 : `市場${market.id} · ${view.me.nickname} さん · ${view.me.alias}`}
             </div>
             <h1>{teacher ? view.config.title : "取引ルーム"}</h1>
-            <p>同じ商品、同じ条件。取引の制度を体験する。</p>
           </div>
+          <section className="study-institution">
+            <Image
+              src="/fruits/apple.jpg"
+              alt="取引する商品：りんご"
+              width={44}
+              height={44}
+            />
+            <div>
+              <span className="eyebrow">
+                市場{market.id} · 制度内 第{market.institutionPeriod} / 5期
+              </span>
+              <h2>
+                {INSTITUTIONS[market.institution].short}{" "}
+                <small>{INSTITUTIONS[market.institution].name}</small>
+              </h2>
+              <p>{INSTITUTIONS[market.institution].description}</p>
+            </div>
+            <span className="study-units">1商品・各自2単位／期</span>
+          </section>
           <div className="round-display">
             <div>
               <span className="phase-label">{stageLabel}</span>
@@ -160,110 +182,162 @@ export function StudyRoom({
           <TeacherControls view={view} command={command} disabled={disabled} />
         )}
         {teacher && (
-          <section className="panel study-section">
-            <div className="study-section-heading">
-              <h2>市場と制度の順序</h2>
-              <label className="field">
-                表示する市場
-                <select
-                  value={market.id}
-                  onChange={(e) => setSelected(Number(e.target.value))}
-                >
-                  {teacher.markets.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      市場 {m.id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="study-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>市場</th>
-                    <th>人数</th>
-                    <th>第1〜5期</th>
-                    <th>第6〜10期</th>
-                    <th>第11〜15期</th>
-                    <th>現在</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teacher.markets.map((m) => (
-                    <tr
-                      key={m.id}
-                      className={m.id === market.id ? "selected-row" : ""}
-                    >
-                      <td>市場{m.id}</td>
-                      <td>{m.participantCount}/16</td>
-                      {m.order.map((i) => (
-                        <td key={i}>{INSTITUTIONS[i].short}</td>
+          <div className="study-teacher-tools">
+            {teacher && (
+              <StudyDetailDialog label="市場と制度の順序">
+                <section className="panel study-section">
+                  <div className="study-section-heading">
+                    <h2>市場と制度の順序</h2>
+                    <label className="field">
+                      表示する市場
+                      <select
+                        value={market.id}
+                        onChange={(e) => setSelected(Number(e.target.value))}
+                      >
+                        {teacher.markets.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            市場 {m.id}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="study-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>市場</th>
+                          <th>人数</th>
+                          <th>第1〜5期</th>
+                          <th>第6〜10期</th>
+                          <th>第11〜15期</th>
+                          <th>現在</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teacher.markets.map((m) => (
+                          <tr
+                            key={m.id}
+                            className={m.id === market.id ? "selected-row" : ""}
+                          >
+                            <td>市場{m.id}</td>
+                            <td>{m.participantCount}/16</td>
+                            {m.order.map((i) => (
+                              <td key={i}>{INSTITUTIONS[i].short}</td>
+                            ))}
+                            <td>{stages[m.stage]}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </StudyDetailDialog>
+            )}
+            {teacher && (
+              <StudyDetailDialog
+                label="集計・条件・参加者"
+                title="市場の集計と実験管理"
+              >
+                <TeacherMetrics view={view} market={market} />
+                {!demo && (
+                  <StudySettingsEditor
+                    view={view}
+                    command={command}
+                    disabled={disabled}
+                  />
+                )}
+                <section className="panel study-section">
+                  <h2>参加者と条件</h2>
+                  <div className="study-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>市場</th>
+                          <th>名前</th>
+                          <th>役割</th>
+                          <th>第1単位</th>
+                          <th>第2単位</th>
+                          <th>累積利益</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teacher.participants
+                          .filter((p) => p.market === market.id)
+                          .map((p) => (
+                            <tr key={p.id}>
+                              <td>{p.market}</td>
+                              <td>{p.nickname}</td>
+                              <td>{p.alias}</td>
+                              <td>{money(p.limits[0])}</td>
+                              <td>{money(p.limits[1])}</td>
+                              <td>{money(p.profit)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+                {!demo && (
+                  <section className="panel study-section">
+                    <h2>実験データを保存</h2>
+                    <p className="muted">
+                      すべての市場・15期の記録を、制度・市場番号・単位番号とともに保存します。
+                    </p>
+                    <div className="study-actions">
+                      {[
+                        ["trades", "取引履歴 CSV"],
+                        ["metrics", "市場・期別集計 CSV"],
+                        ["events", "操作ログ CSV"],
+                        ["settings", "実験条件 JSON"],
+                      ].map(([kind, name]) => (
+                        <a
+                          className="button secondary"
+                          href={`/api/rooms/${view.code}/export?kind=${kind}`}
+                          key={kind}
+                        >
+                          <Download size={15} />
+                          {name}
+                        </a>
                       ))}
-                      <td>{stages[m.stage]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
-        <section className="study-institution">
-          <Image
-            src="/fruits/apple.jpg"
-            alt="取引する商品：りんご"
-            width={78}
-            height={78}
-          />
-          <div>
-            <span className="eyebrow">
-              市場{market.id} · 制度内 第{market.institutionPeriod} / 5期
-            </span>
-            <h2>
-              {INSTITUTIONS[market.institution].short}{" "}
-              <small>{INSTITUTIONS[market.institution].name}</small>
-            </h2>
-            <p>{INSTITUTIONS[market.institution].description}</p>
+                    </div>
+                  </section>
+                )}
+              </StudyDetailDialog>
+            )}
           </div>
-          <span className="study-units">1商品・各自2単位／期</span>
-        </section>
-        {!teacher && (view.phase !== "running" || market.stage === "done") && (
-          <div className="phase-banner">
-            <Clock3 size={19} />
-            <div>
-              <b>
-                {view.phase === "waiting"
-                  ? demo
-                    ? "上の「デモを開始」から始めましょう"
-                    : "教員が実験を開始するまでお待ちください"
-                  : view.phase === "paused"
-                    ? "取引は一時停止中です"
-                    : view.phase === "finished"
-                      ? "おつかれさまでした。実験は終了です"
-                      : "今期の取引は終了しました"}
-              </b>
-              <p>
-                {view.phase === "waiting"
-                  ? `この市場は ${market.participantCount} / 16人が入室しています。役割と2単位の条件を確認してください。`
-                  : view.phase === "finished"
-                    ? `累積利益は ${money(view.me.profit)} です。`
+        )}
+        {!teacher &&
+          !demo &&
+          (view.phase !== "running" || market.stage === "done") && (
+            <div className="phase-banner">
+              <Clock3 size={19} />
+              <div>
+                <b>
+                  {view.phase === "waiting"
+                    ? "教員が実験を開始するまでお待ちください"
                     : view.phase === "paused"
-                      ? demo
-                        ? "上の「再開」で取引に戻れます。残り時間は止まっています。"
-                        : "教員が再開するまでお待ちください。残り時間は止まっています。"
-                      : `今期の利益：${money(view.me.roundProfit)}。${demo ? "上のボタンから次の期を開始できます。" : "次の期は教員が開始します。"}`}
-              </p>
+                      ? "取引は一時停止中です"
+                      : view.phase === "finished"
+                        ? "おつかれさまでした。実験は終了です"
+                        : "今期の取引は終了しました"}
+                </b>
+                <p>
+                  {view.phase === "waiting"
+                    ? `この市場は ${market.participantCount} / 16人が入室しています。役割と2単位の条件を確認してください。`
+                    : view.phase === "finished"
+                      ? `累積利益は ${money(view.me.profit)} です。`
+                      : view.phase === "paused"
+                        ? "教員が再開するまでお待ちください。残り時間は止まっています。"
+                        : `今期の利益：${money(view.me.roundProfit)}。次の期は教員が開始します。`}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
         <div
-          className={
-            teacher
-              ? ""
-              : `study-trading-grid ${market.institution === "posted" && view.me.role === "buyer" ? "purchase-layout" : ""}`
-          }
+          className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${market.institution === "posted" && view.me.role === "buyer" ? "purchase-layout" : ""}`}
         >
-          <div>
+          <div className="study-market-column">
             {market.institution === "cda" ? (
               <OrderBook
                 view={view}
@@ -317,91 +391,58 @@ export function StudyRoom({
                 )}
               </section>
             )}
-            <section className="panel study-section">
-              <h2>全期間の取引価格</h2>
-              <p className="muted">
-                市場{market.id}の履歴を全期間表示します。
-                {market.order
-                  .map(
-                    (i, n) =>
-                      `${n * 5 + 1}〜${n * 5 + 5}期：${INSTITUTIONS[i].short}`,
-                  )
-                  .join(" ／ ")}
-              </p>
-              <PriceChart
-                trades={market.trades.map((t) => ({ ...t, good: "apple" }))}
-                rounds={15}
-                periodAxis
-                equilibrium={teacher?.equilibrium}
-              />
-              <details>
-                <summary>
-                  取引履歴をすべて見る（{market.trades.length}件）
-                </summary>
-                <div className="study-table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>期</th>
-                        <th>制度</th>
-                        <th>時刻</th>
-                        <th>価格</th>
-                        <th>買い手</th>
-                        <th>売り手</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {market.trades.map((t) => (
-                        <tr key={t.id}>
-                          <td>{t.round}</td>
-                          <td>{INSTITUTIONS[t.institution].short}</td>
-                          <td>{timeLabel(t.at)}</td>
-                          <td>{money(t.price)}</td>
-                          <td>{t.buyerAlias}</td>
-                          <td>{t.sellerAlias}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            </section>
           </div>
-          {!teacher && (
-            <aside>
-              <section className="panel study-section private-panel">
-                <h2>
-                  <LockKeyhole size={16} /> あなたの条件 <small>非公開</small>
-                </h2>
-                <p>
-                  {view.me.role === "buyer"
-                    ? "購入する単位ごとの価値"
-                    : "販売する単位ごとの費用"}
-                </p>
-                <div className="study-values">
-                  {study.unitLimits!.map((v, i) => (
-                    <div
-                      key={i}
-                      className={i < study.unitsUsed ? "used-unit" : ""}
-                    >
-                      <span>
-                        {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
-                      </span>
-                      <b>{money(v)}</b>
-                    </div>
-                  ))}
-                </div>
-                <p className="muted">
-                  役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b>{" "}
-                  単位です。
-                </p>
-                <StudentOrder
-                  key={`${view.round}-${market.stageKey}-${study.unitsUsed}`}
-                  view={view}
-                  market={market}
-                  command={command}
-                  disabled={blocked}
-                />
+          <section className="panel study-section study-price-panel">
+            <h2>全期間の取引価格</h2>
+            <p className="muted">
+              市場{market.id}の履歴を全期間表示します。
+              {market.order
+                .map(
+                  (i, n) =>
+                    `${n * 5 + 1}〜${n * 5 + 5}期：${INSTITUTIONS[i].short}`,
+                )
+                .join(" ／ ")}
+            </p>
+            <PriceChart
+              trades={market.trades.map((t) => ({ ...t, good: "apple" }))}
+              rounds={15}
+              periodAxis
+              fill
+              equilibrium={teacher?.equilibrium}
+            />
+            <StudyDetailDialog
+              label={`取引履歴をすべて見る（${market.trades.length}件）`}
+              title={`市場${market.id}の取引履歴`}
+            >
+              <div className="study-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>期</th>
+                      <th>制度</th>
+                      <th>時刻</th>
+                      <th>価格</th>
+                      <th>買い手</th>
+                      <th>売り手</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {market.trades.map((t) => (
+                      <tr key={t.id}>
+                        <td>{t.round}</td>
+                        <td>{INSTITUTIONS[t.institution].short}</td>
+                        <td>{timeLabel(t.at)}</td>
+                        <td>{money(t.price)}</td>
+                        <td>{t.buyerAlias}</td>
+                        <td>{t.sellerAlias}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </StudyDetailDialog>
+            {!teacher && (
+              <div className="study-personal-results">
                 <div className="study-profit">
                   <span>
                     今期の利益{" "}
@@ -416,118 +457,86 @@ export function StudyRoom({
                     </b>
                   </span>
                 </div>
-              </section>
-              <section className="panel study-section">
-                <h2>あなたの取引履歴</h2>
-                {!study.myTrades.length ? (
-                  <p className="muted">まだ取引はありません。</p>
-                ) : (
-                  <div className="study-table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>期</th>
-                          <th>単位</th>
-                          <th>価格</th>
-                          <th>利益</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {study.myTrades.map((t) => (
-                          <tr key={t.id}>
-                            <td>{t.round}</td>
-                            <td>{t.unit}</td>
-                            <td>{decimal(t.price)}</td>
-                            <td>{decimal(t.profit)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <div className="study-personal-history">
+                  <StudyDetailDialog
+                    label={`あなたの取引履歴（${study.myTrades.length}件）`}
+                    title="あなたの取引履歴"
+                  >
+                    {!study.myTrades.length ? (
+                      <p className="muted">まだ取引はありません。</p>
+                    ) : (
+                      <div className="study-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>期</th>
+                              <th>単位</th>
+                              <th>価格</th>
+                              <th>利益</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {study.myTrades.map((t) => (
+                              <tr key={t.id}>
+                                <td>{t.round}</td>
+                                <td>{t.unit}</td>
+                                <td>{decimal(t.price)}</td>
+                                <td>{decimal(t.profit)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </StudyDetailDialog>
+                </div>
+              </div>
+            )}
+          </section>
+          {!teacher && (
+            <aside className="panel study-section private-panel">
+              <h2>
+                <LockKeyhole size={16} /> あなたの条件 <small>非公開</small>
+              </h2>
+              <p>
+                {view.me.role === "buyer"
+                  ? "購入する単位ごとの価値"
+                  : "販売する単位ごとの費用"}
+              </p>
+              <div className="study-values">
+                {study.unitLimits!.map((v, i) => (
+                  <div
+                    key={i}
+                    className={i < study.unitsUsed ? "used-unit" : ""}
+                  >
+                    <span>
+                      {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
+                    </span>
+                    <b>{money(v)}</b>
                   </div>
-                )}
-              </section>
+                ))}
+              </div>
+              <p className="muted">
+                役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b>{" "}
+                単位です。
+              </p>
+              <StudentOrder
+                key={`${view.round}-${market.stageKey}-${study.unitsUsed}`}
+                view={view}
+                market={market}
+                command={command}
+                disabled={blocked}
+              />
             </aside>
           )}
         </div>
-        {teacher && (
-          <>
-            <TeacherMetrics view={view} market={market} />
-            {!demo && (
-              <StudySettingsEditor
-                view={view}
-                command={command}
-                disabled={disabled}
-              />
-            )}
-            <section className="panel study-section">
-              <h2>参加者と条件</h2>
-              <div className="study-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>市場</th>
-                      <th>名前</th>
-                      <th>役割</th>
-                      <th>第1単位</th>
-                      <th>第2単位</th>
-                      <th>累積利益</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teacher.participants
-                      .filter((p) => p.market === market.id)
-                      .map((p) => (
-                        <tr key={p.id}>
-                          <td>{p.market}</td>
-                          <td>{p.nickname}</td>
-                          <td>{p.alias}</td>
-                          <td>{money(p.limits[0])}</td>
-                          <td>{money(p.limits[1])}</td>
-                          <td>{money(p.profit)}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-            {!demo && (
-              <section className="panel study-section">
-                <h2>実験データを保存</h2>
-                <p className="muted">
-                  すべての市場・15期の記録を、制度・市場番号・単位番号とともに保存します。
-                </p>
-                <div className="study-actions">
-                  {[
-                    ["trades", "取引履歴 CSV"],
-                    ["metrics", "市場・期別集計 CSV"],
-                    ["events", "操作ログ CSV"],
-                    ["settings", "実験条件 JSON"],
-                  ].map(([kind, name]) => (
-                    <a
-                      className="button secondary"
-                      href={`/api/rooms/${view.code}/export?kind=${kind}`}
-                      key={kind}
-                    >
-                      <Download size={15} />
-                      {name}
-                    </a>
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
-        )}
         <p className="room-bottom-note">
           {demo
             ? "デモはこのブラウザー内だけで動作します。"
             : "表示は約1秒ごとに更新されます。"}
-          <Link href="/guide" target="_blank">
-            実験のルール
-          </Link>
         </p>
       </main>
-      <Footer />
-    </>
+    </div>
   );
 }
 
@@ -543,7 +552,7 @@ function TeacherControls({
   const [confirm, setConfirm] = useState<"finish" | "end-round" | null>(null),
     [copied, setCopied] = useState(false);
   return (
-    <section className="panel study-section">
+    <section className="panel study-section study-teacher-controls">
       <div className="study-section-heading">
         <div>
           <span className="eyebrow">学生用ルームコード</span>
@@ -663,10 +672,9 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
                 {side === "buyer" ? "買い注文" : "売り注文"}
               </h3>
               <div
-                className="study-book-scroll"
+                className="study-book-rows"
                 role="region"
                 aria-label={side === "buyer" ? "買い注文一覧" : "売り注文一覧"}
-                tabIndex={0}
               >
                 <table>
                   <thead>
@@ -684,6 +692,20 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
                         <td>{o.alias}</td>
                       </tr>
                     ))}
+                    {Array.from(
+                      { length: Math.max(0, 8 - rows.length) },
+                      (_, i) => (
+                        <tr
+                          key={`empty-${i}`}
+                          className="study-book-placeholder"
+                          aria-hidden="true"
+                        >
+                          <td>—</td>
+                          <td>—</td>
+                          <td>—</td>
+                        </tr>
+                      ),
+                    )}
                   </tbody>
                 </table>
                 {!rows.length && (
@@ -735,78 +757,68 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
         </p>
       ) : (
         <>
-          <p className={mine ? "success-message" : "muted"}>
-            {market.stage === "purchase"
-              ? mine
-                ? "あなたの購入時間です。10秒以内に選んでください。"
-                : `現在は ${market.activeBuyer} の購入時間です。`
-              : "今期の購入時間は終了しました。"}
-          </p>
-          <div className="study-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>売り手</th>
-                  <th>価格</th>
-                  <th>在庫</th>
-                  <th>購入</th>
-                </tr>
-              </thead>
-              <tbody>
-                {market.offers.map((o) => (
-                  <tr key={o.id}>
-                    <td>{o.alias}</td>
-                    <td>{money(o.price)}</td>
-                    <td>{o.remaining}</td>
-                    <td>
-                      <div className="study-actions">
-                        {[1, 2]
-                          .filter(
-                            (q) =>
-                              q <=
-                              Math.min(o.remaining, 2 - view.study!.unitsUsed),
-                          )
-                          .map((q) => (
-                            <button
-                              key={q}
-                              className="button secondary study-buy-button"
-                              disabled={disabled || !mine}
-                              onClick={() =>
-                                void command({
-                                  type: "posted-buy",
-                                  offerId: o.id,
-                                  quantity: q,
-                                })
-                              }
-                            >
-                              {q}単位購入
-                              {view.me.role === "buyer" && (
-                                <ExpectedProfit
-                                  view={view}
-                                  price={o.price}
-                                  quantity={q}
-                                />
-                              )}
-                            </button>
-                          ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className={`study-offer-status ${mine ? "is-my-turn" : ""}`}>
+            <p>
+              {market.stage === "purchase"
+                ? mine
+                  ? "あなたの購入時間です。10秒以内に選んでください。"
+                  : `現在は ${market.activeBuyer} の購入時間です。`
+                : "今期の購入時間は終了しました。"}
+            </p>
+            {mine && (
+              <button
+                className="button secondary"
+                disabled={disabled}
+                onClick={() => void command({ type: "posted-pass" })}
+              >
+                今回は購入を終える
+              </button>
+            )}
+          </div>
+          <div className="study-offer-list" aria-label="売り手の提示一覧">
+            {market.offers.map((o) => (
+              <div className="study-offer-card" key={o.id}>
+                <div className="study-offer-info">
+                  <span>{o.alias}</span>
+                  <b>{money(o.price)}</b>
+                  <span>在庫 {o.remaining}</span>
+                </div>
+                <div className="study-offer-actions">
+                  {[1, 2]
+                    .filter(
+                      (q) =>
+                        q <= Math.min(o.remaining, 2 - view.study!.unitsUsed),
+                    )
+                    .map((q) => (
+                      <button
+                        key={q}
+                        className="button secondary study-buy-button"
+                        disabled={disabled || !mine}
+                        onClick={() =>
+                          void command({
+                            type: "posted-buy",
+                            offerId: o.id,
+                            quantity: q,
+                          })
+                        }
+                      >
+                        {q}単位購入
+                        {view.me.role === "buyer" && (
+                          <ExpectedProfit
+                            view={view}
+                            price={o.price}
+                            quantity={q}
+                          />
+                        )}
+                      </button>
+                    ))}
+                  {o.remaining === 0 && <span className="muted">売り切れ</span>}
+                </div>
+              </div>
+            ))}
           </div>
           {!market.offers.length && (
             <p className="study-empty">購入可能な在庫はありません。</p>
-          )}
-          {mine && (
-            <button
-              className="button secondary"
-              disabled={disabled}
-              onClick={() => void command({ type: "posted-pass" })}
-            >
-              今回は購入を終える
-            </button>
           )}
         </>
       )}
@@ -891,7 +903,11 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
       });
   }
   return (
-    <form onSubmit={submit} noValidate className="study-order-form">
+    <form
+      onSubmit={submit}
+      noValidate
+      className={`study-order-form ${market.institution === "call" ? "study-call-form" : ""}`}
+    >
       {market.institution !== "cda" && (
         <label className="field">
           提示する数量
@@ -912,7 +928,9 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
         </label>
       )}
       {quantity !== 0 && (
-        <label className="field">
+        <label
+          className={`field ${market.institution === "call" ? "study-call-price" : ""}`}
+        >
           {market.institution === "posted"
             ? "1単位あたりの販売価格"
             : `${study.unitsUsed + 1}単位目の${buyer ? "買いたい" : "売りたい"}価格`}
@@ -932,7 +950,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
         </label>
       )}
       {market.institution === "call" && quantity === 2 && (
-        <label className="field">
+        <label className="field study-call-price">
           2単位目の{buyer ? "買いたい" : "売りたい"}価格
           <div className="study-price-input">
             <input

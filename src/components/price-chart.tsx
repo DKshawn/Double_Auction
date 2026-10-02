@@ -9,23 +9,27 @@ export function PriceChart({
   rounds = 1,
   compact = false,
   periodAxis = false,
+  fill = false,
 }: {
   trades: Trade[];
   equilibrium?: Equilibrium;
   rounds?: number;
   compact?: boolean;
   periodAxis?: boolean;
+  fill?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [w, setWidth] = useState(compact ? 360 : 640);
+  const [height, setHeight] = useState(220);
   useEffect(() => {
-    const observer = new ResizeObserver(([entry]) =>
-      setWidth(Math.max(250, Math.floor(entry.contentRect.width))),
-    );
+    const observer = new ResizeObserver(([entry]) => {
+      setWidth(Math.max(250, Math.floor(entry.contentRect.width)));
+      if (fill) setHeight(Math.max(190, Math.floor(entry.contentRect.height)));
+    });
     if (root.current) observer.observe(root.current);
     return () => observer.disconnect();
-  }, []);
-  const h = compact ? 190 : 220;
+  }, [fill]);
+  const h = fill ? height : compact ? 190 : 220;
   const left = 45,
     right = 20,
     top = 24,
@@ -53,7 +57,10 @@ export function PriceChart({
     );
   };
   return (
-    <div ref={root} className={`price-chart ${compact ? "compact" : ""}`}>
+    <div
+      ref={root}
+      className={`price-chart ${compact ? "compact" : ""} ${fill ? "fill" : ""}`}
+    >
       <svg
         viewBox={`0 0 ${w} ${h}`}
         role="img"

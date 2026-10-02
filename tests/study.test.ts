@@ -236,6 +236,83 @@ test("Call hides submitted orders, clears all trades at 97.5, expires unfilled o
   assert.equal(study.markets[0].clearings.at(-1)!.price, null);
 });
 
+test("buyers and sellers can explicitly abstain in all four Calls, with final choices and separate audit records", () => {
+  const { room, study, send, buyers, sellers, events } = classroom(1, "call");
+  send("teacher", { type: "start" });
+  for (let call = 1; call <= 4; call++) {
+    const now = 1000 + (call - 1) * 30000;
+    for (const participant of [buyers[0], sellers[0]]) {
+      send(participant, { type: "call-submit", prices: [] }, now);
+      const view = toView(room, participant, now, "local");
+      assert.equal(view.study!.market.submitted, true);
+      assert.deepEqual(view.study!.market.myOrders, []);
+      assert.equal(view.study!.unitsUsed, 0);
+      assert.equal(view.me.profit, 0);
+      assert.throws(
+        () => send(participant, { type: "call-submit", prices: [80] }, now),
+        /送信済み/,
+      );
+    }
+    assert.equal(
+      toView(room, buyers[1], now, "local").study!.market.submitted,
+      false,
+    );
+    settleDeadline(room, now + 30000, events);
+    assert.equal(
+      toView(room, buyers[0], now + 30000, "local").study!.market.submitted,
+      false,
+    );
+  }
+  assert.equal(study.markets[0].round, 2);
+  assert.equal(study.markets[0].call, 1);
+  assert.equal(study.markets[0].trades.length, 0);
+  assert.equal(study.markets[0].clearings.length, 4);
+  const passes = events.filter((e) => e.type === "call-pass");
+  assert.equal(passes.length, 8);
+  for (const participant of [buyers[0], sellers[0]]) {
+    assert.deepEqual(
+      passes
+        .filter((e) => e.actor === participant.id)
+        .map((e) => e.detail.call),
+      [1, 2, 3, 4],
+    );
+  }
+  assert.ok(
+    passes.every(
+      (e) => e.round === 1 && e.detail.market === 1 && e.detail.quantity === 0,
+    ),
+  );
+  assert.equal(events.filter((e) => e.type === "call-order").length, 0);
+  assert.match(exportData(room, events, 121000, "events").content, /call-pass/);
+});
+
+test("Call abstention preserves a remaining unit for a later call and cannot create capacity after two trades", () => {
+  const { room, study, send, buyers, sellers, events } = classroom(1, "call");
+  send("teacher", { type: "start" });
+  send(buyers[0], { type: "call-submit", prices: [100] });
+  send(sellers[0], { type: "call-submit", prices: [80] });
+  settleDeadline(room, 31000, events);
+  for (const participant of [buyers[0], sellers[0]])
+    send(participant, { type: "call-submit", prices: [] }, 31000);
+  settleDeadline(room, 61000, events);
+  assert.equal(toView(room, buyers[0], 61000, "local").study!.unitsUsed, 1);
+  send(buyers[0], { type: "call-submit", prices: [100] }, 61000);
+  send(sellers[0], { type: "call-submit", prices: [80] }, 61000);
+  settleDeadline(room, 91000, events);
+  assert.deepEqual(
+    study.markets[0].trades.map((t) => [t.call, t.buyerUnit, t.sellerUnit]),
+    [
+      [1, 1, 1],
+      [3, 2, 2],
+    ],
+  );
+  assert.equal(toView(room, buyers[0], 91000, "local").study!.unitsUsed, 2);
+  assert.throws(
+    () => send(buyers[0], { type: "call-submit", prices: [] }, 91000),
+    /残りの取引可能数/,
+  );
+});
+
 test("truthful two-unit Call schedules clear 11 units at 80 for surplus 440, without leaking values", () => {
   const { room, study, send, buyers, sellers, events } = classroom(1, "call");
   send("teacher", { type: "start" });

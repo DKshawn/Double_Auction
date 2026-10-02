@@ -643,7 +643,7 @@ export function executeStudy(
           "この回の注文は受付終了または送信済みです。",
           409,
         );
-      if (!cmd.prices.length || cmd.prices.length > remaining)
+      if (!remaining || cmd.prices.length > remaining)
         throw new AuctionError("残りの取引可能数を確認してください。");
       cmd.prices.forEach(checkPrice);
       if (
@@ -658,6 +658,11 @@ export function executeStudy(
         throw new AuctionError(
           "2単位目の買値は1単位目以下、売値は1単位目以上にしてください。",
         );
+      if (!cmd.prices.length)
+        log(room, m, events, now, "call-pass", actor.id, {
+          quantity: 0,
+          side: actor.role,
+        });
       for (const [i, price] of cmd.prices.entries()) {
         const id = randomUUID(),
           unit = 3 - remaining + i;

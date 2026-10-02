@@ -112,6 +112,43 @@ test("Call demo keeps orders sealed, clears uniformly, retains unit limits acros
   assert.equal(demo.getSnapshot().view.study!.market.call, 1);
 });
 
+test("Call demo lets either human role abstain in all four calls and resets the choice for the next period", async () => {
+  for (const role of ["buyer", "seller"] as const) {
+    const demo = new DemoSession("call", role, 1000);
+    await demo.command({ type: "start" }, true);
+    for (let call = 1; call <= 4; call++) {
+      assert.equal(demo.getSnapshot().view.study!.market.call, call);
+      assert.equal(
+        await demo.command({ type: "call-submit", prices: [] }),
+        true,
+      );
+      const view = demo.getSnapshot().view;
+      assert.equal(view.study!.market.submitted, true);
+      assert.deepEqual(view.study!.market.myOrders, []);
+      assert.equal(view.study!.unitsUsed, 0);
+      assert.equal(view.me.profit, 0);
+      assert.equal(
+        await demo.command({ type: "call-submit", prices: [] }),
+        false,
+      );
+      demo.skipStage();
+    }
+    const next = demo.getSnapshot().view;
+    assert.equal(next.study!.market.round, 2);
+    assert.equal(next.study!.market.call, 1);
+    assert.equal(next.study!.market.submitted, false);
+    assert.equal(next.study!.unitsUsed, 0);
+    assert.deepEqual(next.study!.myTrades, []);
+    assert.equal(
+      await demo.command({
+        type: "call-submit",
+        prices: next.study!.unitLimits!,
+      }),
+      true,
+    );
+  }
+});
+
 test("all 12 demo markets finish 15 periods with isolated trades and all Call clearings, without submitting orders for the human", async () => {
   const demo = new DemoSession("cda", "buyer", 1000);
   const human = demo.getSnapshot().view.me.id;

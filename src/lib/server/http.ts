@@ -141,7 +141,7 @@ export const commandSchema = z
       z
         .object({
           type: z.literal("call-submit"),
-          prices: z.array(z.number().int().min(1).max(999)).min(1).max(2),
+          prices: z.array(z.number().int().min(1).max(999)).max(2),
         })
         .strict(),
       z

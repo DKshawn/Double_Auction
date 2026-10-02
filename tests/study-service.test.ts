@@ -8,6 +8,7 @@ import {
   type Database,
 } from "../src/lib/server/database";
 import { AuctionService } from "../src/lib/server/service";
+import { commandSchema } from "../src/lib/server/http";
 import type { Room } from "../src/lib/server/model";
 import type { Command, RoomView } from "../src/lib/types";
 
@@ -156,6 +157,46 @@ test("export atomically clears expired Call orders without a polling browser, in
   assert.equal(exported.room.study!.markets[0].call, 2);
   const again = await service.export(teacher.code, teacher.token);
   assert.equal(again.events.length, exported.events.length);
+});
+
+test("zero-unit Call requests pass API validation, persist across reloads and log abstention exactly once", async () => {
+  const { teacher, students, send } = await classroom();
+  const snapshot = await service.export(teacher.code, teacher.token);
+  snapshot.room.study!.markets[0].order = ["call", "cda", "posted"];
+  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
+    teacher.code,
+    JSON.stringify(snapshot.room),
+  ]);
+  await send(teacher.token, { type: "start" });
+  const student = students.find((p) => p.view.me.role === "buyer")!;
+  const view = await service.view(teacher.code, student.token);
+  const request = commandSchema.parse({
+    requestId: randomUUID(),
+    expectedRound: view.round,
+    expectedStage: view.study!.market.stageKey,
+    command: { type: "call-submit", prices: [] },
+  });
+  await service.command(teacher.code, student.token, request);
+  await service.command(teacher.code, student.token, request);
+  const reloaded = await new AuctionService(db).view(
+    teacher.code,
+    student.token,
+  );
+  assert.equal(reloaded.study!.market.submitted, true);
+  assert.deepEqual(reloaded.study!.market.myOrders, []);
+  assert.equal(reloaded.study!.unitsUsed, 0);
+  await assert.rejects(
+    send(student.token, { type: "call-submit", prices: [80] }),
+    /送信済み/,
+  );
+  const exported = await service.export(teacher.code, teacher.token);
+  const passes = exported.events.filter((e) => e.type === "call-pass");
+  assert.equal(passes.length, 1);
+  assert.equal(passes[0].actor, student.view.me.id);
+  assert.equal(passes[0].round, 1);
+  assert.equal(passes[0].detail.call, 1);
+  assert.equal(passes[0].detail.quantity, 0);
+  assert.equal(exported.room.study!.markets[0].orders.length, 0);
 });
 
 test("teacher opens admission before anyone joins; each full market starts once and late arrivals begin in period one", async () => {

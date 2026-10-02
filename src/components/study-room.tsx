@@ -849,7 +849,9 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
     buyer = view.me.role === "buyer",
     remaining = 2 - study.unitsUsed;
   const expected =
-    price && !(market.institution === "call" && quantity === 2 && !second)
+    quantity > 0 &&
+    price &&
+    !(market.institution === "call" && quantity === 2 && !second)
       ? study
           .unitLimits!.slice(
             study.unitsUsed,
@@ -879,10 +881,14 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           ? market.myOffer.quantity === 0
             ? "出品なし。"
             : `${market.myOffer.price}円・${market.myOffer.quantity}単位。`
-          : market.myOrders
-              .map((o) => `${o.unit}単位目：${o.price}円`)
-              .join("、")}
-        この提示は変更できません。
+          : market.myOrders.length
+            ? market.myOrders
+                .map((o) => `${o.unit}単位目：${o.price}円`)
+                .join("、")
+            : "今回は注文しない（0単位）を選択しました。"}
+        {market.institution === "call"
+          ? "この回の選択は変更できません。"
+          : "この提示は変更できません。"}
       </p>
     );
   const formDisabled =
@@ -892,7 +898,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
     setValidation("");
     if (formDisabled) return;
     const prices =
-      market.institution === "posted" && quantity === 0
+      quantity === 0
         ? []
         : market.institution === "call" && quantity === 2
           ? [Number(price), Number(second)]
@@ -906,8 +912,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
     else if (market.institution === "call")
       await command({
         type: "call-submit",
-        prices:
-          quantity === 2 ? [Number(price), Number(second)] : [Number(price)],
+        prices,
       });
     else
       await command({
@@ -924,15 +929,17 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
     >
       {market.institution !== "cda" && (
         <label className="field">
-          提示する数量
+          {market.institution === "call" ? "今回注文する数量" : "提示する数量"}
           <select
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
             disabled={formDisabled}
           >
-            {market.institution === "posted" && (
-              <option value={0}>0単位（出品しない）</option>
-            )}
+            <option value={0}>
+              {market.institution === "call"
+                ? "0単位（今回は注文しない）"
+                : "0単位（出品しない）"}
+            </option>
             {Array.from({ length: remaining }, (_, i) => (
               <option key={i} value={i + 1}>
                 {i + 1}単位
@@ -983,19 +990,29 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           </div>
         </label>
       )}
-      <p
-        className={
-          expected !== null && expected < 0 ? "study-loss" : "field-help"
-        }
-      >
-        {market.institution === "call"
-          ? "入力価格で成立した場合の利益"
-          : "この提示価格での利益"}
-        ：{money(expected)}
-      </p>
-      <p className="field-help">
-        損失が出る場合もあります。条件を確認してください。
-      </p>
+      {quantity === 0 ? (
+        <p className="field-help">
+          {market.institution === "call"
+            ? "この選択は今回の清算だけに適用されます。"
+            : "今期は出品しません。"}
+        </p>
+      ) : (
+        <>
+          <p
+            className={
+              expected !== null && expected < 0 ? "study-loss" : "field-help"
+            }
+          >
+            {market.institution === "call"
+              ? "入力価格で成立した場合の利益"
+              : "この提示価格での利益"}
+            ：{money(expected)}
+          </p>
+          <p className="field-help">
+            損失が出る場合もあります。条件を確認してください。
+          </p>
+        </>
+      )}
       {validation && (
         <p role="alert" className="error-message">
           {validation}
@@ -1005,7 +1022,9 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
         {market.institution === "cda"
           ? "注文を出す"
           : market.institution === "call"
-            ? "今回の注文を確定"
+            ? quantity === 0
+              ? "今回は注文しない"
+              : "今回の注文を確定"
             : "価格と数量を確定"}
       </button>
       {market.institution === "cda" && market.myOrders.length > 0 && (

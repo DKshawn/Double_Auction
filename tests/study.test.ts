@@ -190,6 +190,7 @@ test("Call hides submitted orders, clears all trades at 97.5, expires unfilled o
   );
   const before = toView(room, buyers[0], 1000, "local");
   assert.equal(before.study!.market.orders.length, 0);
+  assert.deepEqual(before.study!.market.orderHistory, []);
   assert.equal(before.study!.market.myOrders.length, 1);
   assert.equal(before.study!.teacher, undefined);
   assert.equal(before.study!.market.trades.length, 0);
@@ -206,6 +207,7 @@ test("Call hides submitted orders, clears all trades at 97.5, expires unfilled o
   assert.equal(study.markets[0].trades.length, 3);
   assert.ok(study.markets[0].trades.every((t) => t.price === 97.5));
   assert.equal(study.markets[0].orders.length, 0);
+  assert.deepEqual(study.markets[0].orderHistory, []);
   assert.equal(study.markets[0].call, 2);
   assert.equal(toView(room, buyers[0], 31000, "local").study!.unitsUsed, 1);
   assert.throws(
@@ -481,6 +483,141 @@ test("research exports preserve negative numeric profits, protocol assumptions a
   assert.equal(settings.rules.unitsPerPeriod, 2);
   assert.equal(settings.equilibrium.quantityMax, 11);
   assert.deepEqual(settings.markets[0].order, ["cda", "call", "posted"]);
+  assert.equal(
+    settings.rules.cdaOrderHistory,
+    "public-ended-resting-orders-all-periods-with-status",
+  );
+  assert.equal(settings.markets[0].orderHistory[0].price, 150);
+  assert.equal(settings.markets[0].orderHistory[0].status, "filled");
+  assert.ok(
+    events.some(
+      (e) => e.type === "order-closed" && e.detail.status === "filled",
+    ),
+  );
+});
+
+test("CDA replaced orders stay in history but cannot match, be accepted, or affect the active spread", () => {
+  const { room, study, send, buyers, sellers } = classroom();
+  send("teacher", { type: "start" });
+  const m = study.markets[0];
+  send(buyers[0], { type: "study-quote", price: 100 }, 2000);
+  const oldOrder = m.orders[0];
+  send(buyers[0], { type: "study-quote", price: 80 }, 3000);
+  const currentOrder = m.orders[0];
+  assert.deepEqual(
+    m.orderHistory!.map((o) => [o.price, o.status, o.closedAt]),
+    [[100, "replaced", 3000]],
+  );
+  assert.equal(m.orderHistory![0].id, oldOrder.id);
+  assert.equal(m.orderHistory![0].at, 2000);
+  assert.equal(oldOrder.price, 100);
+  assert.throws(
+    () => send(buyers[0], { type: "study-quote", price: 0 }, 3500),
+    /1〜999/,
+  );
+  assert.equal(m.orderHistory!.length, 1);
+  assert.equal(m.orders[0].price, 80);
+  send(sellers[0], { type: "study-quote", price: 90 }, 4000);
+  assert.equal(m.trades.length, 0);
+  assert.equal(m.spreadValue, 10);
+  assert.throws(
+    () =>
+      send(sellers[0], { type: "study-accept", orderId: oldOrder.id }, 5000),
+    /最良注文/,
+  );
+  assert.equal(m.orderHistory!.length, 1);
+  send(sellers[0], { type: "study-accept", orderId: currentOrder.id }, 6000);
+  assert.equal(m.trades[0].price, 80);
+  assert.equal(m.orders.length, 0);
+  assert.equal(m.spreadValue, null);
+  assert.deepEqual(
+    m.orderHistory!.map((o) => [o.price, o.status]),
+    [
+      [100, "replaced"],
+      [90, "replaced"],
+      [80, "filled"],
+    ],
+  );
+  assert.equal(studyMetrics(room, 6000)[0].quantity, 1);
+  assert.equal(studyMetrics(room, 6000)[0].spread, 10);
+});
+
+test("CDA history persists through cancellation, expiry, interruption and reload of older saved rooms", () => {
+  const { room, study, send, buyers, sellers, events } = classroom();
+  const m = study.markets[0];
+  delete m.orderHistory;
+  assert.deepEqual(
+    toView(room, buyers[0], 1000, "local").study!.market.orderHistory,
+    [],
+  );
+  send("teacher", { type: "start" });
+  send(buyers[0], { type: "study-quote", price: 10 }, 2000);
+  const request = {
+    requestId: randomUUID(),
+    expectedRound: 1,
+    expectedStage: stageKey(room, m),
+    command: { type: "study-cancel" } as Command,
+  };
+  execute(room, buyers[0], request, 3000, events);
+  execute(room, buyers[0], request, 3000, events);
+  assert.equal(m.orderHistory!.length, 1);
+  send(sellers[0], { type: "study-quote", price: 500 }, 4000);
+  settleDeadline(room, 181000, events);
+  assert.equal(m.round, 2);
+  assert.equal(m.orders.length, 0);
+  send(buyers[0], { type: "study-quote", price: 20 }, 182000);
+  send("teacher", { type: "end-round" }, 183000);
+  assert.equal(m.round, 3);
+  assert.deepEqual(
+    m.orderHistory!.map((o) => [o.round, o.status, o.closedAt]),
+    [
+      [1, "cancelled", 3000],
+      [1, "expired", 181000],
+      [2, "interrupted", 183000],
+    ],
+  );
+  const restored: Room = JSON.parse(JSON.stringify(room));
+  assert.deepEqual(
+    toView(restored, buyers[0], 183000, "online").study!.market.orderHistory,
+    m.orderHistory,
+  );
+  assert.equal(events.filter((e) => e.type === "order-closed").length, 3);
+});
+
+test("public CDA history includes only the viewer's market and previously displayed resting prices", () => {
+  const { room, study, send, buyers, sellers } = classroom(2);
+  study.markets.forEach((m) => (m.order = ["cda", "call", "posted"]));
+  send("teacher", { type: "start" });
+  send(sellers[0], { type: "study-quote", price: 80 }, 2000);
+  send(buyers[0], { type: "study-quote", price: 999 }, 3000);
+  send(sellers[8], { type: "study-quote", price: 90 }, 4000);
+  send(sellers[8], { type: "study-cancel" }, 5000);
+  const student = toView(room, buyers[0], 5000, "online").study!;
+  assert.equal(student.market.orderHistory.length, 1);
+  assert.equal(student.market.orderHistory[0].price, 80);
+  assert.equal(student.market.orderHistory[0].status, "filled");
+  assert.equal(student.market.orderHistory[0].participantId, sellers[0].id);
+  assert.equal(student.teacher, undefined);
+  assert.deepEqual(
+    Object.keys(student.market.orderHistory[0]).sort(),
+    [
+      "id",
+      "participantId",
+      "alias",
+      "side",
+      "price",
+      "unit",
+      "sequence",
+      "at",
+      "round",
+      "status",
+      "closedAt",
+      "closedSequence",
+    ].sort(),
+  );
+  const teacher = toView(room, "teacher", 5000, "online").study!.teacher!;
+  assert.equal(teacher.markets[0].orderHistory[0].price, 80);
+  assert.equal(teacher.markets[1].orderHistory[0].price, 90);
 });
 
 test("convergence slope uses institution-local periods and omits interrupted and no-trade periods", () => {

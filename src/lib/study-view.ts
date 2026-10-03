@@ -129,6 +129,20 @@ function publicMarket(
             ?.alias ?? null)
         : null,
     orders: m.stage === "cda" ? m.orders : [],
+    orderHistory: (m.orderHistory ?? []).map((o) => ({
+      id: o.id,
+      participantId: o.participantId,
+      alias: o.alias,
+      side: o.side,
+      price: o.price,
+      unit: o.unit,
+      sequence: o.sequence,
+      at: o.at,
+      round: o.round,
+      status: o.status,
+      closedAt: o.closedAt,
+      closedSequence: o.closedSequence,
+    })),
     offers: ["purchase", "done"].includes(m.stage)
       ? m.offers.filter((o) => o.remaining > 0)
       : [],

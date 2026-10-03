@@ -13,6 +13,12 @@ export type StudyOrder = {
   sequence: number;
   at: number;
 };
+export type StudyOrderHistory = StudyOrder & {
+  round: number;
+  status: "replaced" | "cancelled" | "filled" | "expired" | "interrupted";
+  closedAt: number;
+  closedSequence: number;
+};
 export type PostedOffer = {
   id: string;
   participantId: string;
@@ -77,6 +83,7 @@ export type StudyMarketView = {
   participantCount: number;
   activeBuyer: string | null;
   orders: StudyOrder[];
+  orderHistory: StudyOrderHistory[];
   offers: PostedOffer[];
   clearings: Clearing[];
   trades: Omit<StudyTrade, "value" | "cost">[];

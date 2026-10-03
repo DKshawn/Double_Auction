@@ -5,6 +5,7 @@ import type {
   StudySettings,
   StudyStage,
   StudyOrder,
+  StudyOrderHistory,
   PostedOffer,
   StudyTrade,
   Clearing,
@@ -30,6 +31,8 @@ export type StudyMarket = {
   remainingMs: number;
   call: number;
   orders: StudyOrder[];
+  // Optional for rooms saved before public CDA order history was introduced.
+  orderHistory?: StudyOrderHistory[];
   offers: PostedOffer[];
   submitted: string[];
   buyerOrder: string[];
@@ -104,6 +107,7 @@ export function createStudy(count: number, settings: StudySettings): Study {
       remainingMs: 0,
       call: 0,
       orders: [],
+      orderHistory: [],
       offers: [],
       submitted: [],
       buyerOrder: [],
@@ -178,6 +182,42 @@ function spreadAccumulate(m: StudyMarket, at: number) {
     period.spreadMs += dt;
   }
   m.spreadAt = at;
+}
+function archiveOrders(
+  room: Room,
+  m: StudyMarket,
+  orders: StudyOrder[],
+  status: StudyOrderHistory["status"],
+  events: AuditEvent[],
+  at: number,
+) {
+  // Only orders that actually rested on the public CDA book enter this history.
+  // Incoming marketable limits and sealed Call orders remain private.
+  for (const order of orders) {
+    const closedSequence = log(
+      room,
+      m,
+      events,
+      at,
+      "order-closed",
+      order.participantId,
+      {
+        orderId: order.id,
+        price: order.price,
+        side: order.side,
+        unit: order.unit,
+        postedAt: order.at,
+        status,
+      },
+    );
+    (m.orderHistory ??= []).push({
+      ...order,
+      round: marketRound(room, m),
+      status,
+      closedAt: at,
+      closedSequence,
+    });
+  }
 }
 function spreadUpdate(
   room: Room,
@@ -264,6 +304,15 @@ function finishMarket(
   completion: "complete" | "interrupted",
 ) {
   spreadAccumulate(m, at);
+  if (m.stage === "cda")
+    archiveOrders(
+      room,
+      m,
+      m.orders,
+      completion === "complete" ? "expired" : "interrupted",
+      events,
+      at,
+    );
   const period = m.periods.at(-1);
   if (
     period &&
@@ -575,6 +624,7 @@ export function executeStudy(
         );
       if (cmd.type === "study-cancel") {
         const cancelled = m.orders.filter((o) => o.participantId === actor.id);
+        archiveOrders(room, m, cancelled, "cancelled", events, now);
         m.orders = m.orders.filter((o) => o.participantId !== actor.id);
         log(room, m, events, now, "cancel", actor.id, {
           orders: cancelled.map((o) => o.id),
@@ -597,6 +647,14 @@ export function executeStudy(
           throw new AuctionError("最良注文が変更または約定済みです。", 409);
         const price = cmd.type === "study-quote" ? cmd.price : opposite.price;
         checkPrice(price);
+        archiveOrders(
+          room,
+          m,
+          m.orders.filter((o) => o.participantId === actor.id),
+          "replaced",
+          events,
+          now,
+        );
         m.orders = m.orders.filter((o) => o.participantId !== actor.id);
         const id = randomUUID(),
           sequence = log(room, m, events, now, "quote", actor.id, {
@@ -624,6 +682,7 @@ export function executeStudy(
             events,
             now,
           );
+          archiveOrders(room, m, [opposite], "filled", events, now);
         } else
           m.orders.push({
             id,

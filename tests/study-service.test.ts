@@ -115,6 +115,14 @@ test("study settings update existing students, reject stale revisions and concur
       .length,
     1,
   );
+  const history = (await service.view(teacher.code, buyers[0].token)).study!
+    .market.orderHistory;
+  assert.equal(history.length, 1);
+  assert.equal(history[0].id, orderId);
+  assert.equal(history[0].status, "filled");
+  const saved = await service.export(teacher.code, teacher.token);
+  assert.deepEqual(saved.room.study!.markets[0].orderHistory, history);
+  assert.equal(saved.events.filter((e) => e.type === "order-closed").length, 1);
   await assert.rejects(
     send(teacher.token, {
       type: "study-settings",

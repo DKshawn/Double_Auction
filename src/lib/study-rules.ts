@@ -44,6 +44,7 @@ export const STUDY_RULES = {
   callTieBreak: "random-participant-priority-per-call-then-unit",
   cdaPriority: "price-then-time",
   cdaExecutionPrice: "resting-order",
+  cdaOrderHistory: "public-ended-resting-orders-all-periods-with-status",
   postedOffers: "sealed-until-60s-single-price-final-quantity",
   postedBuyerOrder: "random-every-period",
   nonResponse: "skip-at-deadline",

@@ -771,7 +771,11 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
           );
         })}
       </div>
-      <StudyMarketHistory key={market.id} trades={market.trades} />
+      <StudyMarketHistory
+        key={market.id}
+        trades={market.trades}
+        orders={market.orderHistory}
+      />
     </section>
   );
 }

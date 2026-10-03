@@ -39,6 +39,7 @@ export function studyExport(
             stage: m.stage,
             periods: m.periods,
             clearings: m.clearings,
+            orderHistory: m.orderHistory ?? [],
           })),
           metrics: teacher.metrics,
           convergenceSlopes: teacher.slopes,

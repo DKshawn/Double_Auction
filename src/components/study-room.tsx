@@ -73,6 +73,7 @@ export function StudyRoom({
   const [selected, setSelected] = useState(1);
   const market =
     teacher?.markets.find((m) => m.id === selected) ?? study.market;
+  const cdaLayout = !teacher && market.institution === "cda";
   const remaining =
     view.phase === "running" && market.deadline !== null
       ? Math.max(0, market.deadline - now)
@@ -360,7 +361,7 @@ export function StudyRoom({
             </div>
           )}
         <div
-          className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${market.institution === "posted" && view.me.role === "buyer" ? "purchase-layout" : ""}`}
+          className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${market.institution === "posted" && view.me.role === "buyer" ? "purchase-layout" : ""}`}
         >
           <div className="study-market-column">
             {teacher ? (
@@ -382,40 +383,53 @@ export function StudyRoom({
               />
             )}
           </div>
+          {cdaLayout && (
+            <StudyMarketHistory
+              key={market.id}
+              trades={market.trades}
+              orders={market.orderHistory}
+              participantId={view.me.id}
+              standalone
+            />
+          )}
           {!teacher && (
             <aside className="panel study-section private-panel">
               <h2>
                 <LockKeyhole size={16} /> あなたの条件 <small>非公開</small>
               </h2>
-              <p>
-                {view.me.role === "buyer"
-                  ? "購入する単位ごとの価値"
-                  : "販売する単位ごとの費用"}
-              </p>
-              <div className="study-values">
-                {study.unitLimits!.map((v, i) => (
-                  <div
-                    key={i}
-                    className={i < study.unitsUsed ? "used-unit" : ""}
-                  >
-                    <span>
-                      {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
-                    </span>
-                    <b>{money(v)}</b>
-                  </div>
-                ))}
+              <div className="study-private-values">
+                <p>
+                  {view.me.role === "buyer"
+                    ? "購入する単位ごとの価値"
+                    : "販売する単位ごとの費用"}
+                </p>
+                <div className="study-values">
+                  {study.unitLimits!.map((v, i) => (
+                    <div
+                      key={i}
+                      className={i < study.unitsUsed ? "used-unit" : ""}
+                    >
+                      <span>
+                        {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
+                      </span>
+                      <b>{money(v)}</b>
+                    </div>
+                  ))}
+                </div>
+                <p className="muted">
+                  役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b>{" "}
+                  単位です。
+                </p>
               </div>
-              <p className="muted">
-                役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b>{" "}
-                単位です。
-              </p>
-              <StudentOrder
-                key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
-                view={view}
-                market={market}
-                command={command}
-                disabled={blocked}
-              />
+              <div className="study-private-order">
+                <StudentOrder
+                  key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
+                  view={view}
+                  market={market}
+                  command={command}
+                  disabled={blocked}
+                />
+              </div>
               <StudyPersonalHistory
                 key={`${view.code}-${view.me.id}-${study.myTrades.at(-1)?.id ?? "empty"}`}
                 trades={study.myTrades}
@@ -667,6 +681,14 @@ function TeacherControls({
 
 function OrderBook({ view, market, command, disabled }: MarketProps) {
   const latest = market.trades.at(-1);
+  const teacher = view.me.role === "teacher";
+  const best = market.orders
+    .filter((o) => o.side !== view.me.role)
+    .sort(
+      (a, b) =>
+        (view.me.role === "buyer" ? a.price - b.price : b.price - a.price) ||
+        a.sequence - b.sequence,
+    )[0];
   return (
     <section className="panel study-section study-order-book">
       <div className="study-book-heading">
@@ -710,15 +732,27 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
                     <tr>
                       <th>価格（円）</th>
                       <th>数量</th>
-                      <th>参加者</th>
+                      {teacher && <th>参加者</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((o) => (
-                      <tr key={o.id}>
-                        <td>{o.price}</td>
+                      <tr
+                        key={o.id}
+                        className={
+                          o.participantId === view.me.id
+                            ? "study-own-order"
+                            : undefined
+                        }
+                      >
+                        <td>
+                          {o.price}
+                          {o.participantId === view.me.id && (
+                            <span className="study-own-order-tag">あなた</span>
+                          )}
+                        </td>
                         <td>1</td>
-                        <td>{o.alias}</td>
+                        {teacher && <td>{o.alias}</td>}
                       </tr>
                     ))}
                     {Array.from(
@@ -731,7 +765,7 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
                         >
                           <td>—</td>
                           <td>—</td>
-                          <td>—</td>
+                          {teacher && <td>—</td>}
                         </tr>
                       ),
                     )}
@@ -741,41 +775,37 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
                   <p className="study-empty">まだ注文はありません</p>
                 )}
               </div>
-              <div className="study-book-action">
-                {rows.length > 0 &&
-                  side !== view.me.role &&
-                  view.me.role !== "teacher" && (
-                    <>
-                      <button
-                        className="button secondary full"
-                        disabled={disabled || view.study!.unitsUsed >= 2}
-                        onClick={() =>
-                          void command({
-                            type: "study-accept",
-                            orderId: rows[0].id,
-                          })
-                        }
-                      >
-                        {money(rows[0].price)}で
-                        {side === "seller" ? "買う" : "売る"}
-                      </button>
-                      <ExpectedProfit
-                        view={view}
-                        price={rows[0].price}
-                        quantity={1}
-                      />
-                    </>
-                  )}
-              </div>
             </div>
           );
         })}
       </div>
-      <StudyMarketHistory
-        key={market.id}
-        trades={market.trades}
-        orders={market.orderHistory}
-      />
+      {!teacher && (
+        <div className="study-book-action">
+          {best && (
+            <>
+              <ExpectedProfit view={view} price={best.price} quantity={1} />
+              <button
+                className="button secondary"
+                disabled={disabled || view.study!.unitsUsed >= 2}
+                onClick={() =>
+                  void command({ type: "study-accept", orderId: best.id })
+                }
+              >
+                {money(best.price)}で
+                {view.me.role === "buyer" ? "買う" : "売る"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {teacher && (
+        <StudyMarketHistory
+          key={market.id}
+          trades={market.trades}
+          orders={market.orderHistory}
+          showParticipants
+        />
+      )}
     </section>
   );
 }
@@ -1040,20 +1070,20 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             : "価格と数量を確定"}
       </button>
       {market.institution === "cda" && market.myOrders.length > 0 && (
-        <>
+        <div className="study-standing-order">
           <p className="field-help">
-            現在 {money(market.myOrders[0].price)}{" "}
-            で注文中。再送信すると置き換わります。
+            注文中：{money(market.myOrders[0].price)}（再送信で変更）
           </p>
           <button
             type="button"
             className="text-button"
+            aria-label="注文を取り消す"
             disabled={disabled}
             onClick={() => void command({ type: "study-cancel" })}
           >
-            注文を取り消す
+            取消
           </button>
-        </>
+        </div>
       )}
     </form>
   );

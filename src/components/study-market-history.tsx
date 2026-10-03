@@ -1,12 +1,10 @@
 "use client";
 
-import { useId, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useId, useRef, useState } from "react";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { StudyMarketView, StudyOrderHistory } from "@/lib/study-types";
 
-const ROWS = 3;
 const ORDER_STATUS: Record<StudyOrderHistory["status"], string> = {
   replaced: "変更済み",
   cancelled: "取消済み",
@@ -18,28 +16,28 @@ const ORDER_STATUS: Record<StudyOrderHistory["status"], string> = {
 export function StudyMarketHistory({
   trades,
   orders,
+  participantId,
+  showParticipants = false,
+  standalone = false,
 }: {
   trades: StudyMarketView["trades"];
   orders: StudyMarketView["orderHistory"];
+  participantId?: string;
+  showParticipants?: boolean;
+  standalone?: boolean;
 }) {
   const [mode, setMode] = useState<"orders" | "trades">("orders");
   const panelId = useId();
+  const list = useRef<HTMLDivElement>(null);
   const showOrders = mode === "orders";
   const label = showOrders ? "注文履歴" : "歩み値";
-  // Anchor older records so incoming updates do not move the records someone
-  // is reading. The latest view follows new entries.
-  const [anchor, setAnchor] = useState<string | null>(null);
   const newestFirst = showOrders ? orders.toReversed() : trades.toReversed();
-  const start = anchor
-    ? Math.max(
-        0,
-        newestFirst.findIndex((trade) => trade.id === anchor),
-      )
-    : 0;
-  const rows = newestFirst.slice(start, start + ROWS);
 
   return (
-    <section className="study-market-history" aria-label="市場の注文・約定履歴">
+    <section
+      className={`study-market-history${standalone ? " panel study-section study-history-panel" : ""}`}
+      aria-label="市場の注文・約定履歴"
+    >
       <div className="study-history-heading">
         <div
           className="study-history-switch"
@@ -54,55 +52,36 @@ export function StudyMarketHistory({
               aria-controls={panelId}
               onClick={() => {
                 setMode(value);
-                setAnchor(null);
+                list.current?.scrollTo({ top: 0 });
               }}
             >
               {value === "orders" ? "注文履歴" : "歩み値"}
             </button>
           ))}
         </div>
-        <nav className="study-history-pages" aria-label={`${label}の表示範囲`}>
+        <div className="study-history-pages">
+          <span>{newestFirst.length}件</span>
           <button
             type="button"
             className="text-button"
-            disabled={start === 0}
-            onClick={() => setAnchor(null)}
+            disabled={!newestFirst.length}
+            onClick={() => list.current?.scrollTo({ top: 0 })}
           >
             最新
           </button>
-          <button
-            type="button"
-            className="text-button"
-            aria-label={`新しい${showOrders ? "注文履歴" : "約定"}を表示`}
-            disabled={start === 0}
-            onClick={() =>
-              setAnchor(start <= ROWS ? null : newestFirst[start - ROWS].id)
-            }
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span>
-            {rows.length ? `${start + 1}–${start + rows.length}` : "0"}/
-            {newestFirst.length}件
-          </span>
-          <button
-            type="button"
-            className="text-button"
-            aria-label={`古い${showOrders ? "注文履歴" : "約定"}を表示`}
-            disabled={start + ROWS >= newestFirst.length}
-            onClick={() => setAnchor(newestFirst[start + ROWS].id)}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </nav>
+        </div>
       </div>
       <p className="study-history-caption">
         {showOrders
-          ? "本市場のCDA・全期間。終了済みの注文は取引できません。"
-          : "本市場の全期間の約定記録。新しい順に表示します。"}
+          ? "本市場のCDA・全期間。終了済みの注文は取引できません。新しい順・下へスクロールで過去の記録。"
+          : "本市場の全期間の約定記録。新しい順・下へスクロールで過去の記録。"}
       </p>
       <div
         id={panelId}
+        ref={list}
+        tabIndex={0}
+        role="region"
+        aria-label={`${label}の一覧・スクロールで全件表示`}
         className={`study-tape-rows${showOrders ? " study-quote-history" : ""}`}
       >
         <table
@@ -110,7 +89,13 @@ export function StudyMarketHistory({
         >
           <thead>
             <tr>
-              <th scope="col">{showOrders ? "期・参加者" : "期・制度"}</th>
+              <th scope="col">
+                {showOrders
+                  ? showParticipants
+                    ? "期・参加者"
+                    : "期・売買"
+                  : "期・制度"}
+              </th>
               <th scope="col">{showOrders ? "終了時刻" : "時刻"}</th>
               <th scope="col">
                 {showOrders ? "注文値（円）" : "約定値（円）"}
@@ -119,11 +104,28 @@ export function StudyMarketHistory({
             </tr>
           </thead>
           <tbody>
-            {rows.map((trade) =>
+            {newestFirst.map((trade) =>
               "closedAt" in trade ? (
-                <tr key={trade.id} className="study-ended-order">
+                <tr
+                  key={trade.id}
+                  className={`study-ended-order${trade.participantId === participantId ? " study-own-order" : ""}`}
+                >
                   <td>
-                    第{trade.round}期<small>{trade.alias}</small>
+                    第{trade.round}期
+                    <small
+                      className={
+                        trade.side === "buyer" ? "buy-text" : "sell-text"
+                      }
+                    >
+                      {showParticipants
+                        ? trade.alias
+                        : trade.side === "buyer"
+                          ? "買い"
+                          : "売り"}
+                    </small>
+                    {trade.participantId === participantId && (
+                      <span className="study-own-order-tag">あなた</span>
+                    )}
                   </td>
                   <td
                     title={`提示 ${timeLabel(trade.at)} → 終了 ${timeLabel(trade.closedAt)}`}
@@ -149,21 +151,9 @@ export function StudyMarketHistory({
                 </tr>
               ),
             )}
-            {Array.from({ length: ROWS - rows.length }, (_, i) => (
-              <tr
-                key={`empty-${i}`}
-                className="study-book-placeholder"
-                aria-hidden="true"
-              >
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-              </tr>
-            ))}
           </tbody>
         </table>
-        {!rows.length && (
+        {!newestFirst.length && (
           <p className="study-empty">
             {showOrders
               ? "終了した注文はまだありません。"

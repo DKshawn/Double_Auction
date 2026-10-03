@@ -31,6 +31,15 @@ const config: NextConfig = {
           },
         ],
       },
+      {
+        // The public, in-memory demo can be embedded by our own size preview.
+        // Authenticated room and teacher pages retain the DENY rule above.
+        source: "/demo",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+        ],
+      },
     ];
   },
 };

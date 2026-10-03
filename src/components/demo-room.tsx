@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import {
   Play,
   Pause,
@@ -172,6 +173,15 @@ export default function DemoRoom() {
           </p>
           <p className="demo-note">
             デモ用の条件を使用します。制度・役割の変更と再読み込みでリセットされ、実験データには保存されません。仮想取引の結果は学生の収束を示すものではありません。
+          </p>
+          <p className="demo-note">
+            <Link
+              href="/demo/preview"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ノートPCの画面サイズでデモを試す ↗
+            </Link>
           </p>
         </StudyDetailDialog>
       </div>

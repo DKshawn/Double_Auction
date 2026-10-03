@@ -749,8 +749,117 @@
   font-size: 12px;
 }
 .study-trading-grid .study-book {
-  margin-top: 14px;
+  margin-top: 8px;
   gap: 16px;
+}
+.study-order-book {
+  display: flex;
+  flex-direction: column;
+}
+.study-book-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-bottom: 6px;
+}
+.study-book-heading h2 {
+  margin: 0;
+}
+.study-last-trade {
+  flex-shrink: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.study-last-trade > div {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 8px;
+}
+.study-last-trade span,
+.study-last-trade small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+}
+.study-last-trade b {
+  font-size: 20px;
+  line-height: 1.3;
+  color: var(--accent);
+}
+.study-order-book .study-book-rows {
+  margin-top: 6px;
+}
+.study-order-book .study-book th,
+.study-order-book .study-book td {
+  height: 22px;
+  padding: 2px 6px;
+  line-height: 17px;
+}
+.study-order-book .study-book-action {
+  min-height: 65px;
+  padding-top: 6px;
+}
+.study-order-book .study-book .field-help {
+  margin-top: 4px;
+}
+.study-order-book .study-book-rows .study-empty {
+  top: 22px;
+}
+.study-market-history {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.study-market-history .study-history-heading {
+  min-height: 24px;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.study-tape-rows {
+  position: relative;
+}
+.study-tape-rows table {
+  table-layout: fixed;
+}
+.study-tape-rows th:first-child {
+  width: 40%;
+}
+.study-tape-rows th:nth-child(2) {
+  width: 22%;
+}
+.study-tape-rows th:nth-child(3) {
+  width: 26%;
+}
+.study-tape-rows th:last-child {
+  width: 12%;
+}
+.study-tape-rows th,
+.study-tape-rows td {
+  height: 24px;
+  padding: 2px 5px;
+  line-height: 17px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.study-tape-rows th:nth-last-child(-n + 2),
+.study-tape-rows td:nth-last-child(-n + 2) {
+  text-align: right;
+}
+.study-tape-rows td small {
+  display: inline;
+  margin: 0 0 0 5px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.study-tape-rows .study-empty {
+  position: absolute;
+  inset: 24px 0 auto;
+  padding: 12px 4px;
+  background: #ffffffee;
 }
 .study-offer-status {
   display: flex;

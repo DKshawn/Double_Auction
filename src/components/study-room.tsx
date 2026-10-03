@@ -15,6 +15,7 @@ import {
 import { Header } from "./shell";
 import { StudyDetailDialog } from "./study-detail-dialog";
 import { StudyMarketOverview } from "./study-market-overview";
+import { StudyMarketHistory } from "./study-market-history";
 import {
   StudyPersonalHistory,
   StudyTradeFeedback,
@@ -665,9 +666,23 @@ function TeacherControls({
 }
 
 function OrderBook({ view, market, command, disabled }: MarketProps) {
+  const latest = market.trades.at(-1);
   return (
     <section className="panel study-section study-order-book">
-      <h2>りんごの注文板</h2>
+      <div className="study-book-heading">
+        <h2>りんごの注文板</h2>
+        <div className="study-last-trade" aria-label="直近約定値">
+          <div>
+            <span>直近約定値</span>
+            <b>{latest ? money(latest.price) : "— 円"}</b>
+          </div>
+          <small>
+            {latest
+              ? `第${latest.round}期 · ${INSTITUTIONS[latest.institution].short} · ${timeLabel(latest.at)}`
+              : "まだ約定はありません"}
+          </small>
+        </div>
+      </div>
       <p className="muted">
         価格優先・時間優先。先に板にあった注文の価格で約定します。
       </p>
@@ -756,6 +771,7 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
           );
         })}
       </div>
+      <StudyMarketHistory key={market.id} trades={market.trades} />
     </section>
   );
 }

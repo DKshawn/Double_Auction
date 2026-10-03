@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Laptop } from "lucide-react";
 import styles from "./demo-preview.module.css";
@@ -13,6 +13,7 @@ const PRESETS = [
 ] as const;
 
 export function DemoPreview() {
+  const controlsId = useId();
   const [selected, setSelected] = useState(1);
   const [reserveChrome, setReserveChrome] = useState(true);
   const [fit, setFit] = useState(true);
@@ -50,7 +51,7 @@ export function DemoPreview() {
               画面サイズ別デモ
             </h1>
             <p>
-              枠内でそのまま取引できます。サイズを切り替えても進行状況は保持されます。
+              デモ操作は枠の外、取引画面は枠の中。サイズを切り替えても進行状況は保持されます。
             </p>
           </div>
           <Link
@@ -112,6 +113,7 @@ export function DemoPreview() {
           表示倍率はOS側、ブラウザーのズームは100%を想定。枠全体を縮小してもデモ内の表示領域は変わりません。文字の大きさは「原寸」で確認できます。
         </p>
       </header>
+      <div id={controlsId} className={styles.demoControls} />
       <div className={styles.stage} ref={stage}>
         {!loaded && (
           <p className={styles.loading} role="status">
@@ -125,6 +127,7 @@ export function DemoPreview() {
           <iframe
             className={styles.frame}
             title="操作できるひとりデモ"
+            data-demo-controls={controlsId}
             src="/demo"
             width={preset.width}
             height={height}

@@ -105,6 +105,22 @@
   font-size: 10px;
   margin-top: 5px;
 }
+.demoControls {
+  flex-shrink: 0;
+  padding: 10px 22px;
+  background: #f6f3ff;
+  border-bottom: 1px solid #d7d0f0;
+}
+.demoControls:empty {
+  display: none;
+}
+.demoControls :global(.demo-panel) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
 .stage {
   position: relative;
   flex: 1;
@@ -140,6 +156,9 @@
   font-size: 12px;
 }
 @media (max-width: 700px) {
+  .demoControls {
+    padding: 10px 12px;
+  }
   .toolbar {
     padding: 10px 12px;
   }

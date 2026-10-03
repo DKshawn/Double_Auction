@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   Play,
@@ -19,6 +20,13 @@ import { StudyDetailDialog } from "./study-detail-dialog";
 
 export default function DemoRoom() {
   const [session] = useState(() => new DemoSession());
+  // DemoEntry mounts only in the browser. The preview supplies a same-origin
+  // toolbar host before loading this iframe; ordinary /demo keeps its toolbar.
+  const [controlsTarget] = useState<HTMLElement | null>(() => {
+    if (typeof window === "undefined") return null;
+    const id = window.frameElement?.getAttribute("data-demo-controls");
+    return id ? window.parent.document.getElementById(id) : null;
+  });
   const state = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -188,18 +196,21 @@ export default function DemoRoom() {
     </section>
   );
   return (
-    <StudyRoom
-      key={`${state.generation}-${teacher}`}
-      view={view}
-      now={now}
-      command={session.command}
-      disabled={false}
-      connected
-      error={state.error}
-      notice=""
-      retry={() => {}}
-      demo
-      toolbar={toolbar}
-    />
+    <>
+      {controlsTarget && createPortal(toolbar, controlsTarget)}
+      <StudyRoom
+        key={`${state.generation}-${teacher}`}
+        view={view}
+        now={now}
+        command={session.command}
+        disabled={false}
+        connected
+        error={state.error}
+        notice=""
+        retry={() => {}}
+        demo
+        toolbar={controlsTarget ? undefined : toolbar}
+      />
+    </>
   );
 }

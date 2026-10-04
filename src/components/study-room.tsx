@@ -550,7 +550,7 @@ export function StudyRoom({
           </section>
         </div>
         {!demo && (
-          <p className="room-bottom-note">表示は約1秒ごとに更新されます。</p>
+          <p className="room-bottom-note">注文・約定は自動で同期されます。</p>
         )}
       </main>
     </div>

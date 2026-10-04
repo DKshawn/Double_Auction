@@ -22,6 +22,8 @@ export type Participant = {
   lockedUntil: number;
 };
 export type AuditEvent = {
+  // Zero denotes room-wide operations; other scopes are independent markets.
+  scope?: number;
   sequence: number;
   at: number;
   round: number;
@@ -30,6 +32,8 @@ export type AuditEvent = {
   detail: Record<string, unknown>;
 };
 export type Room = {
+  storageVersion?: 2;
+  participantCount?: number;
   study?: Study;
   code: string;
   config: RoomConfig;

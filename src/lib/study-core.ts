@@ -121,7 +121,7 @@ export function createStudy(count: number, settings: StudySettings): Study {
   };
 }
 export const marketFor = (room: Room, p: Participant) =>
-  room.study!.markets[Math.floor(p.seat / 16)];
+  room.study!.markets.find((m) => m.id === Math.floor(p.seat / 16) + 1)!;
 export const marketRound = (room: Room, market: StudyMarket) =>
   market.round ?? market.periods.at(-1)?.round ?? room.round;
 export const institutionFor = (room: Room, market: StudyMarket) =>

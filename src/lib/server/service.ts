@@ -8,7 +8,15 @@ import {
   passwordHash,
   passwordMatches,
 } from "./auth";
-import { database, databaseTime, type Database, type Sql } from "./database";
+import { database, databaseTime, type Database } from "./database";
+import {
+  assemble,
+  lockBundle,
+  partition,
+  readBundle,
+  saveBundle,
+  writeEvents,
+} from "./market-store";
 import { execute, settleDeadline, toView } from "./engine";
 import { defaultMarketSettings, limitsForSeat } from "./experiment";
 import { AuctionError, emit, type AuditEvent, type Room } from "./model";
@@ -22,14 +30,6 @@ import {
 
 type Outcome<T> =
   { value: T; error?: never } | { error: AuctionError; value?: never };
-
-async function writeEvents(tx: Sql, code: string, events: AuditEvent[]) {
-  if (events.length)
-    await tx.query(
-      "INSERT INTO auction_events (room_code, sequence, event) SELECT $1, (e->>'sequence')::int, e FROM jsonb_array_elements($2::jsonb) AS e",
-      [code, JSON.stringify(events)],
-    );
-}
 
 export class AuctionService {
   constructor(private db: Database) {}
@@ -112,6 +112,7 @@ export class AuctionService {
           [code, JSON.stringify(room)],
         );
         if (!inserted.rows.length) return false;
+        await partition(tx, room);
         await writeEvents(tx, code, events);
         return true;
       });
@@ -126,23 +127,14 @@ export class AuctionService {
   private async locked<T>(
     code: string,
     fn: (room: Room, now: number, events: AuditEvent[]) => T | Promise<T>,
+    scope?: number,
   ): Promise<T> {
     const outcome = await this.db.transaction(
       async (tx): Promise<Outcome<T>> => {
-        const row = await tx.query<{ state: Room }>(
-          "SELECT state FROM auction_rooms WHERE code = $1 FOR UPDATE",
-          [code],
-        );
-        if (!row.rows.length)
-          return {
-            error: new AuctionError(
-              "ルームが見つかりません。コードを確認してください。",
-              404,
-            ),
-          };
-        const room = row.rows[0].state;
+        const bundle = await lockBundle(tx, code, scope);
+        const room = assemble(bundle, scope);
         const before = JSON.stringify(room);
-        const now = await databaseTime(tx); // After acquiring the lock: no pre-lock timestamps.
+        const now = bundle.now; // After acquiring the lock: no pre-lock timestamps.
         const events: AuditEvent[] = [];
         settleDeadline(room, now, events);
         let result: Outcome<T>;
@@ -153,12 +145,7 @@ export class AuctionService {
           result = { error };
         }
         if (JSON.stringify(room) !== before) {
-          room.version++;
-          await tx.query(
-            "UPDATE auction_rooms SET state = $2::jsonb, updated_at = clock_timestamp() WHERE code = $1",
-            [code, JSON.stringify(room)],
-          );
-          await writeEvents(tx, code, events);
+          await saveBundle(tx, bundle, room, events, scope);
         }
         return result;
       },
@@ -311,24 +298,61 @@ export class AuctionService {
   }
 
   async view(code: string, token?: string): Promise<RoomView> {
-    const row = await this.db.query<{ state: Room; now: string }>(
-      "SELECT state, (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now FROM auction_rooms WHERE code = $1",
-      [code],
-    );
-    if (!row.rows.length)
-      throw new AuctionError("ルームが見つかりません。", 404);
-    const room = row.rows[0].state;
+    const scope = await this.scope(code, token);
+    const bundle = await readBundle(this.db, code, scope);
+    const room = assemble(bundle, scope);
     const actor = authenticate(room, token);
-    const now = Number(row.rows[0].now);
+    const now = bundle.now;
     if (
       room.phase === "running" &&
       room.deadline !== null &&
       room.deadline <= now
     ) {
-      await this.locked(code, () => undefined);
+      await this.advance(code, scope);
       return this.view(code, token);
     }
     return toView(room, actor, now, this.db.mode);
+  }
+
+  private async scope(
+    code: string,
+    token?: string,
+  ): Promise<number | undefined> {
+    const result = await this.db.query<{ state: Room }>(
+      "SELECT state FROM auction_rooms WHERE code = $1",
+      [code],
+    );
+    if (!result.rows.length)
+      throw new AuctionError("ルームが見つかりません。", 404);
+    const root = result.rows[0].state;
+    const actor = authenticate(root, token);
+    if (root.study && !root.storageVersion) {
+      await this.locked(code, () => undefined);
+      return this.scope(code, token);
+    }
+    return root.storageVersion && actor !== "teacher"
+      ? Math.floor(actor.seat / 16) + 1
+      : undefined;
+  }
+
+  async advance(code: string, scope?: number) {
+    // A teacher read must not serialize deadlines in unrelated markets.
+    if (!scope) {
+      const bundle = await readBundle(this.db, code);
+      if (bundle.root.storageVersion) {
+        if (bundle.root.phase !== "running") return;
+        await Promise.all(
+          bundle.markets
+            .filter(
+              (m) =>
+                m.state.deadline !== null && m.state.deadline <= bundle.now,
+            )
+            .map((m) => this.locked(code, () => undefined, m.market_id)),
+        );
+        return;
+      }
+    }
+    await this.locked(code, () => undefined, scope);
   }
 
   async command(
@@ -336,56 +360,57 @@ export class AuctionService {
     token: string | undefined,
     request: CommandRequest,
   ) {
-    await this.locked(code, (room, now, events) => {
-      const actor = authenticate(room, token);
-      if (room.sequence > 50_000)
-        throw new AuctionError(
-          "操作数の上限に達しました。実験データを保存してください。",
-          429,
+    const scope = await this.scope(code, token);
+    await this.locked(
+      code,
+      (room, now, events) => {
+        const actor = authenticate(room, token);
+        if (
+          actor !== "teacher" &&
+          (scope ? room.receipts.length : room.sequence) > 50_000
+        )
+          throw new AuctionError(
+            "操作数の上限に達しました。実験データを保存してください。",
+            429,
+          );
+        // Never persist a partially applied rejected command.
+        const candidate = structuredClone(room);
+        const commandEvents: AuditEvent[] = [];
+        execute(
+          candidate,
+          actor === "teacher"
+            ? actor
+            : candidate.participants.find((p) => p.id === actor.id)!,
+          request,
+          now,
+          commandEvents,
         );
-      // Never persist a partially applied rejected command.
-      const candidate = structuredClone(room);
-      const commandEvents: AuditEvent[] = [];
-      execute(
-        candidate,
-        actor === "teacher"
-          ? actor
-          : candidate.participants.find((p) => p.id === actor.id)!,
-        request,
-        now,
-        commandEvents,
-      );
-      Object.assign(room, candidate);
-      events.push(...commandEvents);
-    });
+        Object.assign(room, candidate);
+        events.push(...commandEvents);
+      },
+      scope,
+    );
     return this.view(code, token);
   }
 
   async export(code: string, token?: string) {
     // The locked snapshot ensures event log and room state describe the same commit.
     return this.db.transaction(async (tx) => {
-      const row = await tx.query<{ state: Room }>(
-        "SELECT state FROM auction_rooms WHERE code = $1 FOR UPDATE",
-        [code],
-      );
-      if (!row.rows.length)
-        throw new AuctionError("ルームが見つかりません。", 404);
-      const room = row.rows[0].state;
+      const bundle = await lockBundle(tx, code);
+      const room = assemble(bundle);
       if (authenticate(room, token) !== "teacher")
         throw new AuctionError("データ出力は教員のみ利用できます。", 403);
-      const now = await databaseTime(tx);
+      const now = bundle.now;
       const pendingEvents: AuditEvent[] = [];
       settleDeadline(room, now, pendingEvents);
       if (pendingEvents.length) {
-        room.version++;
-        await tx.query(
-          "UPDATE auction_rooms SET state = $2::jsonb, updated_at = clock_timestamp() WHERE code = $1",
-          [code, JSON.stringify(room)],
-        );
-        await writeEvents(tx, code, pendingEvents);
+        await saveBundle(tx, bundle, room, pendingEvents);
       }
       const events = await tx.query<{ event: AuditEvent }>(
-        "SELECT event FROM auction_events WHERE room_code = $1 ORDER BY sequence",
+        `SELECT event FROM (
+           SELECT event FROM auction_events WHERE room_code = $1
+           UNION ALL SELECT event FROM auction_market_events WHERE room_code = $1
+         ) e ORDER BY (event->>'at')::bigint, (event->>'sequence')::int, COALESCE((event->>'scope')::int, 0)`,
         [code],
       );
       return {

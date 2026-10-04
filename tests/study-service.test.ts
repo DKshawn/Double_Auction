@@ -23,6 +23,27 @@ after(async () => {
   await pg.close();
 });
 
+async function saveFixture(room: Room) {
+  for (const market of room.study!.markets)
+    await db.query(
+      "UPDATE auction_markets SET state = $3::jsonb WHERE room_code = $1 AND market_id = $2",
+      [room.code, market.id, JSON.stringify(market)],
+    );
+  const root = structuredClone(room);
+  root.study!.markets = [];
+  root.receipts = root.receipts.filter((r) => r.actor === "teacher");
+  root.version = (
+    await db.query<{ state: Room }>(
+      "SELECT state FROM auction_rooms WHERE code = $1",
+      [room.code],
+    )
+  ).rows[0].state.version;
+  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
+    room.code,
+    JSON.stringify(root),
+  ]);
+}
+
 async function classroom(markets = 1) {
   const teacher = await service.create(
     {
@@ -73,6 +94,63 @@ test("96 students receive six isolated balanced markets and six distinct institu
   await assert.rejects(
     service.export(teacher.code, students[0].token),
     /教員のみ/,
+  );
+});
+
+test("old single-row study rooms migrate without losing orders, audit events or retry receipts", async () => {
+  const { teacher, students, send } = await classroom();
+  await send(teacher.token, { type: "start" });
+  const student = students[0],
+    before = await service.view(teacher.code, student.token);
+  const request = {
+    requestId: randomUUID(),
+    expectedRound: before.round,
+    expectedStage: before.study!.market.stageKey,
+    command: { type: "study-quote" as const, price: 75 },
+  };
+  const quoted = await service.command(teacher.code, student.token, request);
+  const saved = await service.export(teacher.code, teacher.token);
+  // Reconstruct the previous on-disk format in this test's isolated database.
+  delete saved.room.storageVersion;
+  delete saved.room.participantCount;
+  await db.transaction(async (tx) => {
+    await tx.query(
+      "INSERT INTO auction_events (room_code, sequence, event) SELECT room_code, sequence, jsonb_set(event, '{scope}', '0'::jsonb) FROM auction_market_events WHERE room_code = $1",
+      [teacher.code],
+    );
+    await tx.query("DELETE FROM auction_market_events WHERE room_code = $1", [
+      teacher.code,
+    ]);
+    await tx.query("DELETE FROM auction_markets WHERE room_code = $1", [
+      teacher.code,
+    ]);
+    await tx.query(
+      "UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1",
+      [teacher.code, JSON.stringify(saved.room)],
+    );
+  });
+  const migrated = await service.view(teacher.code, student.token);
+  assert.deepEqual(migrated.study!.market.orders, quoted.study!.market.orders);
+  await service.command(teacher.code, student.token, request);
+  const after = await service.export(teacher.code, teacher.token);
+  assert.equal(after.events.length, saved.events.length);
+  assert.deepEqual(after.room.receipts, saved.room.receipts);
+  const stored = (
+    await db.query<{ state: Room }>(
+      "SELECT state FROM auction_rooms WHERE code = $1",
+      [teacher.code],
+    )
+  ).rows[0].state;
+  assert.equal(stored.storageVersion, 2);
+  assert.equal(stored.study!.markets.length, 0);
+  assert.equal(
+    (
+      await db.query(
+        "SELECT market_id FROM auction_markets WHERE room_code = $1",
+        [teacher.code],
+      )
+    ).rows.length,
+    1,
   );
 });
 
@@ -137,28 +215,18 @@ test("export atomically clears expired Call orders without a polling browser, in
   const { teacher, students, send } = await classroom();
   const snapshot = await service.export(teacher.code, teacher.token);
   snapshot.room.study!.markets[0].order = ["call", "cda", "posted"];
-  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
-    teacher.code,
-    JSON.stringify(snapshot.room),
-  ]);
+  await saveFixture(snapshot.room);
   await send(teacher.token, { type: "start" });
   for (const p of students)
     await send(p.token, {
       type: "call-submit",
       prices: p.view.study!.unitLimits!,
     });
-  const stored = await db.query<{ state: Room }>(
-    "SELECT state FROM auction_rooms WHERE code = $1",
-    [teacher.code],
-  );
-  const room = stored.rows[0].state;
+  const room = (await service.export(teacher.code, teacher.token)).room;
   const deadline = Date.now() - 1;
   room.deadline = deadline;
   room.study!.markets[0].deadline = deadline;
-  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
-    teacher.code,
-    JSON.stringify(room),
-  ]);
+  await saveFixture(room);
   const exported = await service.export(teacher.code, teacher.token);
   assert.equal(exported.room.study!.markets[0].trades.length, 11);
   assert.equal(exported.events.filter((e) => e.type === "trade").length, 11);
@@ -171,10 +239,7 @@ test("Call rejects empty submissions without locking the participant and accepts
   const { teacher, students, send } = await classroom();
   const snapshot = await service.export(teacher.code, teacher.token);
   snapshot.room.study!.markets[0].order = ["call", "cda", "posted"];
-  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
-    teacher.code,
-    JSON.stringify(snapshot.room),
-  ]);
+  await saveFixture(snapshot.room);
   await send(teacher.token, { type: "start" });
   const student = students.find((p) => p.view.me.role === "buyer")!;
   const view = await service.view(teacher.code, student.token);
@@ -252,10 +317,7 @@ test("teacher opens admission before anyone joins; each full market starts once 
   snapshot.room.seats = Array.from({ length: 96 }, (_, i) => i);
   snapshot.room.study!.markets[0].order = ["cda", "call", "posted"];
   snapshot.room.study!.markets[1].order = ["call", "cda", "posted"];
-  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
-    teacher.code,
-    JSON.stringify(snapshot.room),
-  ]);
+  await saveFixture(snapshot.room);
   const opened = await service.command(teacher.code, teacher.token, {
     requestId: randomUUID(),
     expectedRound: 0,
@@ -279,10 +341,7 @@ test("teacher opens admission before anyone joins; each full market starts once 
   );
   started.room.deadline = Date.now() - 10;
   started.room.study!.markets[0].deadline = started.room.deadline;
-  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
-    teacher.code,
-    JSON.stringify(started.room),
-  ]);
+  await saveFixture(started.room);
   assert.equal(
     (await service.view(teacher.code, teacher.token)).study!.market.round,
     2,

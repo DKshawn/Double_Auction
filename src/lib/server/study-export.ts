@@ -62,6 +62,7 @@ export function studyExport(
         "参加者ID",
         "内容_JSON",
         "通貨",
+        "記録スコープ_0は共通",
       ],
       ...events.map((e) => [
         e.sequence,
@@ -74,6 +75,7 @@ export function studyExport(
         e.actor,
         JSON.stringify(e.detail),
         "JPY",
+        e.scope ?? 0,
       ]),
     ];
   else if (kind === "metrics")
@@ -159,7 +161,10 @@ export function studyExport(
       ],
       ...study.markets
         .flatMap((m) => m.trades)
-        .sort((a, b) => a.sequence - b.sequence)
+        .sort(
+          (a, b) =>
+            a.at - b.at || a.market - b.market || a.sequence - b.sequence,
+        )
         .map((t) => [
           t.id,
           t.sequence,

@@ -226,7 +226,7 @@ export function Room({ code }: { code: string }) {
           />
         )}
         <div className="room-bottom-note">
-          <span>表示は約1秒ごとに更新されます。</span>
+          <span>注文・約定は自動で同期されます。</span>
           <Link href="/guide?legacy=1" target="_blank">
             <CircleHelp size={15} />
             実験のルール

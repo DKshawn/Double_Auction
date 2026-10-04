@@ -106,6 +106,10 @@ function publicMarket(
 ): StudyMarketView {
   const isTeacher = actor === "teacher",
     id = isTeacher ? "teacher" : actor.id;
+  const firstPeriod =
+    Math.floor((Math.max(1, marketRound(room, m)) - 1) / 5) * 5 + 1;
+  const visible = (round: number) =>
+    isTeacher || (round >= firstPeriod && round < firstPeriod + 5);
   return {
     id: m.id,
     round: marketRound(room, m),
@@ -129,41 +133,45 @@ function publicMarket(
             ?.alias ?? null)
         : null,
     orders: m.stage === "cda" ? m.orders : [],
-    orderHistory: (m.orderHistory ?? []).map((o) => ({
-      id: o.id,
-      participantId: o.participantId,
-      alias: o.alias,
-      side: o.side,
-      price: o.price,
-      unit: o.unit,
-      sequence: o.sequence,
-      at: o.at,
-      round: o.round,
-      status: o.status,
-      closedAt: o.closedAt,
-      closedSequence: o.closedSequence,
-    })),
+    orderHistory: (m.orderHistory ?? [])
+      .filter((o) => visible(o.round))
+      .map((o) => ({
+        id: o.id,
+        participantId: o.participantId,
+        alias: o.alias,
+        side: o.side,
+        price: o.price,
+        unit: o.unit,
+        sequence: o.sequence,
+        at: o.at,
+        round: o.round,
+        status: o.status,
+        closedAt: o.closedAt,
+        closedSequence: o.closedSequence,
+      })),
     offers: ["purchase", "done"].includes(m.stage)
       ? m.offers.filter((o) => o.remaining > 0)
       : [],
-    clearings: m.clearings,
+    clearings: m.clearings.filter((c) => visible(c.round)),
     // Explicit projection: other participants' values and costs never enter a student response.
-    trades: m.trades.map((t) => ({
-      id: t.id,
-      sequence: t.sequence,
-      at: t.at,
-      round: t.round,
-      market: t.market,
-      institution: t.institution,
-      call: t.call,
-      price: t.price,
-      buyerId: t.buyerId,
-      sellerId: t.sellerId,
-      buyerAlias: t.buyerAlias,
-      sellerAlias: t.sellerAlias,
-      buyerUnit: t.buyerUnit,
-      sellerUnit: t.sellerUnit,
-    })),
+    trades: m.trades
+      .filter((t) => visible(t.round))
+      .map((t) => ({
+        id: t.id,
+        sequence: t.sequence,
+        at: t.at,
+        round: t.round,
+        market: t.market,
+        institution: t.institution,
+        call: t.call,
+        price: t.price,
+        buyerId: t.buyerId,
+        sellerId: t.sellerId,
+        buyerAlias: t.buyerAlias,
+        sellerAlias: t.sellerAlias,
+        buyerUnit: t.buyerUnit,
+        sellerUnit: t.sellerUnit,
+      })),
     myOrders: isTeacher ? [] : m.orders.filter((o) => o.participantId === id),
     submitted: m.submitted.includes(id),
     myOffer: m.offers.find((o) => o.participantId === id) ?? null,
@@ -190,7 +198,7 @@ export function studyView(
     deadline: teacher ? room.deadline : publicState.deadline,
     remainingMs: teacher ? room.remainingMs : publicState.remainingMs,
     serverTime: now,
-    participantCount: room.participants.length,
+    participantCount: room.participantCount ?? room.participants.length,
     quotes: [],
     trades: publicState.trades.map((t) => ({ ...t, good: "apple" })),
     mode,
@@ -217,7 +225,7 @@ export function studyView(
         },
     study: {
       protocol: study.protocol,
-      marketCount: study.markets.length,
+      marketCount: room.config.markets ?? study.markets.length,
       settingsRevision: study.revision,
       market: publicState,
       unitLimits: teacher ? null : unitLimits(room, actor),
@@ -225,7 +233,11 @@ export function studyView(
       myTrades: teacher
         ? []
         : market.trades
-            .filter((t) => t.buyerId === actor.id || t.sellerId === actor.id)
+            .filter(
+              (t) =>
+                t.institution === publicState.institution &&
+                (t.buyerId === actor.id || t.sellerId === actor.id),
+            )
             .map((t) => ({
               id: t.id,
               round: t.round,

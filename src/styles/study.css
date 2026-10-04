@@ -565,7 +565,7 @@
   align-self: flex-start;
   margin-top: 12px;
 }
-.study-price-scope {
+.study-price-panel .study-price-scope {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -573,7 +573,7 @@
   margin: 0 0 8px;
   font-size: 11px;
 }
-.study-price-scope select {
+.study-price-panel .study-price-scope select {
   width: auto;
   flex: 1;
   min-width: 0;

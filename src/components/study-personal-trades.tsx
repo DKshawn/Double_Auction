@@ -124,7 +124,7 @@ export function StudyPersonalHistory({ trades }: { trades: PersonalTrade[] }) {
         <table>
           <thead>
             <tr>
-              <th>期・制度</th>
+              <th>制度内の期</th>
               <th>単位</th>
               <th>価格（円）</th>
               <th>利益（円）</th>
@@ -133,8 +133,8 @@ export function StudyPersonalHistory({ trades }: { trades: PersonalTrade[] }) {
           <tbody>
             {rows.map((trade) => (
               <tr key={trade.id}>
-                <td>
-                  第{trade.round}期
+                <td title={`全体の第${trade.round}期`}>
+                  第{((trade.round - 1) % 5) + 1}期
                   <small>{INSTITUTIONS[trade.institution].short}</small>
                 </td>
                 <td>{trade.unit}</td>

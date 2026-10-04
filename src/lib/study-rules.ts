@@ -45,6 +45,8 @@ export const STUDY_RULES = {
   cdaPriority: "price-then-time",
   cdaExecutionPrice: "resting-order",
   cdaOrderHistory: "public-ended-resting-orders-all-periods-with-status",
+  studentHistoryDisplay: "current-institution-five-periods",
+  teacherHistoryDisplay: "all-fifteen-periods-with-institution-filter",
   postedOffers: "sealed-until-60s-single-price-final-quantity",
   postedBuyerOrder: "random-every-period",
   nonResponse: "skip-at-deadline",

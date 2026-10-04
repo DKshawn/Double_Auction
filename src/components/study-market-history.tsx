@@ -3,7 +3,11 @@
 import { useRef, useState } from "react";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
-import type { StudyMarketView, StudyOrderHistory } from "@/lib/study-types";
+import type {
+  Institution,
+  StudyMarketView,
+  StudyOrderHistory,
+} from "@/lib/study-types";
 
 const ORDER_STATUS: Record<StudyOrderHistory["status"], string> = {
   replaced: "変更済み",
@@ -71,12 +75,14 @@ export function StudyMarketHistory({
   participantId,
   showParticipants = false,
   standalone = false,
+  institution,
 }: {
   trades: StudyMarketView["trades"];
   orders: StudyMarketView["orderHistory"];
   participantId?: string;
   showParticipants?: boolean;
   standalone?: boolean;
+  institution?: Institution;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const newestFirst = historyEntries(orders, trades);
@@ -90,6 +96,9 @@ export function StudyMarketHistory({
       previous.has(id) ? previous : new Set(previous).add(id),
     );
   const latest = newestFirst[0];
+  const scopeLabel = institution
+    ? `${INSTITUTIONS[institution].short}・制度内1〜5期`
+    : "全15期";
 
   return (
     <section
@@ -121,7 +130,8 @@ export function StudyMarketHistory({
         </div>
       </div>
       <p className="study-history-caption">
-        本市場・全期間・新しい順。約定済み注文は歩み値に統合。終了した注文は取引できません。
+        本市場・{scopeLabel}
+        ・新しい順。約定済み注文は歩み値に統合。終了した注文は取引できません。
       </p>
       <div
         ref={list}
@@ -130,10 +140,10 @@ export function StudyMarketHistory({
         aria-label="注文履歴・歩み値の一覧・スクロールで全件表示"
         className="study-tape-rows"
       >
-        <table aria-label="本市場の注文履歴・歩み値・全期間・新しい順">
+        <table aria-label={`本市場の注文履歴・歩み値・${scopeLabel}・新しい順`}>
           <thead>
             <tr>
-              <th scope="col">期・制度</th>
+              <th scope="col">{institution ? "制度内の期" : "期・制度"}</th>
               <th scope="col">時刻</th>
               <th scope="col">種別</th>
               <th scope="col">価格（円）</th>
@@ -160,8 +170,12 @@ export function StudyMarketHistory({
                     .join(" ")}
                   onAnimationEnd={() => finishHighlight(entry.id)}
                 >
-                  <td>
-                    第{order?.round ?? trade!.round}期
+                  <td title={`全体の第${order?.round ?? trade!.round}期`}>
+                    第
+                    {institution
+                      ? (((order?.round ?? trade!.round) - 1) % 5) + 1
+                      : (order?.round ?? trade!.round)}
+                    期
                     <small>
                       {INSTITUTIONS[trade?.institution ?? "cda"].short}
                     </small>

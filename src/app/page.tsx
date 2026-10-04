@@ -97,7 +97,7 @@ export default async function Home({
             [
               "03",
               "結果を振り返る",
-              "各期の利益や全期間の価格の動きを確認。制度や経験によって、市場はどう変わるでしょうか。",
+              "各期の利益と、現在の制度の5期分の価格を確認。経験によって、市場はどう変わるでしょうか。",
             ],
           ].map(([number, title, text]) => (
             <article key={number}>

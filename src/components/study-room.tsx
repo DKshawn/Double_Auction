@@ -25,7 +25,11 @@ import { ConfirmDialog } from "./confirm-dialog";
 import { StudySettingsEditor } from "./study-settings";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
-import type { StudyMarketView, StudyStage } from "@/lib/study-types";
+import type {
+  Institution,
+  StudyMarketView,
+  StudyStage,
+} from "@/lib/study-types";
 import type { Command, RoomView } from "@/lib/types";
 
 type Props = {
@@ -71,8 +75,37 @@ export function StudyRoom({
   const study = view.study!,
     teacher = study.teacher;
   const [selected, setSelected] = useState(1);
-  const market =
+  const [teacherPriceScope, setTeacherPriceScope] = useState<
+    Institution | "all"
+  >("all");
+  const sourceMarket =
     teacher?.markets.find((m) => m.id === selected) ?? study.market;
+  const institutionStart =
+    sourceMarket.order.indexOf(sourceMarket.institution) * 5 + 1;
+  // Scope student displays without changing the stored experiment or teacher data.
+  const market = teacher
+    ? sourceMarket
+    : {
+        ...sourceMarket,
+        trades: sourceMarket.trades.filter(
+          (trade) => trade.institution === sourceMarket.institution,
+        ),
+        orderHistory: sourceMarket.orderHistory.filter(
+          (order) =>
+            order.round >= institutionStart &&
+            order.round < institutionStart + 5,
+        ),
+      };
+  const priceScope = teacher ? teacherPriceScope : market.institution;
+  const priceTrades =
+    priceScope === "all"
+      ? market.trades
+      : market.trades.filter((trade) => trade.institution === priceScope);
+  const priceStart =
+    priceScope === "all" ? 1 : market.order.indexOf(priceScope) * 5 + 1;
+  const pricePeriods = priceScope === "all" ? 15 : 5;
+  const priceScopeLabel =
+    priceScope === "all" ? "全15期" : INSTITUTIONS[priceScope].short;
   const cdaLayout = !teacher && market.institution === "cda";
   const integratedLayout = !teacher && market.institution !== "cda";
   const remaining =
@@ -396,10 +429,11 @@ export function StudyRoom({
           </div>
           {cdaLayout && (
             <StudyMarketHistory
-              key={market.id}
+              key={`${market.id}-${market.institution}`}
               trades={market.trades}
               orders={market.orderHistory}
               participantId={view.me.id}
+              institution={market.institution}
               standalone
             />
           )}
@@ -413,35 +447,64 @@ export function StudyRoom({
           )}
           <section className="panel study-section study-price-panel">
             <h2>
-              {teacher
-                ? `市場${market.id}の全期間の取引価格`
-                : "全期間の取引価格"}
+              {teacher ? `市場${market.id}・` : ""}
+              {priceScopeLabel}の取引価格
             </h2>
+            {teacher && (
+              <label className="field study-price-scope">
+                表示範囲
+                <select
+                  aria-label="価格履歴の表示範囲"
+                  value={teacherPriceScope}
+                  onChange={(event) =>
+                    setTeacherPriceScope(
+                      event.target.value as Institution | "all",
+                    )
+                  }
+                >
+                  <option value="all">全15期</option>
+                  {market.order.map((institution) => (
+                    <option key={institution} value={institution}>
+                      {INSTITUTIONS[institution].short}・制度内1〜5期
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <p className="muted">
-              市場{market.id}の履歴を全期間表示します。
-              {market.order
-                .map(
-                  (i, n) =>
-                    `${n * 5 + 1}〜${n * 5 + 5}期：${INSTITUTIONS[i].short}`,
-                )
-                .join(" ／ ")}
+              {priceScope === "all"
+                ? market.order
+                    .map(
+                      (institution, index) =>
+                        `${index * 5 + 1}〜${index * 5 + 5}期：${INSTITUTIONS[institution].short}`,
+                    )
+                    .join(" ／ ")
+                : `市場${market.id}・${priceScopeLabel}の5期分。横軸は制度内1〜5期（全体の第${priceStart}〜${priceStart + 4}期）です。`}
             </p>
             <PriceChart
-              trades={market.trades.map((t) => ({ ...t, good: "apple" }))}
-              rounds={15}
+              trades={priceTrades.map((trade) => ({
+                ...trade,
+                good: "apple",
+                round: trade.round - priceStart + 1,
+              }))}
+              rounds={pricePeriods}
+              ariaLabel={`${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? "全体の第1〜15期" : "制度内の第1〜5期"}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
               periodAxis
               fill
               equilibrium={teacher?.equilibrium}
             />
             <StudyDetailDialog
-              label={`取引履歴をすべて見る（${market.trades.length}件）`}
-              title={`市場${market.id}の取引履歴`}
+              key={`${market.id}-${priceScope}`}
+              label={`${priceScopeLabel}の取引履歴（${priceTrades.length}件）`}
+              title={`市場${market.id}・${priceScopeLabel}の取引履歴`}
             >
               <div className="study-table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>期</th>
+                      <th>
+                        {priceScope === "all" ? "全体の期" : "制度内の期"}
+                      </th>
                       <th>制度</th>
                       <th>時刻</th>
                       <th>価格</th>
@@ -450,9 +513,11 @@ export function StudyRoom({
                     </tr>
                   </thead>
                   <tbody>
-                    {market.trades.map((t) => (
+                    {priceTrades.map((t) => (
                       <tr key={t.id}>
-                        <td>{t.round}</td>
+                        <td title={`全体の第${t.round}期`}>
+                          {t.round - priceStart + 1}
+                        </td>
                         <td>{INSTITUTIONS[t.institution].short}</td>
                         <td>{timeLabel(t.at)}</td>
                         <td>{money(t.price)}</td>
@@ -498,6 +563,9 @@ function StudentConditions({
 }: MarketProps & { embedded?: boolean }) {
   const { view, market } = props;
   const study = view.study!;
+  const myTrades = study.myTrades.filter(
+    (trade) => trade.institution === market.institution,
+  );
   return (
     <aside
       className={
@@ -536,8 +604,8 @@ function StudentConditions({
         />
       </div>
       <StudyPersonalHistory
-        key={`${view.code}-${view.me.id}-${study.myTrades.at(-1)?.id ?? "empty"}`}
-        trades={study.myTrades}
+        key={`${view.code}-${view.me.id}-${market.institution}-${myTrades.at(-1)?.id ?? "empty"}`}
+        trades={myTrades}
       />
     </aside>
   );
@@ -733,7 +801,7 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
           </div>
           <small>
             {latest
-              ? `第${latest.round}期 · ${INSTITUTIONS[latest.institution].short} · ${timeLabel(latest.at)}`
+              ? `${teacher ? `全体 第${latest.round}期` : `制度内 第${((latest.round - 1) % 5) + 1}期`} · ${INSTITUTIONS[latest.institution].short} · ${timeLabel(latest.at)}`
               : "まだ約定はありません"}
           </small>
         </div>

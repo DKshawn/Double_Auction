@@ -10,6 +10,7 @@ export function PriceChart({
   compact = false,
   periodAxis = false,
   fill = false,
+  ariaLabel,
 }: {
   trades: Trade[];
   equilibrium?: Equilibrium;
@@ -17,6 +18,7 @@ export function PriceChart({
   compact?: boolean;
   periodAxis?: boolean;
   fill?: boolean;
+  ariaLabel?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [w, setWidth] = useState(compact ? 360 : 640);
@@ -65,11 +67,12 @@ export function PriceChart({
         viewBox={`0 0 ${w} ${h}`}
         role="img"
         aria-label={
-          equilibrium
+          ariaLabel ??
+          (equilibrium
             ? "ラウンドごとの取引価格（円）。色付きの帯は理論上の均衡価格区間です。"
             : periodAxis
               ? "全期間の取引価格（円）を期ごとに表示したグラフ"
-              : "今ラウンドの取引価格（円）を約定順に表示したグラフ"
+              : "今ラウンドの取引価格（円）を約定順に表示したグラフ")
         }
       >
         <text x={left - 10} y={12} textAnchor="end">

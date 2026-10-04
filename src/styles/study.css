@@ -565,6 +565,22 @@
   align-self: flex-start;
   margin-top: 12px;
 }
+.study-price-scope {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  font-size: 11px;
+}
+.study-price-scope select {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
 .price-chart.fill {
   flex: 1;
   position: relative;

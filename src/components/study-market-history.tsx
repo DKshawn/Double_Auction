@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { StudyMarketView, StudyOrderHistory } from "@/lib/study-types";
@@ -12,6 +12,58 @@ const ORDER_STATUS: Record<StudyOrderHistory["status"], string> = {
   expired: "期終了",
   interrupted: "中断終了",
 };
+
+type HistoryEntry = {
+  id: string;
+  at: number;
+  sequence: number;
+} & (
+  | { kind: "order"; order: StudyOrderHistory }
+  | { kind: "trade"; trade: StudyMarketView["trades"][number] }
+);
+
+function historyEntries(
+  orders: StudyMarketView["orderHistory"],
+  trades: StudyMarketView["trades"],
+): HistoryEntry[] {
+  const unitKey = (round: number, participant: string, unit: number) =>
+    `${round}/${participant}/${unit}`;
+  const tradedUnits = new Set(
+    trades
+      .filter((trade) => trade.institution === "cda")
+      .flatMap((trade) => [
+        unitKey(trade.round, trade.buyerId, trade.buyerUnit),
+        unitKey(trade.round, trade.sellerId, trade.sellerUnit),
+      ]),
+  );
+  // A filled resting order and its trade describe the same execution. Keep
+  // the trade once, but retain any historical order without a matching trade.
+  const entries: HistoryEntry[] = [
+    ...orders
+      .filter(
+        (order) =>
+          order.status !== "filled" ||
+          !tradedUnits.has(
+            unitKey(order.round, order.participantId, order.unit),
+          ),
+      )
+      .map((order) => ({
+        kind: "order" as const,
+        id: `order-${order.id}`,
+        at: order.closedAt,
+        sequence: order.closedSequence,
+        order,
+      })),
+    ...trades.map((trade) => ({
+      kind: "trade" as const,
+      id: `trade-${trade.id}`,
+      at: trade.at,
+      sequence: trade.sequence,
+      trade,
+    })),
+  ];
+  return entries.sort((a, b) => b.at - a.at || b.sequence - a.sequence);
+}
 
 export function StudyMarketHistory({
   trades,
@@ -26,12 +78,18 @@ export function StudyMarketHistory({
   showParticipants?: boolean;
   standalone?: boolean;
 }) {
-  const [mode, setMode] = useState<"orders" | "trades">("orders");
-  const panelId = useId();
   const list = useRef<HTMLDivElement>(null);
-  const showOrders = mode === "orders";
-  const label = showOrders ? "注文履歴" : "歩み値";
-  const newestFirst = showOrders ? orders.toReversed() : trades.toReversed();
+  const newestFirst = historyEntries(orders, trades);
+  // Existing history must not flash on entry. Remember completed highlights so
+  // polling, scrolling and reopening the teacher dialog do not replay them.
+  const [seenIds, setSeenIds] = useState(
+    () => new Set(newestFirst.map((entry) => entry.id)),
+  );
+  const finishHighlight = (id: string) =>
+    setSeenIds((previous) =>
+      previous.has(id) ? previous : new Set(previous).add(id),
+    );
+  const latest = newestFirst[0];
 
   return (
     <section
@@ -39,28 +97,19 @@ export function StudyMarketHistory({
       aria-label="市場の注文・約定履歴"
     >
       <div className="study-history-heading">
-        <div
-          className="study-history-switch"
-          role="group"
-          aria-label="表示する履歴"
-        >
-          {(["orders", "trades"] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={mode === value}
-              aria-controls={panelId}
-              onClick={() => {
-                setMode(value);
-                list.current?.scrollTo({ top: 0 });
-              }}
-            >
-              {value === "orders" ? "注文履歴" : "歩み値"}
-            </button>
-          ))}
-        </div>
+        <h3>注文履歴・歩み値</h3>
         <div className="study-history-pages">
-          <span>{newestFirst.length}件</span>
+          <span
+            key={latest?.id ?? "empty"}
+            className={
+              latest && !seenIds.has(latest.id)
+                ? "study-history-count study-history-new"
+                : "study-history-count"
+            }
+            onAnimationEnd={() => latest && finishHighlight(latest.id)}
+          >
+            {newestFirst.length}件
+          </span>
           <button
             type="button"
             className="text-button"
@@ -72,93 +121,102 @@ export function StudyMarketHistory({
         </div>
       </div>
       <p className="study-history-caption">
-        {showOrders
-          ? "本市場のCDA・全期間。終了済みの注文は取引できません。新しい順・下へスクロールで過去の記録。"
-          : "本市場の全期間の約定記録。新しい順・下へスクロールで過去の記録。"}
+        本市場・全期間・新しい順。約定済み注文は歩み値に統合。終了した注文は取引できません。
       </p>
       <div
-        id={panelId}
         ref={list}
         tabIndex={0}
         role="region"
-        aria-label={`${label}の一覧・スクロールで全件表示`}
-        className={`study-tape-rows${showOrders ? " study-quote-history" : ""}`}
+        aria-label="注文履歴・歩み値の一覧・スクロールで全件表示"
+        className="study-tape-rows"
       >
-        <table
-          aria-label={`本市場の${showOrders ? "終了した注文履歴" : "約定履歴"}・全期間・新しい順`}
-        >
+        <table aria-label="本市場の注文履歴・歩み値・全期間・新しい順">
           <thead>
             <tr>
-              <th scope="col">
-                {showOrders
-                  ? showParticipants
-                    ? "期・参加者"
-                    : "期・売買"
-                  : "期・制度"}
-              </th>
-              <th scope="col">{showOrders ? "終了時刻" : "時刻"}</th>
-              <th scope="col">
-                {showOrders ? "注文値（円）" : "約定値（円）"}
-              </th>
-              <th scope="col">{showOrders ? "状態" : "数量"}</th>
+              <th scope="col">期・制度</th>
+              <th scope="col">時刻</th>
+              <th scope="col">種別</th>
+              <th scope="col">価格（円）</th>
+              <th scope="col">状態・数量</th>
             </tr>
           </thead>
           <tbody>
-            {newestFirst.map((trade) =>
-              "closedAt" in trade ? (
+            {newestFirst.map((entry) => {
+              const order = entry.kind === "order" ? entry.order : null;
+              const trade = entry.kind === "trade" ? entry.trade : null;
+              const own = order
+                ? order.participantId === participantId
+                : trade!.buyerId === participantId ||
+                  trade!.sellerId === participantId;
+              return (
                 <tr
-                  key={trade.id}
-                  className={`study-ended-order${trade.participantId === participantId ? " study-own-order" : ""}`}
+                  key={entry.id}
+                  className={[
+                    order ? "study-ended-order" : "study-history-trade",
+                    own ? "study-own-order" : "",
+                    !seenIds.has(entry.id) ? "study-history-new" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onAnimationEnd={() => finishHighlight(entry.id)}
                 >
                   <td>
-                    第{trade.round}期
-                    <small
-                      className={
-                        trade.side === "buyer" ? "buy-text" : "sell-text"
-                      }
-                    >
-                      {showParticipants
-                        ? trade.alias
-                        : trade.side === "buyer"
-                          ? "買い"
-                          : "売り"}
+                    第{order?.round ?? trade!.round}期
+                    <small>
+                      {INSTITUTIONS[trade?.institution ?? "cda"].short}
                     </small>
-                    {trade.participantId === participantId && (
-                      <span className="study-own-order-tag">あなた</span>
-                    )}
                   </td>
                   <td
-                    title={`提示 ${timeLabel(trade.at)} → 終了 ${timeLabel(trade.closedAt)}`}
+                    title={
+                      order
+                        ? `提示 ${timeLabel(order.at)} → 終了 ${timeLabel(entry.at)}`
+                        : `約定 ${timeLabel(entry.at)}`
+                    }
                   >
-                    {timeLabel(trade.closedAt)}
+                    {timeLabel(entry.at)}
                   </td>
-                  <td>{decimal(trade.price)}</td>
-                  <td>
-                    <span className="study-order-status">
-                      {ORDER_STATUS[trade.status]}
+                  <td className="study-history-kind">
+                    <span
+                      className={
+                        order
+                          ? order.side === "buyer"
+                            ? "buy-text"
+                            : "sell-text"
+                          : "study-trade-kind"
+                      }
+                    >
+                      {order
+                        ? order.side === "buyer"
+                          ? "買い注文"
+                          : "売り注文"
+                        : "約定"}
                     </span>
+                    {own && <span className="study-own-order-tag">あなた</span>}
+                    {showParticipants && (
+                      <small className="study-history-participants">
+                        {order
+                          ? order.alias
+                          : `${trade!.buyerAlias}・${trade!.sellerAlias}`}
+                      </small>
+                    )}
                   </td>
-                </tr>
-              ) : (
-                <tr key={trade.id}>
+                  <td>{decimal(order?.price ?? trade!.price)}</td>
                   <td>
-                    第{trade.round}期
-                    <small>{INSTITUTIONS[trade.institution].short}</small>
+                    {order ? (
+                      <span className="study-order-status">
+                        {ORDER_STATUS[order.status]}
+                      </span>
+                    ) : (
+                      "1単位"
+                    )}
                   </td>
-                  <td>{timeLabel(trade.at)}</td>
-                  <td>{decimal(trade.price)}</td>
-                  <td>1</td>
                 </tr>
-              ),
-            )}
+              );
+            })}
           </tbody>
         </table>
         {!newestFirst.length && (
-          <p className="study-empty">
-            {showOrders
-              ? "終了した注文はまだありません。"
-              : "まだ約定はありません。"}
-          </p>
+          <p className="study-empty">まだ注文履歴・約定はありません。</p>
         )}
       </div>
     </section>

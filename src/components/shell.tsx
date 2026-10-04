@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeftRight, GraduationCap } from "lucide-react";
+import { ArrowLeftRight } from "lucide-react";
 
 export function Header({ children }: { children?: React.ReactNode }) {
   return (
@@ -14,14 +14,7 @@ export function Header({ children }: { children?: React.ReactNode }) {
             <small>ダブルオークション</small>
           </span>
         </Link>
-        <div className="header-right">
-          {children ?? (
-            <Link className="quiet-link" href="/teacher">
-              <GraduationCap size={18} />
-              教員用ページ
-            </Link>
-          )}
-        </div>
+        <div className="header-right">{children}</div>
       </div>
     </header>
   );

@@ -13,9 +13,13 @@ import {
   type Database,
 } from "../src/lib/server/database";
 import { AuctionService } from "../src/lib/server/service";
-import { commandSchema } from "../src/lib/server/http";
+import { commandSchema, configSchema } from "../src/lib/server/http";
+import { exportData } from "../src/lib/server/export";
+import { RealtimeBroker } from "../src/lib/server/realtime";
+import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
 import type { Room } from "../src/lib/server/model";
 import type { Command, RoomView } from "../src/lib/types";
+import { DEFAULT_STUDY_TIMING } from "../src/lib/study-timing";
 
 let pg: PGlite, db: Database, service: AuctionService;
 before(async () => {
@@ -35,13 +39,14 @@ async function saveFixture(room: Room) {
   });
 }
 
-async function classroom(markets = 1) {
+async function classroom(markets = 1, marketSize = 16) {
   const teacher = await service.create(
     {
       title: "実験1テスト",
       protocol: "institutions-v1",
       markets,
-      capacity: markets * 16,
+      capacity: markets * marketSize,
+      ...(marketSize === 16 ? {} : { marketSize }),
       rounds: 15,
       duration: 180,
     },
@@ -49,7 +54,7 @@ async function classroom(markets = 1) {
     "",
   );
   const students: { token: string; view: RoomView }[] = [];
-  for (let i = 0; i < markets * 16; i++) {
+  for (let i = 0; i < markets * marketSize; i++) {
     const login = await service.join(teacher.code, `学生${i + 1}`, "123456");
     students.push({
       token: login.token,
@@ -67,6 +72,215 @@ async function classroom(markets = 1) {
   };
   return { teacher, students, send };
 }
+
+test("timing validation rejects invalid creation and commands without changing saved settings", async () => {
+  const config = {
+    title: "時間設定テスト",
+    protocol: "institutions-v1" as const,
+    markets: 1,
+    marketSize: 2,
+    capacity: 2,
+    rounds: 15,
+    duration: 180,
+    studyTiming: {
+      cdaSeconds: 120,
+      callSeconds: 20,
+      offerSeconds: 45,
+      buyerSeconds: 15,
+    },
+  };
+  assert.equal(configSchema.safeParse(config).success, true);
+  for (const key of Object.keys(
+    DEFAULT_STUDY_TIMING,
+  ) as (keyof typeof DEFAULT_STUDY_TIMING)[]) {
+    for (const seconds of [0, -1, 1.5, 3601, NaN, Infinity]) {
+      const timing = { ...DEFAULT_STUDY_TIMING, [key]: seconds };
+      assert.equal(
+        configSchema.safeParse({ ...config, studyTiming: timing }).success,
+        false,
+      );
+      assert.equal(
+        commandSchema.safeParse({
+          requestId: randomUUID(),
+          expectedRound: 0,
+          command: { type: "study-timing", expectedRevision: 0, timing },
+        }).success,
+        false,
+      );
+      await assert.rejects(
+        service.create(
+          { ...config, studyTiming: timing },
+          "Test-Teacher-2026",
+          "",
+        ),
+        /時間/,
+      );
+    }
+  }
+  assert.equal(
+    configSchema.safeParse({ ...config, studyTiming: { cdaSeconds: 120 } })
+      .success,
+    false,
+  );
+  const teacher = await service.create(config, "Test-Teacher-2026", "");
+  const view = await service.view(teacher.code, teacher.token);
+  assert.deepEqual(view.config.studyTiming, config.studyTiming);
+  assert.equal(view.config.duration, 120);
+  await assert.rejects(
+    service.command(teacher.code, teacher.token, {
+      requestId: randomUUID(),
+      expectedRound: 0,
+      command: {
+        type: "study-timing",
+        expectedRevision: 0,
+        timing: { ...DEFAULT_STUDY_TIMING, callSeconds: 0 },
+      },
+    }),
+    /時間/,
+  );
+  assert.deepEqual(
+    (await service.view(teacher.code, teacher.token)).config,
+    view.config,
+  );
+});
+
+test("teacher timing is persisted, pushed to every market, audited and locked once the experiment opens", async () => {
+  const { teacher, students, send } = await classroom(3, 2);
+  const broker = new RealtimeBroker(db);
+  const views = new Map<string, RoomView>();
+  const stops: (() => void)[] = [];
+  const timing = {
+    cdaSeconds: 137,
+    callSeconds: 47,
+    offerSeconds: 71,
+    buyerSeconds: 23,
+  };
+  try {
+    for (const student of students)
+      stops.push(
+        await broker.subscribe(teacher.code, student.token, (event) => {
+          if (event.type === "snapshot")
+            views.set(student.token, event.data as RoomView);
+          if (event.type === "patch")
+            views.set(
+              student.token,
+              applyPatch(views.get(student.token)!, event.data as RoomPatch),
+            );
+        }),
+      );
+    await assert.rejects(
+      send(students[0].token, {
+        type: "study-timing",
+        expectedRevision: 0,
+        timing,
+      }),
+      /教員のみ/,
+    );
+    const updated = await send(teacher.token, {
+      type: "study-timing",
+      expectedRevision: 0,
+      timing,
+    });
+    assert.equal(updated.study!.settingsRevision, 1);
+    const until = Date.now() + 5000;
+    while (
+      students.some(
+        (s) => views.get(s.token)?.config.studyTiming?.callSeconds !== 47,
+      )
+    ) {
+      assert.ok(
+        Date.now() < until,
+        "timing update was not pushed to all markets",
+      );
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    for (const student of students)
+      assert.deepEqual(views.get(student.token)!.config.studyTiming, timing);
+    const reloaded = await new AuctionService(db).view(
+      teacher.code,
+      teacher.token,
+    );
+    assert.deepEqual(reloaded.config.studyTiming, timing);
+    await assert.rejects(
+      send(teacher.token, {
+        type: "study-settings",
+        expectedRevision: 0,
+        settings: reloaded.study!.teacher!.settings,
+      }),
+      /更新/,
+    );
+    await assert.rejects(
+      send(teacher.token, {
+        type: "study-timing",
+        expectedRevision: 0,
+        timing: DEFAULT_STUDY_TIMING,
+      }),
+      /更新/,
+    );
+    const saved = await service.export(teacher.code, teacher.token);
+    const json = JSON.parse(
+      exportData(saved.room, saved.events, saved.now, "settings").content,
+    );
+    for (const key of Object.keys(timing) as (keyof typeof timing)[])
+      assert.equal(json.rules[key], timing[key]);
+    assert.deepEqual(
+      saved.events.find((e) => e.type === "study-timing")!.detail.timing,
+      timing,
+    );
+    await send(teacher.token, { type: "start" });
+    await assert.rejects(
+      send(teacher.token, {
+        type: "study-timing",
+        expectedRevision: 1,
+        timing: DEFAULT_STUDY_TIMING,
+      }),
+      /開始前/,
+    );
+    await send(teacher.token, { type: "pause" });
+    await assert.rejects(
+      send(teacher.token, {
+        type: "study-timing",
+        expectedRevision: 1,
+        timing: DEFAULT_STUDY_TIMING,
+      }),
+      /開始前/,
+    );
+    assert.deepEqual(
+      (await service.view(teacher.code, teacher.token)).config.studyTiming,
+      timing,
+    );
+  } finally {
+    stops.forEach((stop) => stop());
+    await broker.close();
+  }
+  // Even while an empty market is still waiting, opening the experiment locks timing.
+  const waiting = await service.create(
+    {
+      title: "開始後の待機市場",
+      protocol: "institutions-v1",
+      markets: 1,
+      marketSize: 2,
+      capacity: 2,
+      rounds: 15,
+      duration: 180,
+    },
+    "Test-Teacher-2026",
+    "",
+  );
+  await service.command(waiting.code, waiting.token, {
+    requestId: randomUUID(),
+    expectedRound: 0,
+    command: { type: "start" },
+  });
+  await assert.rejects(
+    service.command(waiting.code, waiting.token, {
+      requestId: randomUUID(),
+      expectedRound: 0,
+      command: { type: "study-timing", expectedRevision: 0, timing },
+    }),
+    /開始前/,
+  );
+});
 
 test("96 students receive six isolated balanced markets and six distinct institution orders", async () => {
   const { teacher, students } = await classroom(6);
@@ -86,6 +300,158 @@ test("96 students receive six isolated balanced markets and six distinct institu
     service.export(teacher.code, students[0].token),
     /教員のみ/,
   );
+});
+
+test("custom layout rejects odd groups, invalid market counts and totals above 192", async () => {
+  const config = {
+    title: "人数の検証",
+    protocol: "institutions-v1" as const,
+    markets: 3,
+    marketSize: 6,
+    capacity: 18,
+    rounds: 15,
+    duration: 180,
+  };
+  assert.equal(configSchema.safeParse(config).success, true);
+  assert.equal(
+    configSchema.safeParse({
+      ...config,
+      markets: 96,
+      marketSize: 2,
+      capacity: 192,
+    }).success,
+    true,
+  );
+  assert.equal(
+    configSchema.safeParse({
+      ...config,
+      markets: 1,
+      marketSize: 192,
+      capacity: 192,
+    }).success,
+    true,
+  );
+  for (const change of [
+    { marketSize: 5 },
+    { marketSize: 0 },
+    { marketSize: 6.5 },
+    { markets: 0 },
+    { markets: 2.5 },
+    { markets: 33 },
+  ]) {
+    const invalid = { ...config, ...change };
+    assert.equal(configSchema.safeParse(invalid).success, false);
+    await assert.rejects(service.create(invalid, "Test-Teacher-2026", ""));
+  }
+  assert.equal(
+    configSchema.safeParse({ ...config, capacity: 16 }).success,
+    false,
+  );
+});
+
+test("six-person groups preserve private conditions, market-scoped storage and live updates", async () => {
+  const { teacher, students, send } = await classroom(3, 6);
+  const saved = await service.export(teacher.code, teacher.token);
+  saved.room.study!.markets.forEach((m) => {
+    m.order = ["cda", "call", "posted"];
+  });
+  await saveFixture(saved.room);
+  const initial = await service.view(teacher.code, teacher.token);
+  assert.equal(initial.config.capacity, 18);
+  const settings = initial.study!.teacher!.settings;
+  assert.equal(settings.values.length, 3);
+  for (let id = 1; id <= 3; id++) {
+    const group = students.filter((s) => s.view.study!.market.id === id);
+    assert.equal(group.length, 6);
+    assert.equal(group.filter((s) => s.view.me.role === "buyer").length, 3);
+    assert.equal(new Set(group.map((s) => s.view.me.alias)).size, 6);
+    assert.equal(
+      new Set(
+        group
+          .filter((s) => s.view.me.role === "buyer")
+          .map((s) => s.view.study!.unitLimits!.join()),
+      ).size,
+      3,
+    );
+  }
+  await assert.rejects(
+    send(teacher.token, {
+      type: "study-settings",
+      settings: {
+        values: settings.values.slice(1),
+        costs: settings.costs.slice(1),
+      },
+      expectedRevision: 0,
+    }),
+    /3人×2単位/,
+  );
+  settings.values[0] = [121, 105];
+  await send(teacher.token, {
+    type: "study-settings",
+    settings,
+    expectedRevision: 0,
+  });
+  const group = students.filter((s) => s.view.study!.market.id === 3);
+  const buyer = group.find((s) => s.view.me.role === "buyer")!;
+  const seller = group.find((s) => s.view.me.role === "seller")!;
+  const other = students.find((s) => s.view.study!.market.id === 2)!;
+  await send(teacher.token, { type: "start" });
+  const broker = new RealtimeBroker(db);
+  const views = new Map<string, RoomView>();
+  const stops: (() => void)[] = [];
+  try {
+    for (const s of [buyer, seller, other])
+      stops.push(
+        await broker.subscribe(teacher.code, s.token, (event) => {
+          if (event.type === "snapshot")
+            views.set(s.token, event.data as RoomView);
+          if (event.type === "patch")
+            views.set(
+              s.token,
+              applyPatch(views.get(s.token)!, event.data as RoomPatch),
+            );
+        }),
+      );
+    const otherVersion = views.get(other.token)!.version;
+    await send(seller.token, { type: "study-quote", price: 80 });
+    await send(buyer.token, { type: "study-quote", price: 80 });
+    const end = Date.now() + 5000;
+    while (
+      views.get(buyer.token)!.study!.market.trades.length !== 1 ||
+      views.get(seller.token)!.study!.market.trades.length !== 1
+    ) {
+      assert.ok(Date.now() < end, "custom market push timed out");
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.equal(views.get(other.token)!.version, otherVersion);
+    assert.equal(views.get(other.token)!.study!.market.trades.length, 0);
+    for (const s of [buyer, seller]) {
+      const view = views.get(s.token)!;
+      assert.equal(view.study!.market.id, 3);
+      assert.equal(view.study!.teacher, undefined);
+      assert.equal(view.study!.market.trades[0].market, 3);
+      assert.equal(view.study!.market.trades[0].price, 80);
+      const full = await service.view(teacher.code, s.token);
+      const withoutClock = (v: RoomView) => ({
+        ...v,
+        serverTime: 0,
+        remainingMs: 0,
+        study: { ...v.study!, market: { ...v.study!.market, remainingMs: 0 } },
+      });
+      assert.deepEqual(withoutClock(view), withoutClock(full));
+    }
+    const final = await service.export(teacher.code, teacher.token);
+    assert.equal(final.room.study!.markets[2].trades.length, 1);
+    assert.equal(final.room.study!.markets[0].trades.length, 0);
+    const data = JSON.parse(
+      exportData(final.room, final.events, final.now, "settings").content,
+    );
+    assert.equal(data.rules.tradersPerMarket, 6);
+    assert.equal(data.config.markets, 3);
+  } finally {
+    stops.forEach((stop) => stop());
+    await broker.close();
+  }
 });
 
 test("old single-row study rooms migrate without losing orders, audit events or retry receipts", async () => {

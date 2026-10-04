@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { studyRole, studyRoleIndex } from "../src/lib/study-config";
+import { studyTiming, DEFAULT_STUDY_TIMING } from "../src/lib/study-timing";
 import type { Command } from "../src/lib/types";
 import type { AuditEvent, Participant, Room } from "../src/lib/server/model";
 import { execute, settleDeadline, toView } from "../src/lib/server/engine";
@@ -19,8 +21,12 @@ import {
   convergenceSlopes,
 } from "../src/lib/server/study-view";
 
-function classroom(count = 1, first: "cda" | "call" | "posted" = "cda") {
-  const study = newStudy(count);
+function classroom(
+  count = 1,
+  first: "cda" | "call" | "posted" = "cda",
+  marketSize = 16,
+) {
+  const study = newStudy(count, marketSize);
   if (count === 1)
     study.markets[0].order = [
       first,
@@ -33,7 +39,8 @@ function classroom(count = 1, first: "cda" | "call" | "posted" = "cda") {
       title: "実験1",
       protocol: "institutions-v1",
       markets: count,
-      capacity: count * 16,
+      capacity: count * marketSize,
+      ...(marketSize === 16 ? {} : { marketSize }),
       rounds: 15,
       duration: 180,
     },
@@ -54,12 +61,12 @@ function classroom(count = 1, first: "cda" | "call" | "posted" = "cda") {
     receipts: [],
     participants: [],
   };
-  for (let seat = 0; seat < count * 16; seat++)
+  for (let seat = 0; seat < count * marketSize; seat++)
     room.participants.push({
       id: randomUUID(),
       seat,
-      role: seat % 16 < 8 ? "buyer" : "seller",
-      alias: `${seat % 16 < 8 ? "買" : "売"}${(seat % 8) + 1}`,
+      role: studyRole(room.config, seat),
+      alias: `${studyRole(room.config, seat) === "buyer" ? "買" : "売"}${studyRoleIndex(room.config, seat) + 1}`,
       nickname: `学生${seat + 1}`,
       limits: { apple: 0, banana: 0, orange: 0 },
       tokenHash: "",
@@ -81,7 +88,7 @@ function classroom(count = 1, first: "cda" | "call" | "posted" = "cda") {
         expectedStage:
           actor === "teacher"
             ? undefined
-            : stageKey(room, study.markets[Math.floor(actor.seat / 16)]),
+            : stageKey(room, marketFor(room, actor)),
         command,
       },
       now,
@@ -96,6 +103,146 @@ function classroom(count = 1, first: "cda" | "call" | "posted" = "cda") {
     sellers: room.participants.filter((p) => p.role === "seller"),
   };
 }
+
+test("custom CDA timing survives pauses, later market starts and the next period", () => {
+  const { room, study, send, events } = classroom(2, "cda", 4);
+  assert.deepEqual(studyTiming(room.config), DEFAULT_STUDY_TIMING);
+  study.markets.forEach((m) => {
+    m.order = ["cda", "call", "posted"];
+  });
+  const late = room.participants.pop()!;
+  send("teacher", {
+    type: "study-timing",
+    expectedRevision: 0,
+    timing: {
+      cdaSeconds: 37,
+      callSeconds: 7,
+      offerSeconds: 11,
+      buyerSeconds: 3,
+    },
+  });
+  send("teacher", { type: "start" }, 1000);
+  assert.equal(study.markets[0].deadline, 38000);
+  assert.equal(study.markets[1].deadline, null);
+  room.participants.push(late);
+  settleDeadline(room, 5000, events);
+  assert.equal(study.markets[1].deadline, 42000);
+  send("teacher", { type: "pause" }, 10000);
+  assert.deepEqual(
+    study.markets.map((m) => m.remainingMs),
+    [28000, 32000],
+  );
+  send("teacher", { type: "resume" }, 100000);
+  assert.deepEqual(
+    study.markets.map((m) => m.deadline),
+    [128000, 132000],
+  );
+  settleDeadline(room, 127999, events);
+  assert.equal(study.markets[0].round, 1);
+  settleDeadline(room, 128000, events);
+  assert.equal(study.markets[0].round, 2);
+  assert.equal(study.markets[0].deadline, 165000);
+  assert.equal(study.markets[1].round, 1);
+});
+
+test("custom Call timing controls all four clearing deadlines and the following period", () => {
+  const { room, study, send, events, buyers, sellers } = classroom(
+    1,
+    "call",
+    4,
+  );
+  send("teacher", {
+    type: "study-timing",
+    expectedRevision: 0,
+    timing: { ...DEFAULT_STUDY_TIMING, callSeconds: 7 },
+  });
+  send("teacher", { type: "start" }, 1000);
+  send(buyers[0], { type: "call-submit", prices: [100] }, 2000);
+  send(sellers[0], { type: "call-submit", prices: [80] }, 2000);
+  const m = study.markets[0];
+  for (let call = 1; call <= 4; call++) {
+    const deadline = 1000 + call * 7000;
+    assert.equal(m.deadline, deadline);
+    settleDeadline(room, deadline - 1, events);
+    assert.equal(m.clearings.length, call - 1);
+    settleDeadline(room, deadline, events);
+    assert.equal(m.clearings.at(-1)!.at, deadline);
+    assert.equal(m.clearings.at(-1)!.call, call);
+  }
+  assert.equal(m.trades.length, 1);
+  assert.equal(m.trades[0].at, 8000);
+  assert.equal(m.round, 2);
+  assert.equal(m.call, 1);
+  assert.equal(m.deadline, 36000);
+});
+
+test("custom Posted timing preserves sealed offers and gives each next buyer a full turn", () => {
+  const { room, study, send, events, buyers, sellers } = classroom(
+    1,
+    "posted",
+    4,
+  );
+  send("teacher", {
+    type: "study-timing",
+    expectedRevision: 0,
+    timing: { ...DEFAULT_STUDY_TIMING, offerSeconds: 11, buyerSeconds: 3 },
+  });
+  send("teacher", { type: "start" }, 1000);
+  send(sellers[0], { type: "posted-offer", price: 80, quantity: 2 }, 2000);
+  const m = study.markets[0];
+  assert.equal(m.deadline, 12000);
+  settleDeadline(room, 11999, events);
+  assert.equal(
+    toView(room, buyers[0], 11999, "local").study!.market.offers.length,
+    0,
+  );
+  settleDeadline(room, 12000, events);
+  assert.equal(m.stage, "purchase");
+  assert.equal(m.deadline, 15000);
+  assert.equal(
+    toView(room, buyers[0], 12000, "local").study!.market.offers.length,
+    1,
+  );
+  const first = buyers.find((p) => p.id === m.buyerOrder[0])!;
+  send(
+    first,
+    { type: "posted-buy", offerId: m.offers[0].id, quantity: 1 },
+    13000,
+  );
+  assert.equal(m.deadline, 15000);
+  send(first, { type: "posted-pass" }, 14000);
+  assert.equal(m.buyerIndex, 1);
+  assert.equal(m.deadline, 17000);
+  settleDeadline(room, 17000, events);
+  assert.equal(m.round, 2);
+  assert.equal(m.stage, "offer");
+  assert.equal(m.deadline, 28000);
+});
+
+test("minimum and maximum timing settings advance through exactly fifteen periods", () => {
+  for (const seconds of [1, 3600]) {
+    const { room, study, send, events } = classroom(1, "cda", 2);
+    send("teacher", {
+      type: "study-timing",
+      expectedRevision: 0,
+      timing: {
+        cdaSeconds: seconds,
+        callSeconds: seconds,
+        offerSeconds: seconds,
+        buyerSeconds: seconds,
+      },
+    });
+    send("teacher", { type: "start" }, 1000);
+    // Five CDA periods, five four-call periods, five offer + one-buyer periods.
+    const end = 1000 + seconds * 35000;
+    settleDeadline(room, end - 1, events);
+    assert.equal(room.phase, "running");
+    settleDeadline(room, end, events);
+    assert.equal(room.phase, "finished");
+    assert.equal(study.markets[0].periods.length, 15);
+    assert.equal(study.markets[0].periods.at(-1)!.endedAt, end);
+  }
+});
 
 test("study uses 12 balanced markets, six orders twice, and the professor's marginal values", () => {
   const { room, study } = classroom(12);
@@ -116,6 +263,114 @@ test("study uses 12 balanced markets, six orders twice, and the professor's marg
   });
   assert.deepEqual(unitLimits(room, room.participants[0]), [120, 104]);
   assert.deepEqual(unitLimits(room, room.participants[8]), [40, 56]);
+});
+
+test("custom even-sized markets assign every condition and run all three institutions", () => {
+  for (const size of [2, 6, 10, 20]) {
+    for (const first of ["cda", "call", "posted"] as const) {
+      const { room, study, buyers, sellers, send, events } = classroom(
+        1,
+        first,
+        size,
+      );
+      const m = study.markets[0];
+      assert.equal(study.settings.values.length, size / 2);
+      assert.equal(study.settings.costs.length, size / 2);
+      for (const p of room.participants)
+        assert.equal(unitLimits(room, p).length, 2);
+      send("teacher", { type: "start" });
+      if (first === "cda") {
+        for (let i = 0; i < buyers.length; i++) {
+          for (let unit = 0; unit < 2; unit++) {
+            send(sellers[i], { type: "study-quote", price: 80 });
+            send(buyers[i], { type: "study-quote", price: 80 });
+          }
+        }
+      } else if (first === "call") {
+        for (const buyer of buyers)
+          send(buyer, { type: "call-submit", prices: [120, 120] });
+        for (const seller of sellers)
+          send(seller, { type: "call-submit", prices: [40, 40] });
+        settleDeadline(room, m.deadline!, events);
+      } else {
+        for (const seller of sellers)
+          send(seller, { type: "posted-offer", price: 80, quantity: 2 });
+        const at = m.deadline!;
+        settleDeadline(room, at, events);
+        for (const id of [...m.buyerOrder]) {
+          const buyer = buyers.find((p) => p.id === id)!;
+          const offer = m.offers.find((o) => o.remaining === 2)!;
+          send(
+            buyer,
+            { type: "posted-buy", offerId: offer.id, quantity: 2 },
+            at + 1,
+          );
+        }
+      }
+      const trades = m.trades.filter((t) => t.round === 1);
+      assert.equal(trades.length, size, `${first}, ${size} people`);
+      assert.ok(trades.every((t) => t.price === 80));
+      for (const p of room.participants) {
+        assert.equal(
+          trades.filter((t) => [t.buyerId, t.sellerId].includes(p.id)).length,
+          2,
+        );
+      }
+      const saved = JSON.parse(
+        exportData(room, events, 70000, "settings").content,
+      );
+      assert.equal(saved.rules.tradersPerMarket, size);
+      assert.deepEqual(saved.equilibrium, studyEquilibrium(room));
+    }
+  }
+});
+
+test("a custom market starts at its configured capacity; other markets keep waiting", () => {
+  const { room, study, send, events } = classroom(3, "cda", 6);
+  const pending = room.participants.splice(5);
+  send("teacher", { type: "start" });
+  assert.ok(study.markets.every((m) => m.round === 0));
+  room.participants.push(pending.shift()!);
+  settleDeadline(room, 2000, events);
+  assert.equal(study.markets[0].round, 1);
+  assert.ok(
+    study.markets.slice(1).every((m) => m.round === 0 && m.deadline === null),
+  );
+  room.participants.push(...pending.splice(0, 6));
+  settleDeadline(room, 4000, events);
+  assert.equal(study.markets[1].round, 1);
+  assert.equal(study.markets[1].periods[0].startedAt, 4000);
+  assert.equal(study.markets[2].round, 0);
+});
+
+test("custom schedules cover the source range and support the total capacity boundary", () => {
+  const small = newStudy(3, 6);
+  assert.deepEqual(small.settings.values, [
+    [116, 100],
+    [88, 72],
+    [80, 64],
+  ]);
+  const { room } = classroom(1, "cda", 192);
+  assert.equal(room.study!.settings.values.length, 96);
+  assert.equal(
+    new Set(room.participants.map((p) => `${p.role}:${p.alias}`)).size,
+    192,
+  );
+  assert.deepEqual(unitLimits(room, room.participants[191]), [84, 100]);
+  assert.equal(studyEquilibrium(room).surplus, 440 * 12);
+  for (const count of [2, 3, 5, 7, 11, 24, 96]) {
+    const { markets } = newStudy(count);
+    const occurrences = new Map<string, number>();
+    for (const m of markets)
+      occurrences.set(
+        m.order.join(),
+        (occurrences.get(m.order.join()) ?? 0) + 1,
+      );
+    const n = [...occurrences.values()];
+    assert.ok(Math.max(...n) - Math.min(...n) <= 1);
+    assert.equal(markets.length, count);
+    assert.equal(occurrences.size, Math.min(count, 6));
+  }
 });
 
 test("CDA trades two marginal units at resting prices, permits losses, and never crosses markets", () => {

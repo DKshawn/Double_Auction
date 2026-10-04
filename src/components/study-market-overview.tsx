@@ -157,7 +157,11 @@ export function StudyMarketOverview({
                       </span>
                     </span>
                   </td>
-                  <td>{market.participantCount}/16</td>
+                  <td>
+                    {market.participantCount}/
+                    {teacher.settings.values.length +
+                      teacher.settings.costs.length}
+                  </td>
                   <td>
                     <span className={`study-overview-status ${state}`}>
                       {status}

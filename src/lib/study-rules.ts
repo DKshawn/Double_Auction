@@ -13,7 +13,7 @@ export const INSTITUTIONS: Record<
   call: {
     name: "一括約定市場",
     short: "Call Market",
-    description: "30秒間の非公開注文を集め、共通の価格で一括して取引します。",
+    description: "非公開注文を集め、共通の価格で一括して取引します。",
   },
   posted: {
     name: "売り手価格提示市場",
@@ -47,7 +47,8 @@ export const STUDY_RULES = {
   cdaOrderHistory: "public-ended-resting-orders-all-periods-with-status",
   studentHistoryDisplay: "current-institution-five-periods",
   teacherHistoryDisplay: "all-fifteen-periods-with-institution-filter",
-  postedOffers: "sealed-until-60s-single-price-final-quantity",
+  postedOffers:
+    "sealed-until-configured-offer-deadline-single-price-final-quantity",
   postedBuyerOrder: "random-every-period",
   nonResponse: "skip-at-deadline",
   quantityRatioDenominator: "positive-surplus-quantity",
@@ -59,7 +60,7 @@ export const STUDY_RULES = {
     "OLS-alpha-on-period-1-to-5-within-market-and-institution-complete-periods-only",
   grouping: "random-balanced-seat-assignment",
   comparisonUnit: "market",
-  marketStart: "after-teacher-opens-and-16-participants-join-the-market",
+  marketStart: "after-teacher-opens-and-configured-market-capacity-is-reached",
   periodProgression: "independent-per-market-auto-start-next-period-through-15",
   earlyEnd: "pending-orders-cancelled-period-marked-interrupted",
 } as const;

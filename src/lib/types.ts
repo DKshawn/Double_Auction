@@ -1,5 +1,5 @@
 import type { GoodId } from "./catalog";
-import type { StudyCommand, StudyView } from "./study-types";
+import type { StudyCommand, StudyTiming, StudyView } from "./study-types";
 
 export type Role = "buyer" | "seller";
 export type Phase = "waiting" | "running" | "paused" | "review" | "finished";
@@ -10,6 +10,8 @@ export type MarketSettings = Record<
 export type RoomConfig = {
   protocol?: "institutions-v1";
   markets?: number;
+  marketSize?: number;
+  studyTiming?: StudyTiming;
   title: string;
   capacity: number;
   rounds: number;

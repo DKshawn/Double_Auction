@@ -383,30 +383,8 @@ svg {
 .join-form {
   padding: 30px 31px 25px;
 }
-.form-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 11px;
-  margin-bottom: 18px;
-}
-.icon-chip {
-  display: grid;
-  place-items: center;
-  height: 32px;
-  width: 32px;
-  border-radius: 9px;
-  background: var(--lavender);
-  color: var(--accent);
-}
-.join-form h2 {
-  font-size: 23px;
-  margin-bottom: 7px;
-  letter-spacing: 0.015em;
-}
-.join-form > p.muted {
-  font-size: 11px;
+.join-form > .field:first-child {
+  margin-top: 0;
 }
 .field {
   display: flex;

@@ -11,6 +11,13 @@ import type {
   Clearing,
 } from "./study-types";
 import { STUDY_RULES } from "./study-rules";
+import { MAX_STAGE_SECONDS, studyTiming } from "./study-timing";
+import {
+  MAX_STUDY_PARTICIPANTS,
+  studyMarketId,
+  studyMarketSize,
+  studyRoleIndex,
+} from "./study-config";
 import {
   AuctionError,
   emit,
@@ -62,16 +69,31 @@ const pair = z.tuple([
   z.number().int().min(1).max(999),
   z.number().int().min(1).max(999),
 ]);
+const stageSeconds = z.number().int().min(1).max(MAX_STAGE_SECONDS);
+export const studyTimingSchema = z
+  .object({
+    cdaSeconds: stageSeconds,
+    callSeconds: stageSeconds,
+    offerSeconds: stageSeconds,
+    buyerSeconds: stageSeconds,
+  })
+  .strict();
 export const studySettingsSchema = z
   .object({
     values: z
       .array(pair.refine(([a, b]) => a >= b, "評価値は2単位目で増やせません。"))
-      .length(8),
+      .min(1)
+      .max(MAX_STUDY_PARTICIPANTS / 2),
     costs: z
       .array(pair.refine(([a, b]) => a <= b, "費用は2単位目で減らせません。"))
-      .length(8),
+      .min(1)
+      .max(MAX_STUDY_PARTICIPANTS / 2),
   })
-  .strict();
+  .strict()
+  .refine(
+    (s) => s.values.length === s.costs.length,
+    "買い手と売り手の人数をそろえてください。",
+  );
 
 export function shuffled<T>(items: T[]): T[] {
   const result = [...items];
@@ -90,8 +112,11 @@ export const ORDERS: Institution[][] = [
   ["posted", "call", "cda"],
 ];
 export function createStudy(count: number, settings: StudySettings): Study {
+  // Keep the one-market teaching preset; otherwise distribute all six orders
+  // as evenly as possible, without favouring the first orders in smaller rooms.
+  const candidates = count === 1 ? [ORDERS[0]] : shuffled(ORDERS);
   const orders = shuffled(
-    Array.from({ length: count }, (_, i) => ORDERS[i % 6]),
+    Array.from({ length: count }, (_, i) => candidates[i % candidates.length]),
   );
   return {
     protocol: "institutions-v1",
@@ -121,13 +146,15 @@ export function createStudy(count: number, settings: StudySettings): Study {
   };
 }
 export const marketFor = (room: Room, p: Participant) =>
-  room.study!.markets.find((m) => m.id === Math.floor(p.seat / 16) + 1)!;
+  room.study!.markets.find((m) => m.id === studyMarketId(room.config, p.seat))!;
 export const marketRound = (room: Room, market: StudyMarket) =>
   market.round ?? market.periods.at(-1)?.round ?? room.round;
 export const institutionFor = (room: Room, market: StudyMarket) =>
   market.order[Math.floor((Math.max(1, marketRound(room, market)) - 1) / 5)];
 export const unitLimits = (room: Room, p: Participant) =>
-  room.study!.settings[p.role === "buyer" ? "values" : "costs"][p.seat % 8];
+  room.study!.settings[p.role === "buyer" ? "values" : "costs"][
+    studyRoleIndex(room.config, p.seat)
+  ];
 export const unitsUsed = (room: Room, p: Participant) =>
   marketFor(room, p).trades.filter(
     (t) =>
@@ -289,11 +316,12 @@ function startMarket(
     spreadArea: 0,
     spreadMs: 0,
   });
-  if (institution === "cda") schedule(m, "cda", at, STUDY_RULES.cdaSeconds);
+  const timing = studyTiming(room.config);
+  if (institution === "cda") schedule(m, "cda", at, timing.cdaSeconds);
   else if (institution === "call") {
     m.call = 1;
-    schedule(m, "call", at, STUDY_RULES.callSeconds);
-  } else schedule(m, "offer", at, STUDY_RULES.offerSeconds);
+    schedule(m, "call", at, timing.callSeconds);
+  } else schedule(m, "offer", at, timing.offerSeconds);
   log(room, m, events, at, "period-started", "system");
 }
 function finishMarket(
@@ -443,7 +471,7 @@ function nextBuyer(
   if (m.buyerIndex >= m.buyerOrder.length)
     finishMarket(room, m, events, at, "complete");
   else {
-    schedule(m, "purchase", at, STUDY_RULES.buyerSeconds);
+    schedule(m, "purchase", at, studyTiming(room.config).buyerSeconds);
     log(room, m, events, at, "buyer-turn", "system", {
       participantId: m.buyerOrder[m.buyerIndex],
     });
@@ -457,7 +485,7 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
       ["waiting", "done"].includes(m.stage) &&
       marketRound(room, m) < 15 &&
       room.participants.filter((p) => marketFor(room, p).id === m.id).length ===
-        16
+        studyMarketSize(room.config)
     ) {
       startMarket(room, m, events, now);
       changed = true;
@@ -468,10 +496,11 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
       if (m.stage === "cda") finishMarket(room, m, events, at, "complete");
       else if (m.stage === "call") {
         clearCall(room, m, events, at);
-        if (m.call === 4) finishMarket(room, m, events, at, "complete");
+        if (m.call === STUDY_RULES.callsPerPeriod)
+          finishMarket(room, m, events, at, "complete");
         else {
           m.call++;
-          schedule(m, "call", at, STUDY_RULES.callSeconds);
+          schedule(m, "call", at, studyTiming(room.config).callSeconds);
         }
       } else if (m.stage === "offer") {
         m.buyerOrder = shuffled(
@@ -480,7 +509,7 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
             .map((p) => p.id),
         );
         m.buyerIndex = 0;
-        schedule(m, "purchase", at, STUDY_RULES.buyerSeconds);
+        schedule(m, "purchase", at, studyTiming(room.config).buyerSeconds);
         log(room, m, events, at, "offers-published", "system", {
           offers: m.offers,
           buyerOrder: m.buyerOrder,
@@ -519,7 +548,7 @@ export function executeStudy(
     );
   const cmd = request.command,
     study = room.study!;
-  if (cmd.type === "study-settings") {
+  if (cmd.type === "study-settings" || cmd.type === "study-timing") {
     if (actor !== "teacher")
       throw new AuctionError("この操作は教員のみ利用できます。", 403);
     if (room.round !== 0 || room.phase !== "waiting")
@@ -529,17 +558,35 @@ export function executeStudy(
         "条件が更新されています。再読込してください。",
         409,
       );
-    const parsed = studySettingsSchema.safeParse(cmd.settings);
-    if (!parsed.success)
-      throw new AuctionError(
-        "8人×2単位の条件を確認してください。評価値は低下、費用は上昇するように設定します。",
-      );
-    study.settings = parsed.data;
-    study.revision++;
-    emit(room, events, now, "study-settings", "teacher", {
-      settings: study.settings,
-      revision: study.revision,
-    });
+    if (cmd.type === "study-timing") {
+      const parsed = studyTimingSchema.safeParse(cmd.timing);
+      if (!parsed.success)
+        throw new AuctionError(
+          `各時間は1〜${MAX_STAGE_SECONDS}秒の整数で設定してください。`,
+        );
+      room.config.studyTiming = parsed.data;
+      room.config.duration = parsed.data.cdaSeconds;
+      study.revision++;
+      emit(room, events, now, "study-timing", "teacher", {
+        timing: parsed.data,
+        revision: study.revision,
+      });
+    } else {
+      const parsed = studySettingsSchema.safeParse(cmd.settings);
+      if (
+        !parsed.success ||
+        parsed.data.values.length !== studyMarketSize(room.config) / 2
+      )
+        throw new AuctionError(
+          `買い手・売り手それぞれ${studyMarketSize(room.config) / 2}人×2単位の条件を確認してください。評価値は低下、費用は上昇するように設定します。`,
+        );
+      study.settings = parsed.data;
+      study.revision++;
+      emit(room, events, now, "study-settings", "teacher", {
+        settings: study.settings,
+        revision: study.revision,
+      });
+    }
   } else if (
     ["start", "pause", "resume", "end-round", "finish"].includes(cmd.type)
   ) {

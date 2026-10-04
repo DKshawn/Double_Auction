@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuctionError } from "./model";
 import { marketSettingsSchema } from "./market-settings";
-import { studySettingsSchema } from "./study";
+import { studySettingsSchema, studyTimingSchema } from "./study";
+import { MAX_STAGE_SECONDS } from "../study-timing";
+import {
+  MAX_STUDY_MARKETS,
+  MAX_STUDY_PARTICIPANTS,
+  studyLayoutError,
+  studyMarketSize,
+} from "../study-config";
 
 export const NO_STORE = {
   "Cache-Control": "private, no-store, max-age=0",
@@ -109,12 +116,26 @@ export const configSchema = z.union([
     .object({
       protocol: z.literal("institutions-v1"),
       title: z.string().trim().min(1).max(60),
-      markets: z.union([z.literal(1), z.literal(6), z.literal(12)]),
-      capacity: z.number().int().min(16).max(192),
+      markets: z.number().int().min(1).max(MAX_STUDY_MARKETS),
+      marketSize: z
+        .number()
+        .int()
+        .min(2)
+        .max(MAX_STUDY_PARTICIPANTS)
+        .multipleOf(2)
+        .optional(),
+      capacity: z.number().int().min(2).max(MAX_STUDY_PARTICIPANTS),
       rounds: z.literal(15),
-      duration: z.literal(180),
+      duration: z.number().int().min(1).max(MAX_STAGE_SECONDS),
+      studyTiming: studyTimingSchema.optional(),
     })
-    .strict(),
+    .strict()
+    .refine(
+      (c) =>
+        !studyLayoutError(c.markets, studyMarketSize(c)) &&
+        c.capacity === c.markets * studyMarketSize(c),
+      "市場数・1市場の人数・合計人数を確認してください。",
+    ),
 ]);
 const good = z.enum(["apple", "banana", "orange"]);
 export const commandSchema = z
@@ -123,6 +144,13 @@ export const commandSchema = z
     expectedRound: z.number().int().min(0).max(15),
     expectedStage: z.string().max(50).optional(),
     command: z.discriminatedUnion("type", [
+      z
+        .object({
+          type: z.literal("study-timing"),
+          timing: studyTimingSchema,
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
       z
         .object({
           type: z.literal("study-settings"),

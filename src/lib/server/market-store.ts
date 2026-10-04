@@ -1,4 +1,5 @@
 import { timed } from "./performance";
+import { studyMarketId } from "../study-config";
 import type { Database, Sql } from "./database";
 import { AuctionError, type AuditEvent, type Room } from "./model";
 import type { StudyMarket } from "../study-core";
@@ -27,7 +28,7 @@ export function assemble(
       ? {
           ...root,
           participants: root.participants.filter(
-            (p) => Math.floor(p.seat / 16) + 1 === scope,
+            (p) => studyMarketId(root.config, p.seat) === scope,
           ),
         }
       : root,
@@ -75,7 +76,7 @@ export async function partition(tx: Sql, room: Room) {
   for (const market of room.study.markets) {
     const ids = new Set(
       room.participants
-        .filter((p) => Math.floor(p.seat / 16) + 1 === market.id)
+        .filter((p) => studyMarketId(room.config, p.seat) === market.id)
         .map((p) => p.id),
     );
     await tx.query(
@@ -276,7 +277,7 @@ export async function saveBundle(
       const old = before.markets.find((m) => m.market_id === market.id)!;
       const ids = new Set(
         room.participants
-          .filter((p) => Math.floor(p.seat / 16) + 1 === market.id)
+          .filter((p) => studyMarketId(room.config, p.seat) === market.id)
           .map((p) => p.id),
       );
       const receipts = room.receipts.filter((r) => ids.has(r.actor));

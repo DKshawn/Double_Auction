@@ -30,7 +30,7 @@ test("teacher edits private market conditions, students receive them, and starti
     expect(
       (
         await student.request.post(`${path}/join`, {
-          data: { nickname: "条件確認の学生", pin: "123456" },
+          data: { nickname: "条件確認", pin: "1234" },
         })
       ).ok(),
     ).toBe(true);
@@ -175,7 +175,7 @@ test("teacher edits private market conditions, students receive them, and starti
       expect(
         (
           await context.request.post(`${path}/join`, {
-            data: { nickname: `学生${i}`, pin: "123456" },
+            data: { nickname: `学生${i}`, pin: "1234" },
           })
         ).ok(),
       ).toBe(true);

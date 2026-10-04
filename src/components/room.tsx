@@ -48,9 +48,6 @@ export function Room({ code }: { code: string }) {
           <div className="join-card">
             <JoinForm initialCode={code} />
           </div>
-          <p className="center muted">
-            <Link href={`/teacher?code=${code}`}>教員として再入室する</Link>
-          </p>
         </main>
         <Footer />
       </>

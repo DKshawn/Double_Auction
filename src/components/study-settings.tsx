@@ -5,6 +5,8 @@ import { equilibrium, equilibriumQuantity } from "@/lib/equilibrium";
 import { decimal } from "@/lib/client";
 import type { Command, RoomView } from "@/lib/types";
 import type { StudySettings } from "@/lib/study-types";
+import { studyMarketSize } from "@/lib/study-config";
+import { studyTiming } from "@/lib/study-timing";
 
 export function StudySettingsEditor({
   view,
@@ -16,6 +18,8 @@ export function StudySettingsEditor({
   disabled: boolean;
 }) {
   const teacher = view.study!.teacher!;
+  const marketSize = studyMarketSize(view.config);
+  const timing = studyTiming(view.config);
   const [draft, setDraft] = useState<StudySettings | null>(null);
   const [revision, setRevision] = useState(0);
   const settings = draft ?? teacher.settings;
@@ -62,7 +66,7 @@ export function StudySettingsEditor({
         )}
       </div>
       <details open={Boolean(draft)}>
-        <summary>16人の条件を確認する</summary>
+        <summary>{marketSize}人の条件を確認する</summary>
         <div className="study-settings-grid">
           {(["values", "costs"] as const).map((side) => (
             <div key={side}>
@@ -174,20 +178,24 @@ export function StudySettingsEditor({
         <summary>採用した実験ルール</summary>
         <ul>
           <li>
-            各市場は買い手8人・売り手8人。全員が毎期2単位まで取引し、役割・価値・費用は固定です。手数料は0円で、損失が出る取引も認めます。
+            各市場は買い手{marketSize / 2}人・売り手{marketSize / 2}
+            人。全員が毎期2単位まで取引し、役割・価値・費用は固定です。手数料は0円で、損失が出る取引も認めます。
           </li>
           <li>
-            CDAは180秒。価格優先・時間優先で、先に注文板にあった注文の価格を使います。
+            CDAは{timing.cdaSeconds}
+            秒。価格優先・時間優先で、先に注文板にあった注文の価格を使います。
           </li>
           <li>
-            Callは30秒×4回。各回に1回だけ、残り数量の範囲で1〜2単位分の注文を送信できます。締切までに送信しない場合、その回は注文なしとして進みます。買値は単位順に下がり、売値は上がる注文です。同値は参加者ごとに抽選し、同じ人の1単位目を優先します。
+            Callは{timing.callSeconds}
+            秒×4回。各回に1回だけ、残り数量の範囲で1〜2単位分の注文を送信できます。締切までに送信しない場合、その回は注文なしとして進みます。買値は単位順に下がり、売値は上がる注文です。同値は参加者ごとに抽選し、同じ人の1単位目を優先します。
           </li>
           <li>
             Callの共通価格は、成立可能な最後の買値・売値の中間値です。未約定注文は清算ごとに失効します。数量は清算ごとには戻らず、次の期で2単位に戻ります。
           </li>
           <li>
-            Posted
-            Offerは60秒の非公開提示後に公開します。売り手は1つの価格と0〜2単位を1回だけ送信します。買い手は毎期ランダムな順で各10秒。購入完了・辞退で次の人に進みます。
+            Posted Offerは{timing.offerSeconds}
+            秒の非公開提示後に公開します。売り手は1つの価格と0〜2単位を1回だけ送信します。買い手は毎期ランダムな順で各
+            {timing.buyerSeconds}秒。購入完了・辞退で次の人に進みます。
           </li>
           <li>
             1市場の練習はCDA→Call→Posted。6市場は6通りの制度順を1市場ずつ、12市場は2市場ずつ割り当てます。

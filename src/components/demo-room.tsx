@@ -17,6 +17,7 @@ import type { Institution } from "@/lib/study-types";
 import type { Role } from "@/lib/types";
 import { StudyRoom } from "./study-room";
 import { StudyDetailDialog } from "./study-detail-dialog";
+import { studyTiming } from "@/lib/study-timing";
 
 export default function DemoRoom() {
   const [session] = useState(() => new DemoSession());
@@ -170,7 +171,7 @@ export default function DemoRoom() {
                           : "「自分の購入順へ進む」を押すと、売り手の価格を見て購入できます。"
                         : role === "seller"
                           ? "仮想の買い手が順番に購入します。説明中は「一時停止」で時計を止められます。"
-                          : "自分の順番では10秒以内に購入してください。説明中は「一時停止」で時計を止められます。"}
+                          : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。説明中は「一時停止」で時計を止められます。`}
         </p>
         <StudyDetailDialog label="デモについて">
           <p>

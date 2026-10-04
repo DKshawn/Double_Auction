@@ -1,4 +1,5 @@
 import { StudyViewCache } from "../study-view";
+import { studyMarketId } from "../study-config";
 import type { Room } from "./model";
 import { timed, timedSync } from "./performance";
 import type { RoomView } from "../types";
@@ -125,7 +126,7 @@ class RoomFeed {
         const scope =
           actor === "teacher" || !bundle.root.storageVersion
             ? undefined
-            : Math.floor(actor.seat / 16) + 1;
+            : studyMarketId(bundle.root.config, actor.seat);
         if (
           sub.previous &&
           scope &&

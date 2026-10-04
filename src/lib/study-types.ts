@@ -1,5 +1,11 @@
 export type Institution = "cda" | "call" | "posted";
 export type UnitPair = [number, number];
+export type StudyTiming = {
+  cdaSeconds: number;
+  callSeconds: number;
+  offerSeconds: number;
+  buyerSeconds: number;
+};
 export type StudySettings = { values: UnitPair[]; costs: UnitPair[] };
 export type StudyStage =
   "waiting" | "cda" | "call" | "offer" | "purchase" | "done";
@@ -135,6 +141,11 @@ export type StudyView = {
   };
 };
 export type StudyCommand =
+  | {
+      type: "study-timing";
+      timing: StudyTiming;
+      expectedRevision: number;
+    }
   | {
       type: "study-settings";
       settings: StudySettings;

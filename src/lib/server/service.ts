@@ -1,4 +1,12 @@
 import { inMarketQueue } from "./market-queue";
+import { studyTiming } from "../study-timing";
+import {
+  studyLayoutError,
+  studyMarketId,
+  studyMarketSize,
+  studyRole,
+  studyRoleIndex,
+} from "../study-config";
 import { timed, timedSync } from "./performance";
 import { randomInt, randomUUID } from "node:crypto";
 import type { CommandRequest, RoomConfig, RoomView } from "../types";
@@ -27,6 +35,7 @@ import {
   marketRound,
   newStudy,
   settleStudy,
+  studyTimingSchema,
   unitLimits,
 } from "./study";
 
@@ -38,13 +47,19 @@ export class AuctionService {
 
   async create(config: RoomConfig, password: string, accessKey: string) {
     if (config.protocol === "institutions-v1") {
-      if (![1, 6, 12].includes(config.markets ?? 0))
-        throw new AuctionError("市場数は1、6、12から選んでください。");
+      const size = studyMarketSize(config);
+      const layoutError = studyLayoutError(config.markets ?? 0, size);
+      if (layoutError) throw new AuctionError(layoutError);
+      const timing = studyTimingSchema.safeParse(studyTiming(config));
+      if (!timing.success)
+        throw new AuctionError("各時間は1〜3600秒の整数で設定してください。");
       config = {
         ...config,
-        capacity: config.markets! * 16,
+        marketSize: size,
+        capacity: config.markets! * size,
         rounds: 15,
-        duration: 180,
+        duration: timing.data.cdaSeconds,
+        studyTiming: timing.data,
       };
     }
     if (process.env.VERCEL && !process.env.TEACHER_ACCESS_KEY)
@@ -71,7 +86,7 @@ export class AuctionService {
         const now = await databaseTime(tx);
         const room: Room = {
           ...(config.protocol === "institutions-v1"
-            ? { study: newStudy(config.markets!) }
+            ? { study: newStudy(config.markets!, studyMarketSize(config)) }
             : {}),
           code,
           config,
@@ -216,15 +231,13 @@ export class AuctionService {
           throw new AuctionError("このルームは満員です。", 409);
         const seat = room.seats[room.participants.length];
         const role = room.study
-          ? seat % 16 < 8
-            ? "buyer"
-            : "seller"
+          ? studyRole(room.config, seat)
           : seat < room.config.capacity / 2
             ? "buyer"
             : "seller";
         const number =
           (room.study
-            ? seat % 8
+            ? studyRoleIndex(room.config, seat)
             : role === "buyer"
               ? seat
               : seat - room.config.capacity / 2) + 1;
@@ -264,7 +277,7 @@ export class AuctionService {
             limits: participant.limits,
             ...(room.study
               ? {
-                  market: Math.floor(seat / 16) + 1,
+                  market: studyMarketId(room.config, seat),
                   unitLimits: unitLimits(room, participant),
                 }
               : {}),
@@ -341,7 +354,7 @@ export class AuctionService {
       return this.scope(code, token);
     }
     return root.storageVersion && actor !== "teacher"
-      ? Math.floor(actor.seat / 16) + 1
+      ? studyMarketId(root.config, actor.seat)
       : undefined;
   }
 

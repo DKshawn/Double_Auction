@@ -3,8 +3,15 @@
 import { useState } from "react";
 import { ArrowRight, FlaskConical, Info } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
+import {
+  MAX_STUDY_MARKETS,
+  MAX_STUDY_PARTICIPANTS,
+  studyLayoutError,
+} from "@/lib/study-config";
 import type { ServerStatus } from "@/lib/server/config";
 import { Spinner } from "./shell";
+import { StudyTimingFields } from "./study-timing-settings";
+import { DEFAULT_STUDY_TIMING, studyTimingError } from "@/lib/study-timing";
 
 export function TeacherForm({
   initialCode = "",
@@ -18,8 +25,20 @@ export function TeacherForm({
   const [tab, setTab] = useState(initialCode ? "reenter" : "create");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [preset, setPreset] = useState("1");
+  const [marketCount, setMarketCount] = useState("1");
+  const [marketSize, setMarketSize] = useState("16");
+  const [timing, setTiming] = useState(() => ({ ...DEFAULT_STUDY_TIMING }));
+  const count = Number(marketCount),
+    size = Number(marketSize);
+  const layoutError = studyLayoutError(count, size);
+  const timingError = studyTimingError(timing);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (tab === "create" && !legacy && (layoutError || timingError)) {
+      setError(layoutError || timingError);
+      return;
+    }
     setError("");
     setPending(true);
     const form = new FormData(event.currentTarget);
@@ -37,10 +56,12 @@ export function TeacherForm({
                 : {
                     protocol: "institutions-v1",
                     title: form.get("title"),
-                    markets: Number(form.get("markets")),
-                    capacity: Number(form.get("markets")) * 16,
+                    markets: count,
+                    marketSize: size,
+                    capacity: count * size,
                     rounds: 15,
-                    duration: 180,
+                    duration: timing.cdaSeconds,
+                    studyTiming: timing,
                   },
               password: form.get("password"),
               accessKey: form.get("accessKey") || "",
@@ -132,7 +153,17 @@ export function TeacherForm({
               <>
                 <label className="field">
                   市場数・参加人数
-                  <select name="markets" defaultValue="1">
+                  <select
+                    name="marketPreset"
+                    value={preset}
+                    onChange={(event) => {
+                      setPreset(event.target.value);
+                      if (event.target.value !== "custom") {
+                        setMarketCount(event.target.value);
+                        setMarketSize("16");
+                      }
+                    }}
+                  >
                     <option value="1">1市場・16人（授業・動作確認）</option>
                     <option value="6">
                       6市場・96人（6通りの順序を1市場ずつ）
@@ -140,19 +171,78 @@ export function TeacherForm({
                     <option value="12">
                       12市場・192人（6通りの順序を2市場ずつ）
                     </option>
+                    <option value="custom">
+                      カスタム（人数・市場数を指定）
+                    </option>
                   </select>
                 </label>
+                {preset === "custom" && (
+                  <div className="form-grid">
+                    <label className="field">
+                      1市場の人数
+                      <input
+                        type="number"
+                        name="marketSize"
+                        min={2}
+                        max={MAX_STUDY_PARTICIPANTS}
+                        step={2}
+                        required
+                        value={marketSize}
+                        onChange={(e) => setMarketSize(e.target.value)}
+                        aria-describedby="study-layout-help"
+                      />
+                    </label>
+                    <label className="field">
+                      市場数
+                      <input
+                        type="number"
+                        name="markets"
+                        min={1}
+                        max={MAX_STUDY_MARKETS}
+                        step={1}
+                        required
+                        value={marketCount}
+                        onChange={(e) => setMarketCount(e.target.value)}
+                        aria-describedby="study-layout-help"
+                      />
+                    </label>
+                  </div>
+                )}
+                <p
+                  id="study-layout-help"
+                  className={layoutError ? "error-message" : "field-help"}
+                  aria-live="polite"
+                >
+                  {layoutError ||
+                    `${size}人 × ${count}市場 ＝ 合計${size * count}人。各市場は買い手${size / 2}人・売り手${size / 2}人です。`}
+                </p>
                 <div className="callout">
                   <Info size={18} />
                   <p>
-                    各市場は買い手8人・売り手8人。1商品を各自2単位、3制度を各5期、計15期実施します。市場・役割は自動割当です。1市場の場合はCDA
+                    1商品を各自2単位、3制度を各5期、計15期実施します。市場・役割は自動割当です。1市場の場合はCDA
                     → Call → Posted Offerの順です。
                   </p>
                 </div>
+                <h3>実験時間の設定</h3>
                 <p className="field-help">
-                  CDA：180秒／Call：30秒×4回／Posted
-                  Offer：価格提示60秒＋買い手1人10秒。価格・費用の条件は全市場で共通です。
+                  時間・価値・費用の条件は全市場で共通です。作成後も実験開始前なら教員画面で変更できます。
                 </p>
+                <StudyTimingFields
+                  timing={timing}
+                  onChange={setTiming}
+                  disabled={pending}
+                />
+                {preset === "custom" && (
+                  <p className="field-help">
+                    1市場の人数は偶数、合計は{MAX_STUDY_PARTICIPANTS}
+                    人以内。人数・市場数は作成後に変更できません。参加予定人数に合わせて設定してください。
+                    {size !== 16 &&
+                      "16人以外では、既定の価値・費用を全範囲から均等に抽出・複製します。作成後に教員画面で確認・変更できます。"}
+                    {count > 1 &&
+                      count % 6 !== 0 &&
+                      "市場数が6の倍数以外では、6通りの制度順序の割当数に差が出ます。"}
+                  </p>
+                )}
               </>
             )}
           </>
@@ -218,7 +308,12 @@ export function TeacherForm({
         )}
         <button
           className="button primary full"
-          disabled={pending || (tab === "create" && !status.ready)}
+          disabled={
+            pending ||
+            (tab === "create" &&
+              (!status.ready ||
+                (!legacy && Boolean(layoutError || timingError))))
+          }
         >
           {pending ? (
             <Spinner />
@@ -235,8 +330,10 @@ export function TeacherForm({
             <p>
               {legacy
                 ? "ルーム作成後、教員用画面で各商品の価値と費用を変更できます。"
-                : "ルーム作成後、教員用画面で8人×2単位の価値・費用を確認・変更できます。"}
-              参加人数がそろうと開始でき、実験開始後は条件が固定されます。
+                : "ルーム作成後、教員用画面で全員の価値・費用を確認・変更できます。"}
+              {legacy
+                ? "参加人数がそろうと開始でき、実験開始後は条件が固定されます。"
+                : "教員が実験を開始した後、各市場が設定人数に達すると自動で取引が始まります。実験開始後は条件が固定されます。"}
             </p>
           </div>
         )}

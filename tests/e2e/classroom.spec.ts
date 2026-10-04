@@ -10,7 +10,7 @@ test("Japanese home, photographs, navigation and mobile layout", async ({
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "ja");
   await expect(
-    page.getByRole("heading", { name: "実験に参加する" }),
+    page.getByRole("form", { name: "実験に参加する" }),
   ).toBeVisible();
   await expect
     .poll(() =>
@@ -91,7 +91,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
         await studentPage
           .locator('input[name="nickname"]')
           .fill(`実験者${i + 1}`);
-        await studentPage.locator('input[name="pin"]').fill("246810");
+        await studentPage.locator('input[name="pin"]').fill("2468");
         await studentPage
           .getByRole("button", { name: "入室する", exact: true })
           .click();
@@ -100,7 +100,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
         ).toBeVisible();
       } else {
         const joined = await context.request.post(`${apiPath}/join`, {
-          data: { nickname: `実験者${i + 1}`, pin: "246810" },
+          data: { nickname: `実験者${i + 1}`, pin: "2468" },
         });
         expect(joined.status()).toBe(200);
       }
@@ -307,7 +307,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
     await reentryPage
       .locator('input[name="nickname"]')
       .fill(buyers[0].view.me.nickname);
-    await reentryPage.locator('input[name="pin"]').fill("246810");
+    await reentryPage.locator('input[name="pin"]').fill("2468");
     await reentryPage
       .getByRole("button", { name: "入室する", exact: true })
       .click();
@@ -324,7 +324,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
     await buyerPage
       .locator('input[name="nickname"]')
       .fill(buyers[0].view.me.nickname);
-    await buyerPage.locator('input[name="pin"]').fill("246810");
+    await buyerPage.locator('input[name="pin"]').fill("2468");
     await buyerPage
       .getByRole("button", { name: "入室する", exact: true })
       .click();

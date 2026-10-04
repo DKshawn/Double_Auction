@@ -23,8 +23,11 @@ import {
 import { PriceChart } from "./price-chart";
 import { ConfirmDialog } from "./confirm-dialog";
 import { StudySettingsEditor } from "./study-settings";
+import { StudyTimingEditor } from "./study-timing-settings";
+import { studyTiming } from "@/lib/study-timing";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
+import { studyMarketSize } from "@/lib/study-config";
 import type {
   Institution,
   StudyMarketView,
@@ -180,7 +183,11 @@ export function StudyRoom({
                 {INSTITUTIONS[market.institution].short}{" "}
                 <small>{INSTITUTIONS[market.institution].name}</small>
               </h2>
-              <p>{INSTITUTIONS[market.institution].description}</p>
+              <p>
+                {market.institution === "call"
+                  ? `${studyTiming(view.config).callSeconds}秒間の非公開注文を集め、共通の価格で一括して取引します。`
+                  : INSTITUTIONS[market.institution].description}
+              </p>
             </div>
             <span className="study-units">1商品・各自2単位／期</span>
           </section>
@@ -282,7 +289,10 @@ export function StudyRoom({
                             className={m.id === market.id ? "selected-row" : ""}
                           >
                             <td>市場{m.id}</td>
-                            <td>{m.participantCount}/16</td>
+                            <td>
+                              {m.participantCount}/
+                              {studyMarketSize(view.config)}
+                            </td>
                             {m.order.map((i) => (
                               <td key={i}>{INSTITUTIONS[i].short}</td>
                             ))}
@@ -300,6 +310,11 @@ export function StudyRoom({
                 label="集計・条件・参加者"
                 title="市場の集計と実験管理"
               >
+                <StudyTimingEditor
+                  view={view}
+                  command={command}
+                  disabled={disabled}
+                />
                 <TeacherMetrics view={view} market={market} />
                 {!demo && (
                   <StudySettingsEditor
@@ -389,7 +404,7 @@ export function StudyRoom({
                     ? `累積利益は ${money(view.me.profit)} です。`
                     : view.phase === "paused"
                       ? "教員が再開するまでお待ちください。残り時間は止まっています。"
-                      : `この市場は ${market.participantCount} / 16人が入室しています。教員が実験を開始し、16人そろうと自動で始まります。`}
+                      : `この市場は ${market.participantCount} / ${studyMarketSize(view.config)}人が入室しています。教員が実験を開始し、${studyMarketSize(view.config)}人そろうと自動で始まります。`}
                 </p>
               </div>
             </div>
@@ -755,7 +770,8 @@ function TeacherControls({
         )}
       </div>
       <p className="field-help">
-        実験を開始すると、各市場は16人そろい次第、取引を開始します。各期の終了後は自動で次の期へ進み、15期で終了します。
+        実験を開始すると、各市場は{studyMarketSize(view.config)}
+        人そろい次第、取引を開始します。各期の終了後は自動で次の期へ進み、15期で終了します。
       </p>
       {confirm && (
         <ConfirmDialog
@@ -857,7 +873,13 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
                       </tr>
                     ))}
                     {Array.from(
-                      { length: Math.max(0, 8 - rows.length) },
+                      {
+                        length: Math.max(
+                          0,
+                          Math.min(8, studyMarketSize(view.config) / 2) -
+                            rows.length,
+                        ),
+                      },
                       (_, i) => (
                         <tr
                           key={`empty-${i}`}
@@ -919,6 +941,7 @@ function OfferBoard({
   children,
 }: MarketProps & { children?: ReactNode }) {
   const mine = market.activeBuyer === view.me.alias && view.me.role === "buyer";
+  const timing = studyTiming(view.config);
   return (
     <section
       className={`panel study-section study-offers ${children ? "study-market-workspace" : ""}`}
@@ -926,7 +949,8 @@ function OfferBoard({
       <h2>売り手の提示価格</h2>
       {market.stage === "offer" ? (
         <p className="study-empty">
-          60秒の提示時間が終わると、全売り手の価格と在庫が公開されます。
+          {timing.offerSeconds}
+          秒の提示時間が終わると、全売り手の価格と在庫が公開されます。
         </p>
       ) : (
         <>
@@ -934,7 +958,7 @@ function OfferBoard({
             <p>
               {market.stage === "purchase"
                 ? mine
-                  ? "あなたの購入時間です。10秒以内に選んでください。"
+                  ? `あなたの購入時間です。${timing.buyerSeconds}秒以内に選んでください。`
                   : `現在は ${market.activeBuyer} の購入時間です。`
                 : "今期の購入時間は終了しました。"}
             </p>

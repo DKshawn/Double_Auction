@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, KeyRound, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
 import { Spinner } from "./shell";
 
@@ -29,15 +29,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
     }
   }
   return (
-    <form onSubmit={join} className="join-form">
-      <div className="form-eyebrow">
-        <span className="icon-chip">
-          <KeyRound size={19} />
-        </span>
-        学生の方
-      </div>
-      <h2>実験に参加する</h2>
-      <p className="muted">教員から共有されたコードを入力してください。</p>
+    <form onSubmit={join} className="join-form" aria-label="実験に参加する">
       <label className="field">
         ルームコード
         <input
@@ -60,6 +52,9 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           autoComplete="off"
           spellCheck={false}
         />
+        <span className="field-help">
+          教員から共有されたコードを入力してください。
+        </span>
       </label>
       <label className="field">
         ニックネーム
@@ -67,10 +62,12 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           name="nickname"
           placeholder="例：学生01"
           required
-          maxLength={20}
+          maxLength={5}
           autoComplete="nickname"
         />
-        <span className="field-help">実名を使う必要はありません。</span>
+        <span className="field-help">
+          実名を使う必要はありません。5文字以内で入力してください。
+        </span>
       </label>
       <label className="field">
         再入室用の暗証番号
@@ -78,10 +75,10 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           type="password"
           name="pin"
           inputMode="numeric"
-          placeholder="数字6桁を決めてください"
-          pattern="[0-9]{6}"
-          minLength={6}
-          maxLength={6}
+          placeholder="数字4桁を決めてください"
+          pattern="[0-9]{4}"
+          minLength={4}
+          maxLength={4}
           required
           autoComplete="new-password"
         />
@@ -95,14 +92,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
         </p>
       )}
       <button className="button primary full" disabled={pending}>
-        {pending ? (
-          <Spinner />
-        ) : (
-          <>
-            入室する
-            <ArrowRight size={17} />
-          </>
-        )}
+        {pending ? <Spinner /> : "入室する"}
       </button>
       <div className="form-footnote">
         <LockKeyhole size={14} />

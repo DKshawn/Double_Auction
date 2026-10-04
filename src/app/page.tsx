@@ -1,6 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
-import { Layers3, UsersRound, RefreshCcw, ArrowRight } from "lucide-react";
+import { Layers3, UsersRound, RefreshCcw } from "lucide-react";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { Footer, Header } from "@/components/shell";
 import { JoinForm } from "@/components/join-form";
@@ -56,7 +55,7 @@ export default async function Home({
               </span>
               <span>
                 <UsersRound size={17} />
-                1市場16人
+                標準：1市場16人
               </span>
               <span>
                 <RefreshCcw size={16} />
@@ -66,20 +65,6 @@ export default async function Home({
           </div>
           <div className="join-card">
             <JoinForm initialCode={code?.toUpperCase() ?? ""} />
-            <div className="teacher-link-row">
-              <span>授業を始める教員の方はこちら</span>
-              <Link href="/teacher">
-                実験を作成
-                <ArrowRight size={15} />
-              </Link>
-            </div>
-            <div className="demo-entry-link">
-              <span>ひとりで操作を確認したい方へ</span>
-              <Link href="/demo">
-                ひとりデモを試す <ArrowRight size={15} />
-              </Link>
-              <small>ログイン不要・12市場192人の実験を体験</small>
-            </div>
           </div>
         </section>
         <section className="home-steps" aria-label="実験の流れ">

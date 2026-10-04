@@ -1,4 +1,6 @@
 import { STUDY_RULES } from "../study-rules";
+import { studyMarketSize } from "../study-config";
+import { studyTiming } from "../study-timing";
 import { studyView } from "./study-view";
 import { marketRound } from "./study";
 import type { AuditEvent, Room } from "./model";
@@ -27,7 +29,11 @@ export function studyExport(
             0,
           ),
           phase: room.phase,
-          rules: STUDY_RULES,
+          rules: {
+            ...STUDY_RULES,
+            ...studyTiming(room.config),
+            tradersPerMarket: studyMarketSize(room.config),
+          },
           settingsRevision: study.revision,
           schedules: study.settings,
           equilibrium: teacher.equilibrium,

@@ -12,8 +12,8 @@ import { service } from "@/lib/server/service";
 export const runtime = "nodejs";
 const schema = z
   .object({
-    nickname: z.string().trim().min(1).max(20),
-    pin: z.string().regex(/^\d{6}$/),
+    nickname: z.string().trim().min(1).max(5),
+    pin: z.string().regex(/^\d{4}$/),
   })
   .strict();
 export async function POST(

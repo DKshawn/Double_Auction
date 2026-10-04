@@ -230,7 +230,7 @@ async function main() {
           base = bases[i % bases.length];
         const joined = await api(base, `/api/rooms/${code}/join`, {
           nickname: `負荷${String(i + 1).padStart(3, "0")}`,
-          pin: "123456",
+          pin: "1234",
         });
         assert.equal(joined.response.status, 200, JSON.stringify(joined.body));
         clients[i] = {

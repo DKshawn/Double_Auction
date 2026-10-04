@@ -1,3 +1,5 @@
+import { inMarketQueue } from "./market-queue";
+import { timed, timedSync } from "./performance";
 import { randomInt, randomUUID } from "node:crypto";
 import type { CommandRequest, RoomConfig, RoomView } from "../types";
 import {
@@ -129,10 +131,12 @@ export class AuctionService {
     fn: (room: Room, now: number, events: AuditEvent[]) => T | Promise<T>,
     scope?: number,
   ): Promise<T> {
-    const outcome = await this.db.transaction(
-      async (tx): Promise<Outcome<T>> => {
-        const bundle = await lockBundle(tx, code, scope);
-        const room = assemble(bundle, scope);
+    const outcome = await inMarketQueue(this.db, code, scope, () =>
+      this.db.transaction(async (tx): Promise<Outcome<T>> => {
+        const bundle = await timed("command.lock_bundle", () =>
+          lockBundle(tx, code, scope),
+        );
+        const room = timedSync("state.assemble", () => assemble(bundle, scope));
         const before = JSON.stringify(room);
         const now = bundle.now; // After acquiring the lock: no pre-lock timestamps.
         const events: AuditEvent[] = [];
@@ -145,10 +149,12 @@ export class AuctionService {
           result = { error };
         }
         if (JSON.stringify(room) !== before) {
-          await saveBundle(tx, bundle, room, events, scope);
+          await timed("command.save", () =>
+            saveBundle(tx, bundle, room, events, scope),
+          );
         }
         return result;
-      },
+      }),
     );
     if (outcome.error) throw outcome.error;
     return outcome.value;
@@ -298,9 +304,11 @@ export class AuctionService {
   }
 
   async view(code: string, token?: string): Promise<RoomView> {
-    const scope = await this.scope(code, token);
+    const scope = await timed("command.auth_scope", () =>
+      this.scope(code, token),
+    );
     const bundle = await readBundle(this.db, code, scope);
-    const room = assemble(bundle, scope);
+    const room = timedSync("state.assemble", () => assemble(bundle, scope));
     const actor = authenticate(room, token);
     const now = bundle.now;
     if (
@@ -311,7 +319,9 @@ export class AuctionService {
       await this.advance(code, scope);
       return this.view(code, token);
     }
-    return toView(room, actor, now, this.db.mode);
+    return timedSync("view.project", () =>
+      toView(room, actor, now, this.db.mode),
+    );
   }
 
   private async scope(
@@ -360,7 +370,9 @@ export class AuctionService {
     token: string | undefined,
     request: CommandRequest,
   ) {
-    const scope = await this.scope(code, token);
+    const scope = await timed("command.auth_scope", () =>
+      this.scope(code, token),
+    );
     await this.locked(
       code,
       (room, now, events) => {
@@ -374,16 +386,20 @@ export class AuctionService {
             429,
           );
         // Never persist a partially applied rejected command.
-        const candidate = structuredClone(room);
+        const candidate = timedSync("command.clone", () =>
+          structuredClone(room),
+        );
         const commandEvents: AuditEvent[] = [];
-        execute(
-          candidate,
-          actor === "teacher"
-            ? actor
-            : candidate.participants.find((p) => p.id === actor.id)!,
-          request,
-          now,
-          commandEvents,
+        timedSync("command.execute", () =>
+          execute(
+            candidate,
+            actor === "teacher"
+              ? actor
+              : candidate.participants.find((p) => p.id === actor.id)!,
+            request,
+            now,
+            commandEvents,
+          ),
         );
         Object.assign(room, candidate);
         events.push(...commandEvents);
@@ -396,7 +412,7 @@ export class AuctionService {
   async export(code: string, token?: string) {
     // The locked snapshot ensures event log and room state describe the same commit.
     return this.db.transaction(async (tx) => {
-      const bundle = await lockBundle(tx, code);
+      const bundle = await lockBundle(tx, code, undefined, true);
       const room = assemble(bundle);
       if (authenticate(room, token) !== "teacher")
         throw new AuctionError("データ出力は教員のみ利用できます。", 403);

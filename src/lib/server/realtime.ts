@@ -1,3 +1,6 @@
+import { StudyViewCache } from "../study-view";
+import type { Room } from "./model";
+import { timed, timedSync } from "./performance";
 import type { RoomView } from "../types";
 import { diffViews } from "../room-sync";
 import { authenticate } from "./auth";
@@ -20,6 +23,7 @@ type Subscriber = {
 class RoomFeed {
   subscribers = new Set<Subscriber>();
   private bundle?: Bundle;
+  private projections = new StudyViewCache();
   private queued = new Set<number>();
   private worker?: Promise<void>;
   private deadline?: ReturnType<typeof setTimeout>;
@@ -80,15 +84,19 @@ class RoomFeed {
       this.queued.clear();
       try {
         if (!this.bundle || scopes.includes(0))
-          this.bundle = await readBundle(this.db, this.code);
-        else
-          for (const scope of scopes) {
-            const next = await readBundle(this.db, this.code, scope);
-            if (next.root.version !== this.bundle.root.version) {
-              this.bundle = await readBundle(this.db, this.code);
-              scopes.push(0);
-              break;
-            }
+          this.bundle = await timed("push.read", () =>
+            readBundle(this.db, this.code),
+          );
+        else {
+          const next = await timed("push.read", () =>
+            readBundle(this.db, this.code, scopes, this.bundle),
+          );
+          if (next.root.version !== this.bundle.root.version) {
+            this.bundle = await timed("push.read", () =>
+              readBundle(this.db, this.code),
+            );
+            scopes.push(0);
+          } else {
             this.bundle = {
               ...next,
               markets: this.bundle.markets.map(
@@ -97,9 +105,10 @@ class RoomFeed {
               ),
             };
           }
+        }
         this.offset = this.bundle.now - Date.now();
         this.verifiedAt = Date.now();
-        this.publish(scopes);
+        timedSync("push.publish_batch", () => this.publish(scopes));
         this.scheduleDeadline();
       } catch (error) {
         this.fail(error);
@@ -108,6 +117,8 @@ class RoomFeed {
   }
   private publish(scopes: number[]) {
     const bundle = this.bundle!;
+    const rooms = new Map<number | undefined, Room>();
+    this.projections.begin();
     for (const sub of this.subscribers) {
       try {
         const actor = authenticate(bundle.root, sub.token);
@@ -122,26 +133,36 @@ class RoomFeed {
           !scopes.includes(scope)
         )
           continue;
-        const room = assemble(
-          scope
-            ? {
-                ...bundle,
-                markets: bundle.markets.filter((m) => m.market_id === scope),
-              }
-            : bundle,
-          scope,
+        let room = rooms.get(scope);
+        if (!room) {
+          room = timedSync("push.assemble", () =>
+            assemble(
+              scope
+                ? {
+                    ...bundle,
+                    markets: bundle.markets.filter(
+                      (m) => m.market_id === scope,
+                    ),
+                  }
+                : bundle,
+              scope,
+              false,
+            ),
+          );
+          rooms.set(scope, room);
+        }
+        const view = timedSync("push.project", () =>
+          toView(room!, actor, bundle.now, this.db.mode, this.projections),
         );
-        const view = toView(room, actor, bundle.now, this.db.mode);
         if (sub.previous && sub.previous.version > view.version) continue;
         if (!sub.previous) sub.send({ type: "snapshot", data: view });
         else {
-          const patch = diffViews(sub.previous, view);
-          // Large stage changes may be smaller as a fresh snapshot.
-          sub.send(
-            JSON.stringify(patch).length < JSON.stringify(view).length
-              ? { type: "patch", data: patch }
-              : { type: "snapshot", data: view },
+          const patch = timedSync("push.diff", () =>
+            diffViews(sub.previous!, view),
           );
+          // A valid patch also handles phase changes; avoid serializing the entire
+          // history just to choose between a patch and a snapshot for every recipient.
+          sub.send({ type: "patch", data: patch });
         }
         sub.previous = view;
       } catch (error) {
@@ -162,7 +183,7 @@ class RoomFeed {
     clearTimeout(this.deadline);
     if (this.closed || !this.bundle || this.bundle.root.phase !== "running")
       return;
-    const room = assemble(this.bundle);
+    const room = assemble(this.bundle, undefined, false);
     if (room.deadline === null) return;
     this.deadline = setTimeout(
       () => {

@@ -1,7 +1,7 @@
 // Deliberately restricted to loopback apps. Never point a load test at a cloud deployment.
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
-import { performance } from "node:perf_hooks";
+import { performance, monitorEventLoopDelay } from "node:perf_hooks";
 import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
 import type { Command, RoomView } from "../src/lib/types";
 
@@ -51,6 +51,10 @@ const stats = {
   responseMs: [] as number[],
   fanoutMs: [] as number[],
 };
+const clientLoop = monitorEventLoopDelay({ resolution: 20 });
+clientLoop.enable();
+let parseApplyMs = 0,
+  bookkeepingMs = 0;
 let running = true;
 const clients: Client[] = [];
 async function api(
@@ -100,6 +104,7 @@ async function consume(client: Client, code: string) {
           const kind = frame.match(/^event: (.+)$/m)?.[1],
             raw = frame.match(/^data: (.+)$/m)?.[1];
           if (!raw) continue;
+          const parseStart = performance.now();
           const data = JSON.parse(raw);
           if (kind === "snapshot") {
             client.wire = data;
@@ -109,9 +114,11 @@ async function consume(client: Client, code: string) {
             client.wire = applyPatch(client.wire, data as RoomPatch);
             stats.patches++;
             stats.patchBytes += Buffer.byteLength(raw);
+            const accountingStart = performance.now();
             stats.equivalentSnapshotBytes += Buffer.byteLength(
               JSON.stringify(client.wire),
             );
+            bookkeepingMs += performance.now() - accountingStart;
           } else if (kind === "heartbeat") {
             stats.heartbeats++;
             continue;
@@ -119,6 +126,7 @@ async function consume(client: Client, code: string) {
             stats.errors.push(`SSE ${data.status}: ${data.message}`);
             continue;
           }
+          parseApplyMs += performance.now() - parseStart;
           if (
             client.wire &&
             (!client.view || client.wire.version >= client.view.version)
@@ -188,6 +196,18 @@ function percentile(values: number[], p: number) {
 }
 async function main() {
   const setup = performance.now();
+  // Check the server's local-only database guard BEFORE creating an experiment.
+  // A loopback application URL alone does not prove that its DB is local.
+  await Promise.all(
+    bases.map(async (base) => {
+      const response = await fetch(base + "/api/local-profile");
+      assert.equal(
+        response.status,
+        200,
+        "Enable LOCAL_ONLY=1, LOCAL_PROFILE=1 and a loopback LOCAL_DATABASE_URL on each app",
+      );
+    }),
+  );
   const created = await api(bases[0], "/api/rooms", {
     config: {
       title: "192人・ローカル負荷試験",
@@ -275,6 +295,15 @@ async function main() {
   }
   await command(teacher, { type: "start" }, false);
   await until(() => clients.every((c) => c.view!.phase === "running"));
+  await Promise.all(
+    bases.map(async (base) => {
+      const r = await fetch(base + "/api/local-profile", { method: "POST" });
+      assert.equal(r.status, 200, "Enable LOCAL_PROFILE=1 on each local app");
+    }),
+  );
+  clientLoop.reset();
+  parseApplyMs = 0;
+  bookkeepingMs = 0;
   const start = performance.now();
   console.log(
     JSON.stringify({
@@ -338,6 +367,21 @@ async function main() {
   }
   const report = {
     at: new Date().toISOString(),
+    serverProfiles: await Promise.all(
+      bases.map(async (base) =>
+        (await fetch(base + "/api/local-profile")).json(),
+      ),
+    ),
+    clientProcessing: {
+      parseApplyMs,
+      bookkeepingMs,
+      eventLoopDelayMs: {
+        p50: clientLoop.percentile(50) / 1e6,
+        p95: clientLoop.percentile(95) / 1e6,
+        p99: clientLoop.percentile(99) / 1e6,
+        max: clientLoop.max / 1e6,
+      },
+    },
     appTargets: bases,
     database: "local PostgreSQL on 127.0.0.1:55433",
     code,
@@ -386,12 +430,14 @@ async function main() {
     JSON.stringify(report, null, 2),
   );
   console.log(JSON.stringify(report, null, 2));
+  clientLoop.disable();
   running = false;
   for (const c of clients) c.abort.abort();
   await Promise.all(streams);
   assert.equal(stats.errors.length, 0, "Local load test encountered failures");
 }
 main().catch((error) => {
+  clientLoop.disable();
   running = false;
   for (const c of clients) c.abort.abort();
   console.error(error);

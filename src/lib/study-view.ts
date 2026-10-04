@@ -98,11 +98,23 @@ export function convergenceSlopes(metrics: StudyMetric[]) {
     };
   });
 }
+type PublicMarket = Omit<StudyMarketView, "myOrders" | "submitted" | "myOffer">;
+// One cache per feed. Public projections never contain a student's private fields.
+export class StudyViewCache {
+  markets = new Map<string, PublicMarket>();
+  orders = new WeakMap<object, StudyMarketView["orderHistory"][number]>();
+  trades = new WeakMap<object, StudyMarketView["trades"][number]>();
+  legacyTrades = new WeakMap<object, RoomView["trades"]>();
+  begin() {
+    this.markets.clear();
+  }
+}
 function publicMarket(
   room: Room,
   m: StudyMarket,
   actor: Participant | "teacher",
   now: number,
+  cache?: StudyViewCache,
 ): StudyMarketView {
   const isTeacher = actor === "teacher",
     id = isTeacher ? "teacher" : actor.id;
@@ -110,7 +122,8 @@ function publicMarket(
     Math.floor((Math.max(1, marketRound(room, m)) - 1) / 5) * 5 + 1;
   const visible = (round: number) =>
     isTeacher || (round >= firstPeriod && round < firstPeriod + 5);
-  return {
+  const key = `${m.id}:${isTeacher ? "all" : firstPeriod}:${room.version}:${now}`;
+  const common: PublicMarket = cache?.markets.get(key) ?? {
     id: m.id,
     round: marketRound(room, m),
     order: m.order,
@@ -132,23 +145,37 @@ function publicMarket(
         ? (room.participants.find((p) => p.id === m.buyerOrder[m.buyerIndex])
             ?.alias ?? null)
         : null,
-    orders: m.stage === "cda" ? m.orders : [],
+    // Stable transport order avoids moving every row when one trader requotes.
+    // The matching engine and displayed book still use price/time priority.
+    orders:
+      m.stage === "cda"
+        ? [...m.orders].sort(
+            (a, b) =>
+              a.participantId.localeCompare(b.participantId) || a.unit - b.unit,
+          )
+        : [],
     orderHistory: (m.orderHistory ?? [])
       .filter((o) => visible(o.round))
-      .map((o) => ({
-        id: o.id,
-        participantId: o.participantId,
-        alias: o.alias,
-        side: o.side,
-        price: o.price,
-        unit: o.unit,
-        sequence: o.sequence,
-        at: o.at,
-        round: o.round,
-        status: o.status,
-        closedAt: o.closedAt,
-        closedSequence: o.closedSequence,
-      })),
+      .map((o) => {
+        const cached = cache?.orders.get(o);
+        if (cached) return cached;
+        const value = {
+          id: o.id,
+          participantId: o.participantId,
+          alias: o.alias,
+          side: o.side,
+          price: o.price,
+          unit: o.unit,
+          sequence: o.sequence,
+          at: o.at,
+          round: o.round,
+          status: o.status,
+          closedAt: o.closedAt,
+          closedSequence: o.closedSequence,
+        };
+        cache?.orders.set(o, value);
+        return value;
+      }),
     offers: ["purchase", "done"].includes(m.stage)
       ? m.offers.filter((o) => o.remaining > 0)
       : [],
@@ -156,22 +183,32 @@ function publicMarket(
     // Explicit projection: other participants' values and costs never enter a student response.
     trades: m.trades
       .filter((t) => visible(t.round))
-      .map((t) => ({
-        id: t.id,
-        sequence: t.sequence,
-        at: t.at,
-        round: t.round,
-        market: t.market,
-        institution: t.institution,
-        call: t.call,
-        price: t.price,
-        buyerId: t.buyerId,
-        sellerId: t.sellerId,
-        buyerAlias: t.buyerAlias,
-        sellerAlias: t.sellerAlias,
-        buyerUnit: t.buyerUnit,
-        sellerUnit: t.sellerUnit,
-      })),
+      .map((t) => {
+        const cached = cache?.trades.get(t);
+        if (cached) return cached;
+        const value = {
+          id: t.id,
+          sequence: t.sequence,
+          at: t.at,
+          round: t.round,
+          market: t.market,
+          institution: t.institution,
+          call: t.call,
+          price: t.price,
+          buyerId: t.buyerId,
+          sellerId: t.sellerId,
+          buyerAlias: t.buyerAlias,
+          sellerAlias: t.sellerAlias,
+          buyerUnit: t.buyerUnit,
+          sellerUnit: t.sellerUnit,
+        };
+        cache?.trades.set(t, value);
+        return value;
+      }),
+  };
+  cache?.markets.set(key, common);
+  return {
+    ...common,
     myOrders: isTeacher ? [] : m.orders.filter((o) => o.participantId === id),
     submitted: m.submitted.includes(id),
     myOffer: m.offers.find((o) => o.participantId === id) ?? null,
@@ -182,11 +219,17 @@ export function studyView(
   actor: Participant | "teacher",
   now: number,
   mode: "local" | "online",
+  cache?: StudyViewCache,
 ): RoomView {
   const study = room.study!,
     teacher = actor === "teacher",
     market = teacher ? study.markets[0] : marketFor(room, actor);
-  const publicState = publicMarket(room, market, actor, now);
+  const publicState = publicMarket(room, market, actor, now, cache);
+  let legacyTrades = cache?.legacyTrades.get(publicState.trades);
+  if (!legacyTrades) {
+    legacyTrades = publicState.trades.map((t) => ({ ...t, good: "apple" }));
+    cache?.legacyTrades.set(publicState.trades, legacyTrades);
+  }
   const view: RoomView = {
     code: room.code,
     config: room.config,
@@ -200,7 +243,7 @@ export function studyView(
     serverTime: now,
     participantCount: room.participantCount ?? room.participants.length,
     quotes: [],
-    trades: publicState.trades.map((t) => ({ ...t, good: "apple" })),
+    trades: legacyTrades,
     mode,
     me: teacher
       ? {
@@ -253,7 +296,9 @@ export function studyView(
     const metrics = studyMetrics(room, now);
     view.study!.teacher = {
       settings: study.settings,
-      markets: study.markets.map((m) => publicMarket(room, m, actor, now)),
+      markets: study.markets.map((m) =>
+        publicMarket(room, m, actor, now, cache),
+      ),
       participants: room.participants.map((p) => ({
         id: p.id,
         market: marketFor(room, p).id,

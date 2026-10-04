@@ -1,3 +1,4 @@
+import { timed } from "@/lib/server/performance";
 import type { NextRequest } from "next/server";
 import {
   body,
@@ -19,7 +20,9 @@ export async function POST(
     const code = codeFor((await ctx.params).code);
     const data = await body(request, commandSchema);
     return json(
-      await (await service()).command(code, tokenFor(request, code), data),
+      await timed("command.total", async () =>
+        (await service()).command(code, tokenFor(request, code), data),
+      ),
     );
   } catch (error) {
     return failure(error);

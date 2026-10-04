@@ -20,6 +20,7 @@ export function diffViews(before: RoomView, after: RoomView): RoomPatch {
   function visit(a: unknown, b: unknown, path: Path) {
     if (Object.is(a, b)) return;
     if (Array.isArray(a) && Array.isArray(b)) {
+      const start = changes.length;
       const n = Math.min(a.length, b.length);
       for (let i = 0; i < n; i++) visit(a[i], b[i], [...path, i]);
       if (a.length !== b.length)
@@ -30,6 +31,21 @@ export function diffViews(before: RoomView, after: RoomView): RoomPatch {
           deleteCount: a.length - n,
           items: b.slice(n),
         });
+      // A small live book can be cheaper to replace than a long list of field
+      // edits when entries disappear. Never serialize long history arrays here.
+      if (
+        ["orders", "myOrders", "offers", "quotes"].includes(
+          String(path.at(-1)),
+        ) &&
+        changes.length - start > 1
+      ) {
+        const replacement: Change = { op: "set", path, value: b };
+        if (
+          JSON.stringify([replacement]).length <
+          JSON.stringify(changes.slice(start)).length
+        )
+          changes.splice(start, changes.length - start, replacement);
+      }
     } else if (
       a &&
       b &&
@@ -54,7 +70,20 @@ export function diffViews(before: RoomView, after: RoomView): RoomPatch {
 export function applyPatch(view: RoomView, patch: RoomPatch): RoomView {
   if (view.version !== patch.base || patch.version < patch.base)
     throw new Error("Snapshot required");
-  const result = structuredClone(view);
+  // Copy only paths touched by this patch. Long immutable histories are shared.
+  const result = { ...view };
+  const owned = new WeakSet<object>([result]);
+  const ownChild = (
+    parent: Record<string | number, unknown>,
+    key: string | number,
+  ) => {
+    const child = parent[key];
+    if (child && typeof child === "object" && !owned.has(child)) {
+      parent[key] = Array.isArray(child) ? child.slice() : { ...child };
+      owned.add(parent[key] as object);
+    }
+    return parent[key];
+  };
   for (const change of patch.changes) {
     if (
       !change.path.length ||
@@ -74,13 +103,13 @@ export function applyPatch(view: RoomView, patch: RoomPatch): RoomView {
         typeof parent[key] !== "object"
       )
         throw new Error("Invalid patch path");
-      parent = parent[key] as typeof parent;
+      parent = ownChild(parent, key) as typeof parent;
     }
     const key = change.path.at(-1)!;
     if (change.op === "set") parent[key] = structuredClone(change.value);
     else if (change.op === "remove") delete parent[key];
     else {
-      const array = parent[key];
+      const array = ownChild(parent, key);
       if (
         !Array.isArray(array) ||
         change.start < 0 ||

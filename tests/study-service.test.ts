@@ -1,3 +1,8 @@
+import {
+  lockBundle,
+  saveBundle,
+  readBundle,
+} from "../src/lib/server/market-store";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -24,24 +29,10 @@ after(async () => {
 });
 
 async function saveFixture(room: Room) {
-  for (const market of room.study!.markets)
-    await db.query(
-      "UPDATE auction_markets SET state = $3::jsonb WHERE room_code = $1 AND market_id = $2",
-      [room.code, market.id, JSON.stringify(market)],
-    );
-  const root = structuredClone(room);
-  root.study!.markets = [];
-  root.receipts = root.receipts.filter((r) => r.actor === "teacher");
-  root.version = (
-    await db.query<{ state: Room }>(
-      "SELECT state FROM auction_rooms WHERE code = $1",
-      [room.code],
-    )
-  ).rows[0].state.version;
-  await db.query("UPDATE auction_rooms SET state = $2::jsonb WHERE code = $1", [
-    room.code,
-    JSON.stringify(root),
-  ]);
+  await db.transaction(async (tx) => {
+    const before = await lockBundle(tx, room.code, undefined, true);
+    await saveBundle(tx, before, room, []);
+  });
 }
 
 async function classroom(markets = 1) {
@@ -119,6 +110,9 @@ test("old single-row study rooms migrate without losing orders, audit events or 
       [teacher.code],
     );
     await tx.query("DELETE FROM auction_market_events WHERE room_code = $1", [
+      teacher.code,
+    ]);
+    await tx.query("DELETE FROM auction_order_history WHERE room_code = $1", [
       teacher.code,
     ]);
     await tx.query("DELETE FROM auction_markets WHERE room_code = $1", [
@@ -384,4 +378,69 @@ test("teacher opens admission before anyone joins; each full market starts once 
     final.room.study!.markets[1].periods[0].startedAt >
       final.room.study!.markets[0].periods[0].startedAt,
   );
+});
+
+test("archived orders append independently, migrate losslessly and resume by cursor", async () => {
+  const { teacher, students, send } = await classroom();
+  const buyer = students.find((s) => s.view.me.role === "buyer")!;
+  await send(teacher.token, { type: "start" });
+  for (const price of [50, 51, 52])
+    await send(buyer.token, { type: "study-quote", price });
+  const initial = await readBundle(db, teacher.code, 1);
+  assert.equal(initial.markets[0].state.orderHistory!.length, 2);
+  const raw = (
+    await db.query<{ state: Record<string, unknown> }>(
+      "SELECT state FROM auction_markets WHERE room_code=$1",
+      [teacher.code],
+    )
+  ).rows[0].state;
+  assert.equal(raw.orderHistory, undefined);
+  const unchanged = await readBundle(db, teacher.code, 1, initial);
+  assert.equal(
+    unchanged.markets[0].state.orderHistory,
+    initial.markets[0].state.orderHistory,
+  );
+  await send(buyer.token, { type: "study-quote", price: 53 });
+  const changed = await readBundle(db, teacher.code, [1], initial);
+  assert.equal(changed.markets[0].state.orderHistory!.length, 3);
+  assert.equal(
+    changed.markets[0].state.orderHistory![0],
+    initial.markets[0].state.orderHistory![0],
+  );
+  assert.deepEqual(
+    changed.markets[0].state.orderHistory,
+    (await readBundle(db, teacher.code, 1)).markets[0].state.orderHistory,
+  );
+  const exported = await service.export(teacher.code, teacher.token);
+  assert.deepEqual(
+    exported.room.study!.markets[0].orderHistory,
+    changed.markets[0].state.orderHistory,
+  );
+  // Reconstruct a version-2 market with embedded historical records.
+  await db.transaction(async (tx) => {
+    await tx.query("DELETE FROM auction_order_history WHERE room_code=$1", [
+      teacher.code,
+    ]);
+    await tx.query(
+      "UPDATE auction_markets SET state=$2::jsonb, history_separated=false, history_cursor=0 WHERE room_code=$1",
+      [teacher.code, JSON.stringify(exported.room.study!.markets[0])],
+    );
+  });
+  assert.equal(
+    (await service.view(teacher.code, buyer.token)).study!.market.orderHistory
+      .length,
+    3,
+  );
+  await send(buyer.token, { type: "study-cancel" });
+  const migrated = await service.export(teacher.code, teacher.token);
+  assert.equal(migrated.room.study!.markets[0].orderHistory!.length, 4);
+  assert.deepEqual(
+    migrated.room.study!.markets[0].orderHistory!.slice(0, 3),
+    exported.room.study!.markets[0].orderHistory,
+  );
+  const archived = await db.query(
+    "SELECT closed_sequence FROM auction_order_history WHERE room_code=$1",
+    [teacher.code],
+  );
+  assert.equal(archived.rows.length, 4);
 });

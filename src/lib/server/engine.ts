@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { GOODS, type GoodId } from "../catalog";
 import type { CommandRequest, LegacyCommand, RoomView } from "../types";
 import { executeStudy, settleStudy } from "./study";
-import { studyView } from "./study-view";
+import { studyView, type StudyViewCache } from "./study-view";
 import {
   defaultMarketSettings,
   equilibrium,
@@ -344,8 +344,9 @@ export function toView(
   actor: Participant | "teacher",
   now: number,
   mode: "local" | "online",
+  cache?: StudyViewCache,
 ): RoomView {
-  if (room.study) return studyView(room, actor, now, mode);
+  if (room.study) return studyView(room, actor, now, mode, cache);
   const view: RoomView = {
     code: room.code,
     config: room.config,

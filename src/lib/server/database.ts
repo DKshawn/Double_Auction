@@ -1,3 +1,4 @@
+import { timed } from "./performance";
 import { neon, neonConfig, Pool } from "@neondatabase/serverless";
 import ws from "ws";
 import path from "node:path";
@@ -48,6 +49,16 @@ export const SCHEMA = [
     sequence integer NOT NULL,
     event jsonb NOT NULL,
     PRIMARY KEY (room_code, market_id, sequence),
+    FOREIGN KEY (room_code, market_id) REFERENCES auction_markets(room_code, market_id)
+  )`,
+  `ALTER TABLE auction_markets ADD COLUMN IF NOT EXISTS history_separated boolean NOT NULL DEFAULT false`,
+  `ALTER TABLE auction_markets ADD COLUMN IF NOT EXISTS history_cursor integer NOT NULL DEFAULT 0`,
+  `CREATE TABLE IF NOT EXISTS auction_order_history (
+    room_code text NOT NULL,
+    market_id integer NOT NULL,
+    closed_sequence integer NOT NULL,
+    entry jsonb NOT NULL,
+    PRIMARY KEY (room_code, market_id, closed_sequence),
     FOREIGN KEY (room_code, market_id) REFERENCES auction_markets(room_code, market_id)
   )`,
 ];
@@ -111,15 +122,16 @@ export function postgresDatabase(url: string) {
   });
   const db: Database & { close(): Promise<void> } = {
     mode: "local",
-    query: (sql, params) => pool.query(sql, params),
+    query: (sql, params) => timed("db.read", () => pool.query(sql, params)),
     async transaction<T>(fn: (tx: Sql) => Promise<T>) {
-      const client = await pool.connect();
+      const client = await timed("db.pool_wait", () => pool.connect());
       try {
         await client.query("BEGIN");
-        await client.query("SET LOCAL lock_timeout = '8s'");
-        await client.query("SET LOCAL statement_timeout = '15s'");
-        const result = await fn(client);
-        await client.query("COMMIT");
+        await client.query(
+          "SELECT set_config('lock_timeout', '8s', true), set_config('statement_timeout', '15s', true)",
+        );
+        const result = await timed("db.transaction_body", () => fn(client));
+        await timed("db.commit", () => client.query("COMMIT"));
         return result;
       } catch (error) {
         await client.query("ROLLBACK");
@@ -168,13 +180,13 @@ async function open(): Promise<Database> {
           max: 1,
         });
         try {
-          const client = await pool.connect();
+          const client = await timed("db.pool_wait", () => pool.connect());
           try {
             await client.query("BEGIN");
             await client.query("SET LOCAL lock_timeout = '8s'");
             await client.query("SET LOCAL statement_timeout = '15s'");
-            const result = await fn(client);
-            await client.query("COMMIT");
+            const result = await timed("db.transaction_body", () => fn(client));
+            await timed("db.commit", () => client.query("COMMIT"));
             return result;
           } catch (error) {
             await client.query("ROLLBACK");

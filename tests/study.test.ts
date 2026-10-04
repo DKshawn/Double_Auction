@@ -13,6 +13,7 @@ import {
 } from "../src/lib/server/study";
 import { csv, exportData } from "../src/lib/server/export";
 import {
+  StudyViewCache,
   studyEquilibrium,
   studyMetrics,
   convergenceSlopes,
@@ -780,4 +781,54 @@ test("interrupting periods while paused preserves the pause and excludes interru
   assert.ok(study.markets.every((m) => m.round === 2));
   send("teacher", { type: "resume" }, 400000);
   assert.ok(study.markets.every((m) => m.deadline! > 400000));
+});
+
+test("shared market projections preserve each actor's private orders and current-block visibility", () => {
+  const { room, send } = classroom();
+  const [buyer, second] = room.participants;
+  send("teacher", { type: "start" });
+  send(buyer, { type: "study-quote", price: 50 });
+  send(buyer, { type: "study-quote", price: 51 });
+  const cache = new StudyViewCache();
+  const a = toView(room, buyer, 2000, "local", cache);
+  const b = toView(room, second, 2000, "local", cache);
+  assert.deepEqual(a, toView(room, buyer, 2000, "local"));
+  assert.deepEqual(b, toView(room, second, 2000, "local"));
+  assert.equal(a.study!.market.orderHistory, b.study!.market.orderHistory);
+  assert.equal(a.study!.market.myOrders.length, 1);
+  assert.equal(b.study!.market.myOrders.length, 0);
+  for (let i = 0; i < 5; i++) send("teacher", { type: "end-round" }, 3000 + i);
+  cache.begin();
+  send(buyer, { type: "call-submit", prices: [100, 90] }, 4000);
+  const sealed = toView(room, buyer, 4001, "local", cache);
+  const stranger = toView(room, second, 4001, "local", cache);
+  assert.equal(sealed.study!.market.submitted, true);
+  assert.equal(stranger.study!.market.submitted, false);
+  assert.equal(sealed.study!.market.myOrders.length, 2);
+  assert.deepEqual(stranger.study!.market.myOrders, []);
+  assert.deepEqual(stranger.study!.market.orders, []);
+  assert.deepEqual(stranger.study!.market.orderHistory, []);
+  assert.equal(stranger.study!.teacher, undefined);
+  assert.deepEqual(stranger, toView(room, second, 4001, "local"));
+});
+
+test("public book serialization stays stable on requotes while matching retains time priority", () => {
+  const { room, send } = classroom();
+  const [a, b] = room.participants;
+  const seller = room.participants.find((p) => p.role === "seller")!;
+  send("teacher", { type: "start" });
+  send(a, { type: "study-quote", price: 80 }, 2000);
+  send(b, { type: "study-quote", price: 80 }, 2001);
+  const before = toView(room, a, 2002, "local").study!.market.orders.map(
+    (o) => o.participantId,
+  );
+  send(a, { type: "study-quote", price: 80 }, 2003);
+  assert.deepEqual(
+    toView(room, a, 2004, "local").study!.market.orders.map(
+      (o) => o.participantId,
+    ),
+    before,
+  );
+  send(seller, { type: "study-quote", price: 80 }, 2005);
+  assert.equal(room.study!.markets[0].trades[0].buyerId, b.id);
 });

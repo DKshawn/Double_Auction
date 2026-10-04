@@ -74,6 +74,7 @@ export function StudyRoom({
   const market =
     teacher?.markets.find((m) => m.id === selected) ?? study.market;
   const cdaLayout = !teacher && market.institution === "cda";
+  const integratedLayout = !teacher && market.institution !== "cda";
   const remaining =
     view.phase === "running" && market.deadline !== null
       ? Math.max(0, market.deadline - now)
@@ -361,7 +362,7 @@ export function StudyRoom({
             </div>
           )}
         <div
-          className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${market.institution === "posted" && view.me.role === "buyer" ? "purchase-layout" : ""}`}
+          className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${integratedLayout ? "integrated-layout" : ""}`}
         >
           <div className="study-market-column">
             {teacher ? (
@@ -380,7 +381,17 @@ export function StudyRoom({
                 market={market}
                 command={command}
                 disabled={blocked}
-              />
+              >
+                {integratedLayout && (
+                  <StudentConditions
+                    view={view}
+                    market={market}
+                    command={command}
+                    disabled={blocked}
+                    embedded
+                  />
+                )}
+              </MarketActivity>
             )}
           </div>
           {cdaLayout && (
@@ -392,49 +403,13 @@ export function StudyRoom({
               standalone
             />
           )}
-          {!teacher && (
-            <aside className="panel study-section private-panel">
-              <h2>
-                <LockKeyhole size={16} /> あなたの条件 <small>非公開</small>
-              </h2>
-              <div className="study-private-values">
-                <p>
-                  {view.me.role === "buyer"
-                    ? "購入する単位ごとの価値"
-                    : "販売する単位ごとの費用"}
-                </p>
-                <div className="study-values">
-                  {study.unitLimits!.map((v, i) => (
-                    <div
-                      key={i}
-                      className={i < study.unitsUsed ? "used-unit" : ""}
-                    >
-                      <span>
-                        {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
-                      </span>
-                      <b>{money(v)}</b>
-                    </div>
-                  ))}
-                </div>
-                <p className="muted">
-                  役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b>{" "}
-                  単位です。
-                </p>
-              </div>
-              <div className="study-private-order">
-                <StudentOrder
-                  key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
-                  view={view}
-                  market={market}
-                  command={command}
-                  disabled={blocked}
-                />
-              </div>
-              <StudyPersonalHistory
-                key={`${view.code}-${view.me.id}-${study.myTrades.at(-1)?.id ?? "empty"}`}
-                trades={study.myTrades}
-              />
-            </aside>
+          {cdaLayout && (
+            <StudentConditions
+              view={view}
+              market={market}
+              command={command}
+              disabled={blocked}
+            />
           )}
           <section className="panel study-section study-price-panel">
             <h2>
@@ -517,12 +492,69 @@ export function StudyRoom({
   );
 }
 
-function MarketActivity(props: MarketProps) {
+function StudentConditions({
+  embedded = false,
+  ...props
+}: MarketProps & { embedded?: boolean }) {
+  const { view, market } = props;
+  const study = view.study!;
+  return (
+    <aside
+      className={
+        embedded
+          ? `private-panel study-integrated-conditions ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}`
+          : "panel study-section private-panel"
+      }
+    >
+      <h2>
+        <LockKeyhole size={16} /> あなたの条件 <small>非公開</small>
+      </h2>
+      <div className="study-private-values">
+        <p>
+          {view.me.role === "buyer"
+            ? "購入する単位ごとの価値"
+            : "販売する単位ごとの費用"}
+        </p>
+        <div className="study-values">
+          {study.unitLimits!.map((v, i) => (
+            <div key={i} className={i < study.unitsUsed ? "used-unit" : ""}>
+              <span>
+                {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
+              </span>
+              <b>{money(v)}</b>
+            </div>
+          ))}
+        </div>
+        <p className="muted">
+          役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b> 単位です。
+        </p>
+      </div>
+      <div className="study-private-order">
+        <StudentOrder
+          key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
+          {...props}
+        />
+      </div>
+      <StudyPersonalHistory
+        key={`${view.code}-${view.me.id}-${study.myTrades.at(-1)?.id ?? "empty"}`}
+        trades={study.myTrades}
+      />
+    </aside>
+  );
+}
+
+function MarketActivity({
+  children,
+  ...props
+}: MarketProps & { children?: ReactNode }) {
   const { market } = props;
   if (market.institution === "cda") return <OrderBook {...props} />;
-  if (market.institution === "posted") return <OfferBoard {...props} />;
+  if (market.institution === "posted")
+    return <OfferBoard {...props}>{children}</OfferBoard>;
   return (
-    <section className="panel study-section">
+    <section
+      className={`panel study-section ${children ? "study-market-workspace" : ""}`}
+    >
       <h2>一括約定・第{market.call || 1}回 / 4回</h2>
       <p className="muted">
         注文は締切まで非公開です。締切までに送信しない場合、その回は注文なしとして進みます。未約定注文は各回で失効し、残り数量を次の回で再注文できます。
@@ -558,6 +590,7 @@ function MarketActivity(props: MarketProps) {
       {!market.clearings.some((c) => c.round === market.round) && (
         <p className="study-empty">締切後に清算結果が表示されます。</p>
       )}
+      {children}
     </section>
   );
 }
@@ -810,10 +843,18 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
   );
 }
 
-function OfferBoard({ view, market, command, disabled }: MarketProps) {
+function OfferBoard({
+  view,
+  market,
+  command,
+  disabled,
+  children,
+}: MarketProps & { children?: ReactNode }) {
   const mine = market.activeBuyer === view.me.alias && view.me.role === "buyer";
   return (
-    <section className="panel study-section study-offers">
+    <section
+      className={`panel study-section study-offers ${children ? "study-market-workspace" : ""}`}
+    >
       <h2>売り手の提示価格</h2>
       {market.stage === "offer" ? (
         <p className="study-empty">
@@ -886,6 +927,7 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
           )}
         </>
       )}
+      {children}
     </section>
   );
 }

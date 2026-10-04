@@ -360,6 +360,9 @@
   display: block;
   margin-top: 8px;
 }
+.study-book-action .field-help {
+  color: var(--green);
+}
 .study-book th,
 .study-book td {
   height: 30px;

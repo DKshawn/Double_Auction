@@ -908,7 +908,7 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
             <>
               <ExpectedProfit view={view} price={best.price} quantity={1} />
               <button
-                className="button secondary"
+                className="button primary"
                 disabled={disabled || view.study!.unitsUsed >= 2}
                 onClick={() =>
                   void command({ type: "study-accept", orderId: best.id })

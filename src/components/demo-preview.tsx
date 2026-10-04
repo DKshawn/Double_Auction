@@ -6,10 +6,36 @@ import { ExternalLink, Laptop } from "lucide-react";
 import styles from "./demo-preview.module.css";
 
 const PRESETS = [
-  { screen: "1366 × 768", width: 1366, height: 768, scaling: 100 },
-  { screen: "1920 × 1080", width: 1536, height: 864, scaling: 125 },
-  { screen: "1920 × 1080", width: 1280, height: 720, scaling: 150 },
-  { screen: "1920 × 1080", width: 1920, height: 1080, scaling: 100 },
+  {
+    screen: "1366 × 768",
+    width: 1366,
+    height: 768,
+    description: "表示倍率 100%",
+  },
+  {
+    screen: "1920 × 1080",
+    width: 1536,
+    height: 864,
+    description: "表示倍率 125%",
+  },
+  {
+    screen: "1920 × 1080",
+    width: 1280,
+    height: 720,
+    description: "表示倍率 150%",
+  },
+  {
+    screen: "1920 × 1080",
+    width: 1920,
+    height: 1080,
+    description: "表示倍率 100%",
+  },
+  {
+    screen: "MacBook Pro 14インチ",
+    width: 1512,
+    height: 982,
+    description: "1512 × 982 · Retina 2×",
+  },
 ] as const;
 
 export function DemoPreview() {
@@ -71,13 +97,13 @@ export function DemoPreview() {
           >
             {PRESETS.map((item, index) => (
               <button
-                key={`${item.screen}-${item.scaling}`}
+                key={`${item.width}-${item.height}`}
                 type="button"
                 aria-pressed={selected === index}
                 onClick={() => setSelected(index)}
               >
                 <b>{item.screen}</b>
-                <span>表示倍率 {item.scaling}%</span>
+                <span>{item.description}</span>
               </button>
             ))}
           </div>
@@ -99,7 +125,7 @@ export function DemoPreview() {
               checked={reserveChrome}
               onChange={(e) => setReserveChrome(e.target.checked)}
             />
-            ブラウザー・タスクバー用に高さ120pxを差し引く（目安）
+            ブラウザー・OSのバー用に高さ120pxを差し引く（目安）
           </label>
           <output aria-live="polite">
             デモの表示領域{" "}

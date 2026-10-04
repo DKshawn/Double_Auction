@@ -16,6 +16,8 @@ import { studyView } from "./study-view";
 
 export const DEMO_MARKETS = 12;
 export const DEMO_CAPACITY = DEMO_MARKETS * 16;
+const CDA_THINKING_MS = 3000;
+const BOT_INTERVAL_MS = 2000;
 // Public practice conditions, deliberately separate from the classroom schedules.
 export const DEMO_SETTINGS: StudySettings = {
   values: Array.from({ length: 8 }, (_, i) => [160 - i * 8, 140 - i * 8]),
@@ -41,7 +43,10 @@ export class DemoSession {
   private teacher = false;
   private error = "";
   private generation = 0;
-  private botClocks = new Map<number, { nextAt: number; index: number }>();
+  private botClocks = new Map<
+    number,
+    { nextAt: number; round: number; indices: Record<Role, number> }
+  >();
   private listeners = new Set<() => void>();
   private snapshot!: DemoSnapshot;
 
@@ -113,7 +118,11 @@ export class DemoSession {
       study.markets[0].order,
     ];
     for (const market of study.markets)
-      this.botClocks.set(market.id, { nextAt: this.now, index: 0 });
+      this.botClocks.set(market.id, {
+        nextAt: this.now,
+        round: 0,
+        indices: { buyer: 0, seller: 0 },
+      });
     this.room = {
       code: "DEMO",
       study,
@@ -220,12 +229,6 @@ export class DemoSession {
     this.error = "";
     try {
       this.send(asTeacher ? "teacher" : this.human, command);
-      if (command.type === "start") {
-        for (const clock of this.botClocks.values()) {
-          clock.index = 0;
-          clock.nextAt = this.now;
-        }
-      }
       this.runBots();
       this.publish();
       return true;
@@ -339,9 +342,18 @@ export class DemoSession {
     this.submitSealedBots();
     for (const id of this.botClocks.keys()) {
       const clock = this.botClocks.get(id)!;
-      if (this.now < clock.nextAt) continue;
-      clock.nextAt = this.now + 2000;
       const market = this.room.study!.markets.find((m) => m.id === id)!;
+      const round = marketRound(this.room, market);
+      if (clock.round !== round) {
+        clock.round = round;
+        clock.indices = { buyer: 0, seller: 0 };
+        clock.nextAt =
+          market.stage === "cda"
+            ? market.periods.at(-1)!.startedAt + CDA_THINKING_MS
+            : this.now;
+      }
+      if (this.now < clock.nextAt) continue;
+      clock.nextAt = this.now + BOT_INTERVAL_MS;
       const bots = this.bots.filter((p) => marketFor(this.room, p).id === id);
       if (market.stage === "purchase") {
         const bot = bots.find(
@@ -349,27 +361,34 @@ export class DemoSession {
         );
         if (bot) this.buyAsBot(bot);
       } else if (market.stage === "cda") {
-        const lastSide = id === 1 ? this.role : id % 2 ? "buyer" : "seller";
-        bots.sort(
-          (a, b) => Number(a.role === lastSide) - Number(b.role === lastSide),
+        // Start with patient limits so both sides can rest on the book, then
+        // reduce the requested margin over time using only each bot's own limit.
+        const quotingMs =
+          this.now - market.periods.at(-1)!.startedAt - CDA_THINKING_MS;
+        const margin = Math.max(
+          12,
+          72 - Math.floor(quotingMs / BOT_INTERVAL_MS) * 4,
         );
-        for (let i = 0; i < bots.length; i++) {
-          const bot = bots[clock.index++ % bots.length];
-          const used = unitsUsed(this.room, bot);
-          if (used >= 2) continue;
-          const limit = unitLimits(this.room, bot)[used];
-          const price = bot.role === "buyer" ? limit - 12 : limit + 12;
-          if (
-            market.orders.some(
-              (o) => o.participantId === bot.id && o.price === price,
+        for (const side of ["buyer", "seller"] as const) {
+          const sideBots = bots.filter((p) => p.role === side);
+          for (let i = 0; i < sideBots.length; i++) {
+            const bot = sideBots[clock.indices[side]++ % sideBots.length];
+            const used = unitsUsed(this.room, bot);
+            if (used >= 2) continue;
+            const limit = unitLimits(this.room, bot)[used];
+            const price = side === "buyer" ? limit - margin : limit + margin;
+            if (
+              market.orders.some(
+                (o) => o.participantId === bot.id && o.price === price,
+              )
             )
-          )
-            continue;
-          this.sendBot(bot, {
-            type: "study-quote",
-            price,
-          });
-          break;
+              continue;
+            this.sendBot(bot, {
+              type: "study-quote",
+              price,
+            });
+            break;
+          }
         }
       }
     }

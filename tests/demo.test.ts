@@ -41,10 +41,87 @@ test("demo supplies 12 balanced markets and 191 virtual participants, keeps form
   assert.equal(demo.getSnapshot().view.study!.teacher, undefined);
 });
 
+test("CDA demo waits for participants to think, then keeps both sides visible in every CDA market regardless of the human role", async () => {
+  for (const role of ["buyer", "seller"] as const) {
+    const demo = new DemoSession("cda", role, 1000);
+    const human = demo.getSnapshot().view.me.id;
+    demo.toggleTeacher();
+    await demo.command({ type: "start" });
+    const markets = () =>
+      demo
+        .getSnapshot()
+        .view.study!.teacher!.markets.filter((m) => m.stage === "cda");
+    assert.ok(markets().length > 1);
+    assert.ok(markets().every((m) => m.orders.length === 0));
+    demo.tick(1000);
+    demo.tick(1000);
+    demo.tick(999);
+    assert.ok(markets().every((m) => m.orders.length === 0));
+    demo.tick(1);
+    for (const market of markets()) {
+      const bid = market.orders.find((o) => o.side === "buyer");
+      const ask = market.orders.find((o) => o.side === "seller");
+      assert.ok(bid);
+      assert.ok(ask);
+      assert.ok(bid.price < ask.price);
+      assert.equal(market.trades.length, 0);
+      assert.ok(market.orders.every((o) => o.participantId !== human));
+    }
+    demo.tick(1000);
+    demo.tick(1000);
+    assert.ok(
+      markets().every((m) =>
+        ["buyer", "seller"].every(
+          (side) => m.orders.filter((o) => o.side === side).length === 2,
+        ),
+      ),
+    );
+    demo.advanceTime(30);
+    assert.ok(markets().every((m) => m.trades.length > 0));
+    demo.toggleTeacher();
+    assert.equal(demo.getSnapshot().view.study!.unitsUsed, 0);
+    assert.deepEqual(demo.getSnapshot().view.study!.myTrades, []);
+  }
+});
+
+test("CDA demo preserves the thinking delay across pause and repeats it in new periods and after reset", async () => {
+  const demo = new DemoSession("cda", "buyer", 1000);
+  await demo.command({ type: "start" }, true);
+  demo.advanceTime(2);
+  await demo.command({ type: "pause" }, true);
+  const paused = demo.getSnapshot();
+  demo.tick(1000);
+  demo.advanceTime(30);
+  assert.equal(demo.getSnapshot(), paused);
+  await demo.command({ type: "resume" }, true);
+  demo.tick(999);
+  assert.deepEqual(demo.getSnapshot().view.study!.market.orders, []);
+  demo.tick(1);
+  assert.equal(demo.getSnapshot().view.study!.market.orders.length, 2);
+  demo.advanceTime(177);
+  assert.equal(demo.getSnapshot().view.study!.market.round, 2);
+  assert.deepEqual(demo.getSnapshot().view.study!.market.orders, []);
+  demo.advanceTime(2);
+  assert.deepEqual(demo.getSnapshot().view.study!.market.orders, []);
+  demo.advanceTime(1);
+  assert.equal(demo.getSnapshot().view.study!.market.orders.length, 2);
+  demo.skipStage();
+  assert.equal(demo.getSnapshot().view.study!.market.round, 3);
+  assert.deepEqual(demo.getSnapshot().view.study!.market.orders, []);
+  demo.advanceTime(3);
+  assert.equal(demo.getSnapshot().view.study!.market.orders.length, 2);
+  demo.reset("cda", "seller");
+  await demo.command({ type: "start" }, true);
+  assert.deepEqual(demo.getSnapshot().view.study!.market.orders, []);
+  demo.advanceTime(3);
+  assert.equal(demo.getSnapshot().view.study!.market.orders.length, 2);
+});
+
 test("CDA demo trades two marginal units through the real engine without bots ever acting for the human", async () => {
   for (const role of ["buyer", "seller"] as const) {
     const demo = new DemoSession("cda", role, 1000);
     assert.equal(await demo.command({ type: "start" }, true), true);
+    demo.advanceTime(3);
     let profit = 0;
     for (let unit = 0; unit < 2; unit++) {
       const state = demo.getSnapshot().view;

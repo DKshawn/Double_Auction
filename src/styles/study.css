@@ -240,6 +240,12 @@
 }
 .study-values > div {
   flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px 8px;
+  min-width: 0;
   border: 1px solid var(--line);
   background: #f8f8fd;
   border-radius: 9px;
@@ -252,9 +258,13 @@
 }
 .study-values b {
   display: block;
-  font-size: 20px;
+  font-size: 26px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
   color: var(--accent);
-  margin-top: 4px;
+  margin-left: auto;
 }
 .study-values .used-unit {
   opacity: 0.5;
@@ -656,10 +666,6 @@
 .cda-layout .study-private-values .study-values > div {
   padding: 4px 6px;
 }
-.cda-layout .study-private-values .study-values b {
-  font-size: 18px;
-  margin-top: 0;
-}
 .study-trading-grid.integrated-layout {
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   grid-template-areas: "market prices";
@@ -706,10 +712,6 @@
 .study-integrated-conditions .study-private-values .study-values > div {
   padding: 4px 8px;
 }
-.study-integrated-conditions .study-private-values .study-values b {
-  font-size: 18px;
-  margin-top: 0;
-}
 .study-purchase-conditions {
   grid-template-areas: "title title" "values own" "order own";
 }
@@ -725,7 +727,8 @@
   font-size: 11px;
 }
 .study-market-workspace .study-offer-list {
-  margin-bottom: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
 }
 .study-market-workspace > .study-table-wrap {
   margin-top: 10px;
@@ -735,23 +738,12 @@
 .study-market-workspace > .study-table-wrap td {
   padding: 5px 10px;
 }
-.study-market-workspace .study-offer-list {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 6px;
-}
-.study-market-workspace .study-offer-status {
-  min-height: 30px;
-}
 .study-trading-grid .study-values {
   margin: 6px 0;
   gap: 8px;
 }
 .study-trading-grid .study-values > div {
   padding: 5px 10px;
-}
-.study-trading-grid .study-values b {
-  font-size: 20px;
-  line-height: 1.3;
 }
 .study-trading-grid .study-profit {
   flex-direction: row;
@@ -1181,48 +1173,73 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  font-size: 11px;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-height: 80px;
+  margin: 24px 0;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--lavender);
+  font-size: 13px;
   color: var(--muted);
 }
+.study-offer-status strong {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.study-offer-status p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
 .study-offer-status.is-my-turn {
+  color: var(--green);
+  border-color: #a7d6c5;
+  background: #eef9f4;
+}
+.study-offer-status.is-my-turn strong {
   color: var(--green);
 }
 .study-offer-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 12px;
   margin-top: 10px;
 }
 .study-offer-card {
-  padding: 6px;
+  padding: 12px;
+  min-height: 140px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 .study-offer-info {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: 11px;
+  gap: 6px 8px;
+  font-size: 12px;
 }
 .study-offer-info b {
-  font-size: 13px;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  font-size: 26px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 .study-offer-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  min-height: 38px;
+  gap: 8px;
+  margin-top: 12px;
+  min-height: 48px;
 }
-.study-trading-grid .study-offer-actions .button,
-.study-trading-grid .study-offer-status .button {
-  padding: 4px 5px;
+.study-trading-grid .study-offer-actions .button {
+  padding: 8px 5px;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
 }
 .study-offer-actions .button small {
   font-size: 10px;
@@ -1231,10 +1248,7 @@
   white-space: normal;
 }
 .study-offer-actions .study-buy-button {
-  gap: 1px;
-}
-.study-offer-status .button {
-  flex-shrink: 0;
+  gap: 4px;
 }
 .study-offer-actions > span {
   grid-column: 1 / -1;

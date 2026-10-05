@@ -948,24 +948,6 @@ function OfferBoard({
         </p>
       ) : (
         <>
-          <div className={`study-offer-status ${mine ? "is-my-turn" : ""}`}>
-            <p>
-              {market.stage === "purchase"
-                ? mine
-                  ? `あなたの購入時間です。${timing.buyerSeconds}秒以内に選んでください。`
-                  : `現在は ${market.activeBuyer} の購入時間です。`
-                : "今期の購入時間は終了しました。"}
-            </p>
-            {mine && (
-              <button
-                className="button secondary"
-                disabled={disabled}
-                onClick={() => void command({ type: "posted-pass" })}
-              >
-                今回は購入を終える
-              </button>
-            )}
-          </div>
           <div className="study-offer-list" aria-label="売り手の提示一覧">
             {market.offers.map((o) => (
               <div className="study-offer-card" key={o.id}>
@@ -1011,6 +993,28 @@ function OfferBoard({
           {!market.offers.length && (
             <p className="study-empty">購入可能な在庫はありません。</p>
           )}
+          <div className={`study-offer-status ${mine ? "is-my-turn" : ""}`}>
+            <div role="status">
+              <strong>
+                {market.stage === "purchase"
+                  ? view.me.role === "buyer"
+                    ? mine
+                      ? "今はあなたの番です"
+                      : "今はあなたの番ではありません"
+                    : `現在は ${market.activeBuyer} の購入時間です。`
+                  : view.phase === "waiting"
+                    ? "実験開始をお待ちください"
+                    : "今期の購入時間は終了しました。"}
+              </strong>
+              {market.stage === "purchase" && view.me.role === "buyer" && (
+                <p>
+                  {mine
+                    ? `${timing.buyerSeconds}秒以内に購入する数量を選んでください。`
+                    : "自分の番になると購入できます。"}
+                </p>
+              )}
+            </div>
+          </div>
         </>
       )}
       {children}

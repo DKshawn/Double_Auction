@@ -155,7 +155,9 @@ export function StudyRoom({
       </Header>
       <main className="room-main study-main">
         {toolbar}
-        <div className="room-heading study-room-context">
+        <div
+          className={`room-heading study-room-context ${teacher ? "" : "study-student-context"}`}
+        >
           {teacher && (
             <div className="study-room-title">
               <div className="eyebrow">教員用ダッシュボード</div>
@@ -456,8 +458,9 @@ export function StudyRoom({
           )}
           <section className="panel study-section study-price-panel">
             <h2>
-              {teacher ? `市場${market.id}・` : ""}
-              {priceScopeLabel}の取引価格
+              {teacher
+                ? `市場${market.id}・${priceScopeLabel}の取引価格`
+                : "取引価格"}
             </h2>
             {teacher && (
               <label className="field study-price-scope">

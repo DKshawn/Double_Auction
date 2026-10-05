@@ -489,6 +489,18 @@
   gap: 24px;
   margin-bottom: 12px;
 }
+.study-main .study-student-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+.study-student-context .study-institution,
+.study-student-context .study-institution > div {
+  min-width: 0;
+}
+.study-student-context .round-display {
+  grid-column: 2;
+  justify-self: center;
+}
 .study-room-context h1 {
   font-size: 20px;
   margin: 2px 0 0;
@@ -1483,6 +1495,9 @@
     align-items: center;
     gap: 12px;
   }
+  .study-main .study-student-context {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .study-room-context > .study-room-title {
     flex: 1;
   }
@@ -1490,7 +1505,8 @@
     flex-basis: 100%;
   }
   .study-room-context .round-display {
-    margin-left: auto;
+    margin-inline: auto;
+    grid-column: 1;
     width: auto;
     gap: 8px;
   }

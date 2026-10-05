@@ -57,7 +57,7 @@ export function StudyRoster({
             {waiting
               ? assigned
                 ? "市場と買い手・売り手の割り当てが完了しました。「実験を開始」で全市場の5秒カウントダウンが始まります。"
-                : "入室順に市場1から仮配置します。全員がそろったら、市場と買い手・売り手をランダムに割り当ててください。"
+                : "買い手・売り手の枠は固定です。入室順に仮配置し、全員がそろったら学生をランダムに割り当ててください。"
               : "実験開始時の割り当てです。各市場の買い手・売り手は実験終了まで固定されます。"}
           </p>
           {waiting && (
@@ -87,6 +87,13 @@ export function StudyRoster({
             const people = teacher.participants.filter(
               (p) => p.market === market.id,
             );
+            const byAlias = new Map(people.map((p) => [p.alias, p]));
+            const slots = Array.from({ length: size / 2 }, (_, index) =>
+              (["buyer", "seller"] as const).map((role) => ({
+                role,
+                alias: `${role === "buyer" ? "買" : "売"}${String(index + 1).padStart(2, "0")}`,
+              })),
+            ).flat();
             return (
               <section
                 className={`study-roster-room ${people.length === size ? "full" : ""}`}
@@ -106,27 +113,30 @@ export function StudyRoster({
                   {market.order.map((i) => INSTITUTIONS[i].short).join(" → ")}
                 </p>
                 <ul>
-                  {people.map((person) => (
-                    <li key={person.id}>
-                      <span className="study-roster-number" title="入室順">
-                        {person.joinOrder}
-                      </span>
-                      <b>{person.nickname}</b>
-                      {assigned && (
-                        <span className={`role-tag ${person.role}`}>
-                          {person.alias}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                  {Array.from(
-                    { length: Math.max(0, size - people.length) },
-                    (_, i) => (
-                      <li className="study-roster-empty" key={`empty-${i}`}>
-                        <span>—</span>入室待ち
+                  {slots.map(({ role, alias }) => {
+                    const person = byAlias.get(alias);
+                    return (
+                      <li
+                        key={alias}
+                        className={person ? undefined : "study-roster-empty"}
+                      >
+                        <span className={`role-tag ${role}`}>{alias}</span>
+                        {person ? (
+                          <>
+                            <b>{person.nickname}</b>
+                            <span
+                              className="study-roster-number"
+                              title="入室順"
+                            >
+                              {person.joinOrder}
+                            </span>
+                          </>
+                        ) : (
+                          <span>入室待ち</span>
+                        )}
                       </li>
-                    ),
-                  )}
+                    );
+                  })}
                 </ul>
                 <footer>
                   {assigned ? (
@@ -189,13 +199,11 @@ export function StudyWaitingRoom({
           <div className="study-waiting-icon">
             {assigned ? <Check size={32} /> : <Clock3 size={32} />}
           </div>
-          <p className="eyebrow">入室が完了しました</p>
-          <h1>
-            {assigned
-              ? "割り当てが完了しました"
-              : "教員による割り当てを待っています"}
-          </h1>
-          <p>{view.me.nickname} さん、この画面を開いたままお待ちください。</p>
+          <p className="eyebrow study-waiting-admission">入室が完了しました</p>
+          {assigned && <h1>割り当てが完了しました</h1>}
+          <p className="study-waiting-message">
+            {view.me.nickname} さん、この画面を開いたままお待ちください。
+          </p>
           <p>
             {assigned
               ? "教員が開始すると実験画面に切り替わり、5秒後に取引が始まります。"
@@ -205,14 +213,6 @@ export function StudyWaitingRoom({
             <li className="complete">
               <Check size={16} />
               入室
-            </li>
-            <li className={assigned ? "complete" : "current"}>
-              {assigned ? <Check size={16} /> : <UsersRound size={16} />}
-              割り当て
-            </li>
-            <li>
-              <Clock3 size={16} />
-              開始まで5秒
             </li>
           </ol>
           <div className="study-waiting-count">

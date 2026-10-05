@@ -265,7 +265,7 @@ test("demo and student screens use the lobby; countdown survives pause and tradi
         demo: true,
       }),
     );
-  assert.match(markup(), /教員による割り当てを待っています/);
+  assert.match(markup(), /入室が完了しました/);
   assert.doesNotMatch(markup(), /購入する単位ごとの価値|買いたい価格/);
   demo.toggleTeacher();
   assert.match(markup(), /学生の割り当て/);

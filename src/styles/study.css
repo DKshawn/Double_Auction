@@ -130,6 +130,8 @@
   min-width: 0;
 }
 .study-roster-room li b {
+  flex: 1;
+  min-width: 0;
   overflow-wrap: anywhere;
   font-weight: 500;
 }
@@ -137,18 +139,18 @@
   color: var(--muted);
   font-size: 10px;
   min-width: 19px;
+  margin-left: auto;
+  text-align: right;
 }
 .study-roster-room .role-tag {
   padding: 2px 4px;
   font-size: 10px;
-  margin-left: auto;
+  width: 34px;
+  justify-content: center;
   flex-shrink: 0;
 }
 .study-roster-empty {
   color: #b0b5c3;
-}
-.study-roster-empty > span {
-  min-width: 19px;
 }
 .study-roster-room footer {
   border-top: 1px solid var(--line);
@@ -181,10 +183,20 @@
   margin: 10px 0 22px;
   font-size: clamp(20px, 3vw, 28px);
 }
+.study-waiting-card > .study-waiting-admission {
+  justify-content: center;
+  text-align: center;
+  font-size: 16px;
+}
 .study-waiting-card > p:not(.eyebrow) {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.8;
+}
+.study-waiting-card > p.study-waiting-message {
+  margin: 22px 0 4px;
+  font-size: 18px;
+  font-weight: 700;
 }
 .study-waiting-steps {
   display: flex;
@@ -205,10 +217,6 @@
 }
 .study-waiting-steps .complete {
   color: #287559;
-}
-.study-waiting-steps .current {
-  color: var(--accent);
-  font-weight: 600;
 }
 .study-waiting-count {
   color: var(--muted);

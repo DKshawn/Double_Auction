@@ -293,8 +293,17 @@ async function main() {
       stats.fanoutMs.push(performance.now() - started);
     }
   }
+  await command(
+    teacher,
+    { type: "study-randomize", expectedRevision: 0 },
+    false,
+  );
   await command(teacher, { type: "start" }, false);
-  await until(() => clients.every((c) => c.view!.phase === "running"));
+  await until(() =>
+    clients.every(
+      (c) => c.view!.phase === "running" && c.view!.study!.market.round > 0,
+    ),
+  );
   await Promise.all(
     bases.map(async (base) => {
       const r = await fetch(base + "/api/local-profile", { method: "POST" });

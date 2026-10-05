@@ -20,7 +20,9 @@ import { StudyDetailDialog } from "./study-detail-dialog";
 import { studyTiming } from "@/lib/study-timing";
 
 export default function DemoRoom() {
-  const [session] = useState(() => new DemoSession());
+  const [session] = useState(
+    () => new DemoSession("cda", "buyer", Date.now(), { lobby: true }),
+  );
   // DemoEntry mounts only in the browser. The preview supplies a same-origin
   // toolbar host before loading this iframe; ordinary /demo keeps its toolbar.
   const [controlsTarget] = useState<HTMLElement | null>(() => {
@@ -35,6 +37,8 @@ export default function DemoRoom() {
   );
   const { view, now, teacher, role, institution } = state;
   const market = view.study!.market;
+  const needsAssignment =
+    view.phase === "waiting" && view.study!.lobby?.randomizedAt === null;
   useEffect(() => {
     const timer = window.setInterval(() => {
       // A presentation can sit in a background tab without losing the user's turn.
@@ -53,7 +57,7 @@ export default function DemoRoom() {
       ? "再開"
       : view.phase === "running"
         ? "一時停止"
-        : "デモを開始";
+        : "実験を開始";
   const skipLabel = teacher
     ? "30秒進める"
     : market.stage === "done"
@@ -70,7 +74,7 @@ export default function DemoRoom() {
       <div className="demo-controls">
         <div className="demo-options">
           <label className="field">
-            市場1の開始制度
+            開始制度（リセット）
             <select
               value={institution}
               onChange={(e) =>
@@ -88,7 +92,7 @@ export default function DemoRoom() {
             {teacher ? "表示対象" : "あなたの役割"}
             <select
               value={teacher ? "all" : role}
-              disabled={teacher}
+              disabled={teacher || view.phase !== "waiting" || !needsAssignment}
               onChange={(e) =>
                 session.reset(institution, e.target.value as Role)
               }
@@ -111,7 +115,7 @@ export default function DemoRoom() {
         <div className="demo-actions">
           <button
             className="button primary"
-            disabled={view.phase === "finished"}
+            disabled={view.phase === "finished" || needsAssignment}
             onClick={() => session.command({ type: control }, true)}
           >
             {control === "pause" ? <Pause size={16} /> : <Play size={16} />}
@@ -119,7 +123,7 @@ export default function DemoRoom() {
           </button>
           <button
             className="button secondary"
-            disabled={view.phase !== "running"}
+            disabled={view.phase !== "running" || market.stage === "countdown"}
             onClick={
               teacher || market.stage === "done"
                 ? () => session.advanceTime()
@@ -136,7 +140,8 @@ export default function DemoRoom() {
               <button
                 className="button secondary"
                 disabled={
-                  view.phase !== "running" || market.activeBuyer === "買01"
+                  view.phase !== "running" ||
+                  market.activeBuyer === view.me.alias
                 }
                 onClick={session.skipToHuman}
               >
@@ -153,32 +158,36 @@ export default function DemoRoom() {
           {DEMO_MARKETS}市場・あなた1人 ＋ 仮想参加者{DEMO_CAPACITY - 1}人
         </span>
         <p className="demo-hint">
-          {teacher
-            ? "各市場は独立して次の期へ進みます。一時停止・再開は全市場に適用されます。"
-            : view.phase === "waiting"
-              ? "「デモを開始」を押すと、下の取引画面で操作できます。"
-              : view.phase === "paused"
-                ? "時計と仮想参加者を停止中です。説明が終わったら「再開」を押してください。"
-                : market.stage === "done"
-                  ? "市場1の実験は終了しました。教員画面で全市場の進行状況と結果を確認できます。"
-                  : market.stage === "cda"
-                    ? "注文板の最良価格で取引するか、自分の希望価格を入力してください。各期2単位まで取引できます。"
-                    : market.stage === "call"
-                      ? "希望価格を送信し、「今の注文を清算」を押すと待たずに結果を確認できます。"
-                      : market.stage === "offer"
-                        ? role === "seller"
-                          ? "販売価格と数量を送信し、「提示を締め切って公開」を押してください。"
-                          : "「自分の購入順へ進む」を押すと、売り手の価格を見て購入できます。"
-                        : role === "seller"
-                          ? "仮想の買い手が順番に購入します。説明中は「一時停止」で時計を止められます。"
-                          : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。説明中は「一時停止」で時計を止められます。`}
+          {needsAssignment
+            ? "教員画面で「ランダムに割り当て」を押してから、実験を開始してください。"
+            : market.stage === "countdown"
+              ? "全市場の開始まで5秒間カウントダウンします。"
+              : teacher
+                ? "各市場は独立して次の期へ進みます。一時停止・再開は全市場に適用されます。"
+                : view.phase === "waiting"
+                  ? "割り当てが完了しました。「実験を開始」で5秒後に取引が始まります。"
+                  : view.phase === "paused"
+                    ? "時計と仮想参加者を停止中です。説明が終わったら「再開」を押してください。"
+                    : market.stage === "done"
+                      ? "市場1の実験は終了しました。教員画面で全市場の進行状況と結果を確認できます。"
+                      : market.stage === "cda"
+                        ? "注文板の最良価格で取引するか、自分の希望価格を入力してください。各期2単位まで取引できます。"
+                        : market.stage === "call"
+                          ? "希望価格を送信し、「今の注文を清算」を押すと待たずに結果を確認できます。"
+                          : market.stage === "offer"
+                            ? role === "seller"
+                              ? "販売価格と数量を送信し、「提示を締め切って公開」を押してください。"
+                              : "「自分の購入順へ進む」を押すと、売り手の価格を見て購入できます。"
+                            : role === "seller"
+                              ? "仮想の買い手が順番に購入します。説明中は「一時停止」で時計を止められます。"
+                              : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。説明中は「一時停止」で時計を止められます。`}
         </p>
         <StudyDetailDialog label="デモについて">
           <p>
-            12市場・192人の実験を体験できます。市場1はあなたと仮想参加者15人、他の11市場は全員が仮想参加者です。学生画面で買い手・売り手を選べます。教員画面では両側の注文・条件と全市場の結果を確認できます。
+            12市場・192人の実験を体験できます。あなた1人と仮想参加者191人が入室済みです。教員画面で市場と役割をランダムに割り当て、開始すると5秒後に取引が始まります。あなた以外の参加者は自動で取引します。
           </p>
           <p className="demo-note">
-            各市場は買い手8人・売り手8人です。3制度の6通りの順序を各2市場に割り当てます。各市場は終了した期から自動で次の期へ進み、15期で終了します。「30秒進める」で全市場の時間を進められます。教員画面でも、あなたの注文や購入は自動では行いません。市場1で取引するときは学生画面に戻ってください。
+            各市場は買い手8人・売り手8人です。3制度の6通りの順序を各2市場に割り当てます。各市場は終了した期から自動で次の期へ進み、15期で終了します。「30秒進める」で全市場の時間を進められます。教員画面でも、あなたの注文や購入は自動では行いません。取引するときは学生画面に戻ってください。
           </p>
           <p className="demo-note">
             デモ用の条件を使用します。制度・役割の変更と再読み込みでリセットされ、実験データには保存されません。仮想取引の結果は学生の収束を示すものではありません。

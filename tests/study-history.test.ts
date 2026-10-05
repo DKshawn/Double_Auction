@@ -36,6 +36,90 @@ function history(session: DemoSession) {
   return { section, rows };
 }
 
+test("Posted history retains published quotes and sold-out trades across periods", async () => {
+  const session = new DemoSession("posted", "buyer", 1000);
+  await session.command({ type: "start" }, true);
+  assert.deepEqual(history(session).rows, []);
+  assert.deepEqual(session.getSnapshot().view.study!.market.offerHistory, []);
+
+  session.skipToHuman();
+  const market = session.getSnapshot().view.study!.market;
+  assert.equal(market.offerHistory.length, 8);
+  const quotedRows = history(session).rows.filter(
+    (row) => row[2] === "価格提示",
+  );
+  assert.equal(quotedRows.length, 8);
+  assert.ok(quotedRows.every((row) => row[4] === "2単位"));
+  const offer = market.offers.find((offer) => offer.remaining === 2)!;
+  assert.ok(
+    offer,
+    "inventory must be available when the human buyer's turn starts",
+  );
+  const tradeCount = market.trades.length;
+  assert.equal(
+    await session.command({
+      type: "posted-buy",
+      offerId: offer.id,
+      quantity: 2,
+    }),
+    true,
+  );
+  const afterPurchase = session.getSnapshot().view.study!.market;
+  assert.equal(afterPurchase.trades.length, tradeCount + 2);
+  assert.ok(!afterPurchase.offers.some((item) => item.id === offer.id));
+  assert.equal(
+    afterPurchase.offerHistory.find((item) => item.id === offer.id)!.quantity,
+    2,
+  );
+  const { rows } = history(session);
+  assert.equal(rows.filter((row) => row[2] === "価格提示").length, 8);
+  assert.equal(
+    rows.filter((row) => row[2].startsWith("約定")).length,
+    tradeCount + 2,
+  );
+  assert.ok(rows.slice(0, 2).every((row) => row[2] === "約定あなた"));
+
+  for (
+    let turn = 0;
+    turn < 8 && session.getSnapshot().view.study!.market.round === 1;
+    turn++
+  ) {
+    session.skipStage();
+  }
+  assert.equal(session.getSnapshot().view.study!.market.round, 2);
+  assert.equal(session.getSnapshot().view.study!.market.stage, "offer");
+  assert.equal(
+    history(session).rows.filter((row) => row[2] === "価格提示").length,
+    8,
+  );
+  assert.ok(history(session).rows.every((row) => row[0].startsWith("第1期")));
+});
+
+test("sellers see only published Posted quotes in institution-relative periods", async () => {
+  const session = new DemoSession("call", "seller", 1000);
+  await session.command({ type: "start" }, true);
+  for (let stage = 0; stage < 25; stage++) session.skipStage();
+  assert.equal(session.getSnapshot().view.study!.market.round, 11);
+  assert.equal(session.getSnapshot().view.study!.market.institution, "posted");
+  assert.equal(
+    await session.command({ type: "posted-offer", price: 91, quantity: 2 }),
+    true,
+  );
+  assert.deepEqual(history(session).rows, []);
+  assert.doesNotMatch(history(session).section, /91|Call Market|CDA/);
+  session.skipStage();
+
+  const { section, rows } = history(session);
+  assert.equal(rows.length, 8);
+  assert.ok(rows.every((row) => row[0] === "第1期"));
+  assert.match(section, /全体の第11期/);
+  assert.deepEqual(rows.find((row) => row[2] === "価格提示あなた")?.slice(3), [
+    "91",
+    "2単位",
+  ]);
+  assert.doesNotMatch(section, /Call Market|CDA/);
+});
+
 test("Call history shows the fourth clearing after automatic period advance, including no-trade results", async () => {
   const session = new DemoSession("call", "buyer", 1000);
   await session.command({ type: "start" }, true);

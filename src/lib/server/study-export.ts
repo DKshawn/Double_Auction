@@ -1,4 +1,5 @@
 import { STUDY_RULES } from "../study-rules";
+import { STUDY_START_SECONDS } from "../study-types";
 import { studyMarketSize } from "../study-config";
 import { studyTiming } from "../study-timing";
 import { studyView } from "./study-view";
@@ -35,6 +36,12 @@ export function studyExport(
             tradersPerMarket: studyMarketSize(room.config),
           },
           settingsRevision: study.revision,
+          ...(study.lobby
+            ? {
+                assignment: study.lobby,
+                startCountdownSeconds: STUDY_START_SECONDS,
+              }
+            : {}),
           schedules: study.settings,
           equilibrium: teacher.equilibrium,
           participants: teacher.participants,
@@ -46,6 +53,7 @@ export function studyExport(
             periods: m.periods,
             clearings: m.clearings,
             orderHistory: m.orderHistory ?? [],
+            offerHistory: m.offerHistory ?? [],
           })),
           metrics: teacher.metrics,
           convergenceSlopes: teacher.slopes,

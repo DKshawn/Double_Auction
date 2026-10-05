@@ -15,6 +15,7 @@ import { Header } from "./shell";
 import { StudyDetailDialog } from "./study-detail-dialog";
 import { StudyMarketOverview } from "./study-market-overview";
 import { StudyMarketHistory } from "./study-market-history";
+import { StudyRoster, StudyWaitingRoom } from "./study-lobby";
 import {
   StudyPersonalHistory,
   StudyTradeFeedback,
@@ -54,6 +55,7 @@ type MarketProps = {
 };
 const stages: Record<StudyStage, string> = {
   waiting: "開始待ち",
+  countdown: "開始カウントダウン",
   cda: "連続取引",
   call: "非公開注文の受付",
   offer: "売り手の価格提示",
@@ -97,6 +99,11 @@ export function StudyRoom({
             order.round >= institutionStart &&
             order.round < institutionStart + 5,
         ),
+        offerHistory: (sourceMarket.offerHistory ?? []).filter(
+          (offer) =>
+            offer.round >= institutionStart &&
+            offer.round < institutionStart + 5,
+        ),
         clearings: sourceMarket.clearings.filter(
           (clearing) =>
             clearing.round >= institutionStart &&
@@ -115,6 +122,7 @@ export function StudyRoom({
     priceScope === "all" ? "全15期" : INSTITUTIONS[priceScope].short;
   const cdaLayout = !teacher && market.institution === "cda";
   const callLayout = !teacher && market.institution === "call";
+  const postedLayout = !teacher && market.institution === "posted";
   const integratedLayout = !teacher && market.institution !== "cda";
   const remaining =
     view.phase === "running" && market.deadline !== null
@@ -131,9 +139,22 @@ export function StudyRoom({
     disabled ||
     view.phase !== "running" ||
     remaining <= 0 ||
-    market.stage === "done";
+    ["done", "waiting", "countdown"].includes(market.stage);
+  if (!teacher && study.lobby && view.phase === "waiting")
+    return (
+      <StudyWaitingRoom
+        view={view}
+        connected={connected}
+        retry={retry}
+        toolbar={toolbar}
+        demo={demo}
+        error={error}
+      />
+    );
   return (
-    <div className={`study-shell ${demo ? "study-demo" : ""}`}>
+    <div
+      className={`study-shell ${demo ? "study-demo" : ""} ${teacher && study.lobby && view.phase === "waiting" ? "study-lobby-shell" : ""}`}
+    >
       {!teacher && (
         <StudyTradeFeedback
           key={`${view.code}-${view.me.id}`}
@@ -170,27 +191,28 @@ export function StudyRoom({
               <h1>{view.config.title}</h1>
             </div>
           )}
-          <section className="study-institution">
-            <Image
-              src="/fruits/apple.jpg"
-              alt="取引する商品：りんご"
-              width={44}
-              height={44}
-            />
-            <div>
-              <span className="eyebrow">
-                市場{market.id} · 制度内 第{market.institutionPeriod} / 5期
-              </span>
-              <h2>
-                {INSTITUTIONS[market.institution].short}{" "}
-                <small>{INSTITUTIONS[market.institution].name}</small>
-              </h2>
-              {market.institution !== "call" && (
-                <p>{INSTITUTIONS[market.institution].description}</p>
-              )}
-            </div>
-            <span className="study-units">1商品・各自2単位／期</span>
-          </section>
+          {!(teacher && study.lobby && view.phase === "waiting") && (
+            <section className="study-institution">
+              <Image
+                src="/fruits/apple.jpg"
+                alt="取引する商品：りんご"
+                width={44}
+                height={44}
+              />
+              <div>
+                <span className="eyebrow">
+                  市場{market.id} · 制度内 第{market.institutionPeriod} / 5期
+                </span>
+                <h2>
+                  {INSTITUTIONS[market.institution].short}{" "}
+                  <small>{INSTITUTIONS[market.institution].name}</small>
+                </h2>
+                {market.institution !== "call" && (
+                  <p>{INSTITUTIONS[market.institution].description}</p>
+                )}
+              </div>
+            </section>
+          )}
           {!teacher && (
             <div className="round-display">
               <div>
@@ -237,6 +259,9 @@ export function StudyRoom({
         </div>
         {teacher && !demo && (
           <TeacherControls view={view} command={command} disabled={disabled} />
+        )}
+        {teacher && study.lobby && (
+          <StudyRoster view={view} command={command} disabled={disabled} />
         )}
         {teacher && (
           <div className="study-teacher-tools">
@@ -409,163 +434,191 @@ export function StudyRoom({
               </div>
             </div>
           )}
-        <div
-          className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${integratedLayout ? "integrated-layout" : ""} ${callLayout ? "call-layout" : ""}`}
-        >
-          <div className="study-market-column">
-            {teacher ? (
-              <StudyMarketOverview
-                key={view.code}
-                teacher={teacher}
-                phase={view.phase}
-                now={now}
-                selected={market.id}
-                onSelect={setSelected}
-                demo={demo}
+        {!(teacher && study.lobby && view.phase === "waiting") && (
+          <div
+            className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${integratedLayout ? "integrated-layout" : ""} ${callLayout ? "call-layout" : ""} ${postedLayout ? "posted-layout" : ""}`}
+          >
+            <div className="study-market-column">
+              {teacher ? (
+                <StudyMarketOverview
+                  key={view.code}
+                  teacher={teacher}
+                  phase={view.phase}
+                  now={now}
+                  selected={market.id}
+                  onSelect={setSelected}
+                  demo={demo}
+                />
+              ) : (
+                <MarketActivity
+                  view={view}
+                  market={market}
+                  command={command}
+                  disabled={blocked}
+                >
+                  {integratedLayout && (
+                    <StudentConditions
+                      view={view}
+                      market={market}
+                      command={command}
+                      disabled={blocked}
+                      embedded
+                    />
+                  )}
+                </MarketActivity>
+              )}
+            </div>
+            {!teacher && (
+              <StudyMarketHistory
+                key={`${market.id}-${market.institution}`}
+                trades={market.trades}
+                orders={market.orderHistory}
+                clearings={market.clearings}
+                offerHistory={market.offerHistory}
+                participantId={view.me.id}
+                institution={market.institution}
+                standalone
               />
-            ) : (
-              <MarketActivity
+            )}
+            {cdaLayout && (
+              <StudentConditions
                 view={view}
                 market={market}
                 command={command}
                 disabled={blocked}
-              >
-                {integratedLayout && (
-                  <StudentConditions
-                    view={view}
-                    market={market}
-                    command={command}
-                    disabled={blocked}
-                    embedded
-                  />
-                )}
-              </MarketActivity>
+              />
             )}
-          </div>
-          {(cdaLayout || callLayout) && (
-            <StudyMarketHistory
-              key={`${market.id}-${market.institution}`}
-              trades={market.trades}
-              orders={market.orderHistory}
-              clearings={market.clearings}
-              participantId={view.me.id}
-              institution={market.institution}
-              standalone
-            />
-          )}
-          {cdaLayout && (
-            <StudentConditions
-              view={view}
-              market={market}
-              command={command}
-              disabled={blocked}
-            />
-          )}
-          <section className="panel study-section study-price-panel">
-            <h2>
-              {teacher
-                ? `市場${market.id}・${priceScopeLabel}の取引価格`
-                : "取引価格"}
-            </h2>
-            {teacher && (
-              <label className="field study-price-scope">
-                表示範囲
-                <select
-                  aria-label="価格履歴の表示範囲"
-                  value={teacherPriceScope}
-                  onChange={(event) =>
-                    setTeacherPriceScope(
-                      event.target.value as Institution | "all",
-                    )
-                  }
-                >
-                  <option value="all">全15期</option>
-                  {market.order.map((institution) => (
-                    <option key={institution} value={institution}>
-                      {INSTITUTIONS[institution].short}・制度内1〜5期
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <p className="muted">
-              {priceScope === "all"
-                ? market.order
-                    .map(
-                      (institution, index) =>
-                        `${index * 5 + 1}〜${index * 5 + 5}期：${INSTITUTIONS[institution].short}`,
-                    )
-                    .join(" ／ ")
-                : `市場${market.id}・${priceScopeLabel}の5期分。横軸は制度内1〜5期（全体の第${priceStart}〜${priceStart + 4}期）です。`}
-            </p>
-            <PriceChart
-              trades={priceTrades.map((trade) => ({
-                ...trade,
-                good: "apple",
-                round: trade.round - priceStart + 1,
-              }))}
-              rounds={pricePeriods}
-              ariaLabel={`${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? "全体の第1〜15期" : "制度内の第1〜5期"}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
-              periodAxis
-              fill
-              equilibrium={teacher?.equilibrium}
-            />
-            <StudyDetailDialog
-              key={`${market.id}-${priceScope}`}
-              label={`${priceScopeLabel}の取引履歴（${priceTrades.length}件）`}
-              title={`市場${market.id}・${priceScopeLabel}の取引履歴`}
-            >
-              <div className="study-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>
-                        {priceScope === "all" ? "全体の期" : "制度内の期"}
-                      </th>
-                      <th>制度</th>
-                      <th>時刻</th>
-                      <th>価格</th>
-                      <th>買い手</th>
-                      <th>売り手</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {priceTrades.map((t) => (
-                      <tr key={t.id}>
-                        <td title={`全体の第${t.round}期`}>
-                          {t.round - priceStart + 1}
-                        </td>
-                        <td>{INSTITUTIONS[t.institution].short}</td>
-                        <td>{timeLabel(t.at)}</td>
-                        <td>{money(t.price)}</td>
-                        <td>{t.buyerAlias}</td>
-                        <td>{t.sellerAlias}</td>
-                      </tr>
+            <section className="panel study-section study-price-panel">
+              <h2>
+                {teacher
+                  ? `市場${market.id}・${priceScopeLabel}の取引価格`
+                  : "取引価格"}
+              </h2>
+              {teacher && (
+                <label className="field study-price-scope">
+                  表示範囲
+                  <select
+                    aria-label="価格履歴の表示範囲"
+                    value={teacherPriceScope}
+                    onChange={(event) =>
+                      setTeacherPriceScope(
+                        event.target.value as Institution | "all",
+                      )
+                    }
+                  >
+                    <option value="all">全15期</option>
+                    {market.order.map((institution) => (
+                      <option key={institution} value={institution}>
+                        {INSTITUTIONS[institution].short}・制度内1〜5期
+                      </option>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </StudyDetailDialog>
-            {!teacher && (
-              <div className="study-personal-results">
-                <div className="study-profit">
-                  <span>
-                    今期の利益{" "}
-                    <b className={view.me.roundProfit < 0 ? "loss" : ""}>
-                      {money(view.me.roundProfit)}
-                    </b>
-                  </span>
-                  <span>
-                    累積利益{" "}
-                    <b className={view.me.profit < 0 ? "loss" : ""}>
-                      {money(view.me.profit)}
-                    </b>
-                  </span>
+                  </select>
+                </label>
+              )}
+              <p className="muted">
+                {priceScope === "all"
+                  ? market.order
+                      .map(
+                        (institution, index) =>
+                          `${index * 5 + 1}〜${index * 5 + 5}期：${INSTITUTIONS[institution].short}`,
+                      )
+                      .join(" ／ ")
+                  : `市場${market.id}・${priceScopeLabel}の5期分。横軸は制度内1〜5期（全体の第${priceStart}〜${priceStart + 4}期）です。`}
+              </p>
+              <PriceChart
+                trades={priceTrades.map((trade) => ({
+                  ...trade,
+                  good: "apple",
+                  round: trade.round - priceStart + 1,
+                }))}
+                rounds={pricePeriods}
+                ariaLabel={`${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? "全体の第1〜15期" : "制度内の第1〜5期"}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
+                periodAxis
+                fill
+                equilibrium={teacher?.equilibrium}
+              />
+              <StudyDetailDialog
+                key={`${market.id}-${priceScope}`}
+                label={`${priceScopeLabel}の取引履歴（${priceTrades.length}件）`}
+                title={`市場${market.id}・${priceScopeLabel}の取引履歴`}
+              >
+                <div className="study-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>
+                          {priceScope === "all" ? "全体の期" : "制度内の期"}
+                        </th>
+                        <th>制度</th>
+                        <th>時刻</th>
+                        <th>価格</th>
+                        <th>買い手</th>
+                        <th>売り手</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {priceTrades.map((t) => (
+                        <tr key={t.id}>
+                          <td title={`全体の第${t.round}期`}>
+                            {t.round - priceStart + 1}
+                          </td>
+                          <td>{INSTITUTIONS[t.institution].short}</td>
+                          <td>{timeLabel(t.at)}</td>
+                          <td>{money(t.price)}</td>
+                          <td>{t.buyerAlias}</td>
+                          <td>{t.sellerAlias}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            )}
-          </section>
-        </div>
+              </StudyDetailDialog>
+              {!teacher && (
+                <div className="study-personal-results">
+                  <div className="study-profit">
+                    <span>
+                      今期の利益{" "}
+                      <b className={view.me.roundProfit < 0 ? "loss" : ""}>
+                        {money(view.me.roundProfit)}
+                      </b>
+                    </span>
+                    <span>
+                      累積利益{" "}
+                      <b className={view.me.profit < 0 ? "loss" : ""}>
+                        {money(view.me.profit)}
+                      </b>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+        {!teacher && market.stage === "countdown" && (
+          <div
+            className="study-start-countdown"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="panel">
+              <span className="eyebrow">
+                市場{market.id} ·{" "}
+                {view.me.role === "buyer" ? "買い手" : "売り手"}
+              </span>
+              <h2>
+                {view.phase === "paused"
+                  ? "開始前に一時停止しています"
+                  : "まもなく実験が始まります"}
+              </h2>
+              <strong>{seconds || "開始中"}</strong>
+              <p>
+                {view.phase === "paused"
+                  ? "教員が再開するまでお待ちください。"
+                  : "あなたの条件を確認してください。カウントダウン後に注文できます。"}
+              </p>
+            </div>
+          </div>
+        )}
         {!demo && (
           <p className="room-bottom-note">注文・約定は自動で同期されます。</p>
         )}
@@ -656,6 +709,7 @@ function MarketActivity({
           trades={market.trades}
           orders={market.orderHistory}
           clearings={market.clearings}
+          offerHistory={market.offerHistory}
           showParticipants
         />
       )}
@@ -707,7 +761,14 @@ function TeacherControls({
         {["waiting", "review"].includes(view.phase) && (
           <button
             className="button primary"
-            disabled={disabled}
+            disabled={
+              disabled ||
+              Boolean(
+                view.study?.lobby &&
+                (view.participantCount !== view.config.capacity ||
+                  view.study.lobby.randomizedAt === null),
+              )
+            }
             onClick={() => void command({ type: "start" })}
           >
             実験を開始
@@ -737,7 +798,7 @@ function TeacherControls({
             disabled={
               disabled ||
               !view.study!.teacher!.markets.some(
-                (m) => !["done", "waiting"].includes(m.stage),
+                (m) => !["done", "waiting", "countdown"].includes(m.stage),
               )
             }
             onClick={() => setConfirm("end-round")}
@@ -756,8 +817,10 @@ function TeacherControls({
         )}
       </div>
       <p className="field-help">
-        実験を開始すると、各市場は{studyMarketSize(view.config)}
-        人そろい次第、取引を開始します。各期の終了後は自動で次の期へ進み、15期で終了します。
+        {view.study?.lobby
+          ? "全員の入室とランダム割り当てを確認して開始します。全市場で5秒後に取引が始まります。"
+          : `実験を開始すると、各市場は${studyMarketSize(view.config)}人そろい次第、取引を開始します。`}
+        各期の終了後は自動で次の期へ進み、15期で終了します。
       </p>
       {confirm && (
         <ConfirmDialog
@@ -912,6 +975,8 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
           key={market.id}
           trades={market.trades}
           orders={market.orderHistory}
+          clearings={market.clearings}
+          offerHistory={market.offerHistory}
           showParticipants
         />
       )}
@@ -1008,6 +1073,16 @@ function OfferBoard({
             </div>
           </div>
         </>
+      )}
+      {view.study!.teacher && (
+        <StudyMarketHistory
+          key={market.id}
+          trades={market.trades}
+          orders={market.orderHistory}
+          clearings={market.clearings}
+          offerHistory={market.offerHistory}
+          showParticipants
+        />
       )}
       {children}
     </section>

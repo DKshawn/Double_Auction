@@ -54,6 +54,7 @@ export class DemoSession {
     institution: Institution = "cda",
     role: Role = "buyer",
     now = Date.now(),
+    private options: { lobby?: boolean } = {},
   ) {
     this.now = now;
     this.role = role;
@@ -70,7 +71,7 @@ export class DemoSession {
   getSnapshot = () => this.snapshot;
 
   private get market() {
-    return this.room.study!.markets[0];
+    return marketFor(this.room, this.human);
   }
   private get human() {
     return this.room.participants.find((p) => p.id === this.humanId)!;
@@ -104,6 +105,7 @@ export class DemoSession {
     this.botClocks.clear();
     this.generation++;
     const study = createStudy(DEMO_MARKETS, DEMO_SETTINGS);
+    if (this.options.lobby) study.lobby = { revision: 0, randomizedAt: null };
     const firstOrder = [
       institution,
       ...(["cda", "call", "posted"] as const).filter((i) => i !== institution),
@@ -163,7 +165,12 @@ export class DemoSession {
         seat,
         role: side,
         alias,
-        nickname: human ? "あなた" : `仮想参加者 市場${market}・${alias}`,
+        nickname: human
+          ? "あなた"
+          : this.options.lobby
+            ? `仮想${String(seat + 1).padStart(3, "0")}`
+            : `仮想参加者 市場${market}・${alias}`,
+        joinedAt: this.now,
         limits: { apple: 0, banana: 0, orange: 0 },
         tokenHash: "",
         pinHash: "",
@@ -229,6 +236,10 @@ export class DemoSession {
     this.error = "";
     try {
       this.send(asTeacher ? "teacher" : this.human, command);
+      if (command.type === "study-randomize") {
+        this.role = this.human.role;
+        this.institution = this.market.order[0];
+      }
       this.runBots();
       this.publish();
       return true;

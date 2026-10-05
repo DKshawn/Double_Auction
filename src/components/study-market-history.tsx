@@ -6,6 +6,7 @@ import { INSTITUTIONS } from "@/lib/study-rules";
 import type {
   Clearing,
   Institution,
+  PostedOfferHistory,
   StudyMarketView,
   StudyOrderHistory,
 } from "@/lib/study-types";
@@ -25,6 +26,7 @@ type HistoryEntry = {
 } & (
   | { kind: "order"; order: StudyOrderHistory }
   | { kind: "trade"; trade: StudyMarketView["trades"][number] }
+  | { kind: "offer"; offer: PostedOfferHistory }
   | { kind: "clearing"; clearing: Clearing }
 );
 
@@ -32,6 +34,7 @@ function historyEntries(
   orders: StudyMarketView["orderHistory"],
   trades: StudyMarketView["trades"],
   clearings: Clearing[],
+  offerHistory: PostedOfferHistory[],
 ): HistoryEntry[] {
   const clearingKeys = new Set(clearings.map((c) => `${c.round}/${c.call}`));
   const unitKey = (round: number, participant: string, unit: number) =>
@@ -84,6 +87,13 @@ function historyEntries(
       sequence: 0,
       clearing,
     })),
+    ...offerHistory.map((offer) => ({
+      kind: "offer" as const,
+      id: `offer-${offer.id}`,
+      at: offer.at,
+      sequence: offer.sequence,
+      offer,
+    })),
   ];
   return entries.sort((a, b) => b.at - a.at || b.sequence - a.sequence);
 }
@@ -92,6 +102,7 @@ export function StudyMarketHistory({
   trades,
   orders,
   clearings = EMPTY_CLEARINGS,
+  offerHistory = EMPTY_OFFERS,
   participantId,
   showParticipants = false,
   standalone = false,
@@ -100,13 +111,14 @@ export function StudyMarketHistory({
   trades: StudyMarketView["trades"];
   orders: StudyMarketView["orderHistory"];
   clearings?: Clearing[];
+  offerHistory?: PostedOfferHistory[];
   participantId?: string;
   showParticipants?: boolean;
   standalone?: boolean;
   institution?: Institution;
 }) {
   const list = useRef<HTMLDivElement>(null);
-  const newestFirst = historyEntries(orders, trades, clearings);
+  const newestFirst = historyEntries(orders, trades, clearings, offerHistory);
   // Existing history must not flash on entry. Remember completed highlights so
   // polling, scrolling and reopening the teacher dialog do not replay them.
   const [seenIds, setSeenIds] = useState(
@@ -151,10 +163,14 @@ export function StudyMarketHistory({
         </div>
       </div>
       <p className="study-history-caption">
-        本市場・{scopeLabel}
+        本市場・{institution === "posted" ? "制度内1〜5期" : scopeLabel}
         {institution === "call"
           ? "・新しい順。各回の清算価格と約定数量を表示します。個別の注文価格は公開しません。"
-          : "・新しい順。約定済み注文は歩み値に統合。終了した注文は取引できません。"}
+          : institution === "posted"
+            ? "・新しい順。提示数量は価格公開時の数量です。"
+            : institution === "cda"
+              ? "・新しい順。終了した注文は取引できません。"
+              : "・新しい順。約定済み注文は歩み値に統合。終了した注文は取引できません。"}
       </p>
       <div
         ref={list}
@@ -212,6 +228,45 @@ export function StudyMarketHistory({
                   </tr>
                 );
               }
+              if (entry.kind === "offer") {
+                const offer = entry.offer;
+                return (
+                  <tr
+                    key={entry.id}
+                    className={[
+                      offer.participantId === participantId
+                        ? "study-own-order"
+                        : "",
+                      !seenIds.has(entry.id) ? "study-history-new" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onAnimationEnd={() => finishHighlight(entry.id)}
+                  >
+                    <td title={`全体の第${offer.round}期`}>
+                      第
+                      {institution ? ((offer.round - 1) % 5) + 1 : offer.round}
+                      期{!institution && <small>Posted Offer</small>}
+                    </td>
+                    <td title={`価格公開 ${timeLabel(entry.at)}`}>
+                      {timeLabel(entry.at)}
+                    </td>
+                    <td className="study-history-kind">
+                      <span className="sell-text">価格提示</span>
+                      {offer.participantId === participantId && (
+                        <span className="study-own-order-tag">あなた</span>
+                      )}
+                      {showParticipants && (
+                        <small className="study-history-participants">
+                          {offer.alias}
+                        </small>
+                      )}
+                    </td>
+                    <td>{decimal(offer.price)}</td>
+                    <td>{offer.quantity}単位</td>
+                  </tr>
+                );
+              }
               const order = entry.kind === "order" ? entry.order : null;
               const trade = entry.kind === "trade" ? entry.trade : null;
               const own = order
@@ -236,9 +291,11 @@ export function StudyMarketHistory({
                       ? (((order?.round ?? trade!.round) - 1) % 5) + 1
                       : (order?.round ?? trade!.round)}
                     期
-                    <small>
-                      {INSTITUTIONS[trade?.institution ?? "cda"].short}
-                    </small>
+                    {!institution && (
+                      <small>
+                        {INSTITUTIONS[trade?.institution ?? "cda"].short}
+                      </small>
+                    )}
                   </td>
                   <td
                     title={
@@ -293,7 +350,9 @@ export function StudyMarketHistory({
           <p className="study-empty">
             {institution === "call"
               ? "締切後に清算結果が表示されます。"
-              : "まだ注文履歴・約定はありません。"}
+              : institution === "posted"
+                ? "まだ価格提示・約定はありません。"
+                : "まだ注文履歴・約定はありません。"}
           </p>
         )}
       </div>
@@ -302,3 +361,4 @@ export function StudyMarketHistory({
 }
 
 const EMPTY_CLEARINGS: Clearing[] = [];
+const EMPTY_OFFERS: PostedOfferHistory[] = [];

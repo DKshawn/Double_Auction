@@ -47,7 +47,7 @@ test(
           svc.join(teacher.code, `local-${i}`, "123456"),
         ),
       );
-      const roster = await Promise.all(
+      let roster = await Promise.all(
         students.map(async (s) => ({
           ...s,
           view: await svc.view(s.code, s.token),
@@ -66,7 +66,21 @@ test(
           command,
         });
       };
-      await send(teacher.token, { type: "start" });
+      await send(teacher.token, {
+        type: "study-randomize",
+        expectedRevision: 0,
+      });
+      const countdown = await send(teacher.token, { type: "start" });
+      await delay(
+        Math.max(0, countdown.study!.market.deadline! - countdown.serverTime) +
+          20,
+      );
+      roster = await Promise.all(
+        students.map(async (s) => ({
+          ...s,
+          view: await svc.view(s.code, s.token),
+        })),
+      );
       const group = (id: number) =>
         roster.filter((s) => s.view.study!.market.id === id);
       const seller = group(1).find((s) => s.view.me.role === "seller")!;

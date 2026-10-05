@@ -72,7 +72,11 @@ export class AuctionService {
     const token = newToken();
     const hash = passwordHash(password);
     const seats = Array.from({ length: config.capacity }, (_, i) => i);
-    for (let i = seats.length - 1; i > 0; i--) {
+    for (
+      let i = config.protocol === "institutions-v1" ? 0 : seats.length - 1;
+      i > 0;
+      i--
+    ) {
       const j = randomInt(i + 1);
       [seats[i], seats[j]] = [seats[j], seats[i]];
     }
@@ -86,7 +90,12 @@ export class AuctionService {
         const now = await databaseTime(tx);
         const room: Room = {
           ...(config.protocol === "institutions-v1"
-            ? { study: newStudy(config.markets!, studyMarketSize(config)) }
+            ? {
+                study: {
+                  ...newStudy(config.markets!, studyMarketSize(config)),
+                  lobby: { revision: 0, randomizedAt: null },
+                },
+              }
             : {}),
           code,
           config,
@@ -220,9 +229,13 @@ export class AuctionService {
             : room.round,
         );
       } else {
-        if (room.study ? room.phase === "finished" : room.phase !== "waiting")
+        if (
+          room.study && !room.study.lobby
+            ? room.phase === "finished"
+            : room.phase !== "waiting"
+        )
           throw new AuctionError(
-            room.study
+            room.study && room.phase === "finished"
               ? "実験は終了しています。記録を確認する場合は以前の名前と暗証番号で再入室してください。"
               : "実験開始後は新しく参加できません。以前の名前と暗証番号で再入室してください。",
             409,
@@ -243,6 +256,7 @@ export class AuctionService {
               : seat - room.config.capacity / 2) + 1;
         participant = {
           id: randomUUID(),
+          joinedAt: now,
           alias: `${role === "buyer" ? "買" : "売"}${String(number).padStart(2, "0")}`,
           nickname,
           role,
@@ -353,7 +367,11 @@ export class AuctionService {
       await this.locked(code, () => undefined);
       return this.scope(code, token);
     }
-    return root.storageVersion && actor !== "teacher"
+    // Admission and reallocation are room-wide transactions. Avoid capturing an
+    // old market scope while a teacher is moving participants between markets.
+    return root.storageVersion &&
+      actor !== "teacher" &&
+      !(root.study?.lobby && root.phase === "waiting")
       ? studyMarketId(root.config, actor.seat)
       : undefined;
   }

@@ -146,6 +146,12 @@ export const commandSchema = z
     command: z.discriminatedUnion("type", [
       z
         .object({
+          type: z.literal("study-randomize"),
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
+      z
+        .object({
           type: z.literal("study-timing"),
           timing: studyTimingSchema,
           expectedRevision: z.number().int().min(0),

@@ -54,6 +54,11 @@ async function classroom(markets = 1, marketSize = 16) {
     "",
   );
   const students: { token: string; view: RoomView }[] = [];
+  // Keep these matching/storage regressions on the pre-lobby saved-room format.
+  // The current admission flow is exercised end-to-end in study-lobby.test.ts.
+  const existing = await service.export(teacher.code, teacher.token);
+  delete existing.room.study!.lobby;
+  await saveFixture(existing.room);
   for (let i = 0; i < markets * marketSize; i++) {
     const login = await service.join(teacher.code, `学生${i + 1}`, "123456");
     students.push({
@@ -253,7 +258,7 @@ test("teacher timing is persisted, pushed to every market, audited and locked on
     stops.forEach((stop) => stop());
     await broker.close();
   }
-  // Even while an empty market is still waiting, opening the experiment locks timing.
+  // Previously saved rooms retain independent admission and timing locks.
   const waiting = await service.create(
     {
       title: "開始後の待機市場",
@@ -267,6 +272,9 @@ test("teacher timing is persisted, pushed to every market, audited and locked on
     "Test-Teacher-2026",
     "",
   );
+  const existingWaiting = await service.export(waiting.code, waiting.token);
+  delete existingWaiting.room.study!.lobby;
+  await saveFixture(existingWaiting.room);
   await service.command(waiting.code, waiting.token, {
     requestId: randomUUID(),
     expectedRound: 0,
@@ -714,7 +722,7 @@ test("Posted Offer rejects zero quantity without locking the seller and persists
   );
 });
 
-test("teacher opens admission before anyone joins; each full market starts once and late arrivals begin in period one", async () => {
+test("legacy saved rooms: each full market starts once and late arrivals begin in period one", async () => {
   const teacher = await service.create(
     {
       title: "独立進行",
@@ -728,6 +736,7 @@ test("teacher opens admission before anyone joins; each full market starts once 
     "",
   );
   const snapshot = await service.export(teacher.code, teacher.token);
+  delete snapshot.room.study!.lobby;
   snapshot.room.seats = Array.from({ length: 96 }, (_, i) => i);
   snapshot.room.study!.markets[0].order = ["cda", "call", "posted"];
   snapshot.room.study!.markets[1].order = ["call", "cda", "posted"];

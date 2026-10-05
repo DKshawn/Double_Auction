@@ -7,9 +7,12 @@ import type {
   StudyOrder,
   StudyOrderHistory,
   PostedOffer,
+  PostedOfferHistory,
   StudyTrade,
   Clearing,
+  StudyLobby,
 } from "./study-types";
+import { STUDY_START_SECONDS } from "./study-types";
 import { STUDY_RULES } from "./study-rules";
 import { MAX_STAGE_SECONDS, studyTiming } from "./study-timing";
 import {
@@ -17,6 +20,7 @@ import {
   studyMarketId,
   studyMarketSize,
   studyRoleIndex,
+  studyRole,
 } from "./study-config";
 import {
   AuctionError,
@@ -41,6 +45,8 @@ export type StudyMarket = {
   // Optional for rooms saved before public CDA order history was introduced.
   orderHistory?: StudyOrderHistory[];
   offers: PostedOffer[];
+  // Added only when prices become public; optional for older saved rooms.
+  offerHistory?: PostedOfferHistory[];
   submitted: string[];
   buyerOrder: string[];
   buyerIndex: number;
@@ -60,6 +66,8 @@ export type StudyMarket = {
 };
 export type Study = {
   protocol: "institutions-v1";
+  // Absent in existing rooms, which retain their independent admission flow.
+  lobby?: StudyLobby;
   settings: StudySettings;
   revision: number;
   markets: StudyMarket[];
@@ -134,6 +142,7 @@ export function createStudy(count: number, settings: StudySettings): Study {
       orders: [],
       orderHistory: [],
       offers: [],
+      offerHistory: [],
       submitted: [],
       buyerOrder: [],
       buyerIndex: 0,
@@ -493,7 +502,8 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
     while (m.deadline !== null && now >= m.deadline) {
       changed = true;
       const at = m.deadline;
-      if (m.stage === "cda") finishMarket(room, m, events, at, "complete");
+      if (m.stage === "countdown") startMarket(room, m, events, at);
+      else if (m.stage === "cda") finishMarket(room, m, events, at, "complete");
       else if (m.stage === "call") {
         clearCall(room, m, events, at);
         if (m.call === STUDY_RULES.callsPerPeriod)
@@ -510,10 +520,30 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
         );
         m.buyerIndex = 0;
         schedule(m, "purchase", at, studyTiming(room.config).buyerSeconds);
-        log(room, m, events, at, "offers-published", "system", {
-          offers: m.offers,
-          buyerOrder: m.buyerOrder,
-        });
+        const sequence = log(
+          room,
+          m,
+          events,
+          at,
+          "offers-published",
+          "system",
+          {
+            offers: m.offers,
+            buyerOrder: m.buyerOrder,
+          },
+        );
+        (m.offerHistory ??= []).push(
+          ...m.offers.map((offer) => ({
+            id: offer.id,
+            participantId: offer.participantId,
+            alias: offer.alias,
+            price: offer.price,
+            quantity: offer.quantity,
+            round: marketRound(room, m),
+            at,
+            sequence,
+          })),
+        );
       } else if (m.stage === "purchase") {
         log(room, m, events, at, "buyer-timeout", m.buyerOrder[m.buyerIndex]);
         nextBuyer(room, m, events, at);
@@ -548,7 +578,54 @@ export function executeStudy(
     );
   const cmd = request.command,
     study = room.study!;
-  if (cmd.type === "study-settings" || cmd.type === "study-timing") {
+  if (cmd.type === "study-randomize") {
+    if (actor !== "teacher")
+      throw new AuctionError("この操作は教員のみ利用できます。", 403);
+    if (!study.lobby || room.phase !== "waiting" || room.round !== 0)
+      throw new AuctionError("割り当ては実験開始前のみ変更できます。", 409);
+    if (room.participants.length !== room.config.capacity)
+      throw new AuctionError(
+        "全員が入室してからランダムに割り当ててください。",
+        409,
+      );
+    if (cmd.expectedRevision !== study.lobby.revision)
+      throw new AuctionError(
+        "割り当てが更新されています。最新の画面を確認してください。",
+        409,
+      );
+    const before = room.participants.map((p) => ({
+      id: p.id,
+      seat: p.seat,
+      role: p.role,
+    }));
+    room.seats = shuffled(
+      Array.from({ length: room.config.capacity }, (_, i) => i),
+    );
+    for (const [i, person] of room.participants.entries()) {
+      person.seat = room.seats[i];
+      person.role = studyRole(room.config, person.seat);
+      person.alias = `${person.role === "buyer" ? "買" : "売"}${String(studyRoleIndex(room.config, person.seat) + 1).padStart(2, "0")}`;
+      person.limits = {
+        apple: unitLimits(room, person)[0],
+        banana: 0,
+        orange: 0,
+      };
+    }
+    study.lobby.revision++;
+    study.lobby.randomizedAt = now;
+    emit(room, events, now, "participants-randomized", actorId, {
+      revision: study.lobby.revision,
+      before,
+      assignments: room.participants.map((p) => ({
+        id: p.id,
+        seat: p.seat,
+        market: studyMarketId(room.config, p.seat),
+        role: p.role,
+        alias: p.alias,
+        unitLimits: unitLimits(room, p),
+      })),
+    });
+  } else if (cmd.type === "study-settings" || cmd.type === "study-timing") {
     if (actor !== "teacher")
       throw new AuctionError("この操作は教員のみ利用できます。", 403);
     if (room.round !== 0 || room.phase !== "waiting")
@@ -595,6 +672,25 @@ export function executeStudy(
     if (cmd.type === "start") {
       if (!["waiting", "review"].includes(room.phase))
         throw new AuctionError("今は実験を開始できません。", 409);
+      if (study.lobby) {
+        if (room.participants.length !== room.config.capacity)
+          throw new AuctionError(
+            "全員の入室を待ってから開始してください。",
+            409,
+          );
+        if (study.lobby.randomizedAt === null)
+          throw new AuctionError(
+            "先に学生をランダムに割り当ててください。",
+            409,
+          );
+        for (const m of study.markets)
+          schedule(m, "countdown", now, STUDY_START_SECONDS);
+        emit(room, events, now, "start-countdown", actorId, {
+          seconds: STUDY_START_SECONDS,
+          startsAt: now + STUDY_START_SECONDS * 1000,
+          assignmentRevision: study.lobby.revision,
+        });
+      }
       room.phase = "running";
       emit(room, events, now, "experiment-started", actorId);
       settleStudy(room, now, events);
@@ -624,13 +720,22 @@ export function executeStudy(
       if (
         cmd.type === "end-round" &&
         (!["running", "paused"].includes(room.phase) ||
-          !study.markets.some((m) => !["done", "waiting"].includes(m.stage)))
+          !study.markets.some(
+            (m) => !["done", "waiting", "countdown"].includes(m.stage),
+          ))
       )
         throw new AuctionError("進行中の期がありません。", 409);
       if (room.phase === "finished")
         throw new AuctionError("実験は終了しています。", 409);
       for (const m of study.markets)
         if (!["done", "waiting"].includes(m.stage)) {
+          if (m.stage === "countdown") {
+            m.stage = "done";
+            m.epoch++;
+            m.deadline = null;
+            m.remainingMs = 0;
+            continue;
+          }
           if (room.phase === "paused") m.spreadAt = now;
           finishMarket(room, m, events, now, "interrupted");
           if (cmd.type === "end-round" && marketRound(room, m) < 15) {
@@ -651,7 +756,10 @@ export function executeStudy(
     if (actor === "teacher")
       throw new AuctionError("教員は取引できません。", 403);
     const m = marketFor(room, actor);
-    if (room.phase !== "running" || ["done", "waiting"].includes(m.stage))
+    if (
+      room.phase !== "running" ||
+      ["done", "waiting", "countdown"].includes(m.stage)
+    )
       throw new AuctionError("現在は取引時間外です。", 409);
     if (request.expectedStage !== stageKey(room, m))
       throw new AuctionError(

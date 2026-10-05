@@ -111,22 +111,25 @@ export function StudyMarketOverview({
                 interrupted: "途中終了",
                 paused: "一時停止",
                 running:
-                  market.stage === "call"
-                    ? `受付 ${market.call}/4`
-                    : market.stage === "offer"
-                      ? "価格提示"
-                      : "取引中",
+                  market.stage === "countdown"
+                    ? "開始まで"
+                    : market.stage === "call"
+                      ? `受付 ${market.call}/4`
+                      : market.stage === "offer"
+                        ? "価格提示"
+                        : "取引中",
               }[state];
               const remaining =
                 phase === "running" && market.deadline !== null
                   ? Math.max(0, market.deadline - now)
                   : market.remainingMs;
               const seconds = Math.ceil(remaining / 1000);
-              const time = !market.round
-                ? "--:--"
-                : ["complete", "interrupted"].includes(state)
-                  ? "終了"
-                  : `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+              const time =
+                !market.round && market.stage !== "countdown"
+                  ? "--:--"
+                  : ["complete", "interrupted"].includes(state)
+                    ? "終了"
+                    : `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
               return (
                 <tr
                   key={market.id}

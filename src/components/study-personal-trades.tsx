@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, X } from "lucide-react";
 import { decimal } from "@/lib/client";
-import { INSTITUTIONS } from "@/lib/study-rules";
 import type { StudyView } from "@/lib/study-types";
 
 type PersonalTrade = StudyView["myTrades"][number];
@@ -113,7 +112,6 @@ export function StudyPersonalHistory({ trades }: { trades: PersonalTrade[] }) {
                 <tr key={trade.id}>
                   <td title={`全体の第${trade.round}期`}>
                     第{((trade.round - 1) % 5) + 1}期
-                    <small>{INSTITUTIONS[trade.institution].short}</small>
                   </td>
                   <td>{trade.unit}</td>
                   <td>{decimal(trade.price)}</td>

@@ -228,13 +228,15 @@ export function useRoom(code: string) {
         round: next!.round,
         message: newTrade
           ? `${goodName(newTrade.good)}を ${newTrade.price} 円で取引しました。`
-          : command.type === "quote"
-            ? "注文を受け付けました。"
-            : command.type === "cancel"
-              ? "注文を取り消しました。"
-              : command.type === "update-markets"
-                ? "価値と費用を保存しました。入室済みの学生にも反映されます。"
-                : "実験の状態を更新しました。",
+          : command.type === "study-randomize"
+            ? "学生の市場と買い手・売り手をランダムに割り当てました。"
+            : command.type === "quote"
+              ? "注文を受け付けました。"
+              : command.type === "cancel"
+                ? "注文を取り消しました。"
+                : command.type === "update-markets"
+                  ? "価値と費用を保存しました。入室済みの学生にも反映されます。"
+                  : "実験の状態を更新しました。",
       });
       return true;
     } catch (e) {

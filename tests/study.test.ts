@@ -625,6 +625,86 @@ test("Posted Offer locks offers, hides them before 60s and enforces random buyer
   assert.equal(m.periods[0].completion, "complete");
 });
 
+test("Posted quote history preserves public snapshots without leaking pending offers or other markets", () => {
+  const { room, study, send, buyers, sellers, events } = classroom(
+    2,
+    "posted",
+    4,
+  );
+  study.markets.forEach((market) => {
+    market.order = ["posted", "cda", "call"];
+  });
+  send("teacher", { type: "start" }, 1000);
+  send(sellers[0], { type: "posted-offer", price: 91, quantity: 2 }, 2000);
+  send(sellers[2], { type: "posted-offer", price: 93, quantity: 2 }, 2000);
+  assert.deepEqual(
+    toView(room, buyers[0], 2000, "local").study!.market.offerHistory,
+    [],
+  );
+  assert.deepEqual(
+    toView(room, "teacher", 2000, "local").study!.teacher!.markets[0]
+      .offerHistory,
+    [],
+  );
+
+  settleDeadline(room, 61000, events);
+  const market = study.markets[0];
+  const first = buyers.find((buyer) => buyer.id === market.buyerOrder[0])!;
+  send(
+    first,
+    { type: "posted-buy", offerId: market.offers[0].id, quantity: 1 },
+    62000,
+  );
+  assert.equal(market.offers[0].remaining, 1);
+  const published = toView(room, first, 62000, "local").study!.market
+    .offerHistory;
+  assert.deepEqual(
+    published.map(({ price, quantity, round, at }) => ({
+      price,
+      quantity,
+      round,
+      at,
+    })),
+    [{ price: 91, quantity: 2, round: 1, at: 61000 }],
+  );
+  assert.deepEqual(
+    toView(room, buyers[2], 62000, "local").study!.market.offerHistory.map(
+      (offer) => offer.price,
+    ),
+    [93],
+  );
+
+  settleDeadline(room, 81000, events);
+  assert.equal(market.round, 2);
+  send(sellers[0], { type: "posted-offer", price: 177, quantity: 1 }, 82000);
+  assert.deepEqual(
+    toView(room, first, 82000, "local").study!.market.offerHistory,
+    published,
+  );
+  const restored = JSON.parse(JSON.stringify(room)) as Room;
+  assert.deepEqual(
+    toView(restored, first, 82000, "local").study!.market.offerHistory,
+    published,
+  );
+  const exported = JSON.parse(
+    exportData(room, events, 82000, "settings").content,
+  );
+  assert.deepEqual(exported.markets[0].offerHistory, published);
+
+  settleDeadline(room, 141000, events);
+  assert.deepEqual(
+    toView(room, first, 141000, "local").study!.market.offerHistory.map(
+      (offer) => offer.price,
+    ),
+    [91, 177],
+  );
+  delete restored.study!.markets[0].offerHistory;
+  assert.deepEqual(
+    toView(restored, first, 82000, "local").study!.market.offerHistory,
+    [],
+  );
+});
+
 test("Posted Offer advances without seller submissions, trades or inferred zero-unit offers", () => {
   const { room, study, send, buyers, sellers, events } = classroom(1, "posted");
   send("teacher", { type: "start" });

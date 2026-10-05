@@ -8,7 +8,12 @@ export type StudyTiming = {
 };
 export type StudySettings = { values: UnitPair[]; costs: UnitPair[] };
 export type StudyStage =
-  "waiting" | "cda" | "call" | "offer" | "purchase" | "done";
+  "waiting" | "countdown" | "cda" | "call" | "offer" | "purchase" | "done";
+export type StudyLobby = {
+  revision: number;
+  randomizedAt: number | null;
+};
+export const STUDY_START_SECONDS = 5;
 export type StudyOrder = {
   id: string;
   participantId: string;
@@ -32,6 +37,11 @@ export type PostedOffer = {
   price: number;
   quantity: number;
   remaining: number;
+};
+export type PostedOfferHistory = Omit<PostedOffer, "remaining"> & {
+  round: number;
+  at: number;
+  sequence: number;
 };
 export type StudyTrade = {
   id: string;
@@ -91,6 +101,7 @@ export type StudyMarketView = {
   orders: StudyOrder[];
   orderHistory: StudyOrderHistory[];
   offers: PostedOffer[];
+  offerHistory: PostedOfferHistory[];
   clearings: Clearing[];
   trades: Omit<StudyTrade, "value" | "cost">[];
   myOrders: StudyOrder[];
@@ -99,6 +110,7 @@ export type StudyMarketView = {
 };
 export type StudyView = {
   protocol: "institutions-v1";
+  lobby?: StudyLobby;
   marketCount: number;
   settingsRevision: number;
   market: StudyMarketView;
@@ -123,6 +135,8 @@ export type StudyView = {
       role: "buyer" | "seller";
       limits: UnitPair;
       profit: number;
+      joinOrder: number;
+      joinedAt?: number;
     }[];
     metrics: StudyMetric[];
     slopes: {
@@ -141,6 +155,7 @@ export type StudyView = {
   };
 };
 export type StudyCommand =
+  | { type: "study-randomize"; expectedRevision: number }
   | {
       type: "study-timing";
       timing: StudyTiming;

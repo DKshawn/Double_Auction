@@ -179,6 +179,18 @@ function publicMarket(
     offers: ["purchase", "done"].includes(m.stage)
       ? m.offers.filter((o) => o.remaining > 0)
       : [],
+    offerHistory: (m.offerHistory ?? [])
+      .filter((offer) => visible(offer.round))
+      .map((offer) => ({
+        id: offer.id,
+        participantId: offer.participantId,
+        alias: offer.alias,
+        price: offer.price,
+        quantity: offer.quantity,
+        round: offer.round,
+        at: offer.at,
+        sequence: offer.sequence,
+      })),
     clearings: m.clearings.filter((c) => visible(c.round)),
     // Explicit projection: other participants' values and costs never enter a student response.
     trades: m.trades
@@ -268,10 +280,14 @@ export function studyView(
         },
     study: {
       protocol: study.protocol,
+      ...(study.lobby ? { lobby: { ...study.lobby } } : {}),
       marketCount: room.config.markets ?? study.markets.length,
       settingsRevision: study.revision,
       market: publicState,
-      unitLimits: teacher ? null : unitLimits(room, actor),
+      unitLimits:
+        teacher || (study.lobby && room.phase === "waiting")
+          ? null
+          : unitLimits(room, actor),
       unitsUsed: teacher ? 0 : unitsUsed(room, actor),
       myTrades: teacher
         ? []
@@ -299,7 +315,7 @@ export function studyView(
       markets: study.markets.map((m) =>
         publicMarket(room, m, actor, now, cache),
       ),
-      participants: room.participants.map((p) => ({
+      participants: room.participants.map((p, i) => ({
         id: p.id,
         market: marketFor(room, p).id,
         nickname: p.nickname,
@@ -307,6 +323,8 @@ export function studyView(
         role: p.role,
         limits: unitLimits(room, p),
         profit: studyProfit(room, p),
+        joinOrder: i + 1,
+        joinedAt: p.joinedAt,
       })),
       metrics,
       slopes: convergenceSlopes(metrics),

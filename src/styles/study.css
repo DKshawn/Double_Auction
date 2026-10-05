@@ -679,7 +679,7 @@
   padding: 12px;
 }
 .call-layout .study-market-workspace > .muted {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
 }
 .study-section .study-call-guidance {
@@ -822,16 +822,30 @@
 .study-personal-history th,
 .study-personal-history td {
   padding: 4px 5px;
-  font-size: 11px;
+}
+.study-personal-history th {
+  font-size: 13px;
+  white-space: normal;
+}
+.study-personal-history th:nth-child(2) {
+  white-space: nowrap;
+}
+.study-personal-history td {
+  font-size: 14px;
+}
+.study-personal-history td:first-child {
+  font-size: 13px;
+  white-space: normal;
 }
 .study-personal-history td small {
-  display: inline;
-  margin-left: 4px;
+  display: block;
+  margin-top: 2px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: inherit;
+  white-space: nowrap;
 }
 .study-personal-history-scroll {
-  max-height: 132px;
+  max-height: 160px;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -1063,6 +1077,9 @@
   flex-wrap: wrap;
   margin-bottom: 4px;
 }
+.study-market-history .study-history-heading h3 {
+  font-size: 16px;
+}
 .study-history-count {
   padding: 2px 5px;
   border-radius: 4px;
@@ -1088,6 +1105,7 @@
 .study-tape-rows table {
   table-layout: fixed;
   margin: 0;
+  font-size: 14px;
 }
 .study-tape-rows th {
   position: sticky;
@@ -1115,8 +1133,8 @@
 .study-tape-rows td {
   height: 24px;
   padding: 2px 5px;
-  line-height: 17px;
-  font-size: 11px;
+  line-height: 1.4;
+  font-size: inherit;
   font-variant-numeric: tabular-nums;
 }
 .study-tape-rows th:nth-last-child(-n + 2),
@@ -1129,12 +1147,13 @@
   color: var(--muted);
   font-size: 9px;
 }
-.study-tape-rows td:first-child {
+.study-tape-rows td:first-child,
+.study-tape-rows td:nth-child(4) {
   white-space: normal;
 }
 .study-tape-rows .study-history-kind {
   white-space: normal;
-  font-size: 10px;
+  font-size: inherit;
 }
 .study-history-kind .study-own-order-tag,
 .study-tape-rows .study-history-participants {

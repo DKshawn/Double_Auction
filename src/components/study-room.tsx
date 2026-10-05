@@ -185,11 +185,9 @@ export function StudyRoom({
                 {INSTITUTIONS[market.institution].short}{" "}
                 <small>{INSTITUTIONS[market.institution].name}</small>
               </h2>
-              <p>
-                {market.institution === "call"
-                  ? `${studyTiming(view.config).callSeconds}秒間の非公開注文を集め、共通の価格で一括して取引します。`
-                  : INSTITUTIONS[market.institution].description}
-              </p>
+              {market.institution !== "call" && (
+                <p>{INSTITUTIONS[market.institution].description}</p>
+              )}
             </div>
             <span className="study-units">1商品・各自2単位／期</span>
           </section>

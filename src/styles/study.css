@@ -1483,14 +1483,14 @@
     align-items: center;
     gap: 12px;
   }
-  .study-room-context > div:first-child {
+  .study-room-context > .study-room-title {
     flex: 1;
   }
   .study-room-context .study-institution {
-    order: 3;
     flex-basis: 100%;
   }
   .study-room-context .round-display {
+    margin-left: auto;
     width: auto;
     gap: 8px;
   }

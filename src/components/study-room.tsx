@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import {
   Clock3,
@@ -153,21 +152,16 @@ export function StudyRoom({
         <span className={`role-tag ${teacher ? "teacher" : view.me.role}`}>
           {teacher ? "教員" : view.me.role === "buyer" ? "買い手" : "売り手"}
         </span>
-        <Link href="/guide" target="_blank" className="quiet-link">
-          実験のルール
-        </Link>
       </Header>
       <main className="room-main study-main">
         {toolbar}
         <div className="room-heading study-room-context">
-          <div>
-            <div className="eyebrow">
-              {teacher
-                ? "教員用ダッシュボード"
-                : `市場${market.id} · ${view.me.nickname} さん · ${view.me.alias}`}
+          {teacher && (
+            <div className="study-room-title">
+              <div className="eyebrow">教員用ダッシュボード</div>
+              <h1>{view.config.title}</h1>
             </div>
-            <h1>{teacher ? view.config.title : "取引ルーム"}</h1>
-          </div>
+          )}
           <section className="study-institution">
             <Image
               src="/fruits/apple.jpg"
@@ -590,7 +584,7 @@ function StudentConditions({
       }
     >
       <h2>
-        <LockKeyhole size={16} /> あなたの条件 <small>非公開</small>
+        <LockKeyhole size={16} /> {view.me.nickname}の条件
       </h2>
       <div className="study-private-values">
         <p>
@@ -608,9 +602,6 @@ function StudentConditions({
             </div>
           ))}
         </div>
-        <p className="muted">
-          役割と条件は全15期で固定。残り <b>{2 - study.unitsUsed}</b> 単位です。
-        </p>
       </div>
       <div className="study-private-order">
         <StudentOrder

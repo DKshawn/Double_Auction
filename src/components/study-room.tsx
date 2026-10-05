@@ -1076,11 +1076,9 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
     setValidation("");
     if (formDisabled) return;
     const prices =
-      quantity === 0
-        ? []
-        : market.institution === "call" && quantity === 2
-          ? [Number(price), Number(second)]
-          : [Number(price)];
+      market.institution === "call" && quantity === 2
+        ? [Number(price), Number(second)]
+        : [Number(price)];
     if (prices.some((p) => !Number.isInteger(p) || p < 1 || p > 999)) {
       setValidation("注文価格は1〜999円の整数で入力してください。");
       return;
@@ -1095,7 +1093,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
     else
       await command({
         type: "posted-offer",
-        price: quantity === 0 ? 1 : Number(price),
+        price: Number(price),
         quantity,
       });
   }
@@ -1113,9 +1111,6 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             onChange={(e) => setQuantity(Number(e.target.value))}
             disabled={formDisabled}
           >
-            {market.institution === "posted" && (
-              <option value={0}>0単位（出品しない）</option>
-            )}
             {Array.from({ length: remaining }, (_, i) => (
               <option key={i} value={i + 1}>
                 {i + 1}単位
@@ -1124,30 +1119,28 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           </select>
         </label>
       )}
-      {quantity !== 0 && (
-        <label
-          className={`field ${market.institution === "call" ? "study-call-price" : ""}`}
-        >
-          {market.institution === "posted"
-            ? "1単位あたりの販売価格"
-            : market.institution === "call"
-              ? `${study.unitsUsed + 1}単位目の${buyer ? "買値" : "売値"}`
-              : `${study.unitsUsed + 1}単位目の${buyer ? "買いたい" : "売りたい"}価格`}
-          <div className="study-price-input">
-            <input
-              type="number"
-              min={1}
-              max={999}
-              step={1}
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              required
-              disabled={formDisabled}
-            />
-            <span>円</span>
-          </div>
-        </label>
-      )}
+      <label
+        className={`field ${market.institution === "call" ? "study-call-price" : ""}`}
+      >
+        {market.institution === "posted"
+          ? "1単位あたりの販売価格"
+          : market.institution === "call"
+            ? `${study.unitsUsed + 1}単位目の${buyer ? "買値" : "売値"}`
+            : `${study.unitsUsed + 1}単位目の${buyer ? "買いたい" : "売りたい"}価格`}
+        <div className="study-price-input">
+          <input
+            type="number"
+            min={1}
+            max={999}
+            step={1}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+            disabled={formDisabled}
+          />
+          <span>円</span>
+        </div>
+      </label>
       {market.institution === "call" && quantity === 2 && (
         <label className="field study-call-price">
           2単位目の{buyer ? "買値" : "売値"}
@@ -1166,24 +1159,23 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           </div>
         </label>
       )}
-      {quantity === 0 ? (
-        <p className="field-help">今期は出品しません。</p>
-      ) : (
-        <>
-          <p
-            className={
-              expected !== null && expected < 0 ? "study-loss" : "field-help"
-            }
-          >
-            {market.institution === "call"
-              ? "入力価格で成立した場合の利益"
-              : "この提示価格での利益"}
-            ：{money(expected)}
-          </p>
-          <p className="field-help">
-            損失が出る場合もあります。条件を確認してください。
-          </p>
-        </>
+      <p
+        className={
+          expected !== null && expected < 0 ? "study-loss" : "field-help"
+        }
+      >
+        {market.institution === "call"
+          ? "入力価格で成立した場合の利益"
+          : "この提示価格での利益"}
+        ：{money(expected)}
+      </p>
+      <p className="field-help">
+        損失が出る場合もあります。条件を確認してください。
+      </p>
+      {market.institution === "posted" && (
+        <p className="field-help">
+          締切までに確定しなければ、今期は出品しません。
+        </p>
       )}
       {validation && (
         <p role="alert" className="error-message">

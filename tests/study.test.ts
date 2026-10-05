@@ -625,6 +625,36 @@ test("Posted Offer locks offers, hides them before 60s and enforces random buyer
   assert.equal(m.periods[0].completion, "complete");
 });
 
+test("Posted Offer advances without seller submissions, trades or inferred zero-unit offers", () => {
+  const { room, study, send, buyers, sellers, events } = classroom(1, "posted");
+  send("teacher", { type: "start" });
+  settleDeadline(room, 61000, events);
+  const market = study.markets[0];
+  assert.equal(market.stage, "purchase");
+  assert.deepEqual(market.offers, []);
+  assert.deepEqual(market.submitted, []);
+  assert.deepEqual(
+    toView(room, buyers[0], 61000, "local").study!.market.offers,
+    [],
+  );
+  assert.throws(
+    () =>
+      send(sellers[0], { type: "posted-offer", price: 80, quantity: 1 }, 61000),
+    /価格提示中/,
+  );
+  settleDeadline(room, 141000, events);
+  assert.equal(market.round, 2);
+  assert.equal(market.stage, "offer");
+  assert.equal(market.periods[0].completion, "complete");
+  assert.deepEqual(market.trades, []);
+  assert.equal(events.filter((e) => e.type === "posted-offer").length, 0);
+  for (const participant of [...buyers, ...sellers]) {
+    const view = toView(room, participant, 141000, "local");
+    assert.equal(view.study!.unitsUsed, 0);
+    assert.equal(view.me.profit, 0);
+  }
+});
+
 test("pause freezes substage timers, deadlines catch up without browsers, and next periods reset inventory only", () => {
   const { room, study, send, events } = classroom(1, "call");
   send("teacher", { type: "start" });

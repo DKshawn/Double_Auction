@@ -660,6 +660,60 @@ test("Call rejects empty submissions without locking the participant and accepts
   assert.equal(exported.room.study!.markets[0].orders.length, 2);
 });
 
+test("Posted Offer rejects zero quantity without locking the seller and persists one- and two-unit offers", async () => {
+  const { teacher, students, send } = await classroom(1, 4);
+  const snapshot = await service.export(teacher.code, teacher.token);
+  snapshot.room.study!.markets[0].order = ["posted", "cda", "call"];
+  await saveFixture(snapshot.room);
+  await send(teacher.token, { type: "start" });
+  const sellers = students.filter((p) => p.view.me.role === "seller");
+  const view = await service.view(teacher.code, sellers[0].token);
+  const zeroRequest = {
+    requestId: randomUUID(),
+    expectedRound: view.round,
+    expectedStage: view.study!.market.stageKey,
+    command: { type: "posted-offer" as const, price: 80, quantity: 0 },
+  };
+  assert.equal(commandSchema.safeParse(zeroRequest).success, false);
+  await assert.rejects(
+    service.command(teacher.code, sellers[0].token, zeroRequest),
+    /1〜2単位/,
+  );
+  const afterZero = await new AuctionService(db).view(
+    teacher.code,
+    sellers[0].token,
+  );
+  assert.equal(afterZero.study!.market.submitted, false);
+  assert.equal(afterZero.study!.market.myOffer, null);
+  assert.equal(afterZero.study!.unitsUsed, 0);
+  assert.equal(afterZero.me.profit, 0);
+  for (const [i, quantity] of [1, 2].entries()) {
+    const request = commandSchema.parse({
+      ...zeroRequest,
+      requestId: randomUUID(),
+      command: { type: "posted-offer", price: 80, quantity },
+    });
+    await service.command(teacher.code, sellers[i].token, request);
+    const reloaded = await new AuctionService(db).view(
+      teacher.code,
+      sellers[i].token,
+    );
+    assert.equal(reloaded.study!.market.submitted, true);
+    assert.equal(reloaded.study!.market.myOffer!.quantity, quantity);
+    assert.equal(reloaded.study!.market.myOffer!.remaining, quantity);
+    assert.equal(reloaded.study!.market.myOffer!.price, 80);
+  }
+  const exported = await service.export(teacher.code, teacher.token);
+  assert.equal(
+    exported.events.filter((e) => e.type === "posted-offer").length,
+    2,
+  );
+  assert.deepEqual(
+    exported.room.study!.markets[0].offers.map((o) => o.quantity),
+    [1, 2],
+  );
+});
+
 test("teacher opens admission before anyone joins; each full market starts once and late arrivals begin in period one", async () => {
   const teacher = await service.create(
     {

@@ -176,7 +176,7 @@ export const commandSchema = z
         .object({
           type: z.literal("posted-offer"),
           price: z.number().int().min(1).max(999),
-          quantity: z.number().int().min(0).max(2),
+          quantity: z.number().int().min(1).max(2),
         })
         .strict(),
       z

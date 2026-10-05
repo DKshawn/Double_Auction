@@ -798,10 +798,12 @@ export function executeStudy(
       checkPrice(cmd.price);
       if (
         !Number.isInteger(cmd.quantity) ||
-        cmd.quantity < 0 ||
+        cmd.quantity < 1 ||
         cmd.quantity > remaining
       )
-        throw new AuctionError("数量は残りの取引可能数以内にしてください。");
+        throw new AuctionError(
+          "数量は1〜2単位で、残りの取引可能数以内にしてください。",
+        );
       const offer = {
         id: randomUUID(),
         participantId: actor.id,

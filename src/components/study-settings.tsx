@@ -194,7 +194,7 @@ export function StudySettingsEditor({
           </li>
           <li>
             Posted Offerは{timing.offerSeconds}
-            秒の非公開提示後に公開します。売り手は1つの価格と0〜2単位を1回だけ送信します。買い手は毎期ランダムな順で各
+            秒の非公開提示後に公開します。売り手は1つの価格と1〜2単位を1回だけ送信します。締切までに確定しなければ、今期は出品しません。買い手は毎期ランダムな順で各
             {timing.buyerSeconds}秒。購入完了・辞退で次の人に進みます。
           </li>
           <li>

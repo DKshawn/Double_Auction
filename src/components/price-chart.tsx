@@ -174,9 +174,7 @@ export function PriceChart({
             className="chart-dot"
           >
             <title>
-              {periodAxis ? "第" : "ラウンド"}
-              {t.round}
-              {periodAxis ? "期" : ""}：{t.price}円
+              {`${periodAxis ? "第" : "ラウンド"}${t.round}${periodAxis ? "期" : ""}：${t.price}円`}
             </title>
           </circle>
         ))}

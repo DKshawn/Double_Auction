@@ -670,6 +670,29 @@
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   grid-template-areas: "market prices";
 }
+.study-trading-grid.call-layout {
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr) minmax(0, 1.1fr);
+  grid-template-areas: "market history prices";
+  gap: 12px;
+}
+.call-layout > .study-section {
+  padding: 12px;
+}
+.call-layout .study-market-workspace > .muted {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.study-section .study-call-guidance {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.call-layout .price-chart.fill {
+  min-height: 180px;
+}
+.call-layout .study-integrated-conditions {
+  margin-top: 6px;
+  column-gap: 12px;
+}
 .study-market-workspace {
   display: flex;
   flex-direction: column;
@@ -807,7 +830,18 @@
   color: var(--muted);
   font-size: 9px;
 }
-.study-personal-history > p {
+.study-personal-history-scroll {
+  max-height: 132px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.study-personal-history-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.study-personal-history-scroll > p {
   font-size: 11px;
 }
 .study-trade-feedback {
@@ -1443,6 +1477,10 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "market" "prices";
   }
+  .study-trading-grid.call-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
+    grid-template-areas: "market history" "prices prices";
+  }
   .study-integrated-conditions {
     margin-top: 16px;
   }
@@ -1474,6 +1512,10 @@
   }
 }
 @media (max-width: 760px) {
+  .study-trading-grid.call-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "market" "history" "prices";
+  }
   .study-trading-grid.cda-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "market" "personal" "history" "prices";

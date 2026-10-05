@@ -97,6 +97,11 @@ export function StudyRoom({
             order.round >= institutionStart &&
             order.round < institutionStart + 5,
         ),
+        clearings: sourceMarket.clearings.filter(
+          (clearing) =>
+            clearing.round >= institutionStart &&
+            clearing.round < institutionStart + 5,
+        ),
       };
   const priceScope = teacher ? teacherPriceScope : market.institution;
   const priceTrades =
@@ -109,6 +114,7 @@ export function StudyRoom({
   const priceScopeLabel =
     priceScope === "all" ? "全15期" : INSTITUTIONS[priceScope].short;
   const cdaLayout = !teacher && market.institution === "cda";
+  const callLayout = !teacher && market.institution === "call";
   const integratedLayout = !teacher && market.institution !== "cda";
   const remaining =
     view.phase === "running" && market.deadline !== null
@@ -406,7 +412,7 @@ export function StudyRoom({
             </div>
           )}
         <div
-          className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${integratedLayout ? "integrated-layout" : ""}`}
+          className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${integratedLayout ? "integrated-layout" : ""} ${callLayout ? "call-layout" : ""}`}
         >
           <div className="study-market-column">
             {teacher ? (
@@ -438,11 +444,12 @@ export function StudyRoom({
               </MarketActivity>
             )}
           </div>
-          {cdaLayout && (
+          {(cdaLayout || callLayout) && (
             <StudyMarketHistory
               key={`${market.id}-${market.institution}`}
               trades={market.trades}
               orders={market.orderHistory}
+              clearings={market.clearings}
               participantId={view.me.id}
               institution={market.institution}
               standalone
@@ -613,7 +620,7 @@ function StudentConditions({
         />
       </div>
       <StudyPersonalHistory
-        key={`${view.code}-${view.me.id}-${market.institution}-${myTrades.at(-1)?.id ?? "empty"}`}
+        key={`${view.code}-${view.me.id}-${market.institution}`}
         trades={myTrades}
       />
     </aside>
@@ -624,7 +631,7 @@ function MarketActivity({
   children,
   ...props
 }: MarketProps & { children?: ReactNode }) {
-  const { market } = props;
+  const { market, view } = props;
   if (market.institution === "cda") return <OrderBook {...props} />;
   if (market.institution === "posted")
     return <OfferBoard {...props}>{children}</OfferBoard>;
@@ -636,36 +643,23 @@ function MarketActivity({
       <p className="muted">
         注文は締切まで非公開です。締切までに送信しない場合、その回は注文なしとして進みます。未約定注文は各回で失効し、残り数量を次の回で再注文できます。
       </p>
-      <p className="field-help">
-        送信は各回1回。2単位目の買値は1単位目以下、売値は1単位目以上にしてください。
+      <p className="field-help study-call-guidance">
+        送信は各回1回です。
+        {view.study!.teacher
+          ? "2単位目の買値は1単位目以下、売値は1単位目以上にしてください。"
+          : view.me.role === "buyer"
+            ? "2単位目の買値は1単位目以下にしてください。"
+            : "2単位目の売値は1単位目以上にしてください。"}
         実際の利益は清算価格で決まります。
       </p>
-      <div className="study-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>期</th>
-              <th>清算回</th>
-              <th>共通の取引価格</th>
-              <th>約定数量</th>
-            </tr>
-          </thead>
-          <tbody>
-            {market.clearings
-              .filter((c) => c.round === market.round)
-              .map((c) => (
-                <tr key={`${c.round}-${c.call}`}>
-                  <td>{c.round}</td>
-                  <td>{c.call}</td>
-                  <td>{c.price === null ? "成立なし" : money(c.price)}</td>
-                  <td>{c.quantity}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-      {!market.clearings.some((c) => c.round === market.round) && (
-        <p className="study-empty">締切後に清算結果が表示されます。</p>
+      {view.study!.teacher && (
+        <StudyMarketHistory
+          key={market.id}
+          trades={market.trades}
+          orders={market.orderHistory}
+          clearings={market.clearings}
+          showParticipants
+        />
       )}
       {children}
     </section>
@@ -1087,19 +1081,17 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
       setValidation("注文価格は1〜999円の整数で入力してください。");
       return;
     }
-    if (market.institution === "cda")
-      await command({ type: "study-quote", price: Number(price) });
-    else if (market.institution === "call")
-      await command({
-        type: "call-submit",
-        prices,
-      });
-    else
-      await command({
-        type: "posted-offer",
-        price: Number(price),
-        quantity,
-      });
+    const accepted = await command(
+      market.institution === "cda"
+        ? { type: "study-quote", price: Number(price) }
+        : market.institution === "call"
+          ? { type: "call-submit", prices }
+          : { type: "posted-offer", price: Number(price), quantity },
+    );
+    if (accepted) {
+      setPrice("");
+      setSecond("");
+    }
   }
   return (
     <form

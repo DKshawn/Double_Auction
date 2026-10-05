@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import { decimal } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { StudyView } from "@/lib/study-types";
@@ -86,69 +86,48 @@ function TradeNotice({
 }
 
 export function StudyPersonalHistory({ trades }: { trades: PersonalTrade[] }) {
-  const [page, setPage] = useState(0);
-  const pages = Math.max(1, Math.ceil(trades.length / 2));
-  const current = Math.min(page, pages - 1);
-  const rows = trades.toReversed().slice(current * 2, current * 2 + 2);
+  const rows = trades.toReversed();
   return (
     <section className="study-personal-history" aria-label="あなたの取引履歴">
       <div className="study-history-heading">
         <h3>あなたの取引履歴（{trades.length}件）</h3>
-        {pages > 1 && (
-          <nav className="study-history-pages" aria-label="取引履歴のページ">
-            <button
-              type="button"
-              className="text-button"
-              aria-label="新しい取引を表示"
-              disabled={current === 0}
-              onClick={() => setPage(current - 1)}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span>
-              {current + 1}/{pages}
-            </span>
-            <button
-              type="button"
-              className="text-button"
-              aria-label="古い取引を表示"
-              disabled={current === pages - 1}
-              onClick={() => setPage(current + 1)}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </nav>
+      </div>
+      <div
+        className="study-personal-history-scroll"
+        role="region"
+        aria-label="あなたの取引履歴・スクロールで全件表示"
+        tabIndex={rows.length ? 0 : undefined}
+      >
+        {rows.length ? (
+          <table>
+            <thead>
+              <tr>
+                <th>制度内の期</th>
+                <th>単位</th>
+                <th>価格（円）</th>
+                <th>利益（円）</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((trade) => (
+                <tr key={trade.id}>
+                  <td title={`全体の第${trade.round}期`}>
+                    第{((trade.round - 1) % 5) + 1}期
+                    <small>{INSTITUTIONS[trade.institution].short}</small>
+                  </td>
+                  <td>{trade.unit}</td>
+                  <td>{decimal(trade.price)}</td>
+                  <td className={trade.profit < 0 ? "loss" : "profit"}>
+                    {decimal(trade.profit)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="muted">まだ取引はありません。</p>
         )}
       </div>
-      {rows.length ? (
-        <table>
-          <thead>
-            <tr>
-              <th>制度内の期</th>
-              <th>単位</th>
-              <th>価格（円）</th>
-              <th>利益（円）</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((trade) => (
-              <tr key={trade.id}>
-                <td title={`全体の第${trade.round}期`}>
-                  第{((trade.round - 1) % 5) + 1}期
-                  <small>{INSTITUTIONS[trade.institution].short}</small>
-                </td>
-                <td>{trade.unit}</td>
-                <td>{decimal(trade.price)}</td>
-                <td className={trade.profit < 0 ? "loss" : "profit"}>
-                  {decimal(trade.profit)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="muted">まだ取引はありません。</p>
-      )}
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type {
+  Clearing,
   Institution,
   StudyMarketView,
   StudyOrderHistory,
@@ -24,12 +25,15 @@ type HistoryEntry = {
 } & (
   | { kind: "order"; order: StudyOrderHistory }
   | { kind: "trade"; trade: StudyMarketView["trades"][number] }
+  | { kind: "clearing"; clearing: Clearing }
 );
 
 function historyEntries(
   orders: StudyMarketView["orderHistory"],
   trades: StudyMarketView["trades"],
+  clearings: Clearing[],
 ): HistoryEntry[] {
+  const clearingKeys = new Set(clearings.map((c) => `${c.round}/${c.call}`));
   const unitKey = (round: number, participant: string, unit: number) =>
     `${round}/${participant}/${unit}`;
   const tradedUnits = new Set(
@@ -58,12 +62,27 @@ function historyEntries(
         sequence: order.closedSequence,
         order,
       })),
-    ...trades.map((trade) => ({
-      kind: "trade" as const,
-      id: `trade-${trade.id}`,
-      at: trade.at,
-      sequence: trade.sequence,
-      trade,
+    // A Call clearing already includes every unit traded at its common price.
+    // Keep zero-volume clearings too, so the fourth result survives a new period.
+    ...trades
+      .filter(
+        (trade) =>
+          trade.institution !== "call" ||
+          !clearingKeys.has(`${trade.round}/${trade.call}`),
+      )
+      .map((trade) => ({
+        kind: "trade" as const,
+        id: `trade-${trade.id}`,
+        at: trade.at,
+        sequence: trade.sequence,
+        trade,
+      })),
+    ...clearings.map((clearing) => ({
+      kind: "clearing" as const,
+      id: `clearing-${clearing.round}-${clearing.call}`,
+      at: clearing.at,
+      sequence: 0,
+      clearing,
     })),
   ];
   return entries.sort((a, b) => b.at - a.at || b.sequence - a.sequence);
@@ -72,6 +91,7 @@ function historyEntries(
 export function StudyMarketHistory({
   trades,
   orders,
+  clearings = EMPTY_CLEARINGS,
   participantId,
   showParticipants = false,
   standalone = false,
@@ -79,13 +99,14 @@ export function StudyMarketHistory({
 }: {
   trades: StudyMarketView["trades"];
   orders: StudyMarketView["orderHistory"];
+  clearings?: Clearing[];
   participantId?: string;
   showParticipants?: boolean;
   standalone?: boolean;
   institution?: Institution;
 }) {
   const list = useRef<HTMLDivElement>(null);
-  const newestFirst = historyEntries(orders, trades);
+  const newestFirst = historyEntries(orders, trades, clearings);
   // Existing history must not flash on entry. Remember completed highlights so
   // polling, scrolling and reopening the teacher dialog do not replay them.
   const [seenIds, setSeenIds] = useState(
@@ -131,7 +152,9 @@ export function StudyMarketHistory({
       </div>
       <p className="study-history-caption">
         本市場・{scopeLabel}
-        ・新しい順。約定済み注文は歩み値に統合。終了した注文は取引できません。
+        {institution === "call"
+          ? "・新しい順。各回の清算価格と約定数量を表示します。個別の注文価格は公開しません。"
+          : "・新しい順。約定済み注文は歩み値に統合。終了した注文は取引できません。"}
       </p>
       <div
         ref={list}
@@ -145,13 +168,50 @@ export function StudyMarketHistory({
             <tr>
               <th scope="col">{institution ? "制度内の期" : "期・制度"}</th>
               <th scope="col">時刻</th>
-              <th scope="col">種別</th>
+              <th scope="col">{institution === "call" ? "清算回" : "種別"}</th>
               <th scope="col">価格（円）</th>
-              <th scope="col">状態・数量</th>
+              <th scope="col">
+                {institution === "call" ? "約定数量" : "状態・数量"}
+              </th>
             </tr>
           </thead>
           <tbody>
             {newestFirst.map((entry) => {
+              if (entry.kind === "clearing") {
+                const clearing = entry.clearing;
+                return (
+                  <tr
+                    key={entry.id}
+                    className={[
+                      clearing.quantity
+                        ? "study-history-trade"
+                        : "study-ended-order",
+                      !seenIds.has(entry.id) ? "study-history-new" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onAnimationEnd={() => finishHighlight(entry.id)}
+                  >
+                    <td title={`全体の第${clearing.round}期`}>
+                      第
+                      {institution
+                        ? ((clearing.round - 1) % 5) + 1
+                        : clearing.round}
+                      期{!institution && <small>Call Market</small>}
+                    </td>
+                    <td title={`清算 ${timeLabel(entry.at)}`}>
+                      {timeLabel(entry.at)}
+                    </td>
+                    <td className="study-history-kind">第{clearing.call}回</td>
+                    <td>
+                      {clearing.price === null
+                        ? "成立なし"
+                        : decimal(clearing.price)}
+                    </td>
+                    <td>{clearing.quantity}単位</td>
+                  </tr>
+                );
+              }
               const order = entry.kind === "order" ? entry.order : null;
               const trade = entry.kind === "trade" ? entry.trade : null;
               const own = order
@@ -230,9 +290,15 @@ export function StudyMarketHistory({
           </tbody>
         </table>
         {!newestFirst.length && (
-          <p className="study-empty">まだ注文履歴・約定はありません。</p>
+          <p className="study-empty">
+            {institution === "call"
+              ? "締切後に清算結果が表示されます。"
+              : "まだ注文履歴・約定はありません。"}
+          </p>
         )}
       </div>
     </section>
   );
 }
+
+const EMPTY_CLEARINGS: Clearing[] = [];

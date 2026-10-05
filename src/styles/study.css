@@ -1113,6 +1113,7 @@
   z-index: 1;
   background: #f8f9fd;
   white-space: normal;
+  font-size: 11px;
 }
 .study-tape-rows th:first-child {
   width: 22%;
@@ -1134,8 +1135,10 @@
   height: 24px;
   padding: 2px 5px;
   line-height: 1.4;
-  font-size: inherit;
   font-variant-numeric: tabular-nums;
+}
+.study-tape-rows td {
+  font-size: 14px;
 }
 .study-tape-rows th:nth-last-child(-n + 2),
 .study-tape-rows td:nth-last-child(-n + 2) {
@@ -1165,8 +1168,6 @@
   font-weight: 600;
 }
 .study-tape-rows .study-empty {
-  position: absolute;
-  inset: 24px 0 auto;
   padding: 12px 4px;
   background: #ffffffee;
 }

@@ -298,6 +298,12 @@
 .demo-options {
   align-items: center;
 }
+.demo-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 .demo-options .field {
   margin: 0;
   display: flex;
@@ -628,15 +634,11 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.study-book-action {
-  min-height: 70px;
-  padding-top: 12px;
+.study-market-order {
+  display: grid;
+  gap: 4px;
 }
-.study-book-action small {
-  display: block;
-  margin-top: 8px;
-}
-.study-book-action .field-help {
+.study-market-order .field-help {
   color: var(--green);
 }
 .study-book th,
@@ -853,6 +855,15 @@
   display: flex;
   flex-direction: column;
   min-height: 350px;
+}
+.study-price-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
 }
 .study-price-panel > .study-detail-trigger {
   align-self: flex-start;
@@ -1317,8 +1328,7 @@
   align-items: baseline;
   gap: 8px;
 }
-.study-last-trade span,
-.study-last-trade small {
+.study-last-trade span {
   display: block;
   font-size: 10px;
   color: var(--muted);
@@ -1336,21 +1346,6 @@
   height: 20px;
   padding: 1px 6px;
   line-height: 17px;
-}
-.study-order-book .study-book-action {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  min-height: 40px;
-  padding-top: 6px;
-}
-.study-order-book .study-book-action .button {
-  padding: 5px 10px;
-}
-.study-order-book .study-book-action small {
-  display: inline;
-  margin: 0;
 }
 .study-order-book .study-book .field-help {
   margin-top: 4px;
@@ -1372,7 +1367,6 @@
   margin-left: auto;
 }
 .cda-layout .study-last-trade span,
-.cda-layout .study-last-trade small,
 .cda-layout .study-last-trade b {
   font-size: var(--study-table-body-font-size);
   line-height: 1.4;
@@ -1397,9 +1391,7 @@
 .cda-layout .study-book th:first-child {
   width: 65%;
 }
-.cda-layout .study-book td,
-.cda-layout .study-book-action small,
-.cda-layout .study-book-action .button {
+.cda-layout .study-book td {
   font-size: var(--study-table-body-font-size);
 }
 .cda-layout .study-book-rows .study-empty {

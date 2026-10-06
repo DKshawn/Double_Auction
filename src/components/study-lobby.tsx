@@ -178,9 +178,7 @@ export function StudyWaitingRoom({
   return (
     <div className="study-shell study-waiting-shell">
       <Header>
-        {demo ? (
-          <span className="demo-header-tag">ひとりデモ</span>
-        ) : (
+        {!demo && (
           <span className={`connection ${connected ? "" : "disconnected"}`}>
             {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
             {connected ? "接続中" : "再接続中"}

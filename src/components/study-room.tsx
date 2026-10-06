@@ -140,6 +140,20 @@ export function StudyRoom({
     view.phase !== "running" ||
     remaining <= 0 ||
     ["done", "waiting", "countdown"].includes(market.stage);
+  const roomStatus = !demo ? (
+    <>
+      <span className={`connection ${connected ? "" : "disconnected"}`}>
+        {connected ? <Wifi size={14} /> : <WifiOff size={14} />}{" "}
+        {connected ? "接続中" : "再接続中"}
+      </span>
+      <span className="header-room-code">
+        ルーム <b>{view.code}</b>
+      </span>
+      <span className={`role-tag ${teacher ? "teacher" : view.me.role}`}>
+        {teacher ? "教員" : view.me.role === "buyer" ? "買い手" : "売り手"}
+      </span>
+    </>
+  ) : null;
   if (!teacher && study.lobby && view.phase === "waiting")
     return (
       <StudyWaitingRoom
@@ -162,24 +176,7 @@ export function StudyRoom({
           buyer={view.me.role === "buyer"}
         />
       )}
-      <Header>
-        {demo ? (
-          <span className="demo-header-tag">ひとりデモ</span>
-        ) : (
-          <>
-            <span className={`connection ${connected ? "" : "disconnected"}`}>
-              {connected ? <Wifi size={14} /> : <WifiOff size={14} />}{" "}
-              {connected ? "接続中" : "再接続中"}
-            </span>
-            <span className="header-room-code">
-              ルーム <b>{view.code}</b>
-            </span>
-          </>
-        )}
-        <span className={`role-tag ${teacher ? "teacher" : view.me.role}`}>
-          {teacher ? "教員" : view.me.role === "buyer" ? "買い手" : "売り手"}
-        </span>
-      </Header>
+      {teacher && <Header>{roomStatus}</Header>}
       <main className="room-main study-main">
         {toolbar}
         <div
@@ -207,7 +204,7 @@ export function StudyRoom({
                   {INSTITUTIONS[market.institution].short}{" "}
                   <small>{INSTITUTIONS[market.institution].name}</small>
                 </h2>
-                {market.institution !== "call" && (
+                {market.institution === "posted" && (
                   <p>{INSTITUTIONS[market.institution].description}</p>
                 )}
               </div>
@@ -489,6 +486,9 @@ export function StudyRoom({
               />
             )}
             <section className="panel study-section study-price-panel">
+              {!teacher && !demo && (
+                <div className="study-price-status">{roomStatus}</div>
+              )}
               <h2>
                 {teacher
                   ? `市場${market.id}・${priceScopeLabel}の取引価格`
@@ -515,16 +515,6 @@ export function StudyRoom({
                   </select>
                 </label>
               )}
-              <p className="muted">
-                {priceScope === "all"
-                  ? market.order
-                      .map(
-                        (institution, index) =>
-                          `${index * 5 + 1}〜${index * 5 + 5}期：${INSTITUTIONS[institution].short}`,
-                      )
-                      .join(" ／ ")
-                  : `市場${market.id}・${priceScopeLabel}の5期分。横軸は制度内1〜5期（全体の第${priceStart}〜${priceStart + 4}期）です。`}
-              </p>
               <PriceChart
                 trades={priceTrades.map((trade) => ({
                   ...trade,
@@ -845,35 +835,20 @@ function TeacherControls({
   );
 }
 
-function OrderBook({ view, market, command, disabled }: MarketProps) {
+function OrderBook({ view, market }: MarketProps) {
   const latest = market.trades.at(-1);
   const teacher = view.me.role === "teacher";
-  const best = market.orders
-    .filter((o) => o.side !== view.me.role)
-    .sort(
-      (a, b) =>
-        (view.me.role === "buyer" ? a.price - b.price : b.price - a.price) ||
-        a.sequence - b.sequence,
-    )[0];
   return (
     <section className="panel study-section study-order-book">
       <div className="study-book-heading">
-        <h2>りんごの注文板</h2>
+        <h2>注文板</h2>
         <div className="study-last-trade" aria-label="直近約定値">
           <div>
             <span>直近約定値</span>
             <b>{latest ? money(latest.price) : "— 円"}</b>
           </div>
-          <small>
-            {latest
-              ? `${teacher ? `全体 第${latest.round}期` : `制度内 第${((latest.round - 1) % 5) + 1}期`} · ${INSTITUTIONS[latest.institution].short} · ${timeLabel(latest.at)}`
-              : "まだ約定はありません"}
-          </small>
         </div>
       </div>
-      <p className="muted">
-        価格優先・時間優先。先に板にあった注文の価格で約定します。
-      </p>
       <div className="study-book">
         {(["buyer", "seller"] as const).map((side) => {
           const rows = market.orders
@@ -951,25 +926,6 @@ function OrderBook({ view, market, command, disabled }: MarketProps) {
           );
         })}
       </div>
-      {!teacher && (
-        <div className="study-book-action">
-          {best && (
-            <>
-              <ExpectedProfit view={view} price={best.price} quantity={1} />
-              <button
-                className="button primary"
-                disabled={disabled || view.study!.unitsUsed >= 2}
-                onClick={() =>
-                  void command({ type: "study-accept", orderId: best.id })
-                }
-              >
-                {money(best.price)}で
-                {view.me.role === "buyer" ? "買う" : "売る"}
-              </button>
-            </>
-          )}
-        </div>
-      )}
       {teacher && (
         <StudyMarketHistory
           key={market.id}
@@ -1097,6 +1053,16 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
   const study = view.study!,
     buyer = view.me.role === "buyer",
     remaining = 2 - study.unitsUsed;
+  const best =
+    market.institution === "cda"
+      ? market.orders
+          .filter((order) => order.side !== view.me.role)
+          .sort(
+            (a, b) =>
+              (buyer ? a.price - b.price : b.price - a.price) ||
+              a.sequence - b.sequence,
+          )[0]
+      : undefined;
   const expected =
     quantity > 0 &&
     price &&
@@ -1238,9 +1204,6 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           : "この提示価格での利益"}
         ：{money(expected)}
       </p>
-      <p className="field-help">
-        損失が出る場合もあります。条件を確認してください。
-      </p>
       {market.institution === "posted" && (
         <p className="field-help">
           締切までに確定しなければ、今期は出品しません。
@@ -1258,6 +1221,24 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             ? "今回の注文を確定"
             : "価格と数量を確定"}
       </button>
+      {market.institution === "cda" && (
+        <div className="study-market-order">
+          <button
+            type="button"
+            className="button primary full"
+            disabled={formDisabled || !best}
+            onClick={() => {
+              if (best)
+                void command({ type: "study-accept", orderId: best.id });
+            }}
+          >
+            {buyer ? "成行買い" : "成行売り"}
+          </button>
+          {best && (
+            <ExpectedProfit view={view} price={best.price} quantity={1} />
+          )}
+        </div>
+      )}
       {market.institution === "cda" && market.myOrders.length > 0 && (
         <div className="study-standing-order">
           <p className="field-help">

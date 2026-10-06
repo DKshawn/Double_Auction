@@ -73,6 +73,12 @@ export default function DemoRoom() {
     <section className="demo-panel" aria-label="ひとりデモの操作">
       <div className="demo-controls">
         <div className="demo-options">
+          <div className="demo-status">
+            <span className="demo-header-tag">ひとりデモ</span>
+            <span className={`role-tag ${teacher ? "teacher" : role}`}>
+              {teacher ? "教員" : role === "buyer" ? "買い手" : "売り手"}
+            </span>
+          </div>
           <label className="field">
             開始制度（リセット）
             <select

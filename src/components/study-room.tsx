@@ -851,13 +851,27 @@ function OrderBook({ view, market }: MarketProps) {
       </div>
       <div className="study-book">
         {(["buyer", "seller"] as const).map((side) => {
-          const rows = market.orders
+          const orders = market.orders
             .filter((o) => o.side === side)
             .sort(
               (a, b) =>
                 (side === "buyer" ? b.price - a.price : a.price - b.price) ||
                 a.sequence - b.sequence,
             );
+          const priceLevels = new Map<number, typeof orders>();
+          for (const order of orders) {
+            const level = priceLevels.get(order.price);
+            if (level) level.push(order);
+            else priceLevels.set(order.price, [order]);
+          }
+          // Each active CDA order represents one unit. Group only the display.
+          const rows = Array.from(priceLevels, ([price, level]) => ({
+            price,
+            quantity: level.length,
+            ownQuantity: level.filter((o) => o.participantId === view.me.id)
+              .length,
+            aliases: level.map((o) => o.alias).join("・"),
+          }));
           return (
             <div key={side}>
               <h3 className={side === "buyer" ? "buy-text" : "sell-text"}>
@@ -877,23 +891,26 @@ function OrderBook({ view, market }: MarketProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((o) => (
+                    {rows.map((row) => (
                       <tr
-                        key={o.id}
+                        key={row.price}
                         className={
-                          o.participantId === view.me.id
-                            ? "study-own-order"
-                            : undefined
+                          row.ownQuantity ? "study-own-order" : undefined
                         }
                       >
                         <td>
-                          {o.price}
-                          {o.participantId === view.me.id && (
-                            <span className="study-own-order-tag">あなた</span>
+                          {row.price}
+                          {row.ownQuantity > 0 && (
+                            <span
+                              className="study-own-order-tag"
+                              title={`あなたの注文${row.ownQuantity}単位を含みます`}
+                            >
+                              あなた含む
+                            </span>
                           )}
                         </td>
-                        <td>1</td>
-                        {teacher && <td>{o.alias}</td>}
+                        <td>{row.quantity}</td>
+                        {teacher && <td>{row.aliases}</td>}
                       </tr>
                     ))}
                     {Array.from(

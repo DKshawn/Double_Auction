@@ -62,7 +62,7 @@ export function StudyRoster({
           </p>
           {waiting && (
             <button
-              className="button secondary"
+              className="button primary"
               disabled={disabled || !full}
               onClick={() =>
                 void command({

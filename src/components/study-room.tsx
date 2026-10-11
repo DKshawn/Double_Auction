@@ -814,15 +814,21 @@ function TeacherControls({
 function OfferBoard({ view, market, command, disabled }: MarketProps) {
   const mine = market.activeBuyer === view.me.alias && view.me.role === "buyer";
   const timing = studyTiming(view.config);
-  const showActiveBuyer =
-    market.stage === "purchase" && view.me.role !== "buyer";
+  const myTurn = market.stage === "purchase" && mine;
   return (
     <section className="panel study-section study-offers study-market-workspace">
       <div className="study-offer-heading">
         <h2>売り手の提示価格</h2>
-        {showActiveBuyer && (
-          <span className="study-offer-buyer-label" role="status">
-            現在は {market.activeBuyer} の購入時間です。
+        {market.stage === "purchase" && (
+          <span
+            className={`study-offer-buyer-label ${myTurn ? "is-my-turn" : ""}`}
+            role="status"
+          >
+            {myTurn
+              ? `あなたの番：${timing.buyerSeconds}秒以内に購入数を選択`
+              : view.me.role === "buyer"
+                ? "自分の番までお待ちください。"
+                : `現在は ${market.activeBuyer} の購入時間です。`}
           </span>
         )}
       </div>
@@ -881,19 +887,12 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
               <p className="study-empty">購入可能な在庫はありません。</p>
             )}
           </div>
-          {!showActiveBuyer && (
-            <div
-              className={`study-offer-status ${mine ? "is-my-turn" : ""}`}
-              role="status"
-            >
+          {market.stage !== "purchase" && (
+            <div className="study-offer-status" role="status">
               <strong>
-                {market.stage === "purchase"
-                  ? mine
-                    ? `あなたの番：${timing.buyerSeconds}秒以内に購入数を選択`
-                    : "自分の番までお待ちください。"
-                  : view.phase === "waiting"
-                    ? "実験開始をお待ちください"
-                    : "今期の購入時間は終了しました。"}
+                {view.phase === "waiting"
+                  ? "実験開始をお待ちください"
+                  : "今期の購入時間は終了しました。"}
               </strong>
             </div>
           )}

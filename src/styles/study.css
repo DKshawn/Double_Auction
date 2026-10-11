@@ -935,11 +935,10 @@
   flex-direction: column;
 }
 .study-trading-grid.cda-layout {
-  --study-cda-conditions-height: 360px;
   grid-template-columns: minmax(0, 1fr) minmax(460px, 1.4fr) minmax(0, 1.1fr);
-  grid-template-areas: "market history prices" "personal history prices";
-  /* Reserve the order form and two trades; give the remaining height to the book. */
-  grid-template-rows: minmax(240px, 1fr) var(--study-cda-conditions-height);
+  grid-template-areas: "market history prices" "personal own prices";
+  /* Keep the lower panels compact and give the remaining height to the book. */
+  grid-template-rows: minmax(240px, 1fr) auto;
   gap: 12px;
 }
 .cda-layout > .study-section,
@@ -949,7 +948,7 @@
 :is(.cda-layout, .call-layout, .posted-layout) > .private-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  grid-template-areas: "title title" "values order" "own own";
+  grid-template-areas: "title title" "values order";
   gap: 6px 12px;
   align-content: start;
   overflow: auto;
@@ -995,10 +994,6 @@
   .study-order-form {
   margin: 0;
 }
-:is(.cda-layout, .call-layout, .posted-layout) .study-personal-history {
-  grid-area: own;
-  margin-top: 0;
-}
 :is(.cda-layout, .call-layout, .posted-layout)
   .study-private-values
   .study-values {
@@ -1013,13 +1008,13 @@
 }
 .study-trading-grid.call-layout {
   grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr) minmax(0, 1.1fr);
-  grid-template-areas: "market history prices" "personal history prices";
+  grid-template-areas: "market history prices" "personal own prices";
   grid-template-rows: minmax(min-content, 1fr) auto;
   gap: 12px;
 }
 .study-trading-grid.posted-layout {
   grid-template-columns: minmax(0, 1.5fr) minmax(460px, 1.25fr) minmax(0, 0.9fr);
-  grid-template-areas: "market history prices" "personal history prices";
+  grid-template-areas: "market history prices" "personal own prices";
   grid-template-rows: minmax(240px, 1fr) auto;
   gap: 12px;
 }
@@ -1045,7 +1040,8 @@
   padding: 8px 12px;
 }
 .posted-layout > .private-panel.study-purchase-conditions {
-  grid-template-areas: "title title" "values own" "order own";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "title" "values" "order";
 }
 .posted-layout .price-chart.fill {
   min-height: 180px;
@@ -1121,13 +1117,6 @@
   display: flex;
   flex-direction: column;
 }
-.study-purchase-conditions {
-  grid-template-areas: "title title" "values own" "order own";
-}
-.study-purchase-conditions .study-personal-history {
-  border-top: 0;
-  padding-top: 0;
-}
 .study-purchase-conditions .callout {
   padding: 0;
   border-radius: 0;
@@ -1182,9 +1171,10 @@
   margin-top: 12px;
 }
 .study-personal-history {
-  border-top: 1px solid var(--line);
-  margin-top: auto;
-  padding-top: 8px;
+  grid-area: own;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .study-trading-grid .study-order-form {
   margin-bottom: 8px;
@@ -1238,6 +1228,7 @@
   white-space: nowrap;
 }
 .study-personal-history-scroll {
+  min-height: 0;
   max-height: 160px;
   overflow: auto;
   overscroll-behavior: contain;
@@ -1612,7 +1603,7 @@
   flex-direction: column;
   margin-top: 0;
   contain: size;
-  min-height: 350px;
+  min-height: 0;
 }
 .study-market-history .study-history-heading {
   min-height: 24px;
@@ -1642,7 +1633,7 @@
 .study-history-panel .study-tape-rows {
   flex: 1;
   height: 0;
-  min-height: 250px;
+  min-height: 0;
   max-height: none;
 }
 .study-tape-rows table {
@@ -2099,12 +2090,12 @@
   }
   .study-trading-grid.call-layout {
     grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
-    grid-template-areas: "market history" "personal history" "prices prices";
+    grid-template-areas: "market history" "personal own" "prices prices";
     grid-template-rows: auto auto auto;
   }
   .study-trading-grid.posted-layout {
     grid-template-columns: minmax(0, 1fr) minmax(460px, 1.1fr);
-    grid-template-areas: "market history" "personal history" "prices prices";
+    grid-template-areas: "market history" "personal own" "prices prices";
     grid-template-rows: auto auto auto;
   }
   .posted-layout .study-offers {
@@ -2112,7 +2103,7 @@
   }
   .study-trading-grid.cda-layout {
     grid-template-columns: minmax(0, 1fr) minmax(460px, 1.1fr);
-    grid-template-areas: "market history" "personal history" "prices prices";
+    grid-template-areas: "market history" "personal own" "prices prices";
     grid-template-rows: auto auto auto;
   }
   .study-trading-grid.teacher-layout {
@@ -2140,17 +2131,17 @@
 @media (max-width: 760px) {
   .study-trading-grid.call-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "market" "personal" "history" "prices";
+    grid-template-areas: "market" "personal" "history" "own" "prices";
     grid-template-rows: auto;
   }
   .study-trading-grid.posted-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "market" "personal" "history" "prices";
+    grid-template-areas: "market" "personal" "history" "own" "prices";
     grid-template-rows: auto;
   }
   .study-trading-grid.cda-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "market" "personal" "history" "prices";
+    grid-template-areas: "market" "personal" "history" "own" "prices";
     grid-template-rows: auto;
   }
   :is(.cda-layout, .call-layout, .posted-layout) > .private-panel {

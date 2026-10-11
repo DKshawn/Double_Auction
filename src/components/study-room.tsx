@@ -468,6 +468,14 @@ export function StudyRoom({
               />
             )}
             {!teacher && (
+              <StudyPersonalHistory
+                key={`${view.code}-${view.me.id}-${market.institution}`}
+                trades={study.myTrades.filter(
+                  (trade) => trade.institution === market.institution,
+                )}
+              />
+            )}
+            {!teacher && (
               <StudentConditions
                 view={view}
                 market={market}
@@ -610,9 +618,6 @@ export function StudyRoom({
 function StudentConditions(props: MarketProps) {
   const { view, market } = props;
   const study = view.study!;
-  const myTrades = study.myTrades.filter(
-    (trade) => trade.institution === market.institution,
-  );
   return (
     <aside
       className={`panel study-section private-panel ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}`}
@@ -643,10 +648,6 @@ function StudentConditions(props: MarketProps) {
           {...props}
         />
       </div>
-      <StudyPersonalHistory
-        key={`${view.code}-${view.me.id}-${market.institution}`}
-        trades={myTrades}
-      />
     </aside>
   );
 }

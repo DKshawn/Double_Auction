@@ -87,9 +87,12 @@ function TradeNotice({
 export function StudyPersonalHistory({ trades }: { trades: PersonalTrade[] }) {
   const rows = trades.toReversed();
   return (
-    <section className="study-personal-history" aria-label="あなたの取引履歴">
+    <section
+      className="panel study-section study-personal-history"
+      aria-label="あなたの取引履歴"
+    >
       <div className="study-history-heading">
-        <h3>あなたの取引履歴（{trades.length}件）</h3>
+        <h2>あなたの取引履歴（{trades.length}件）</h2>
       </div>
       <div
         className="study-personal-history-scroll"

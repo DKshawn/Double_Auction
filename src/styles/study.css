@@ -637,12 +637,35 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.study-market-order {
-  display: grid;
-  gap: 4px;
+.study-market-order > .button {
+  position: relative;
+  z-index: 1;
+}
+.study-market-order small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 12px);
+  margin: -5px 0 0;
+  border: 1px solid;
+  border-radius: 0 0 7px 7px;
+  padding: 7px 4px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: 0 3px 6px #2936650d;
 }
 .study-market-order .field-help {
   color: var(--green);
+  background: #edf8f4;
+  border-color: #d4eae1;
+}
+.study-market-order .loss {
+  color: var(--red);
+  background: #fff0f2;
+  border-color: #f4dfe4;
 }
 .study-book th,
 .study-book td {
@@ -1307,11 +1330,10 @@
   white-space: nowrap;
 }
 .study-cda-order-actions .study-market-order {
-  grid-column: 1 / -1;
-  justify-items: end;
-}
-.study-cda-order-actions .study-market-order small {
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
 }
 .study-call-form {
   display: grid;
@@ -1507,14 +1529,6 @@
   font-size: 12px;
   line-height: 1.6;
 }
-.study-book-chart-own-key {
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-}
-.study-book-chart-own-key > span {
-  color: var(--accent);
-}
 @container (max-width: 320px) {
   .study-book-chart-heading,
   .study-book-chart-row {
@@ -1586,17 +1600,6 @@
   top: 24px;
   font-size: var(--study-table-body-font-size);
   line-height: 1.4;
-}
-.study-standing-order {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-.study-standing-order .text-button {
-  flex-shrink: 0;
-  padding: 2px 0;
-  font-size: 11px;
 }
 .study-market-history {
   margin-top: auto;

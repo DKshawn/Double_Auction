@@ -871,7 +871,6 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
                               view={view}
                               price={o.price}
                               quantity={q}
-                              showLossLabel={false}
                             />
                           )}
                         </button>
@@ -1090,22 +1089,22 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           >
             指値注文
           </button>
-          <button
-            type="button"
-            className="button primary full"
-            disabled={formDisabled || !best}
-            onClick={() => {
-              if (best)
-                void command({ type: "study-accept", orderId: best.id });
-            }}
-          >
-            成行注文
-          </button>
-          {best && (
-            <div className="study-market-order">
+          <div className="study-market-order">
+            <button
+              type="button"
+              className="button primary full"
+              disabled={formDisabled || !best}
+              onClick={() => {
+                if (best)
+                  void command({ type: "study-accept", orderId: best.id });
+              }}
+            >
+              成行注文
+            </button>
+            {best && (
               <ExpectedProfit view={view} price={best.price} quantity={1} />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       ) : (
         <button className="button primary full" disabled={formDisabled}>
@@ -1113,22 +1112,6 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             ? "今回の注文を確定"
             : "価格と数量を確定"}
         </button>
-      )}
-      {market.institution === "cda" && market.myOrders.length > 0 && (
-        <div className="study-standing-order">
-          <p className="field-help">
-            注文中：{money(market.myOrders[0].price)}（再送信で変更）
-          </p>
-          <button
-            type="button"
-            className="text-button"
-            aria-label="注文を取り消す"
-            disabled={disabled}
-            onClick={() => void command({ type: "study-cancel" })}
-          >
-            取消
-          </button>
-        </div>
       )}
     </form>
   );
@@ -1138,12 +1121,10 @@ function ExpectedProfit({
   view,
   price,
   quantity,
-  showLossLabel = true,
 }: {
   view: RoomView;
   price: number;
   quantity: number;
-  showLossLabel?: boolean;
 }) {
   const study = view.study!;
   if (!study.unitLimits || study.unitsUsed + quantity > 2) return null;
@@ -1157,7 +1138,6 @@ function ExpectedProfit({
   return (
     <small className={profit < 0 ? "loss" : "field-help"}>
       利益 {money(profit)}
-      {showLossLabel && profit < 0 ? "（損失）" : ""}
     </small>
   );
 }

@@ -171,9 +171,6 @@ export function StudyBookChart({
   const prices = [...new Set([...buyers.keys(), ...sellers.keys()])].sort(
     (a, b) => b - a,
   );
-  const hasOwn = sides.some(({ rows }) =>
-    rows.some((row) => row.ownQuantity > 0),
-  );
   return (
     <div
       className="study-book-chart"
@@ -233,11 +230,6 @@ export function StudyBookChart({
           <p className="study-book-chart-empty">まだ注文はありません</p>
         )}
       </div>
-      {hasOwn && (
-        <p className="study-book-chart-own-key">
-          <span aria-hidden="true">●</span> あなたの注文を含む
-        </p>
-      )}
     </div>
   );
 }

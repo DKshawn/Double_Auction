@@ -124,7 +124,6 @@ export function StudyRoom({
   const cdaLayout = !teacher && market.institution === "cda";
   const callLayout = !teacher && market.institution === "call";
   const postedLayout = !teacher && market.institution === "posted";
-  const integratedLayout = callLayout;
   const remaining =
     view.phase === "running" && market.deadline !== null
       ? Math.max(0, market.deadline - now)
@@ -434,7 +433,7 @@ export function StudyRoom({
           )}
         {!(teacher && study.lobby && view.phase === "waiting") && (
           <div
-            className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${integratedLayout ? "integrated-layout" : ""} ${callLayout ? "call-layout" : ""} ${postedLayout ? "posted-layout" : ""}`}
+            className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${callLayout ? "call-layout" : ""} ${postedLayout ? "posted-layout" : ""}`}
           >
             <div className="study-market-column">
               {teacher ? (
@@ -453,17 +452,7 @@ export function StudyRoom({
                   market={market}
                   command={command}
                   disabled={blocked}
-                >
-                  {integratedLayout && (
-                    <StudentConditions
-                      view={view}
-                      market={market}
-                      command={command}
-                      disabled={blocked}
-                      embedded
-                    />
-                  )}
-                </MarketActivity>
+                />
               )}
             </div>
             {!teacher && (
@@ -478,7 +467,7 @@ export function StudyRoom({
                 standalone
               />
             )}
-            {(cdaLayout || postedLayout) && (
+            {!teacher && (
               <StudentConditions
                 view={view}
                 market={market}
@@ -618,10 +607,7 @@ export function StudyRoom({
   );
 }
 
-function StudentConditions({
-  embedded = false,
-  ...props
-}: MarketProps & { embedded?: boolean }) {
+function StudentConditions(props: MarketProps) {
   const { view, market } = props;
   const study = view.study!;
   const myTrades = study.myTrades.filter(
@@ -629,7 +615,7 @@ function StudentConditions({
   );
   return (
     <aside
-      className={`${embedded ? "private-panel study-integrated-conditions" : "panel study-section private-panel"} ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}`}
+      className={`panel study-section private-panel ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}`}
     >
       <h2>
         <LockKeyhole size={16} /> {view.me.nickname}の条件
@@ -665,17 +651,12 @@ function StudentConditions({
   );
 }
 
-function MarketActivity({
-  children,
-  ...props
-}: MarketProps & { children?: ReactNode }) {
+function MarketActivity(props: MarketProps) {
   const { market, view } = props;
   if (market.institution === "cda") return <StudyOrderBook {...props} />;
   if (market.institution === "posted") return <OfferBoard {...props} />;
   return (
-    <section
-      className={`panel study-section ${children ? "study-market-workspace" : ""}`}
-    >
+    <section className="panel study-section study-market-workspace">
       <h2>一括約定・第{market.call || 1}回 / 4回</h2>
       <p className="muted">
         注文は締切まで非公開です。締切までに送信しない場合、その回は注文なしとして進みます。未約定注文は各回で失効し、残り数量を次の回で再注文できます。
@@ -699,7 +680,6 @@ function MarketActivity({
           showParticipants
         />
       )}
-      {children}
     </section>
   );
 }
@@ -1102,15 +1082,15 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           {validation}
         </p>
       )}
-      <button className="button primary full" disabled={formDisabled}>
-        {market.institution === "cda"
-          ? "注文を出す"
-          : market.institution === "call"
-            ? "今回の注文を確定"
-            : "価格と数量を確定"}
-      </button>
-      {market.institution === "cda" && (
-        <div className="study-market-order">
+      {market.institution === "cda" ? (
+        <div className="study-cda-order-actions">
+          <button
+            type="submit"
+            className="button primary full"
+            disabled={formDisabled}
+          >
+            指値注文
+          </button>
           <button
             type="button"
             className="button primary full"
@@ -1120,12 +1100,20 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
                 void command({ type: "study-accept", orderId: best.id });
             }}
           >
-            {buyer ? "成行買い" : "成行売り"}
+            成行注文
           </button>
           {best && (
-            <ExpectedProfit view={view} price={best.price} quantity={1} />
+            <div className="study-market-order">
+              <ExpectedProfit view={view} price={best.price} quantity={1} />
+            </div>
           )}
         </div>
+      ) : (
+        <button className="button primary full" disabled={formDisabled}>
+          {market.institution === "call"
+            ? "今回の注文を確定"
+            : "価格と数量を確定"}
+        </button>
       )}
       {market.institution === "cda" && market.myOrders.length > 0 && (
         <div className="study-standing-order">

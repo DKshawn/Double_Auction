@@ -774,15 +774,20 @@
 }
 .study-main .study-student-context {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
 }
 .study-student-context .study-institution,
 .study-student-context .study-institution > div {
   min-width: 0;
 }
-.study-student-context .round-display {
+.study-student-context .study-institution {
   grid-column: 2;
-  justify-self: center;
+  grid-row: 1;
+}
+.study-student-context .round-display {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
 }
 .study-room-context h1 {
   font-size: 20px;
@@ -907,7 +912,7 @@
   flex-direction: column;
 }
 .study-trading-grid.cda-layout {
-  --study-cda-conditions-height: 390px;
+  --study-cda-conditions-height: 360px;
   grid-template-columns: minmax(0, 1fr) minmax(460px, 1.4fr) minmax(0, 1.1fr);
   grid-template-areas: "market history prices" "personal history prices";
   /* Reserve the order form and two trades; give the remaining height to the book. */
@@ -918,13 +923,21 @@
 .cda-layout > .study-market-column > .study-section {
   padding: 12px;
 }
-:is(.cda-layout, .posted-layout) > .private-panel {
+:is(.cda-layout, .call-layout, .posted-layout) > .private-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   grid-template-areas: "title title" "values order" "own own";
   gap: 6px 12px;
   align-content: start;
   overflow: auto;
+}
+.cda-layout > .private-panel {
+  row-gap: 4px;
+}
+.cda-layout .study-personal-history th,
+.cda-layout .study-personal-history td {
+  padding: 2px 5px;
+  line-height: 1.4;
 }
 .cda-layout > .study-market-column,
 .cda-layout .study-order-book {
@@ -939,42 +952,46 @@
 .cda-layout .study-order-book > .study-book-chart {
   overflow-x: hidden;
 }
-:is(.cda-layout, .posted-layout) > .private-panel h2 {
+:is(.cda-layout, .call-layout, .posted-layout) > .private-panel h2 {
   grid-area: title;
   margin-bottom: 0;
 }
-:is(.cda-layout, .posted-layout) .study-private-values {
+:is(.cda-layout, .call-layout, .posted-layout) .study-private-values {
   grid-area: values;
   min-width: 0;
 }
-:is(.cda-layout, .posted-layout) .study-private-values > p {
+:is(.cda-layout, .call-layout, .posted-layout) .study-private-values > p {
   font-size: 11px;
 }
-:is(.cda-layout, .posted-layout) .study-private-order {
+:is(.cda-layout, .call-layout, .posted-layout) .study-private-order {
   grid-area: order;
   min-width: 0;
 }
-:is(.cda-layout, .posted-layout) .study-private-order .study-order-form {
+:is(.cda-layout, .call-layout, .posted-layout)
+  .study-private-order
+  .study-order-form {
   margin: 0;
 }
-:is(.cda-layout, .posted-layout) .study-personal-history {
+:is(.cda-layout, .call-layout, .posted-layout) .study-personal-history {
   grid-area: own;
   margin-top: 0;
 }
-:is(.cda-layout, .posted-layout) .study-private-values .study-values {
+:is(.cda-layout, .call-layout, .posted-layout)
+  .study-private-values
+  .study-values {
   flex-wrap: wrap;
 }
-:is(.cda-layout, .posted-layout) .study-private-values .study-values > div {
+:is(.cda-layout, .call-layout, .posted-layout)
+  .study-private-values
+  .study-values
+  > div {
   flex: 1 1 110px;
   padding: 4px 6px;
 }
-.study-trading-grid.integrated-layout {
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  grid-template-areas: "market prices";
-}
 .study-trading-grid.call-layout {
   grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr) minmax(0, 1.1fr);
-  grid-template-areas: "market history prices";
+  grid-template-areas: "market history prices" "personal history prices";
+  grid-template-rows: minmax(min-content, 1fr) auto;
   gap: 12px;
 }
 .study-trading-grid.posted-layout {
@@ -1062,7 +1079,8 @@
 .posted-layout .study-tape-rows th:last-child {
   width: 20%;
 }
-.call-layout > .study-section {
+.call-layout > .study-section,
+.call-layout > .study-market-column > .study-section {
   padding: 12px;
 }
 .call-layout .study-market-workspace > .muted {
@@ -1076,51 +1094,9 @@
 .call-layout .price-chart.fill {
   min-height: 180px;
 }
-.call-layout .study-integrated-conditions {
-  margin-top: 6px;
-  column-gap: 12px;
-}
 .study-market-workspace {
   display: flex;
   flex-direction: column;
-}
-.integrated-layout > .study-market-column > .study-market-workspace {
-  padding: 12px;
-}
-.study-integrated-conditions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: "title title" "values order" "own order";
-  gap: 6px 20px;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
-  margin-top: auto;
-}
-.study-integrated-conditions > h2 {
-  grid-area: title;
-  margin-bottom: 0;
-}
-.study-integrated-conditions .study-private-values {
-  grid-area: values;
-  min-width: 0;
-}
-.study-integrated-conditions .study-private-order {
-  grid-area: order;
-  min-width: 0;
-}
-.study-integrated-conditions .study-private-order .study-order-form,
-.study-integrated-conditions .study-private-order > p {
-  margin: 0;
-}
-.study-integrated-conditions .study-personal-history {
-  grid-area: own;
-  margin-top: 0;
-}
-.study-integrated-conditions .study-private-values > p {
-  font-size: 11px;
-}
-.study-integrated-conditions .study-private-values .study-values > div {
-  padding: 4px 8px;
 }
 .study-purchase-conditions {
   grid-template-areas: "title title" "values own" "order own";
@@ -1318,6 +1294,24 @@
 }
 .study-trading-grid .study-order-form > .button {
   margin-top: 4px;
+}
+.study-cda-order-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+.study-cda-order-actions .button {
+  padding-inline: 6px;
+  white-space: nowrap;
+}
+.study-cda-order-actions .study-market-order {
+  grid-column: 1 / -1;
+  justify-items: end;
+}
+.study-cda-order-actions .study-market-order small {
+  margin: 0;
 }
 .study-call-form {
   display: grid;
@@ -2057,13 +2051,14 @@
   margin: 0;
 }
 @media (max-width: 1199px) {
-  .study-trading-grid.integrated-layout {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "market" "prices";
+  .study-trade-feedback {
+    top: auto;
+    bottom: 12px;
   }
   .study-trading-grid.call-layout {
     grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
-    grid-template-areas: "market history" "prices prices";
+    grid-template-areas: "market history" "personal history" "prices prices";
+    grid-template-rows: auto auto auto;
   }
   .study-trading-grid.posted-layout {
     grid-template-columns: minmax(0, 1fr) minmax(460px, 1.1fr);
@@ -2072,9 +2067,6 @@
   }
   .posted-layout .study-offers {
     contain: none;
-  }
-  .study-integrated-conditions {
-    margin-top: 16px;
   }
   .study-trading-grid.cda-layout {
     grid-template-columns: minmax(0, 1fr) minmax(460px, 1.1fr);
@@ -2106,7 +2098,8 @@
 @media (max-width: 760px) {
   .study-trading-grid.call-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "market" "history" "prices";
+    grid-template-areas: "market" "personal" "history" "prices";
+    grid-template-rows: auto;
   }
   .study-trading-grid.posted-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -2118,7 +2111,7 @@
     grid-template-areas: "market" "personal" "history" "prices";
     grid-template-rows: auto;
   }
-  :is(.cda-layout, .posted-layout) > .private-panel {
+  :is(.cda-layout, .call-layout, .posted-layout) > .private-panel {
     display: flex;
     gap: 8px;
   }
@@ -2151,6 +2144,10 @@
   .study-main .study-student-context {
     grid-template-columns: minmax(0, 1fr);
   }
+  .study-student-context .study-institution {
+    grid-column: 1;
+    grid-row: 2;
+  }
   .study-room-context > .study-room-title {
     flex: 1;
   }
@@ -2158,7 +2155,7 @@
     flex-basis: 100%;
   }
   .study-room-context .round-display {
-    margin-inline: auto;
+    margin-inline: 0;
     grid-column: 1;
     width: auto;
     gap: 8px;
@@ -2167,11 +2164,6 @@
   .study-trading-grid.teacher-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "personal" "market" "prices";
-  }
-  .study-integrated-conditions {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "title" "values" "order" "own";
-    gap: 12px;
   }
   .study-market-workspace .study-offer-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));

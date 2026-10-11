@@ -24,6 +24,8 @@ export function useRoom(code: string) {
   const busy = useRef(false);
 
   const acceptView = useCallback((next: RoomView) => {
+    // A response already in flight must not re-enable trading while offline.
+    if (!navigator.onLine) return;
     offset.current = next.serverTime - Date.now();
     lastSuccess.current = Date.now();
     setNow(next.serverTime);
@@ -45,6 +47,7 @@ export function useRoom(code: string) {
     let authFailed = false;
     const controller = new AbortController();
     const healthy = (serverTime: number) => {
+      if (!navigator.onLine) return;
       lastSuccess.current = Date.now();
       offset.current = serverTime - Date.now();
       setNow(serverTime);
@@ -53,7 +56,7 @@ export function useRoom(code: string) {
       clearTimeout(fallback);
     };
     async function snapshot() {
-      if (inflight || disposed) return;
+      if (inflight || disposed || !navigator.onLine) return;
       inflight = true;
       lastFetch = Date.now();
       try {
@@ -82,7 +85,7 @@ export function useRoom(code: string) {
     }
     function retrySnapshot() {
       clearTimeout(fallback);
-      if (authFailed || disposed) return;
+      if (authFailed || disposed || !navigator.onLine) return;
       fallback = setTimeout(
         async () => {
           await snapshot();
@@ -93,7 +96,7 @@ export function useRoom(code: string) {
       );
     }
     function connect() {
-      if (disposed) return;
+      if (disposed || !navigator.onLine) return;
       stream?.close();
       wireView = null;
       stream = new EventSource(`/api/rooms/${code}/events`);
@@ -156,8 +159,19 @@ export function useRoom(code: string) {
       void snapshot();
       connect();
     };
+    const offline = () => {
+      // An existing SSE connection may survive the browser's offline signal.
+      // Close it so old heartbeats cannot restore the connected state.
+      stream?.close();
+      clearTimeout(fallback);
+      setConnected(false);
+      setConnectionError(
+        "接続が途切れました。接続が戻るまで注文は送信できません。",
+      );
+    };
     const wake = () => {
       if (
+        navigator.onLine &&
         !document.hidden &&
         (stream?.readyState !== EventSource.OPEN ||
           Date.now() - lastSuccess.current > 15_000)
@@ -168,6 +182,8 @@ export function useRoom(code: string) {
     };
     void snapshot();
     connect();
+    if (!navigator.onLine) offline();
+    window.addEventListener("offline", offline);
     window.addEventListener("online", wake);
     document.addEventListener("visibilitychange", wake);
     const tick = setInterval(() => {
@@ -186,13 +202,14 @@ export function useRoom(code: string) {
       stream?.close();
       clearTimeout(fallback);
       clearInterval(tick);
+      window.removeEventListener("offline", offline);
       window.removeEventListener("online", wake);
       document.removeEventListener("visibilitychange", wake);
     };
   }, [code, acceptView]);
 
   async function command(command: Command) {
-    if (!view || busy.current || !connected) return false;
+    if (!view || busy.current || !connected || !navigator.onLine) return false;
     busy.current = true;
     setPending(true);
     setError("");

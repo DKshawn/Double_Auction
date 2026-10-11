@@ -246,15 +246,43 @@ test("12 independent students trade, recover, finish rounds and export with serv
       buyerPage.getByRole("spinbutton", { name: "買いたい価格" }),
     ).toBeEnabled();
 
-    // Simulated transport failure must disable actions and recover with a fresh snapshot.
+    // The offline signal must disable actions without waiting for SSE to fail.
+    const buyPrice = buyerPage.getByRole("spinbutton", {
+      name: "買いたい価格",
+    });
+    const connectionAlert = buyerPage.locator(".connection-alert");
     await buyers[0].context.setOffline(true);
+    await expect(buyPrice).toBeDisabled({ timeout: 2000 });
+    await expect(connectionAlert).toBeVisible();
+
+    // A change missed while offline must be fetched before trading resumes.
+    await teacherPage
+      .getByRole("button", { name: "一時停止", exact: true })
+      .click();
     await expect(
-      buyerPage.getByRole("spinbutton", { name: "買いたい価格" }),
-    ).toBeDisabled();
+      teacherPage.getByRole("button", { name: "再開する", exact: true }),
+    ).toBeVisible();
+
+    // The browser being online alone does not prove the server is reachable.
+    const roomRead = (url: URL) =>
+      url.pathname === apiPath || url.pathname === `${apiPath}/events`;
+    const failedReads = new Set<string>();
+    await buyerPage.route(roomRead, (route) => {
+      failedReads.add(new URL(route.request().url()).pathname);
+      return route.abort("failed");
+    });
     await buyers[0].context.setOffline(false);
-    await expect(
-      buyerPage.getByRole("spinbutton", { name: "買いたい価格" }),
-    ).toBeEnabled();
+    await expect.poll(() => failedReads.size).toBe(2);
+    await expect(buyPrice).toBeDisabled();
+    await expect(connectionAlert).toBeVisible();
+    await buyerPage.unroute(roomRead);
+    await expect(connectionAlert).toBeHidden();
+    await expect(buyerPage.locator(".phase-label")).toHaveText("一時停止中");
+    await expect(buyPrice).toBeDisabled();
+    await teacherPage
+      .getByRole("button", { name: "再開する", exact: true })
+      .click();
+    await expect(buyPrice).toBeEnabled();
 
     await teacherPage
       .getByRole("button", { name: "ラウンド終了", exact: true })
@@ -319,7 +347,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
 
     // Recover directly on the room URL, without relying on route navigation.
     await expect(
-      buyerPage.getByRole("heading", { name: "実験に参加する" }),
+      buyerPage.getByRole("form", { name: "実験に参加する" }),
     ).toBeVisible();
     await buyerPage
       .locator('input[name="nickname"]')

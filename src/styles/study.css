@@ -1813,8 +1813,7 @@
   margin-top: 10px;
 }
 .study-offer-card {
-  padding: 12px;
-  min-height: 140px;
+  padding: 12px 12px 8px;
   border: 1px solid var(--line);
   border-radius: 10px;
 }
@@ -1838,7 +1837,6 @@
   align-items: center;
   gap: 8px;
   margin-top: 12px;
-  min-height: 48px;
 }
 .study-trading-grid .study-offer-actions .button {
   padding: 8px 5px;
@@ -1883,8 +1881,7 @@
     margin-top: 8px;
   }
   .posted-layout .study-offer-card {
-    min-height: 110px;
-    padding: 6px;
+    padding: 6px 6px 4px;
   }
   .posted-layout .study-offer-actions {
     gap: 4px;

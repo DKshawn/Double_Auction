@@ -907,48 +907,64 @@
   flex-direction: column;
 }
 .study-trading-grid.cda-layout {
+  --study-cda-conditions-height: 390px;
   grid-template-columns: minmax(0, 1fr) minmax(460px, 1.4fr) minmax(0, 1.1fr);
   grid-template-areas: "market history prices" "personal history prices";
-  grid-template-rows: auto 1fr;
+  /* Reserve the order form and two trades; give the remaining height to the book. */
+  grid-template-rows: minmax(240px, 1fr) var(--study-cda-conditions-height);
   gap: 12px;
 }
 .cda-layout > .study-section,
 .cda-layout > .study-market-column > .study-section {
   padding: 12px;
 }
-.cda-layout > .private-panel {
+:is(.cda-layout, .posted-layout) > .private-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   grid-template-areas: "title title" "values order" "own own";
   gap: 6px 12px;
   align-content: start;
+  overflow: auto;
 }
-.cda-layout > .private-panel h2 {
+.cda-layout > .study-market-column,
+.cda-layout .study-order-book {
+  min-height: 0;
+}
+.cda-layout .study-order-book > .study-book,
+.cda-layout .study-order-book > .study-book-chart {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.cda-layout .study-order-book > .study-book-chart {
+  overflow-x: hidden;
+}
+:is(.cda-layout, .posted-layout) > .private-panel h2 {
   grid-area: title;
   margin-bottom: 0;
 }
-.cda-layout .study-private-values {
+:is(.cda-layout, .posted-layout) .study-private-values {
   grid-area: values;
   min-width: 0;
 }
-.cda-layout .study-private-values > p {
+:is(.cda-layout, .posted-layout) .study-private-values > p {
   font-size: 11px;
 }
-.cda-layout .study-private-order {
+:is(.cda-layout, .posted-layout) .study-private-order {
   grid-area: order;
   min-width: 0;
 }
-.cda-layout .study-private-order .study-order-form {
+:is(.cda-layout, .posted-layout) .study-private-order .study-order-form {
   margin: 0;
 }
-.cda-layout .study-personal-history {
+:is(.cda-layout, .posted-layout) .study-personal-history {
   grid-area: own;
   margin-top: 0;
 }
-.cda-layout .study-private-values .study-values {
+:is(.cda-layout, .posted-layout) .study-private-values .study-values {
   flex-wrap: wrap;
 }
-.cda-layout .study-private-values .study-values > div {
+:is(.cda-layout, .posted-layout) .study-private-values .study-values > div {
   flex: 1 1 110px;
   padding: 4px 6px;
 }
@@ -963,8 +979,33 @@
 }
 .study-trading-grid.posted-layout {
   grid-template-columns: minmax(0, 1.5fr) minmax(460px, 1.25fr) minmax(0, 0.9fr);
-  grid-template-areas: "market history prices";
+  grid-template-areas: "market history prices" "personal history prices";
+  grid-template-rows: minmax(240px, 1fr) auto;
   gap: 12px;
+}
+.posted-layout > .study-market-column,
+.posted-layout .study-offers {
+  min-height: 0;
+}
+.posted-layout .study-offers {
+  contain: size;
+}
+.posted-layout .study-market-column > .study-section {
+  padding: 12px;
+}
+.posted-layout .study-offer-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.posted-layout .study-offer-status {
+  flex-shrink: 0;
+  min-height: 44px;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+}
+.posted-layout > .private-panel.study-purchase-conditions {
+  grid-template-areas: "title title" "values own" "order own";
 }
 .posted-layout .price-chart.fill {
   min-height: 180px;
@@ -1308,10 +1349,189 @@
 .study-order-book {
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
+}
+.study-book-display {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7f7fc;
+}
+.study-book-display button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.study-book-display button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--accent);
+}
+.study-book-display button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.study-book-chart {
+  margin-top: 8px;
+  font-size: var(--study-table-body-font-size);
+  font-variant-numeric: tabular-nums;
+}
+.study-book-chart-heading,
+.study-book-chart-row {
+  --book-quantity-width: 16px;
+  --book-price-width: 52px;
+  --book-chart-gap: 4px;
+  display: grid;
+  grid-template-columns:
+    var(--book-quantity-width) minmax(0, 1fr) var(--book-price-width)
+    minmax(0, 1fr) var(--book-quantity-width);
+  align-items: center;
+  gap: var(--book-chart-gap);
+}
+.study-book-chart-heading {
+  min-height: 36px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.study-book-chart-heading h3 {
+  margin: 0;
+  font-size: var(--study-table-body-font-size);
+  line-height: 1.4;
+  text-align: center;
+}
+.study-book-chart-heading .sell-text {
+  grid-column: 1 / 3;
+}
+.study-book-chart-heading .buy-text {
+  grid-column: 4 / 6;
+}
+.study-book-chart-price-header,
+.study-book-chart-price {
+  grid-column: 3;
+  grid-row: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+.study-book-chart-price-header {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.study-book-chart-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--book-quantity-width);
+  align-items: center;
+  gap: var(--book-chart-gap);
+  min-width: 0;
+  grid-column: 4 / 6;
+  grid-row: 1;
+  --book-bar-color: var(--buy);
+}
+.study-book-chart-side.seller {
+  grid-column: 1 / 3;
+  grid-template-columns: var(--book-quantity-width) minmax(0, 1fr);
+  --book-bar-color: var(--sell);
+}
+.study-book-chart-rows {
+  position: relative;
+}
+.study-book-chart-rows ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.study-book-chart-row {
+  min-height: 24px;
+  line-height: 1.4;
+}
+.study-book-chart-track {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  height: 16px;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(25% - 1px),
+    var(--line) calc(25% - 1px),
+    var(--line) 25%
+  );
+  border-left: 1px solid var(--line);
+}
+.seller .study-book-chart-track {
+  grid-column: 2;
+  justify-content: flex-end;
+  border-left: 0;
+  border-right: 1px solid var(--line);
+}
+.study-book-chart-bar {
+  display: block;
+  height: 100%;
+  border-radius: 0 3px 3px 0;
+  background: var(--book-bar-color);
+}
+.seller .study-book-chart-bar {
+  border-radius: 3px 0 0 3px;
+}
+.study-book-chart-quantity {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--book-bar-color);
+  text-align: right;
+  font-weight: 600;
+}
+.seller .study-book-chart-quantity {
+  grid-column: 1;
+  text-align: left;
+}
+.study-book-chart-own .study-book-chart-bar {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.study-book-chart-own-dot {
+  margin-inline-start: 2px;
+  color: var(--accent);
+  font-size: 8px;
+}
+.study-book-chart-empty {
+  position: absolute;
+  inset: 14px 0 auto;
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.study-book-chart-own-key {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.study-book-chart-own-key > span {
+  color: var(--accent);
+}
+@container (max-width: 320px) {
+  .study-book-chart-heading,
+  .study-book-chart-row {
+    --book-quantity-width: 12px;
+    --book-price-width: 46px;
+    --book-chart-gap: 3px;
+  }
 }
 .study-book-heading {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
   min-height: 38px;
@@ -1319,27 +1539,8 @@
 }
 .study-book-heading h2 {
   margin: 0;
-}
-.study-last-trade {
   flex-shrink: 0;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.study-last-trade > div {
-  display: flex;
-  justify-content: flex-end;
-  align-items: baseline;
-  gap: 8px;
-}
-.study-last-trade span {
-  display: block;
-  font-size: 10px;
-  color: var(--muted);
-}
-.study-last-trade b {
-  font-size: 20px;
-  line-height: 1.3;
-  color: var(--accent);
+  white-space: nowrap;
 }
 .study-order-book .study-book-rows {
   margin-top: 6px;
@@ -1357,22 +1558,12 @@
   top: 20px;
 }
 .cda-layout .study-book-heading {
-  flex-wrap: wrap;
   min-height: 32px;
   margin-bottom: 4px;
 }
 .cda-layout .study-book-heading h2 {
   margin: 0;
   font-size: var(--study-table-body-font-size);
-}
-.cda-layout .study-last-trade {
-  max-width: 100%;
-  margin-left: auto;
-}
-.cda-layout .study-last-trade span,
-.cda-layout .study-last-trade b {
-  font-size: var(--study-table-body-font-size);
-  line-height: 1.4;
 }
 .cda-layout .study-order-book > p {
   font-size: var(--study-table-body-font-size);
@@ -1578,29 +1769,48 @@
     background-color: transparent;
   }
 }
-.study-offer-status {
+.study-offer-heading {
   display: flex;
-  justify-content: space-between;
+  flex-shrink: 0;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  min-height: 80px;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.study-offer-heading h2 {
+  margin: 0;
+}
+.study-offer-buyer-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--lavender);
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.study-offer-status {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
   margin: 24px 0;
-  padding: 16px 20px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--lavender);
   font-size: 13px;
   color: var(--muted);
+  overflow-x: auto;
 }
 .study-offer-status strong {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 650;
   color: var(--ink);
-}
-.study-offer-status p {
-  margin: 4px 0 0;
-  font-size: 13px;
+  white-space: nowrap;
+  line-height: 1.5;
 }
 .study-offer-status.is-my-turn {
   color: var(--green);
@@ -1624,14 +1834,13 @@
 }
 .study-offer-info {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 6px 8px;
   font-size: 12px;
 }
 .study-offer-info b {
   grid-column: 1 / -1;
-  grid-row: 2;
   font-size: 26px;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
@@ -1858,7 +2067,11 @@
   }
   .study-trading-grid.posted-layout {
     grid-template-columns: minmax(0, 1fr) minmax(460px, 1.1fr);
-    grid-template-areas: "market history" "prices prices";
+    grid-template-areas: "market history" "personal history" "prices prices";
+    grid-template-rows: auto auto auto;
+  }
+  .posted-layout .study-offers {
+    contain: none;
   }
   .study-integrated-conditions {
     margin-top: 16px;
@@ -1897,14 +2110,15 @@
   }
   .study-trading-grid.posted-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "market" "history" "prices";
+    grid-template-areas: "market" "personal" "history" "prices";
+    grid-template-rows: auto;
   }
   .study-trading-grid.cda-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "market" "personal" "history" "prices";
     grid-template-rows: auto;
   }
-  .cda-layout > .private-panel {
+  :is(.cda-layout, .posted-layout) > .private-panel {
     display: flex;
     gap: 8px;
   }

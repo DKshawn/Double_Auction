@@ -15,6 +15,7 @@ import { Header } from "./shell";
 import { StudyDetailDialog } from "./study-detail-dialog";
 import { StudyMarketOverview } from "./study-market-overview";
 import { StudyMarketHistory } from "./study-market-history";
+import { StudyOrderBook } from "./study-order-book";
 import { StudyRoster, StudyWaitingRoom } from "./study-lobby";
 import {
   StudyPersonalHistory,
@@ -123,7 +124,7 @@ export function StudyRoom({
   const cdaLayout = !teacher && market.institution === "cda";
   const callLayout = !teacher && market.institution === "call";
   const postedLayout = !teacher && market.institution === "posted";
-  const integratedLayout = !teacher && market.institution !== "cda";
+  const integratedLayout = callLayout;
   const remaining =
     view.phase === "running" && market.deadline !== null
       ? Math.max(0, market.deadline - now)
@@ -477,7 +478,7 @@ export function StudyRoom({
                 standalone
               />
             )}
-            {cdaLayout && (
+            {(cdaLayout || postedLayout) && (
               <StudentConditions
                 view={view}
                 market={market}
@@ -628,11 +629,7 @@ function StudentConditions({
   );
   return (
     <aside
-      className={
-        embedded
-          ? `private-panel study-integrated-conditions ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}`
-          : "panel study-section private-panel"
-      }
+      className={`${embedded ? "private-panel study-integrated-conditions" : "panel study-section private-panel"} ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}`}
     >
       <h2>
         <LockKeyhole size={16} /> {view.me.nickname}の条件
@@ -673,9 +670,8 @@ function MarketActivity({
   ...props
 }: MarketProps & { children?: ReactNode }) {
   const { market, view } = props;
-  if (market.institution === "cda") return <OrderBook {...props} />;
-  if (market.institution === "posted")
-    return <OfferBoard {...props}>{children}</OfferBoard>;
+  if (market.institution === "cda") return <StudyOrderBook {...props} />;
+  if (market.institution === "posted") return <OfferBoard {...props} />;
   return (
     <section
       className={`panel study-section ${children ? "study-market-workspace" : ""}`}
@@ -835,142 +831,21 @@ function TeacherControls({
   );
 }
 
-function OrderBook({ view, market }: MarketProps) {
-  const latest = market.trades.at(-1);
-  const teacher = view.me.role === "teacher";
-  return (
-    <section className="panel study-section study-order-book">
-      <div className="study-book-heading">
-        <h2>注文板</h2>
-        <div className="study-last-trade" aria-label="直近約定値">
-          <div>
-            <span>直近約定値</span>
-            <b>{latest ? money(latest.price) : "— 円"}</b>
-          </div>
-        </div>
-      </div>
-      <div className="study-book">
-        {(["buyer", "seller"] as const).map((side) => {
-          const orders = market.orders
-            .filter((o) => o.side === side)
-            .sort(
-              (a, b) =>
-                (side === "buyer" ? b.price - a.price : a.price - b.price) ||
-                a.sequence - b.sequence,
-            );
-          const priceLevels = new Map<number, typeof orders>();
-          for (const order of orders) {
-            const level = priceLevels.get(order.price);
-            if (level) level.push(order);
-            else priceLevels.set(order.price, [order]);
-          }
-          // Each active CDA order represents one unit. Group only the display.
-          const rows = Array.from(priceLevels, ([price, level]) => ({
-            price,
-            quantity: level.length,
-            ownQuantity: level.filter((o) => o.participantId === view.me.id)
-              .length,
-            aliases: level.map((o) => o.alias).join("・"),
-          }));
-          return (
-            <div key={side}>
-              <h3 className={side === "buyer" ? "buy-text" : "sell-text"}>
-                {side === "buyer" ? "買い注文" : "売り注文"}
-              </h3>
-              <div
-                className="study-book-rows"
-                role="region"
-                aria-label={side === "buyer" ? "買い注文一覧" : "売り注文一覧"}
-              >
-                <table>
-                  <thead>
-                    <tr>
-                      <th>価格（円）</th>
-                      <th>数量</th>
-                      {teacher && <th>参加者</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => (
-                      <tr
-                        key={row.price}
-                        className={
-                          row.ownQuantity ? "study-own-order" : undefined
-                        }
-                      >
-                        <td>
-                          {row.price}
-                          {row.ownQuantity > 0 && (
-                            <span
-                              className="study-own-order-tag"
-                              title={`あなたの注文${row.ownQuantity}単位を含みます`}
-                            >
-                              あなた含む
-                            </span>
-                          )}
-                        </td>
-                        <td>{row.quantity}</td>
-                        {teacher && <td>{row.aliases}</td>}
-                      </tr>
-                    ))}
-                    {Array.from(
-                      {
-                        length: Math.max(
-                          0,
-                          Math.min(8, studyMarketSize(view.config) / 2) -
-                            rows.length,
-                        ),
-                      },
-                      (_, i) => (
-                        <tr
-                          key={`empty-${i}`}
-                          className="study-book-placeholder"
-                          aria-hidden="true"
-                        >
-                          <td>—</td>
-                          <td>—</td>
-                          {teacher && <td>—</td>}
-                        </tr>
-                      ),
-                    )}
-                  </tbody>
-                </table>
-                {!rows.length && (
-                  <p className="study-empty">まだ注文はありません</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {teacher && (
-        <StudyMarketHistory
-          key={market.id}
-          trades={market.trades}
-          orders={market.orderHistory}
-          clearings={market.clearings}
-          offerHistory={market.offerHistory}
-          showParticipants
-        />
-      )}
-    </section>
-  );
-}
-
-function OfferBoard({
-  view,
-  market,
-  command,
-  disabled,
-  children,
-}: MarketProps & { children?: ReactNode }) {
+function OfferBoard({ view, market, command, disabled }: MarketProps) {
   const mine = market.activeBuyer === view.me.alias && view.me.role === "buyer";
   const timing = studyTiming(view.config);
+  const showActiveBuyer =
+    market.stage === "purchase" && view.me.role !== "buyer";
   return (
-    <section
-      className={`panel study-section study-offers ${children ? "study-market-workspace" : ""}`}
-    >
-      <h2>売り手の提示価格</h2>
+    <section className="panel study-section study-offers study-market-workspace">
+      <div className="study-offer-heading">
+        <h2>売り手の提示価格</h2>
+        {showActiveBuyer && (
+          <span className="study-offer-buyer-label" role="status">
+            現在は {market.activeBuyer} の購入時間です。
+          </span>
+        )}
+      </div>
       {market.stage === "offer" ? (
         <p className="study-empty">
           {timing.offerSeconds}
@@ -978,73 +853,70 @@ function OfferBoard({
         </p>
       ) : (
         <>
-          <div className="study-offer-list" aria-label="売り手の提示一覧">
-            {market.offers.map((o) => (
-              <div className="study-offer-card" key={o.id}>
-                <div className="study-offer-info">
-                  <span>{o.alias}</span>
-                  <b>{money(o.price)}</b>
-                  <span>在庫 {o.remaining}</span>
+          <div className="study-offer-content">
+            <div className="study-offer-list" aria-label="売り手の提示一覧">
+              {market.offers.map((o) => (
+                <div className="study-offer-card" key={o.id}>
+                  <div className="study-offer-info">
+                    <b>{money(o.price)}</b>
+                  </div>
+                  <div className="study-offer-actions">
+                    {[1, 2]
+                      .filter(
+                        (q) =>
+                          q <= Math.min(o.remaining, 2 - view.study!.unitsUsed),
+                      )
+                      .map((q) => (
+                        <button
+                          key={q}
+                          className="button secondary study-buy-button"
+                          disabled={disabled || !mine}
+                          onClick={() =>
+                            void command({
+                              type: "posted-buy",
+                              offerId: o.id,
+                              quantity: q,
+                            })
+                          }
+                        >
+                          {q}単位購入
+                          {view.me.role === "buyer" && (
+                            <ExpectedProfit
+                              view={view}
+                              price={o.price}
+                              quantity={q}
+                              showLossLabel={false}
+                            />
+                          )}
+                        </button>
+                      ))}
+                    {o.remaining === 0 && (
+                      <span className="muted">売り切れ</span>
+                    )}
+                  </div>
                 </div>
-                <div className="study-offer-actions">
-                  {[1, 2]
-                    .filter(
-                      (q) =>
-                        q <= Math.min(o.remaining, 2 - view.study!.unitsUsed),
-                    )
-                    .map((q) => (
-                      <button
-                        key={q}
-                        className="button secondary study-buy-button"
-                        disabled={disabled || !mine}
-                        onClick={() =>
-                          void command({
-                            type: "posted-buy",
-                            offerId: o.id,
-                            quantity: q,
-                          })
-                        }
-                      >
-                        {q}単位購入
-                        {view.me.role === "buyer" && (
-                          <ExpectedProfit
-                            view={view}
-                            price={o.price}
-                            quantity={q}
-                          />
-                        )}
-                      </button>
-                    ))}
-                  {o.remaining === 0 && <span className="muted">売り切れ</span>}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            {!market.offers.length && (
+              <p className="study-empty">購入可能な在庫はありません。</p>
+            )}
           </div>
-          {!market.offers.length && (
-            <p className="study-empty">購入可能な在庫はありません。</p>
-          )}
-          <div className={`study-offer-status ${mine ? "is-my-turn" : ""}`}>
-            <div role="status">
+          {!showActiveBuyer && (
+            <div
+              className={`study-offer-status ${mine ? "is-my-turn" : ""}`}
+              role="status"
+            >
               <strong>
                 {market.stage === "purchase"
-                  ? view.me.role === "buyer"
-                    ? mine
-                      ? "今はあなたの番です"
-                      : "今はあなたの番ではありません"
-                    : `現在は ${market.activeBuyer} の購入時間です。`
+                  ? mine
+                    ? `あなたの番：${timing.buyerSeconds}秒以内に購入数を選択`
+                    : "自分の番までお待ちください。"
                   : view.phase === "waiting"
                     ? "実験開始をお待ちください"
                     : "今期の購入時間は終了しました。"}
               </strong>
-              {market.stage === "purchase" && view.me.role === "buyer" && (
-                <p>
-                  {mine
-                    ? `${timing.buyerSeconds}秒以内に購入する数量を選んでください。`
-                    : "自分の番になると購入できます。"}
-                </p>
-              )}
             </div>
-          </div>
+          )}
         </>
       )}
       {view.study!.teacher && (
@@ -1057,7 +929,6 @@ function OfferBoard({
           showParticipants
         />
       )}
-      {children}
     </section>
   );
 }
@@ -1280,10 +1151,12 @@ function ExpectedProfit({
   view,
   price,
   quantity,
+  showLossLabel = true,
 }: {
   view: RoomView;
   price: number;
   quantity: number;
+  showLossLabel?: boolean;
 }) {
   const study = view.study!;
   if (!study.unitLimits || study.unitsUsed + quantity > 2) return null;
@@ -1297,7 +1170,7 @@ function ExpectedProfit({
   return (
     <small className={profit < 0 ? "loss" : "field-help"}>
       利益 {money(profit)}
-      {profit < 0 ? "（損失）" : ""}
+      {showLossLabel && profit < 0 ? "（損失）" : ""}
     </small>
   );
 }

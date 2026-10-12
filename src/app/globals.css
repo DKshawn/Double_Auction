@@ -497,7 +497,7 @@ svg {
   overflow: hidden;
 }
 .narrow-main {
-  max-width: 580px;
+  max-width: 720px;
   margin: auto;
   padding: 40px 24px 0;
 }
@@ -549,6 +549,9 @@ svg {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
+}
+.teacher-form-card .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
 }
 .callout {
   display: flex;

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Clock3,
   LockKeyhole,
@@ -920,6 +920,19 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
   const study = view.study!,
     buyer = view.me.role === "buyer",
     remaining = 2 - study.unitsUsed;
+  const priceInput = useRef<HTMLInputElement>(null);
+  const focusNextUnit = useRef(
+    market.institution === "cda" && study.unitsUsed === 1,
+  );
+  const formDisabled =
+    disabled || (market.institution === "posted" && market.stage !== "offer");
+  useEffect(() => {
+    // The first fill resets this keyed form. Wait until its input is enabled.
+    if (focusNextUnit.current && !formDisabled && priceInput.current) {
+      priceInput.current.focus({ preventScroll: true });
+      focusNextUnit.current = false;
+    }
+  }, [formDisabled]);
   const best =
     market.institution === "cda"
       ? market.orders
@@ -973,8 +986,6 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           : "この提示は変更できません。"}
       </p>
     );
-  const formDisabled =
-    disabled || (market.institution === "posted" && market.stage !== "offer");
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setValidation("");
@@ -1031,6 +1042,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             : `${study.unitsUsed + 1}単位目の${buyer ? "買いたい" : "売りたい"}価格`}
         <div className="study-price-input">
           <input
+            ref={priceInput}
             type="number"
             min={1}
             max={999}

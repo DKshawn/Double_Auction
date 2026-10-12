@@ -1,6 +1,11 @@
 import { STUDY_RULES } from "../study-rules";
 import { STUDY_START_SECONDS } from "../study-types";
-import { studyMarketSize, studyInstitutions } from "../study-config";
+import {
+  studyMarketSize,
+  studyInstitutions,
+  studyPeriodCount,
+  studyPeriodAt,
+} from "../study-config";
 import { studyTiming } from "../study-timing";
 import { studyView } from "./study-view";
 import { marketRound } from "./study";
@@ -35,6 +40,12 @@ export function studyExport(
             ...studyTiming(room.config),
             tradersPerMarket: studyMarketSize(room.config),
             institutions: studyInstitutions(room.config),
+            periodsPerInstitution: Object.fromEntries(
+              studyInstitutions(room.config).map((i) => [
+                i,
+                studyPeriodCount(room.config, i),
+              ]),
+            ),
             periods: room.config.rounds,
           },
           settingsRevision: study.revision,
@@ -188,7 +199,11 @@ export function studyExport(
           t.market,
           t.institution,
           t.round,
-          ((t.round - 1) % 5) + 1,
+          studyPeriodAt(
+            room.config,
+            study.markets.find((m) => m.id === t.market)!.order,
+            t.round,
+          ).period,
           t.call,
           t.price,
           1,

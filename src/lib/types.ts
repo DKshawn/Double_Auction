@@ -3,6 +3,7 @@ import type {
   Institution,
   StudyCommand,
   StudyTiming,
+  StudyPeriods,
   StudyView,
 } from "./study-types";
 
@@ -18,6 +19,7 @@ export type RoomConfig = {
   marketSize?: number;
   studyTiming?: StudyTiming;
   studyInstitutions?: Institution[];
+  studyPeriods?: Partial<StudyPeriods>;
   title: string;
   capacity: number;
   rounds: number;

@@ -2,6 +2,7 @@ import { equilibrium } from "./equilibrium";
 import type { Institution, StudyMarketView, StudyMetric } from "./study-types";
 import type { RoomView } from "./types";
 import type { Participant, Room } from "./auction-model";
+import { studyPeriodAt } from "./study-config";
 import {
   institutionFor,
   marketFor,
@@ -39,7 +40,7 @@ export function studyMetrics(room: Room, now: number): StudyMetric[] {
         market: m.id,
         round: p.round,
         institution: p.institution,
-        institutionPeriod: ((p.round - 1) % 5) + 1,
+        institutionPeriod: studyPeriodAt(room.config, m.order, p.round).period,
         completion: p.completion,
         quantity: n,
         quantityRatio: eq.quantity ? n / eq.quantity : null,
@@ -118,17 +119,17 @@ function publicMarket(
 ): StudyMarketView {
   const isTeacher = actor === "teacher",
     id = isTeacher ? "teacher" : actor.id;
-  const firstPeriod =
-    Math.floor((Math.max(1, marketRound(room, m)) - 1) / 5) * 5 + 1;
+  const period = studyPeriodAt(room.config, m.order, marketRound(room, m));
+  const firstPeriod = period.first;
   const visible = (round: number) =>
-    isTeacher || (round >= firstPeriod && round < firstPeriod + 5);
+    isTeacher || (round >= firstPeriod && round <= period.last);
   const key = `${m.id}:${isTeacher ? "all" : firstPeriod}:${room.version}:${now}`;
   const common: PublicMarket = cache?.markets.get(key) ?? {
     id: m.id,
     round: marketRound(room, m),
     order: m.order,
     institution: institutionFor(room, m),
-    institutionPeriod: ((Math.max(1, marketRound(room, m)) - 1) % 5) + 1,
+    institutionPeriod: period.period,
     stage: m.stage,
     stageKey: stageKey(room, m),
     deadline: m.deadline,

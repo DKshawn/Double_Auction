@@ -238,6 +238,7 @@ class RoomFeed {
               : "サーバーとの同期を再開しています。",
         },
       });
+    if (error instanceof AuctionError && error.status === 404) this.close();
   }
   close() {
     this.closed = true;

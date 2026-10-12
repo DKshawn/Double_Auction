@@ -83,7 +83,7 @@
 }
 .study-roster-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: 16px;
 }
 .study-roster-room {
@@ -139,6 +139,7 @@
   font-weight: 500;
 }
 .study-roster-number {
+  flex-shrink: 0;
   color: var(--muted);
   font-size: 10px;
   min-width: 19px;
@@ -200,6 +201,7 @@
   margin: 22px 0 4px;
   font-size: 18px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .study-waiting-institutions {
   margin-top: 20px;

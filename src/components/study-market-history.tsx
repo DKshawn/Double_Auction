@@ -108,6 +108,8 @@ export function StudyMarketHistory({
   standalone = false,
   institution,
   rounds = 15,
+  firstPeriod = 1,
+  institutionPeriods = 5,
 }: {
   trades: StudyMarketView["trades"];
   orders: StudyMarketView["orderHistory"];
@@ -118,6 +120,8 @@ export function StudyMarketHistory({
   standalone?: boolean;
   institution?: Institution;
   rounds?: number;
+  firstPeriod?: number;
+  institutionPeriods?: number;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const newestFirst = historyEntries(orders, trades, clearings, offerHistory);
@@ -132,7 +136,7 @@ export function StudyMarketHistory({
     );
   const latest = newestFirst[0];
   const scopeLabel = institution
-    ? `${INSTITUTIONS[institution].short}・制度内1〜5期`
+    ? `${INSTITUTIONS[institution].short}・制度内1〜${institutionPeriods}期`
     : `全${rounds}期`;
 
   return (
@@ -165,7 +169,10 @@ export function StudyMarketHistory({
         </div>
       </div>
       <p className="study-history-caption">
-        本市場・{institution === "posted" ? "制度内1〜5期" : scopeLabel}
+        本市場・
+        {institution === "posted"
+          ? `制度内1〜${institutionPeriods}期`
+          : scopeLabel}
         {institution === "call"
           ? "・新しい順。各回の清算価格と約定数量を表示します。個別の注文価格は公開しません。"
           : institution === "posted"
@@ -213,7 +220,7 @@ export function StudyMarketHistory({
                     <td title={`全体の第${clearing.round}期`}>
                       第
                       {institution
-                        ? ((clearing.round - 1) % 5) + 1
+                        ? clearing.round - firstPeriod + 1
                         : clearing.round}
                       期{!institution && <small>Call Market</small>}
                     </td>
@@ -247,7 +254,9 @@ export function StudyMarketHistory({
                   >
                     <td title={`全体の第${offer.round}期`}>
                       第
-                      {institution ? ((offer.round - 1) % 5) + 1 : offer.round}
+                      {institution
+                        ? offer.round - firstPeriod + 1
+                        : offer.round}
                       期{!institution && <small>Posted Offer</small>}
                     </td>
                     <td title={`価格公開 ${timeLabel(entry.at)}`}>
@@ -290,7 +299,7 @@ export function StudyMarketHistory({
                   <td title={`全体の第${order?.round ?? trade!.round}期`}>
                     第
                     {institution
-                      ? (((order?.round ?? trade!.round) - 1) % 5) + 1
+                      ? (order?.round ?? trade!.round) - firstPeriod + 1
                       : (order?.round ?? trade!.round)}
                     期
                     {!institution && (

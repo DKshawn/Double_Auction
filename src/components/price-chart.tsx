@@ -47,6 +47,10 @@ export function PriceChart({
   const y = (price: number) =>
     top + ((max - price) / (max - min || 1)) * (h - top - bottom);
   const width = w - left - right;
+  const periodTickStep = Math.max(
+    1,
+    Math.ceil((rounds - 1) / Math.max(1, Math.floor(width / 34) - 1)),
+  );
   const byPeriod = Boolean(equilibrium || periodAxis);
   const point = (trade: Trade, index: number) => {
     if (!byPeriod)
@@ -116,13 +120,18 @@ export function PriceChart({
         {byPeriod ? (
           Array.from({ length: rounds }, (_, i) => (
             <g key={i}>
-              <text
-                x={left + ((i + 0.5) / rounds) * width}
-                y={h - 10}
-                textAnchor="middle"
-              >
-                {i + 1}
-              </text>
+              {(i === 0 ||
+                i === rounds - 1 ||
+                (i % periodTickStep === 0 &&
+                  rounds - 1 - i >= periodTickStep)) && (
+                <text
+                  x={left + ((i + 0.5) / rounds) * width}
+                  y={h - 10}
+                  textAnchor="middle"
+                >
+                  {i + 1}
+                </text>
+              )}
               {i > 0 && (
                 <line
                   x1={left + (i / rounds) * width}

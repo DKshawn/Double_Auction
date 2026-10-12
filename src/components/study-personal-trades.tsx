@@ -11,10 +11,12 @@ export function StudyTradeFeedback({
   trades,
   buyer,
   feedbackRound = null,
+  feedbackPeriod,
 }: {
   trades: PersonalTrade[];
   buyer: boolean;
   feedbackRound?: number | null;
+  feedbackPeriod?: number;
 }) {
   // The initial snapshot is history, not a new fill. Compare confirmed IDs so
   // polling, command retries and trades initiated by the counterparty behave alike.
@@ -39,7 +41,7 @@ export function StudyTradeFeedback({
         <PeriodNotice
           trades={trades.filter((trade) => trade.round === feedbackRound)}
           buyer={buyer}
-          round={feedbackRound}
+          round={feedbackPeriod ?? feedbackRound}
         />
       ) : notification.length > 0 ? (
         <TradeNotice
@@ -70,7 +72,7 @@ function PeriodNotice({
       )}
       <div>
         <b>
-          第{((round - 1) % 5) + 1}期の取引結果：
+          第{round}期の取引結果：
           {trades.length ? "取引が成立しました" : "未約定"}
         </b>
         {trades.length ? (
@@ -138,7 +140,13 @@ function TradeDetails({
   );
 }
 
-export function StudyPersonalHistory({ trades }: { trades: PersonalTrade[] }) {
+export function StudyPersonalHistory({
+  trades,
+  firstPeriod = 1,
+}: {
+  trades: PersonalTrade[];
+  firstPeriod?: number;
+}) {
   const rows = trades.toReversed();
   return (
     <section
@@ -168,7 +176,7 @@ export function StudyPersonalHistory({ trades }: { trades: PersonalTrade[] }) {
               {rows.map((trade) => (
                 <tr key={trade.id}>
                   <td title={`全体の第${trade.round}期`}>
-                    第{((trade.round - 1) % 5) + 1}期
+                    第{trade.round - firstPeriod + 1}期
                   </td>
                   <td>{trade.unit}</td>
                   <td>{decimal(trade.price)}</td>

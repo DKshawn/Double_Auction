@@ -59,7 +59,7 @@ export default async function Home({
               </span>
               <span>
                 <RefreshCcw size={16} />
-                各5期・全5〜15期
+                制度・期数を選択
               </span>
             </div>
           </div>
@@ -82,7 +82,7 @@ export default async function Home({
             [
               "03",
               "結果を振り返る",
-              "各期の利益と、現在の制度の5期分の価格を確認。経験によって、市場はどう変わるでしょうか。",
+              "各期の利益と、現在の制度の全期の価格を確認。経験によって、市場はどう変わるでしょうか。",
             ],
           ].map(([number, title, text]) => (
             <article key={number}>

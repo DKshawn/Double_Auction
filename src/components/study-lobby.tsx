@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Command, RoomView } from "@/lib/types";
-import { studyMarketSize, studyInstitutions } from "@/lib/study-config";
+import {
+  studyMarketSize,
+  studyInstitutions,
+  studyPeriodCount,
+} from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { Header } from "./shell";
 
@@ -123,7 +127,7 @@ export function StudyRoster({
                         <span className={`role-tag ${role}`}>{alias}</span>
                         {person ? (
                           <>
-                            <b>{person.nickname}</b>
+                            <b title={person.nickname}>{person.nickname}</b>
                             <span
                               className="study-roster-number"
                               title="入室順"
@@ -214,10 +218,13 @@ export function StudyWaitingRoom({
             <p>本実験で実施する制度</p>
             <ul>
               {studyInstitutions(view.config).map((institution) => (
-                <li key={institution}>{INSTITUTIONS[institution].short}</li>
+                <li key={institution}>
+                  {INSTITUTIONS[institution].short}{" "}
+                  {studyPeriodCount(view.config, institution)}期
+                </li>
               ))}
             </ul>
-            <span>各制度5期・計{view.config.rounds}期</span>
+            <span>計{view.config.rounds}期</span>
           </div>
           <ol className="study-waiting-steps">
             <li className="complete">

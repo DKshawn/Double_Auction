@@ -6,14 +6,17 @@ import {
   studySettingsSchema,
   studyTimingSchema,
   studyInstitutionsSchema,
+  studyPeriodsSchema,
 } from "./study";
 import { MAX_STAGE_SECONDS } from "../study-timing";
+import { MAX_NICKNAME_LENGTH } from "../participant-config";
 import {
   MAX_STUDY_MARKETS,
   MAX_STUDY_PARTICIPANTS,
   studyLayoutError,
   studyMarketSize,
-  studyInstitutions,
+  studyTotalRounds,
+  MAX_STUDY_ROUNDS,
 } from "../study-config";
 
 export const NO_STORE = {
@@ -115,6 +118,12 @@ const legacyConfigSchema = z
     duration: z.number().int().min(30).max(900),
   })
   .strict();
+export const joinSchema = z
+  .object({
+    nickname: z.string().trim().min(1).max(MAX_NICKNAME_LENGTH),
+    pin: z.string().regex(/^\d{4}$/),
+  })
+  .strict();
 export const configSchema = z.union([
   legacyConfigSchema,
   z
@@ -130,10 +139,11 @@ export const configSchema = z.union([
         .multipleOf(2)
         .optional(),
       capacity: z.number().int().min(2).max(MAX_STUDY_PARTICIPANTS),
-      rounds: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+      rounds: z.number().int().min(1).max(MAX_STUDY_ROUNDS),
       duration: z.number().int().min(1).max(MAX_STAGE_SECONDS),
       studyTiming: studyTimingSchema.optional(),
       studyInstitutions: studyInstitutionsSchema.optional(),
+      studyPeriods: studyPeriodsSchema.optional(),
     })
     .strict()
     .refine(
@@ -143,15 +153,15 @@ export const configSchema = z.union([
       "市場数・1市場の人数・合計人数を確認してください。",
     )
     .refine(
-      (c) => c.rounds === studyInstitutions(c).length * 5,
-      "期数は選択した制度数×5期で設定してください。",
+      (c) => c.rounds === studyTotalRounds(c),
+      "合計期数は選択した各制度の期数と一致させてください。",
     ),
 ]);
 const good = z.enum(["apple", "banana", "orange"]);
 export const commandSchema = z
   .object({
     requestId: z.uuid(),
-    expectedRound: z.number().int().min(0).max(15),
+    expectedRound: z.number().int().min(0).max(MAX_STUDY_ROUNDS),
     expectedStage: z.string().max(50).optional(),
     command: z.discriminatedUnion("type", [
       z

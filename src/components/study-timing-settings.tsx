@@ -82,7 +82,7 @@ export function StudyTimingEditor({
         <div>
           <h2>実験時間の設定</h2>
           <p className="muted">
-            全市場・各制度の5期で共通です。実験開始前のみ変更できます。
+            全市場・各制度で設定した全期に共通です。実験開始前のみ変更できます。
           </p>
         </div>
         {!draft && (

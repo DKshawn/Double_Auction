@@ -60,6 +60,7 @@ test("students with no final-period fills receive unfilled feedback even if they
       ],
       buyer: true,
       feedbackRound: 10,
+      feedbackPeriod: 5,
     }),
   );
   assert.match(html, /第5期の取引結果：未約定/);

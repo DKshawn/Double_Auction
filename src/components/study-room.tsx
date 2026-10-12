@@ -28,7 +28,13 @@ import { StudyTimingEditor } from "./study-timing-settings";
 import { studyTiming } from "@/lib/study-timing";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
-import { studyMarketSize, studyInstitutions } from "@/lib/study-config";
+import {
+  studyMarketSize,
+  studyInstitutions,
+  studyPeriodAt,
+  studyPeriodCount,
+  studyPeriodRanges,
+} from "@/lib/study-config";
 import type {
   Institution,
   StudyMarketView,
@@ -86,8 +92,12 @@ export function StudyRoom({
   >("all");
   const sourceMarket =
     teacher?.markets.find((m) => m.id === selected) ?? study.market;
-  const institutionStart =
-    sourceMarket.order.indexOf(sourceMarket.institution) * 5 + 1;
+  const institutionRange = studyPeriodAt(
+    view.config,
+    sourceMarket.order,
+    sourceMarket.round,
+  );
+  const institutionStart = institutionRange.first;
   // Scope student displays without changing the stored experiment or teacher data.
   const market = teacher
     ? sourceMarket
@@ -99,17 +109,17 @@ export function StudyRoom({
         orderHistory: sourceMarket.orderHistory.filter(
           (order) =>
             order.round >= institutionStart &&
-            order.round < institutionStart + 5,
+            order.round <= institutionRange.last,
         ),
         offerHistory: (sourceMarket.offerHistory ?? []).filter(
           (offer) =>
             offer.round >= institutionStart &&
-            offer.round < institutionStart + 5,
+            offer.round <= institutionRange.last,
         ),
         clearings: sourceMarket.clearings.filter(
           (clearing) =>
             clearing.round >= institutionStart &&
-            clearing.round < institutionStart + 5,
+            clearing.round <= institutionRange.last,
         ),
       };
   const priceScope = teacher ? teacherPriceScope : market.institution;
@@ -118,8 +128,15 @@ export function StudyRoom({
       ? market.trades
       : market.trades.filter((trade) => trade.institution === priceScope);
   const priceStart =
-    priceScope === "all" ? 1 : market.order.indexOf(priceScope) * 5 + 1;
-  const pricePeriods = priceScope === "all" ? view.config.rounds : 5;
+    priceScope === "all"
+      ? 1
+      : studyPeriodRanges(view.config, market.order).find(
+          (range) => range.institution === priceScope,
+        )!.first;
+  const pricePeriods =
+    priceScope === "all"
+      ? view.config.rounds
+      : studyPeriodCount(view.config, priceScope);
   const priceScopeLabel =
     priceScope === "all"
       ? `全${view.config.rounds}期`
@@ -178,6 +195,7 @@ export function StudyRoom({
           trades={study.myTradeNotifications ?? study.myTrades}
           buyer={view.me.role === "buyer"}
           feedbackRound={market.stage === "feedback" ? market.round : null}
+          feedbackPeriod={market.institutionPeriod}
         />
       )}
       {teacher && <Header>{roomStatus}</Header>}
@@ -202,7 +220,8 @@ export function StudyRoom({
               />
               <div>
                 <span className="eyebrow">
-                  市場{market.id} · 制度内 第{market.institutionPeriod} / 5期
+                  市場{market.id} · 制度内 第{market.institutionPeriod} /{" "}
+                  {institutionRange.periods}期
                 </span>
                 <h2>
                   {INSTITUTIONS[market.institution].short}{" "}
@@ -309,9 +328,7 @@ export function StudyRoom({
                           <th>人数</th>
                           {studyInstitutions(view.config).map(
                             (institution, index) => (
-                              <th key={institution}>
-                                第{index * 5 + 1}〜{(index + 1) * 5}期
-                              </th>
+                              <th key={institution}>制度{index + 1}</th>
                             ),
                           )}
                           <th>現在</th>
@@ -328,9 +345,16 @@ export function StudyRoom({
                               {m.participantCount}/
                               {studyMarketSize(view.config)}
                             </td>
-                            {m.order.map((i) => (
-                              <td key={i}>{INSTITUTIONS[i].short}</td>
-                            ))}
+                            {studyPeriodRanges(view.config, m.order).map(
+                              (range) => (
+                                <td key={range.institution}>
+                                  {INSTITUTIONS[range.institution].short}
+                                  <small>
+                                    第{range.first}〜{range.last}期
+                                  </small>
+                                </td>
+                              ),
+                            )}
                             <td>{stages[m.stage]}</td>
                           </tr>
                         ))}
@@ -454,6 +478,7 @@ export function StudyRoom({
                 <StudyMarketOverview
                   key={view.code}
                   teacher={teacher}
+                  config={view.config}
                   phase={view.phase}
                   now={now}
                   selected={market.id}
@@ -478,6 +503,8 @@ export function StudyRoom({
                 offerHistory={market.offerHistory}
                 participantId={view.me.id}
                 institution={market.institution}
+                firstPeriod={institutionStart}
+                institutionPeriods={institutionRange.periods}
                 rounds={view.config.rounds}
                 standalone
               />
@@ -488,6 +515,7 @@ export function StudyRoom({
                 trades={study.myTrades.filter(
                   (trade) => trade.institution === market.institution,
                 )}
+                firstPeriod={institutionStart}
               />
             )}
             {!teacher && (
@@ -522,7 +550,8 @@ export function StudyRoom({
                     <option value="all">全{view.config.rounds}期</option>
                     {market.order.map((institution) => (
                       <option key={institution} value={institution}>
-                        {INSTITUTIONS[institution].short}・制度内1〜5期
+                        {INSTITUTIONS[institution].short}・制度内1〜
+                        {studyPeriodCount(view.config, institution)}期
                       </option>
                     ))}
                   </select>
@@ -535,7 +564,7 @@ export function StudyRoom({
                   round: trade.round - priceStart + 1,
                 }))}
                 rounds={pricePeriods}
-                ariaLabel={`${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? `全体の第1〜${view.config.rounds}期` : "制度内の第1〜5期"}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
+                ariaLabel={`${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? `全体の第1〜${view.config.rounds}期` : `制度内の第1〜${pricePeriods}期`}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
                 periodAxis
                 fill
                 equilibrium={teacher?.equilibrium}
@@ -1263,7 +1292,7 @@ function TeacherMetrics({
           ))}
       </div>
       <p className="field-help">
-        途中終了・取引ゼロの期は傾き計算から除外します。傾きは制度内1〜5期の記述統計で、有意差検定ではありません。
+        途中終了・取引ゼロの期は傾き計算から除外します。傾きは各制度で設定した期数の記述統計で、有意差検定ではありません。
       </p>
     </section>
   );

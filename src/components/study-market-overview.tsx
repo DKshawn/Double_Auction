@@ -4,10 +4,12 @@ import { useState } from "react";
 import { decimal } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { StudyView } from "@/lib/study-types";
-import type { RoomView } from "@/lib/types";
+import type { RoomConfig, RoomView } from "@/lib/types";
+import { studyPeriodAt } from "@/lib/study-config";
 
 export function StudyMarketOverview({
   teacher,
+  config,
   phase,
   now,
   selected,
@@ -15,6 +17,7 @@ export function StudyMarketOverview({
   demo,
 }: {
   teacher: NonNullable<StudyView["teacher"]>;
+  config: RoomConfig;
   phase: RoomView["phase"];
   now: number;
   selected: number;
@@ -93,7 +96,7 @@ export function StudyMarketOverview({
               const metric = metrics.get(`${market.id}:${round}`);
               const institution =
                 metric?.institution ??
-                market.order[Math.floor((Math.max(1, round) - 1) / 5)];
+                studyPeriodAt(config, market.order, round).institution;
               const currentMetric = metrics.get(`${market.id}:${market.round}`);
               const state =
                 market.stage === "done" || phase === "finished"

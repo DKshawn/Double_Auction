@@ -23,6 +23,8 @@ import {
   studyMarketSize,
   studyRoleIndex,
   studyRole,
+  MAX_INSTITUTION_PERIODS,
+  studyPeriodAt,
 } from "./study-config";
 import {
   AuctionError,
@@ -94,6 +96,14 @@ export const studyTimingSchema = z
     callSeconds: stageSeconds,
     offerSeconds: stageSeconds,
     buyerSeconds: stageSeconds,
+  })
+  .strict();
+const institutionPeriods = z.number().int().min(1).max(MAX_INSTITUTION_PERIODS);
+export const studyPeriodsSchema = z
+  .object({
+    cda: institutionPeriods.optional(),
+    call: institutionPeriods.optional(),
+    posted: institutionPeriods.optional(),
   })
   .strict();
 export const studySettingsSchema = z
@@ -172,7 +182,8 @@ export const marketFor = (room: Room, p: Participant) =>
 export const marketRound = (room: Room, market: StudyMarket) =>
   market.round ?? market.periods.at(-1)?.round ?? room.round;
 export const institutionFor = (room: Room, market: StudyMarket) =>
-  market.order[Math.floor((Math.max(1, marketRound(room, market)) - 1) / 5)];
+  studyPeriodAt(room.config, market.order, marketRound(room, market))
+    .institution;
 export const unitLimits = (room: Room, p: Participant) =>
   room.study!.settings[p.role === "buyer" ? "values" : "costs"][
     studyRoleIndex(room.config, p.seat)
@@ -383,7 +394,11 @@ function finishMarket(
   m.deadline = null;
   m.remainingMs = 0;
   m.spreadValue = null;
-  if (showFeedback && marketRound(room, m) % 5 === 0) {
+  if (
+    showFeedback &&
+    marketRound(room, m) ===
+      studyPeriodAt(room.config, m.order, marketRound(room, m)).last
+  ) {
     // Hold the finished period and its fills for every participant in this market.
     schedule(m, "feedback", at, STUDY_FEEDBACK_SECONDS);
     log(room, m, events, at, "feedback-started", "system", {

@@ -5,7 +5,11 @@ import { equilibrium, equilibriumQuantity } from "@/lib/equilibrium";
 import { decimal } from "@/lib/client";
 import type { Command, RoomView } from "@/lib/types";
 import type { StudySettings } from "@/lib/study-types";
-import { studyMarketSize, studyInstitutions } from "@/lib/study-config";
+import {
+  studyMarketSize,
+  studyInstitutions,
+  studyPeriodCount,
+} from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { studyTiming } from "@/lib/study-timing";
 
@@ -209,8 +213,13 @@ export function StudySettingsEditor({
             </li>
           )}
           <li>
-            {institutions.map((i) => INSTITUTIONS[i].short).join("・")}
-            を各5期、計{view.config.rounds}
+            {institutions
+              .map(
+                (i) =>
+                  `${INSTITUTIONS[i].short} ${studyPeriodCount(view.config, i)}期`,
+              )
+              .join("・")}
+            、計{view.config.rounds}
             期実施します。1市場はこの順序で、多市場は選択した制度の順序を均等に割り当てます。
           </li>
           <li>

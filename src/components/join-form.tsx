@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
 import { Spinner } from "./shell";
+import { MAX_NICKNAME_LENGTH } from "@/lib/participant-config";
 
 export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
   const [code, setCode] = useState(initialCode);
@@ -62,11 +63,12 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           name="nickname"
           placeholder="例：学生01"
           required
-          maxLength={5}
+          maxLength={MAX_NICKNAME_LENGTH}
           autoComplete="nickname"
         />
         <span className="field-help">
-          実名を使う必要はありません。5文字以内で入力してください。
+          実名を使う必要はありません。{MAX_NICKNAME_LENGTH}
+          文字以内で入力してください。
         </span>
       </label>
       <label className="field">

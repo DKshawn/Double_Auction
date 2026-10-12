@@ -25,6 +25,37 @@ export function passwordMatches(password: string, hash: string) {
     equal(scryptSync(password, salt, 32).toString("hex"), key)
   );
 }
+export function assertTeacherAccess(accessKey: string) {
+  if (process.env.VERCEL && !process.env.TEACHER_ACCESS_KEY)
+    throw new AuctionError("管理者による教員用キーの設定が必要です。", 503);
+  if (
+    process.env.TEACHER_ACCESS_KEY &&
+    !equal(accessKey, process.env.TEACHER_ACCESS_KEY)
+  )
+    throw new AuctionError("教員用キーが正しくありません。", 403);
+}
+
+export function verifyTeacherPassword(
+  room: Room,
+  now: number,
+  password: string,
+) {
+  if (room.teacherLockedUntil > now)
+    throw new AuctionError(
+      "パスワードの試行回数が多いため、しばらく待ってください。",
+      429,
+    );
+  if (!passwordMatches(password, room.teacherPasswordHash)) {
+    room.teacherFailedLogins++;
+    if (room.teacherFailedLogins >= 5) {
+      room.teacherLockedUntil = now + 60_000;
+      room.teacherFailedLogins = 0;
+    }
+    throw new AuctionError("教員パスワードが正しくありません。", 403);
+  }
+  room.teacherFailedLogins = 0;
+  room.teacherLockedUntil = 0;
+}
 export function authenticate(room: Room, token: string | undefined) {
   if (!token || !/^[a-f0-9]{64}$/.test(token))
     throw new AuctionError(

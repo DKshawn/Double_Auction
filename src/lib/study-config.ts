@@ -1,5 +1,5 @@
 import type { RoomConfig, Role } from "./types";
-import type { Institution } from "./study-types";
+import type { Institution, StudyPeriods } from "./study-types";
 
 export const DEFAULT_STUDY_INSTITUTIONS: readonly Institution[] = [
   "cda",
@@ -11,6 +11,65 @@ export const studyInstitutions = (
   config: Pick<RoomConfig, "studyInstitutions">,
 ): readonly Institution[] =>
   config.studyInstitutions ?? DEFAULT_STUDY_INSTITUTIONS;
+
+export const DEFAULT_STUDY_PERIODS: Readonly<StudyPeriods> = {
+  cda: 5,
+  call: 5,
+  posted: 5,
+};
+export const MAX_INSTITUTION_PERIODS = 20;
+export const MAX_STUDY_ROUNDS = MAX_INSTITUTION_PERIODS * 3;
+type PeriodConfig = Pick<RoomConfig, "studyPeriods">;
+// Existing rooms retain five periods per institution.
+export const studyPeriodCount = (
+  config: PeriodConfig,
+  institution: Institution,
+) => config.studyPeriods?.[institution] ?? DEFAULT_STUDY_PERIODS[institution];
+export const studyTotalRounds = (
+  config: PeriodConfig & Pick<RoomConfig, "studyInstitutions">,
+) =>
+  studyInstitutions(config).reduce(
+    (sum, i) => sum + studyPeriodCount(config, i),
+    0,
+  );
+
+export function studyPeriodsError(
+  periods: Partial<StudyPeriods>,
+  institutions: readonly Institution[],
+) {
+  return institutions.some((i) => {
+    const count = studyPeriodCount({ studyPeriods: periods }, i);
+    return (
+      !Number.isInteger(count) || count < 1 || count > MAX_INSTITUTION_PERIODS
+    );
+  })
+    ? `各制度の期数は1〜${MAX_INSTITUTION_PERIODS}期の整数で設定してください。`
+    : "";
+}
+
+export function studyPeriodRanges(
+  config: PeriodConfig,
+  order: readonly Institution[],
+) {
+  let first = 1;
+  return order.map((institution) => {
+    const periods = studyPeriodCount(config, institution);
+    const range = { institution, first, last: first + periods - 1, periods };
+    first += periods;
+    return range;
+  });
+}
+
+export function studyPeriodAt(
+  config: PeriodConfig,
+  order: readonly Institution[],
+  round: number,
+) {
+  const ranges = studyPeriodRanges(config, order);
+  const current = Math.max(1, round);
+  const range = ranges.find((r) => current <= r.last) ?? ranges.at(-1)!;
+  return { ...range, period: current - range.first + 1 };
+}
 
 export function studyInstitutionOrders(
   institutions: readonly Institution[],

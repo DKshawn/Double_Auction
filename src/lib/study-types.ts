@@ -1,4 +1,5 @@
 export type Institution = "cda" | "call" | "posted";
+export type StudyPeriods = Record<Institution, number>;
 export type UnitPair = [number, number];
 export type StudyTiming = {
   cdaSeconds: number;

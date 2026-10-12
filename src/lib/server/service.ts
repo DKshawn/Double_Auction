@@ -8,17 +8,22 @@ import {
   studyRoleIndex,
   studyInstitutions,
   DEFAULT_STUDY_INSTITUTIONS,
+  studyPeriodCount,
+  studyTotalRounds,
 } from "../study-config";
 import { timed, timedSync } from "./performance";
 import { randomInt, randomUUID } from "node:crypto";
 import type { CommandRequest, RoomConfig, RoomView } from "../types";
+import type { RoomSummary } from "../room-management";
 import {
   authenticate,
+  assertTeacherAccess,
   digest,
   equal,
   newToken,
   passwordHash,
   passwordMatches,
+  verifyTeacherPassword,
 } from "./auth";
 import { database, databaseTime, type Database } from "./database";
 import {
@@ -39,6 +44,7 @@ import {
   settleStudy,
   studyTimingSchema,
   studyInstitutionsSchema,
+  studyPeriodsSchema,
   unitLimits,
 } from "./study";
 
@@ -49,6 +55,7 @@ export class AuctionService {
   constructor(private db: Database) {}
 
   async create(config: RoomConfig, password: string, accessKey: string) {
+    assertTeacherAccess(accessKey);
     if (config.protocol === "institutions-v1") {
       const size = studyMarketSize(config);
       const layoutError = studyLayoutError(config.markets ?? 0, size);
@@ -63,6 +70,14 @@ export class AuctionService {
       const institutions = DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
         selection.data.includes(i),
       );
+      const periods = studyPeriodsSchema.safeParse(config.studyPeriods ?? {});
+      if (!periods.success)
+        throw new AuctionError(
+          "各制度の期数は1〜20期の整数で設定してください。",
+        );
+      const selectedPeriods = Object.fromEntries(
+        institutions.map((i) => [i, studyPeriodCount(config, i)]),
+      );
       const timing = studyTimingSchema.safeParse(studyTiming(config));
       if (!timing.success)
         throw new AuctionError("各時間は1〜3600秒の整数で設定してください。");
@@ -71,18 +86,15 @@ export class AuctionService {
         marketSize: size,
         capacity: config.markets! * size,
         studyInstitutions: institutions,
-        rounds: institutions.length * 5,
+        studyPeriods: selectedPeriods,
+        rounds: studyTotalRounds({
+          studyInstitutions: institutions,
+          studyPeriods: selectedPeriods,
+        }),
         duration: timing.data.cdaSeconds,
         studyTiming: timing.data,
       };
     }
-    if (process.env.VERCEL && !process.env.TEACHER_ACCESS_KEY)
-      throw new AuctionError("管理者による教員用キーの設定が必要です。", 503);
-    if (
-      process.env.TEACHER_ACCESS_KEY &&
-      !equal(accessKey, process.env.TEACHER_ACCESS_KEY)
-    )
-      throw new AuctionError("教員用キーが正しくありません。", 403);
     const token = newToken();
     const hash = passwordHash(password);
     const seats = Array.from({ length: config.capacity }, (_, i) => i);
@@ -326,26 +338,105 @@ export class AuctionService {
 
   async recoverTeacher(code: string, password: string) {
     return this.locked(code, (room, now, events) => {
-      if (room.teacherLockedUntil > now)
-        throw new AuctionError(
-          "再入室の試行回数が多いため、しばらく待ってください。",
-          429,
-        );
-      if (!passwordMatches(password, room.teacherPasswordHash)) {
-        room.teacherFailedLogins++;
-        if (room.teacherFailedLogins >= 5) {
-          room.teacherLockedUntil = now + 60_000;
-          room.teacherFailedLogins = 0;
-        }
-        throw new AuctionError("教員パスワードが正しくありません。", 403);
-      }
+      verifyTeacherPassword(room, now, password);
       const token = newToken();
       room.teacherTokenHash = digest(token);
-      room.teacherFailedLogins = 0;
-      room.teacherLockedUntil = 0;
       emit(room, events, now, "teacher-rejoined", "teacher");
       return { code, token };
     });
+  }
+
+  async listRooms(accessKey: string): Promise<RoomSummary[]> {
+    assertTeacherAccess(accessKey);
+    // Project only management metadata: credentials, names and trading history
+    // never leave the database through this list.
+    const result = await this.db.query<{
+      code: string;
+      config: RoomConfig;
+      created_at: string;
+      phase: Room["phase"];
+      round: number;
+      participant_count: number;
+      markets_finished: boolean;
+    }>(`SELECT r.code, r.state->'config' AS config,
+        r.state->>'createdAt' AS created_at, r.state->>'phase' AS phase,
+        COALESCE(m.round, (r.state->>'round')::int, 0) AS round,
+        jsonb_array_length(r.state->'participants') AS participant_count,
+        COALESCE(m.finished, false) AS markets_finished
+      FROM auction_rooms r
+      LEFT JOIN LATERAL (
+        SELECT max(COALESCE((state->>'round')::int, 0)) AS round,
+          bool_and(state->>'stage' = 'done' AND
+            (state->>'round')::int = (r.state->'config'->>'rounds')::int) AS finished
+        FROM auction_markets WHERE room_code = r.code
+      ) m ON true
+      ORDER BY (r.state->>'createdAt')::bigint DESC, r.code`);
+    return result.rows.map((row) => ({
+      code: row.code,
+      title: row.config.title,
+      createdAt: Number(row.created_at),
+      phase:
+        row.markets_finished && ["running", "paused"].includes(row.phase)
+          ? "finished"
+          : row.phase,
+      round: row.round,
+      totalRounds: row.config.rounds,
+      participantCount: row.participant_count,
+      capacity: row.config.capacity,
+      marketCount: row.config.markets ?? 1,
+      institutions:
+        row.config.protocol === "institutions-v1"
+          ? studyInstitutions(row.config).map((institution) => ({
+              institution,
+              periods: studyPeriodCount(row.config, institution),
+            }))
+          : [],
+    }));
+  }
+
+  async deleteRoom(code: string, password: string, accessKey: string) {
+    assertTeacherAccess(accessKey);
+    const outcome = await this.db.transaction(
+      async (tx): Promise<Outcome<void>> => {
+        // Scoped commands take a SHARE lock on this row. This UPDATE lock waits
+        // for them and prevents new commands while all room data is removed.
+        const result = await tx.query<{ state: Room }>(
+          "SELECT state FROM auction_rooms WHERE code = $1 FOR UPDATE",
+          [code],
+        );
+        if (!result.rows.length)
+          throw new AuctionError("ルームが見つかりません。", 404);
+        const room = result.rows[0].state;
+        try {
+          verifyTeacherPassword(room, await databaseTime(tx), password);
+        } catch (error) {
+          if (!(error instanceof AuctionError)) throw error;
+          room.version++;
+          await tx.query(
+            "UPDATE auction_rooms SET state = $2::jsonb, updated_at = clock_timestamp() WHERE code = $1",
+            [code, JSON.stringify(room)],
+          );
+          return { error };
+        }
+        for (const table of [
+          "auction_market_events",
+          "auction_order_history",
+          "auction_markets",
+          "auction_events",
+          "auction_rooms",
+        ]) {
+          await tx.query(
+            `DELETE FROM ${table} WHERE ${table === "auction_rooms" ? "code" : "room_code"} = $1`,
+            [code],
+          );
+        }
+        await tx.query("SELECT pg_notify('auction_changes', $1)", [
+          JSON.stringify({ code, market: 0 }),
+        ]);
+        return { value: undefined };
+      },
+    );
+    if (outcome.error) throw outcome.error;
   }
 
   async view(code: string, token?: string): Promise<RoomView> {

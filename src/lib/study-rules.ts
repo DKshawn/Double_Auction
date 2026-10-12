@@ -45,7 +45,7 @@ export const STUDY_RULES = {
   cdaPriority: "price-then-time",
   cdaExecutionPrice: "resting-order",
   cdaOrderHistory: "public-ended-resting-orders-all-periods-with-status",
-  studentHistoryDisplay: "current-institution-five-periods",
+  studentHistoryDisplay: "current-institution-configured-periods",
   teacherHistoryDisplay: "all-selected-periods-with-institution-filter",
   postedOffers:
     "sealed-until-configured-offer-deadline-single-price-final-quantity",
@@ -59,7 +59,7 @@ export const STUDY_RULES = {
   spread:
     "time-weighted-best-ask-minus-best-bid-when-both-exist-excluding-pauses",
   convergenceSlope:
-    "OLS-alpha-on-period-1-to-5-within-market-and-institution-complete-periods-only",
+    "OLS-alpha-on-configured-periods-within-market-and-institution-complete-periods-only",
   grouping: "random-balanced-seat-assignment",
   comparisonUnit: "market",
   marketStart: "after-teacher-opens-and-configured-market-capacity-is-reached",

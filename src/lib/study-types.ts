@@ -8,12 +8,20 @@ export type StudyTiming = {
 };
 export type StudySettings = { values: UnitPair[]; costs: UnitPair[] };
 export type StudyStage =
-  "waiting" | "countdown" | "cda" | "call" | "offer" | "purchase" | "done";
+  | "waiting"
+  | "countdown"
+  | "cda"
+  | "call"
+  | "offer"
+  | "purchase"
+  | "feedback"
+  | "done";
 export type StudyLobby = {
   revision: number;
   randomizedAt: number | null;
 };
 export const STUDY_START_SECONDS = 5;
+export const STUDY_FEEDBACK_SECONDS = 8;
 export type StudyOrder = {
   id: string;
   participantId: string;
@@ -124,6 +132,8 @@ export type StudyView = {
     unit: number;
     profit: number;
   }[];
+  // Keep own fills available to notifications even after the visible institution changes.
+  myTradeNotifications?: StudyView["myTrades"];
   teacher?: {
     settings: StudySettings;
     markets: StudyMarketView[];

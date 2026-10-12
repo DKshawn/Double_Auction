@@ -237,6 +237,18 @@ export function studyView(
     teacher = actor === "teacher",
     market = teacher ? study.markets[0] : marketFor(room, actor);
   const publicState = publicMarket(room, market, actor, now, cache);
+  const myTradeNotifications = teacher
+    ? []
+    : market.trades
+        .filter((t) => t.buyerId === actor.id || t.sellerId === actor.id)
+        .map((t) => ({
+          id: t.id,
+          round: t.round,
+          institution: t.institution,
+          price: t.price,
+          unit: t.buyerId === actor.id ? t.buyerUnit : t.sellerUnit,
+          profit: t.buyerId === actor.id ? t.value - t.price : t.price - t.cost,
+        }));
   let legacyTrades = cache?.legacyTrades.get(publicState.trades);
   if (!legacyTrades) {
     legacyTrades = publicState.trades.map((t) => ({ ...t, good: "apple" }));
@@ -289,23 +301,10 @@ export function studyView(
           ? null
           : unitLimits(room, actor),
       unitsUsed: teacher ? 0 : unitsUsed(room, actor),
-      myTrades: teacher
-        ? []
-        : market.trades
-            .filter(
-              (t) =>
-                t.institution === publicState.institution &&
-                (t.buyerId === actor.id || t.sellerId === actor.id),
-            )
-            .map((t) => ({
-              id: t.id,
-              round: t.round,
-              institution: t.institution,
-              price: t.price,
-              unit: t.buyerId === actor.id ? t.buyerUnit : t.sellerUnit,
-              profit:
-                t.buyerId === actor.id ? t.value - t.price : t.price - t.cost,
-            })),
+      myTrades: myTradeNotifications.filter(
+        (t) => t.institution === publicState.institution,
+      ),
+      myTradeNotifications,
     },
   };
   if (teacher) {

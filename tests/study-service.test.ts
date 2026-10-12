@@ -20,6 +20,7 @@ import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
 import type { Room } from "../src/lib/server/model";
 import type { Command, RoomView } from "../src/lib/types";
 import { DEFAULT_STUDY_TIMING } from "../src/lib/study-timing";
+import { execute, settleDeadline } from "../src/lib/server/engine";
 
 let pg: PGlite, db: Database, service: AuctionService;
 before(async () => {
@@ -77,6 +78,77 @@ async function classroom(markets = 1, marketSize = 16) {
   };
   return { teacher, students, send };
 }
+
+test("feedback persists a final Call fill and one shared deadline for every student, then retains late notifications", async () => {
+  const { teacher, students, send } = await classroom(1, 4);
+  const fixture = await service.export(teacher.code, teacher.token);
+  const room = fixture.room;
+  const market = room.study!.markets[0];
+  market.order = ["call", "cda", "posted"];
+  const initial = Date.now() - 595000;
+  execute(
+    room,
+    "teacher",
+    { requestId: randomUUID(), expectedRound: 0, command: { type: "start" } },
+    initial,
+    [],
+  );
+  while (market.round !== 5 || market.call !== 4)
+    settleDeadline(room, market.deadline!, []);
+  market.deadline = Date.now() + 60000;
+  room.deadline = market.deadline;
+  await saveFixture(room);
+  const buyer = students.find((s) => s.view.me.role === "buyer")!;
+  const seller = students.find((s) => s.view.me.role === "seller")!;
+  const stranger = students.find(
+    (s) => s.view.me.role === "buyer" && s !== buyer,
+  )!;
+  await send(buyer.token, { type: "call-submit", prices: [120] });
+  await send(seller.token, { type: "call-submit", prices: [80] });
+  const pending = await service.export(teacher.code, teacher.token);
+  const endedAt = Date.now() - 1;
+  pending.room.study!.markets[0].deadline = endedAt;
+  pending.room.deadline = endedAt;
+  await saveFixture(pending.room);
+  const feedback = await service.view(teacher.code, buyer.token);
+  assert.equal(feedback.study!.market.round, 5);
+  assert.equal(feedback.study!.market.stage, "feedback");
+  assert.equal(feedback.deadline, endedAt + 8000);
+  const finalTrade = feedback.study!.myTrades[0];
+  assert.ok(finalTrade);
+  for (const student of students) {
+    const view = await service.view(teacher.code, student.token);
+    assert.equal(view.study!.market.stageKey, feedback.study!.market.stageKey);
+    assert.equal(view.deadline, feedback.deadline);
+    assert.equal(view.study!.market.institution, "call");
+    assert.equal(
+      view.study!.myTradeNotifications!.length,
+      [buyer, seller].includes(student) ? 1 : 0,
+    );
+  }
+  await assert.rejects(
+    send(stranger.token, { type: "call-submit", prices: [100] }),
+    /取引時間外/,
+  );
+  const saved = await service.export(teacher.code, teacher.token);
+  assert.equal(
+    saved.room.study!.markets[0].periods.at(-1)!.completion,
+    "complete",
+  );
+  assert.equal(saved.events.filter((e) => e.type === "trade").length, 1);
+  assert.equal(
+    saved.events.filter((e) => e.type === "feedback-started").length,
+    1,
+  );
+  saved.room.study!.markets[0].deadline = Date.now() - 1;
+  saved.room.deadline = saved.room.study!.markets[0].deadline;
+  await saveFixture(saved.room);
+  const next = await service.view(teacher.code, buyer.token);
+  assert.equal(next.study!.market.round, 6);
+  assert.equal(next.study!.market.institution, "cda");
+  assert.deepEqual(next.study!.myTrades, []);
+  assert.equal(next.study!.myTradeNotifications![0].id, finalTrade.id);
+});
 
 test("timing validation rejects invalid creation and commands without changing saved settings", async () => {
   const config = {

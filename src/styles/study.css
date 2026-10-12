@@ -1266,6 +1266,11 @@
 .study-trade-notice > button {
   flex-shrink: 0;
 }
+.study-trade-notice.is-unfilled {
+  border-color: #cfc9ed;
+  background: #f5f3ff;
+  color: #5750c3;
+}
 .study-trade-notice b {
   font-size: 14px;
 }

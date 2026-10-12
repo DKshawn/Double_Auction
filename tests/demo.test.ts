@@ -223,7 +223,7 @@ test("all 12 demo markets finish 15 periods with isolated trades and all Call cl
   const human = demo.getSnapshot().view.me.id;
   demo.toggleTeacher();
   assert.equal(await demo.command({ type: "start" }), true);
-  demo.advanceTime(3000);
+  while (demo.getSnapshot().view.phase !== "finished") demo.advanceTime(3000);
   const view = demo.getSnapshot().view;
   assert.equal(view.phase, "finished");
   assert.equal(view.round, 15);

@@ -12,7 +12,7 @@ import type {
   Clearing,
   StudyLobby,
 } from "./study-types";
-import { STUDY_START_SECONDS } from "./study-types";
+import { STUDY_FEEDBACK_SECONDS, STUDY_START_SECONDS } from "./study-types";
 import { STUDY_RULES } from "./study-rules";
 import { MAX_STAGE_SECONDS, studyTiming } from "./study-timing";
 import {
@@ -339,6 +339,7 @@ function finishMarket(
   events: AuditEvent[],
   at: number,
   completion: "complete" | "interrupted",
+  showFeedback = true,
 ) {
   spreadAccumulate(m, at);
   if (m.stage === "cda")
@@ -369,7 +370,13 @@ function finishMarket(
   m.deadline = null;
   m.remainingMs = 0;
   m.spreadValue = null;
-  if (completion === "complete" && marketRound(room, m) < 15)
+  if (showFeedback && marketRound(room, m) % 5 === 0) {
+    // Hold the finished period and its fills for every participant in this market.
+    schedule(m, "feedback", at, STUDY_FEEDBACK_SECONDS);
+    log(room, m, events, at, "feedback-started", "system", {
+      seconds: STUDY_FEEDBACK_SECONDS,
+    });
+  } else if (completion === "complete" && marketRound(room, m) < 15)
     startMarket(room, m, events, at);
 }
 function checkPrice(price: number) {
@@ -503,7 +510,17 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
       changed = true;
       const at = m.deadline;
       if (m.stage === "countdown") startMarket(room, m, events, at);
-      else if (m.stage === "cda") finishMarket(room, m, events, at, "complete");
+      else if (m.stage === "feedback") {
+        log(room, m, events, at, "feedback-ended", "system");
+        if (marketRound(room, m) < 15) startMarket(room, m, events, at);
+        else {
+          m.stage = "done";
+          m.epoch++;
+          m.deadline = null;
+          m.remainingMs = 0;
+        }
+      } else if (m.stage === "cda")
+        finishMarket(room, m, events, at, "complete");
       else if (m.stage === "call") {
         clearCall(room, m, events, at);
         if (m.call === STUDY_RULES.callsPerPeriod)
@@ -721,7 +738,8 @@ export function executeStudy(
         cmd.type === "end-round" &&
         (!["running", "paused"].includes(room.phase) ||
           !study.markets.some(
-            (m) => !["done", "waiting", "countdown"].includes(m.stage),
+            (m) =>
+              !["done", "waiting", "countdown", "feedback"].includes(m.stage),
           ))
       )
         throw new AuctionError("進行中の期がありません。", 409);
@@ -729,7 +747,8 @@ export function executeStudy(
         throw new AuctionError("実験は終了しています。", 409);
       for (const m of study.markets)
         if (!["done", "waiting"].includes(m.stage)) {
-          if (m.stage === "countdown") {
+          if (m.stage === "feedback" && cmd.type === "end-round") continue;
+          if (["countdown", "feedback"].includes(m.stage)) {
             m.stage = "done";
             m.epoch++;
             m.deadline = null;
@@ -737,9 +756,17 @@ export function executeStudy(
             continue;
           }
           if (room.phase === "paused") m.spreadAt = now;
-          finishMarket(room, m, events, now, "interrupted");
-          if (cmd.type === "end-round" && marketRound(room, m) < 15) {
-            startMarket(room, m, events, now);
+          finishMarket(
+            room,
+            m,
+            events,
+            now,
+            "interrupted",
+            cmd.type !== "finish",
+          );
+          if (cmd.type === "end-round") {
+            if (m.stage !== "feedback" && marketRound(room, m) < 15)
+              startMarket(room, m, events, now);
             if (room.phase === "paused") m.deadline = null;
           }
         }
@@ -758,7 +785,7 @@ export function executeStudy(
     const m = marketFor(room, actor);
     if (
       room.phase !== "running" ||
-      ["done", "waiting", "countdown"].includes(m.stage)
+      ["done", "waiting", "countdown", "feedback"].includes(m.stage)
     )
       throw new AuctionError("現在は取引時間外です。", 409);
     if (request.expectedStage !== stageKey(room, m))

@@ -98,7 +98,11 @@ test("Posted history retains published quotes and sold-out trades across periods
 test("sellers see only published Posted quotes in institution-relative periods", async () => {
   const session = new DemoSession("call", "seller", 1000);
   await session.command({ type: "start" }, true);
-  for (let stage = 0; stage < 25; stage++) session.skipStage();
+  for (let stage = 0; stage < 25; stage++) {
+    session.skipStage();
+    if (session.getSnapshot().view.study!.market.stage === "feedback")
+      session.advanceTime(8);
+  }
   assert.equal(session.getSnapshot().view.study!.market.round, 11);
   assert.equal(session.getSnapshot().view.study!.market.institution, "posted");
   assert.equal(
@@ -158,6 +162,7 @@ test("Call history shows the fourth clearing after automatic period advance, inc
   assert.doesNotMatch(section, /123|買01|売01/);
 
   for (let call = 0; call < 16; call++) session.skipStage();
+  session.advanceTime(8);
   assert.equal(session.getSnapshot().view.study!.market.institution, "cda");
   assert.deepEqual(history(session).rows, []);
   assert.doesNotMatch(history(session).section, /Call Market|成立なし/);
@@ -167,6 +172,7 @@ test("sellers see Call history in institution-relative periods without the previ
   const session = new DemoSession("cda", "seller", 1000);
   await session.command({ type: "start" }, true);
   for (let period = 0; period < 5; period++) session.skipStage();
+  session.advanceTime(8);
   assert.equal(session.getSnapshot().view.study!.market.round, 6);
   assert.equal(session.getSnapshot().view.study!.market.institution, "call");
   assert.deepEqual(history(session).rows, []);

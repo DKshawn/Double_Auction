@@ -113,11 +113,13 @@ export function StudyMarketOverview({
                 running:
                   market.stage === "countdown"
                     ? "開始まで"
-                    : market.stage === "call"
-                      ? `受付 ${market.call}/4`
-                      : market.stage === "offer"
-                        ? "価格提示"
-                        : "取引中",
+                    : market.stage === "feedback"
+                      ? "結果確認"
+                      : market.stage === "call"
+                        ? `受付 ${market.call}/4`
+                        : market.stage === "offer"
+                          ? "価格提示"
+                          : "取引中",
               }[state];
               const remaining =
                 phase === "running" && market.deadline !== null

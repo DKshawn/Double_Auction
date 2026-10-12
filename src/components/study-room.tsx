@@ -61,6 +61,7 @@ const stages: Record<StudyStage, string> = {
   call: "非公開注文の受付",
   offer: "売り手の価格提示",
   purchase: "順番に購入",
+  feedback: "取引結果の確認",
   done: "実験終了",
 };
 const money = (n: number | null | undefined) => `${decimal(n)} 円`;
@@ -139,7 +140,7 @@ export function StudyRoom({
     disabled ||
     view.phase !== "running" ||
     remaining <= 0 ||
-    ["done", "waiting", "countdown"].includes(market.stage);
+    ["done", "waiting", "countdown", "feedback"].includes(market.stage);
   const roomStatus = !demo ? (
     <>
       <span className={`connection ${connected ? "" : "disconnected"}`}>
@@ -172,8 +173,9 @@ export function StudyRoom({
       {!teacher && (
         <StudyTradeFeedback
           key={`${view.code}-${view.me.id}`}
-          trades={study.myTrades}
+          trades={study.myTradeNotifications ?? study.myTrades}
           buyer={view.me.role === "buyer"}
+          feedbackRound={market.stage === "feedback" ? market.round : null}
         />
       )}
       {teacher && <Header>{roomStatus}</Header>}
@@ -222,7 +224,11 @@ export function StudyRoom({
               <div className="timer">
                 <span>
                   <Clock3 size={13} />
-                  この段階の残り時間
+                  {market.stage === "feedback"
+                    ? market.round === 15
+                      ? "実験終了まで"
+                      : "次の制度まで"
+                    : "この段階の残り時間"}
                 </span>
                 <b>{`${Math.floor(seconds / 60)
                   .toString()
@@ -765,7 +771,10 @@ function TeacherControls({
             disabled={
               disabled ||
               !view.study!.teacher!.markets.some(
-                (m) => !["done", "waiting", "countdown"].includes(m.stage),
+                (m) =>
+                  !["done", "waiting", "countdown", "feedback"].includes(
+                    m.stage,
+                  ),
               )
             }
             onClick={() => setConfirm("end-round")}
@@ -787,7 +796,7 @@ function TeacherControls({
         {view.study?.lobby
           ? "全員の入室とランダム割り当てを確認して開始します。全市場で5秒後に取引が始まります。"
           : `実験を開始すると、各市場は${studyMarketSize(view.config)}人そろい次第、取引を開始します。`}
-        各期の終了後は自動で次の期へ進み、15期で終了します。
+        各期の終了後は自動で次の期へ進みます。制度の最終期は8秒間の結果確認後に進み、15期で終了します。
       </p>
       {confirm && (
         <ConfirmDialog

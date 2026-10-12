@@ -260,10 +260,15 @@ export class DemoSession {
   };
 
   skipStage = () => {
-    if (this.room.phase !== "running" || this.market.deadline === null) return;
+    if (
+      this.room.phase !== "running" ||
+      this.market.deadline === null ||
+      this.market.stage === "feedback"
+    )
+      return;
     this.error = "";
     this.submitSealedBots();
-    this.advanceTo(this.market.deadline);
+    this.advanceTo(this.market.deadline, true);
     // Leave the next buyer's full ten seconds available after a manual jump.
     this.botClocks.get(this.market.id)!.nextAt = this.now + 2000;
     this.submitSealedBots();
@@ -272,11 +277,23 @@ export class DemoSession {
 
   // Advance every market through its own deadlines so intermediate Call
   // clearings and Posted Offer purchases still run through the real engine.
-  private advanceTo(target: number) {
+  private advanceTo(target: number, stopAtFeedback = false) {
+    const initialFeedback =
+      this.market.stage === "feedback"
+        ? stageKey(this.room, this.market)
+        : null;
+    const reachedFeedback = () =>
+      stopAtFeedback &&
+      this.market.stage === "feedback" &&
+      stageKey(this.room, this.market) !== initialFeedback;
     while (this.now < target && this.room.phase === "running") {
       this.now = Math.min(target, this.now + 1000);
       settleStudy(this.room, this.now, []);
-      if (this.now < target) this.runBots();
+      if (reachedFeedback()) break;
+      if (this.now < target) {
+        this.runBots();
+        if (reachedFeedback()) break;
+      }
     }
   }
 
@@ -284,7 +301,7 @@ export class DemoSession {
     if (this.room.phase !== "running") return;
     this.error = "";
     this.runBots();
-    this.advanceTo(this.now + seconds * 1000);
+    this.advanceTo(this.now + seconds * 1000, true);
     this.runBots();
     this.publish();
   };

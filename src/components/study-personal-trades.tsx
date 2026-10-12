@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, X } from "lucide-react";
+import { CheckCircle2, Info, X } from "lucide-react";
 import { decimal } from "@/lib/client";
 import type { StudyView } from "@/lib/study-types";
 
@@ -10,19 +10,22 @@ type PersonalTrade = StudyView["myTrades"][number];
 export function StudyTradeFeedback({
   trades,
   buyer,
+  feedbackRound = null,
 }: {
   trades: PersonalTrade[];
   buyer: boolean;
+  feedbackRound?: number | null;
 }) {
   // The initial snapshot is history, not a new fill. Compare confirmed IDs so
   // polling, command retries and trades initiated by the counterparty behave alike.
-  const [previous, setPrevious] = useState(trades);
+  const [previous, setPrevious] = useState({ trades, feedbackRound });
   const [notification, setNotification] = useState<PersonalTrade[]>([]);
-  if (previous !== trades) {
-    setPrevious(trades);
-    const seen = new Set(previous.map((trade) => trade.id));
+  if (previous.trades !== trades || previous.feedbackRound !== feedbackRound) {
+    setPrevious({ trades, feedbackRound });
+    const seen = new Set(previous.trades.map((trade) => trade.id));
     const added = trades.filter((trade) => !seen.has(trade.id));
-    if (added.length) setNotification(added);
+    if (feedbackRound !== null) setNotification([]);
+    else if (added.length) setNotification(added);
   }
 
   return (
@@ -32,13 +35,52 @@ export function StudyTradeFeedback({
       aria-live="polite"
       aria-atomic="true"
     >
-      {notification.length > 0 && (
+      {feedbackRound !== null ? (
+        <PeriodNotice
+          trades={trades.filter((trade) => trade.round === feedbackRound)}
+          buyer={buyer}
+          round={feedbackRound}
+        />
+      ) : notification.length > 0 ? (
         <TradeNotice
           key={notification.at(-1)!.id}
           trades={notification}
           buyer={buyer}
         />
+      ) : null}
+    </div>
+  );
+}
+
+function PeriodNotice({
+  trades,
+  buyer,
+  round,
+}: {
+  trades: PersonalTrade[];
+  buyer: boolean;
+  round: number;
+}) {
+  return (
+    <div className={`study-trade-notice ${trades.length ? "" : "is-unfilled"}`}>
+      {trades.length ? (
+        <CheckCircle2 size={22} aria-hidden="true" />
+      ) : (
+        <Info size={22} aria-hidden="true" />
       )}
+      <div>
+        <b>
+          第{((round - 1) % 5) + 1}期の取引結果：
+          {trades.length ? "取引が成立しました" : "未約定"}
+        </b>
+        {trades.length ? (
+          <TradeDetails trades={trades} buyer={buyer} />
+        ) : (
+          <p>
+            今期は取引が成立しませんでした。<span>利益 0 円</span>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -56,21 +98,12 @@ function TradeNotice({
     return () => window.clearTimeout(timer);
   }, []);
   if (!visible) return null;
-  const prices = [...new Set(trades.map((trade) => trade.price))];
-  const profit = trades.reduce((sum, trade) => sum + trade.profit, 0);
   return (
     <div className="study-trade-notice">
       <CheckCircle2 size={22} aria-hidden="true" />
       <div>
         <b>取引が成立しました</b>
-        <p>
-          {trades.length}単位を
-          {prices.map((price) => `${decimal(price)} 円`).join("・")}で
-          {buyer ? "購入" : "販売"}
-          <span className={profit < 0 ? "loss" : ""}>
-            利益 {decimal(profit)} 円{profit < 0 ? "（損失）" : ""}
-          </span>
-        </p>
+        <TradeDetails trades={trades} buyer={buyer} />
       </div>
       <button
         type="button"
@@ -81,6 +114,27 @@ function TradeNotice({
         <X size={18} />
       </button>
     </div>
+  );
+}
+
+function TradeDetails({
+  trades,
+  buyer,
+}: {
+  trades: PersonalTrade[];
+  buyer: boolean;
+}) {
+  const prices = [...new Set(trades.map((trade) => trade.price))];
+  const profit = trades.reduce((sum, trade) => sum + trade.profit, 0);
+  return (
+    <p>
+      {trades.length}単位を
+      {prices.map((price) => `${decimal(price)} 円`).join("・")}で
+      {buyer ? "購入" : "販売"}
+      <span className={profit < 0 ? "loss" : ""}>
+        利益 {decimal(profit)} 円{profit < 0 ? "（損失）" : ""}
+      </span>
+    </p>
   );
 }
 

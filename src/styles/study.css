@@ -497,6 +497,12 @@
   align-items: center;
   gap: 8px;
 }
+.study-conditions-role {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  font-weight: 600;
+  line-height: 1.4;
+}
 .private-panel h2 small {
   margin-left: auto;
   font-size: 10px;

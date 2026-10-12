@@ -630,6 +630,9 @@ function StudentConditions(props: MarketProps) {
     >
       <h2>
         <LockKeyhole size={16} /> {view.me.nickname}の条件
+        <span className={`role-tag ${view.me.role} study-conditions-role`}>
+          {view.me.role === "buyer" ? "買い手" : "売り手"}
+        </span>
       </h2>
       <div className="study-private-values">
         <p>
@@ -825,6 +828,7 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
   const mine = market.activeBuyer === view.me.alias && view.me.role === "buyer";
   const timing = studyTiming(view.config);
   const myTurn = market.stage === "purchase" && mine;
+  const sortedOffers = [...market.offers].sort((a, b) => a.price - b.price);
   return (
     <section className="panel study-section study-offers study-market-workspace">
       <div className="study-offer-heading">
@@ -851,7 +855,7 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
         <>
           <div className="study-offer-content">
             <div className="study-offer-list" aria-label="売り手の提示一覧">
-              {market.offers.map((o) => (
+              {sortedOffers.map((o) => (
                 <div className="study-offer-card" key={o.id}>
                   <div className="study-offer-info">
                     <b>{money(o.price)}</b>

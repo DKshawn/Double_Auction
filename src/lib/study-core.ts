@@ -17,6 +17,8 @@ import { STUDY_RULES } from "./study-rules";
 import { MAX_STAGE_SECONDS, studyTiming } from "./study-timing";
 import {
   MAX_STUDY_PARTICIPANTS,
+  DEFAULT_STUDY_INSTITUTIONS,
+  studyInstitutionOrders,
   studyMarketId,
   studyMarketSize,
   studyRoleIndex,
@@ -78,6 +80,14 @@ const pair = z.tuple([
   z.number().int().min(1).max(999),
 ]);
 const stageSeconds = z.number().int().min(1).max(MAX_STAGE_SECONDS);
+export const studyInstitutionsSchema = z
+  .array(z.enum(["cda", "call", "posted"]))
+  .min(1, "実施する制度を1つ以上選択してください。")
+  .max(3)
+  .refine(
+    (items) => new Set(items).size === items.length,
+    "制度を重複して選択できません。",
+  );
 export const studyTimingSchema = z
   .object({
     cdaSeconds: stageSeconds,
@@ -111,18 +121,21 @@ export function shuffled<T>(items: T[]): T[] {
   }
   return result;
 }
-export const ORDERS: Institution[][] = [
-  ["cda", "call", "posted"],
-  ["cda", "posted", "call"],
-  ["call", "cda", "posted"],
-  ["call", "posted", "cda"],
-  ["posted", "cda", "call"],
-  ["posted", "call", "cda"],
-];
-export function createStudy(count: number, settings: StudySettings): Study {
-  // Keep the one-market teaching preset; otherwise distribute all six orders
-  // as evenly as possible, without favouring the first orders in smaller rooms.
-  const candidates = count === 1 ? [ORDERS[0]] : shuffled(ORDERS);
+export const ORDERS = studyInstitutionOrders(DEFAULT_STUDY_INSTITUTIONS);
+export function createStudy(
+  count: number,
+  settings: StudySettings,
+  institutions: readonly Institution[] = DEFAULT_STUDY_INSTITUTIONS,
+): Study {
+  if (!studyInstitutionsSchema.safeParse(institutions).success)
+    throw new AuctionError("実施する制度を重複せず1つ以上選択してください。");
+  const selected = DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
+    institutions.includes(i),
+  );
+  // A single market uses the default selected order. Multiple markets balance
+  // every permutation of the selected institutions as evenly as possible.
+  const candidates =
+    count === 1 ? [selected] : shuffled(studyInstitutionOrders(selected));
   const orders = shuffled(
     Array.from({ length: count }, (_, i) => candidates[i % candidates.length]),
   );
@@ -295,7 +308,7 @@ function sync(room: Room) {
   if (
     ["running", "paused"].includes(room.phase) &&
     room.study!.markets.every(
-      (m) => m.stage === "done" && marketRound(room, m) === 15,
+      (m) => m.stage === "done" && marketRound(room, m) === room.config.rounds,
     )
   )
     room.phase = "finished";
@@ -376,7 +389,10 @@ function finishMarket(
     log(room, m, events, at, "feedback-started", "system", {
       seconds: STUDY_FEEDBACK_SECONDS,
     });
-  } else if (completion === "complete" && marketRound(room, m) < 15)
+  } else if (
+    completion === "complete" &&
+    marketRound(room, m) < room.config.rounds
+  )
     startMarket(room, m, events, at);
 }
 function checkPrice(price: number) {
@@ -499,7 +515,7 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
   for (const m of room.study!.markets) {
     if (
       ["waiting", "done"].includes(m.stage) &&
-      marketRound(room, m) < 15 &&
+      marketRound(room, m) < room.config.rounds &&
       room.participants.filter((p) => marketFor(room, p).id === m.id).length ===
         studyMarketSize(room.config)
     ) {
@@ -512,7 +528,8 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
       if (m.stage === "countdown") startMarket(room, m, events, at);
       else if (m.stage === "feedback") {
         log(room, m, events, at, "feedback-ended", "system");
-        if (marketRound(room, m) < 15) startMarket(room, m, events, at);
+        if (marketRound(room, m) < room.config.rounds)
+          startMarket(room, m, events, at);
         else {
           m.stage = "done";
           m.epoch++;
@@ -765,7 +782,10 @@ export function executeStudy(
             cmd.type !== "finish",
           );
           if (cmd.type === "end-round") {
-            if (m.stage !== "feedback" && marketRound(room, m) < 15)
+            if (
+              m.stage !== "feedback" &&
+              marketRound(room, m) < room.config.rounds
+            )
               startMarket(room, m, events, now);
             if (room.phase === "paused") m.deadline = null;
           }

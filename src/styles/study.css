@@ -201,6 +201,32 @@
   font-size: 18px;
   font-weight: 700;
 }
+.study-waiting-institutions {
+  margin-top: 20px;
+  font-size: 13px;
+}
+.study-waiting-institutions p {
+  font-weight: 600;
+}
+.study-waiting-institutions ul {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+.study-waiting-institutions li {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--lavender);
+  color: var(--accent);
+}
+.study-waiting-institutions > span {
+  color: var(--muted);
+  font-size: 12px;
+}
 .study-waiting-steps {
   display: flex;
   justify-content: center;

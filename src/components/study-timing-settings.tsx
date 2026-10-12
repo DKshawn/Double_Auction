@@ -7,24 +7,33 @@ import {
   STUDY_TIMING_FIELDS,
   studyTiming,
   studyTimingError,
+  studyTimingForInstitutions,
 } from "@/lib/study-timing";
-import type { StudyTiming } from "@/lib/study-types";
+import type { Institution, StudyTiming } from "@/lib/study-types";
+import {
+  DEFAULT_STUDY_INSTITUTIONS,
+  studyInstitutions,
+} from "@/lib/study-config";
 import type { Command, RoomView } from "@/lib/types";
 
 export function StudyTimingFields({
   timing,
   onChange,
   disabled = false,
+  institutions = DEFAULT_STUDY_INSTITUTIONS,
 }: {
   timing: StudyTiming;
   onChange: (timing: StudyTiming) => void;
   disabled?: boolean;
+  institutions?: readonly Institution[];
 }) {
-  const error = studyTimingError(timing);
+  const error = studyTimingError(timing, institutions);
   return (
     <>
       <div className="form-grid">
-        {STUDY_TIMING_FIELDS.map(({ key, label }) => (
+        {STUDY_TIMING_FIELDS.filter((field) =>
+          institutions.includes(field.institution),
+        ).map(({ key, label }) => (
           <label className="field" key={key}>
             {label}
             <input
@@ -45,7 +54,7 @@ export function StudyTimingFields({
       </div>
       <p className={error ? "error-message" : "field-help"} aria-live="polite">
         {error ||
-          "1〜3600秒の整数。Call Marketは1期に4回受付します。購入完了・辞退などで予定より早く次へ進む場合があります。"}
+          `1〜3600秒の整数。${institutions.includes("call") ? "Call Marketは1期に4回受付します。" : ""}${institutions.includes("posted") ? "購入完了・辞退などで予定より早く次へ進む場合があります。" : ""}`}
       </p>
     </>
   );
@@ -63,6 +72,7 @@ export function StudyTimingEditor({
   const [draft, setDraft] = useState<StudyTiming | null>(null);
   const [revision, setRevision] = useState(0);
   const timing = draft ?? studyTiming(view.config);
+  const institutions = studyInstitutions(view.config);
   const locked = view.phase !== "waiting" || view.round > 0;
   const stale = draft !== null && revision !== view.study!.settingsRevision;
   const [saved, setSaved] = useState(false);
@@ -94,6 +104,7 @@ export function StudyTimingEditor({
         timing={timing}
         onChange={setDraft}
         disabled={disabled || locked || !draft}
+        institutions={institutions}
       />
       {stale && (
         <p className="error-message">
@@ -114,13 +125,16 @@ export function StudyTimingEditor({
             type="button"
             className="button primary"
             disabled={
-              disabled || locked || stale || Boolean(studyTimingError(draft))
+              disabled ||
+              locked ||
+              stale ||
+              Boolean(studyTimingError(draft, institutions))
             }
             onClick={async () => {
               if (
                 await command({
                   type: "study-timing",
-                  timing: draft,
+                  timing: studyTimingForInstitutions(draft, institutions),
                   expectedRevision: revision,
                 })
               ) {

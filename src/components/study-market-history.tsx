@@ -107,6 +107,7 @@ export function StudyMarketHistory({
   showParticipants = false,
   standalone = false,
   institution,
+  rounds = 15,
 }: {
   trades: StudyMarketView["trades"];
   orders: StudyMarketView["orderHistory"];
@@ -116,6 +117,7 @@ export function StudyMarketHistory({
   showParticipants?: boolean;
   standalone?: boolean;
   institution?: Institution;
+  rounds?: number;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const newestFirst = historyEntries(orders, trades, clearings, offerHistory);
@@ -131,7 +133,7 @@ export function StudyMarketHistory({
   const latest = newestFirst[0];
   const scopeLabel = institution
     ? `${INSTITUTIONS[institution].short}・制度内1〜5期`
-    : "全15期";
+    : `全${rounds}期`;
 
   return (
     <section

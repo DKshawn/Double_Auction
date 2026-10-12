@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Command, RoomView } from "@/lib/types";
-import { studyMarketSize } from "@/lib/study-config";
+import { studyMarketSize, studyInstitutions } from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { Header } from "./shell";
 
@@ -207,6 +207,18 @@ export function StudyWaitingRoom({
               ? "教員が開始すると実験画面に切り替わり、5秒後に取引が始まります。"
               : "全員の入室後、教員が市場と買い手・売り手をランダムに割り当てます。"}
           </p>
+          <div
+            className="study-waiting-institutions"
+            aria-label="本実験で実施する制度"
+          >
+            <p>本実験で実施する制度</p>
+            <ul>
+              {studyInstitutions(view.config).map((institution) => (
+                <li key={institution}>{INSTITUTIONS[institution].short}</li>
+              ))}
+            </ul>
+            <span>各制度5期・計{view.config.rounds}期</span>
+          </div>
           <ol className="study-waiting-steps">
             <li className="complete">
               <Check size={16} />

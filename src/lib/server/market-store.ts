@@ -52,7 +52,9 @@ export function assemble(
   if (
     ["running", "paused"].includes(root.phase) &&
     markets.length &&
-    markets.every((m) => m.state.stage === "done" && m.state.round === 15)
+    markets.every(
+      (m) => m.state.stage === "done" && m.state.round === room.config.rounds,
+    )
   )
     room.phase = "finished";
   return room;

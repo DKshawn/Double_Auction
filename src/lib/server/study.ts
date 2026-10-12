@@ -1,10 +1,17 @@
 import { createStudy } from "../study-core";
-import { DEFAULT_MARKET_SIZE } from "../study-config";
-import type { StudySettings } from "../study-types";
+import {
+  DEFAULT_MARKET_SIZE,
+  DEFAULT_STUDY_INSTITUTIONS,
+} from "../study-config";
+import type { Institution, StudySettings } from "../study-types";
 export * from "../study-core";
 
 // Formal experiment schedules stay on the server; the public demo uses its own values.
-export function newStudy(count: number, marketSize = DEFAULT_MARKET_SIZE) {
+export function newStudy(
+  count: number,
+  marketSize = DEFAULT_MARKET_SIZE,
+  institutions: readonly Institution[] = DEFAULT_STUDY_INSTITUTIONS,
+) {
   const defaults: StudySettings = {
     values: [
       [120, 104],
@@ -39,8 +46,12 @@ export function newStudy(count: number, marketSize = DEFAULT_MARKET_SIZE) {
           number,
         ],
     );
-  return createStudy(count, {
-    values: resize(defaults.values),
-    costs: resize(defaults.costs),
-  });
+  return createStudy(
+    count,
+    {
+      values: resize(defaults.values),
+      costs: resize(defaults.costs),
+    },
+    institutions,
+  );
 }

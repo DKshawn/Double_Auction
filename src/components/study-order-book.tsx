@@ -142,6 +142,7 @@ export function StudyOrderBook({
           orders={market.orderHistory}
           clearings={market.clearings}
           offerHistory={market.offerHistory}
+          rounds={view.config.rounds}
           showParticipants
         />
       )}

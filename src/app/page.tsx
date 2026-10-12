@@ -26,7 +26,7 @@ export default async function Home({
               <em>市場</em>を学ぼう。
             </h1>
             <p className="hero-description">
-              同じ商品を、3つの制度で取引する。
+              同じ商品を、選んだ制度で取引する。
               <br />
               みんなの取引が、ひとつの市場をつくります。
             </p>
@@ -51,7 +51,7 @@ export default async function Home({
             <div className="hero-facts">
               <span>
                 <Layers3 size={17} />
-                3つの制度
+                選べる3つの制度
               </span>
               <span>
                 <UsersRound size={17} />
@@ -59,7 +59,7 @@ export default async function Home({
               </span>
               <span>
                 <RefreshCcw size={16} />
-                各5期・全15期
+                各5期・全5〜15期
               </span>
             </div>
           </div>

@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuctionError } from "./model";
 import { marketSettingsSchema } from "./market-settings";
-import { studySettingsSchema, studyTimingSchema } from "./study";
+import {
+  studySettingsSchema,
+  studyTimingSchema,
+  studyInstitutionsSchema,
+} from "./study";
 import { MAX_STAGE_SECONDS } from "../study-timing";
 import {
   MAX_STUDY_MARKETS,
   MAX_STUDY_PARTICIPANTS,
   studyLayoutError,
   studyMarketSize,
+  studyInstitutions,
 } from "../study-config";
 
 export const NO_STORE = {
@@ -125,9 +130,10 @@ export const configSchema = z.union([
         .multipleOf(2)
         .optional(),
       capacity: z.number().int().min(2).max(MAX_STUDY_PARTICIPANTS),
-      rounds: z.literal(15),
+      rounds: z.union([z.literal(5), z.literal(10), z.literal(15)]),
       duration: z.number().int().min(1).max(MAX_STAGE_SECONDS),
       studyTiming: studyTimingSchema.optional(),
+      studyInstitutions: studyInstitutionsSchema.optional(),
     })
     .strict()
     .refine(
@@ -135,6 +141,10 @@ export const configSchema = z.union([
         !studyLayoutError(c.markets, studyMarketSize(c)) &&
         c.capacity === c.markets * studyMarketSize(c),
       "市場数・1市場の人数・合計人数を確認してください。",
+    )
+    .refine(
+      (c) => c.rounds === studyInstitutions(c).length * 5,
+      "期数は選択した制度数×5期で設定してください。",
     ),
 ]);
 const good = z.enum(["apple", "banana", "orange"]);

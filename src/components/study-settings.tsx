@@ -5,7 +5,8 @@ import { equilibrium, equilibriumQuantity } from "@/lib/equilibrium";
 import { decimal } from "@/lib/client";
 import type { Command, RoomView } from "@/lib/types";
 import type { StudySettings } from "@/lib/study-types";
-import { studyMarketSize } from "@/lib/study-config";
+import { studyMarketSize, studyInstitutions } from "@/lib/study-config";
+import { INSTITUTIONS } from "@/lib/study-rules";
 import { studyTiming } from "@/lib/study-timing";
 
 export function StudySettingsEditor({
@@ -20,6 +21,7 @@ export function StudySettingsEditor({
   const teacher = view.study!.teacher!;
   const marketSize = studyMarketSize(view.config);
   const timing = studyTiming(view.config);
+  const institutions = studyInstitutions(view.config);
   const [draft, setDraft] = useState<StudySettings | null>(null);
   const [revision, setRevision] = useState(0);
   const settings = draft ?? teacher.settings;
@@ -49,7 +51,8 @@ export function StudySettingsEditor({
         <div>
           <h2>価値と費用の設定</h2>
           <p className="muted">
-            全市場・全制度・全15期で同じ条件を使います。開始後は変更できません。
+            全市場・選択した制度の全{view.config.rounds}
+            期で同じ条件を使います。開始後は変更できません。
           </p>
         </div>
         {!draft && (
@@ -181,24 +184,34 @@ export function StudySettingsEditor({
             各市場は買い手{marketSize / 2}人・売り手{marketSize / 2}
             人。全員が毎期2単位まで取引し、役割・価値・費用は固定です。手数料は0円で、損失が出る取引も認めます。
           </li>
+          {institutions.includes("cda") && (
+            <li>
+              CDAは{timing.cdaSeconds}
+              秒。価格優先・時間優先で、先に注文板にあった注文の価格を使います。
+            </li>
+          )}
+          {institutions.includes("call") && (
+            <li>
+              Callは{timing.callSeconds}
+              秒×4回。各回に1回だけ、残り数量の範囲で1〜2単位分の注文を送信できます。締切までに送信しない場合、その回は注文なしとして進みます。買値は単位順に下がり、売値は上がる注文です。同値は参加者ごとに抽選し、同じ人の1単位目を優先します。
+            </li>
+          )}
+          {institutions.includes("call") && (
+            <li>
+              Callの共通価格は、成立可能な最後の買値・売値の中間値です。未約定注文は清算ごとに失効します。数量は清算ごとには戻らず、次の期で2単位に戻ります。
+            </li>
+          )}
+          {institutions.includes("posted") && (
+            <li>
+              Posted Offerは{timing.offerSeconds}
+              秒の非公開提示後に公開します。売り手は1つの価格と1〜2単位を1回だけ送信します。締切までに確定しなければ、今期は出品しません。買い手は毎期ランダムな順で各
+              {timing.buyerSeconds}秒。購入完了・辞退で次の人に進みます。
+            </li>
+          )}
           <li>
-            CDAは{timing.cdaSeconds}
-            秒。価格優先・時間優先で、先に注文板にあった注文の価格を使います。
-          </li>
-          <li>
-            Callは{timing.callSeconds}
-            秒×4回。各回に1回だけ、残り数量の範囲で1〜2単位分の注文を送信できます。締切までに送信しない場合、その回は注文なしとして進みます。買値は単位順に下がり、売値は上がる注文です。同値は参加者ごとに抽選し、同じ人の1単位目を優先します。
-          </li>
-          <li>
-            Callの共通価格は、成立可能な最後の買値・売値の中間値です。未約定注文は清算ごとに失効します。数量は清算ごとには戻らず、次の期で2単位に戻ります。
-          </li>
-          <li>
-            Posted Offerは{timing.offerSeconds}
-            秒の非公開提示後に公開します。売り手は1つの価格と1〜2単位を1回だけ送信します。締切までに確定しなければ、今期は出品しません。買い手は毎期ランダムな順で各
-            {timing.buyerSeconds}秒。購入完了・辞退で次の人に進みます。
-          </li>
-          <li>
-            1市場の練習はCDA→Call→Posted。6市場は6通りの制度順を1市場ずつ、12市場は2市場ずつ割り当てます。
+            {institutions.map((i) => INSTITUTIONS[i].short).join("・")}
+            を各5期、計{view.config.rounds}
+            期実施します。1市場はこの順序で、多市場は選択した制度の順序を均等に割り当てます。
           </li>
           <li>
             数量比の分母は正の余剰が生じる均衡数量です。初期条件では10単位、ゼロ余剰を含む上限は11単位です。途中終了した期は収束の傾きの計算から除きます。

@@ -1,4 +1,27 @@
 import type { RoomConfig, Role } from "./types";
+import type { Institution } from "./study-types";
+
+export const DEFAULT_STUDY_INSTITUTIONS: readonly Institution[] = [
+  "cda",
+  "call",
+  "posted",
+];
+// Rooms created before institution selection keep all three institutions.
+export const studyInstitutions = (
+  config: Pick<RoomConfig, "studyInstitutions">,
+): readonly Institution[] =>
+  config.studyInstitutions ?? DEFAULT_STUDY_INSTITUTIONS;
+
+export function studyInstitutionOrders(
+  institutions: readonly Institution[],
+): Institution[][] {
+  if (institutions.length <= 1) return [[...institutions]];
+  return institutions.flatMap((first) =>
+    studyInstitutionOrders(institutions.filter((i) => i !== first)).map(
+      (rest) => [first, ...rest],
+    ),
+  );
+}
 
 export const DEFAULT_MARKET_SIZE = 16;
 export const MAX_STUDY_PARTICIPANTS = 192;

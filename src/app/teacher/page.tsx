@@ -24,7 +24,7 @@ export default async function Teacher({
             教員用ページ
           </span>
           <h1>授業に、小さな市場を。</h1>
-          <p>同じ需要と供給のもとで、3つの取引制度を比較します。</p>
+          <p>同じ需要と供給のもとで、選択した取引制度を実施します。</p>
         </div>
         <TeacherForm
           initialCode={code}

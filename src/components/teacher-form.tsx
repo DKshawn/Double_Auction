@@ -7,11 +7,19 @@ import {
   MAX_STUDY_MARKETS,
   MAX_STUDY_PARTICIPANTS,
   studyLayoutError,
+  DEFAULT_STUDY_INSTITUTIONS,
+  studyInstitutionOrders,
 } from "@/lib/study-config";
 import type { ServerStatus } from "@/lib/server/config";
 import { Spinner } from "./shell";
 import { StudyTimingFields } from "./study-timing-settings";
-import { DEFAULT_STUDY_TIMING, studyTimingError } from "@/lib/study-timing";
+import {
+  DEFAULT_STUDY_TIMING,
+  studyTimingError,
+  studyTimingForInstitutions,
+} from "@/lib/study-timing";
+import { INSTITUTIONS } from "@/lib/study-rules";
+import type { Institution } from "@/lib/study-types";
 
 export function TeacherForm({
   initialCode = "",
@@ -29,20 +37,35 @@ export function TeacherForm({
   const [marketCount, setMarketCount] = useState("1");
   const [marketSize, setMarketSize] = useState("16");
   const [timing, setTiming] = useState(() => ({ ...DEFAULT_STUDY_TIMING }));
+  const [institutions, setInstitutions] = useState<Institution[]>(() => [
+    ...DEFAULT_STUDY_INSTITUTIONS,
+  ]);
+  const institutionError = institutions.length
+    ? ""
+    : "実施する制度を1つ以上選択してください。";
+  const rounds = institutions.length * 5;
+  const orderCount = institutions.length
+    ? studyInstitutionOrders(institutions).length
+    : 0;
   const count = Number(marketCount),
     size = Number(marketSize);
   const layoutError = studyLayoutError(count, size);
-  const timingError = studyTimingError(timing);
+  const timingError = studyTimingError(timing, institutions);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (tab === "create" && !legacy && (layoutError || timingError)) {
-      setError(layoutError || timingError);
+    if (
+      tab === "create" &&
+      !legacy &&
+      (layoutError || institutionError || timingError)
+    ) {
+      setError(layoutError || institutionError || timingError);
       return;
     }
     setError("");
     setPending(true);
     const form = new FormData(event.currentTarget);
     try {
+      const selectedTiming = studyTimingForInstitutions(timing, institutions);
       const result =
         tab === "create"
           ? await api<{ code: string }>("/api/rooms", {
@@ -59,9 +82,10 @@ export function TeacherForm({
                     markets: count,
                     marketSize: size,
                     capacity: count * size,
-                    rounds: 15,
-                    duration: timing.cdaSeconds,
-                    studyTiming: timing,
+                    rounds,
+                    duration: selectedTiming.cdaSeconds,
+                    studyTiming: selectedTiming,
+                    studyInstitutions: institutions,
                   },
               password: form.get("password"),
               accessKey: form.get("accessKey") || "",
@@ -151,6 +175,49 @@ export function TeacherForm({
               </>
             ) : (
               <>
+                <fieldset
+                  className="study-institution-picker"
+                  aria-describedby="study-institution-help"
+                >
+                  <legend>実施する制度</legend>
+                  <div className="study-institution-options">
+                    {DEFAULT_STUDY_INSTITUTIONS.map((institution) => (
+                      <label
+                        className="study-institution-option"
+                        key={institution}
+                      >
+                        <input
+                          type="checkbox"
+                          name="studyInstitutions"
+                          value={institution}
+                          checked={institutions.includes(institution)}
+                          disabled={pending}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            setInstitutions((previous) =>
+                              DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
+                                i === institution
+                                  ? checked
+                                  : previous.includes(i),
+                              ),
+                            );
+                          }}
+                        />
+                        {INSTITUTIONS[institution].short}
+                      </label>
+                    ))}
+                  </div>
+                  <p
+                    id="study-institution-help"
+                    className={
+                      institutionError ? "error-message" : "field-help"
+                    }
+                    aria-live="polite"
+                  >
+                    {institutionError ||
+                      `各制度5期・計${rounds}期。制度の選択はルーム作成後に変更できません。`}
+                  </p>
+                </fieldset>
                 <label className="field">
                   市場数・参加人数
                   <select
@@ -166,10 +233,16 @@ export function TeacherForm({
                   >
                     <option value="1">1市場・16人（授業・動作確認）</option>
                     <option value="6">
-                      6市場・96人（6通りの順序を1市場ずつ）
+                      6市場・96人
+                      {orderCount > 0
+                        ? `（${orderCount}通りの順序を${6 / orderCount}市場ずつ）`
+                        : ""}
                     </option>
                     <option value="12">
-                      12市場・192人（6通りの順序を2市場ずつ）
+                      12市場・192人
+                      {orderCount > 0
+                        ? `（${orderCount}通りの順序を${12 / orderCount}市場ずつ）`
+                        : ""}
                     </option>
                     <option value="custom">
                       カスタム（人数・市場数を指定）
@@ -219,8 +292,12 @@ export function TeacherForm({
                 <div className="callout">
                   <Info size={18} />
                   <p>
-                    1商品を各自2単位、3制度を各5期、計15期実施します。市場・役割は自動割当です。1市場の場合はCDA
-                    → Call → Posted Offerの順です。
+                    1商品を各自2単位、選択した{institutions.length}
+                    制度を各5期、計{rounds}期実施します。
+                    {count === 1
+                      ? `制度の順序は${institutions.map((i) => INSTITUTIONS[i].short).join(" → ")}です。`
+                      : `${orderCount}通りの制度順序を市場ごとに均等に割り当てます。`}
+                    市場・役割は学生がそろってからランダムに割り当てます。
                   </p>
                 </div>
                 <h3>実験時間の設定</h3>
@@ -231,6 +308,7 @@ export function TeacherForm({
                   timing={timing}
                   onChange={setTiming}
                   disabled={pending}
+                  institutions={institutions}
                 />
                 {preset === "custom" && (
                   <p className="field-help">
@@ -239,8 +317,9 @@ export function TeacherForm({
                     {size !== 16 &&
                       "16人以外では、既定の価値・費用を全範囲から均等に抽出・複製します。作成後に教員画面で確認・変更できます。"}
                     {count > 1 &&
-                      count % 6 !== 0 &&
-                      "市場数が6の倍数以外では、6通りの制度順序の割当数に差が出ます。"}
+                      orderCount > 1 &&
+                      count % orderCount !== 0 &&
+                      `市場数が${orderCount}の倍数以外では、${orderCount}通りの制度順序の割当数に差が出ます。`}
                   </p>
                 )}
               </>
@@ -312,7 +391,8 @@ export function TeacherForm({
             pending ||
             (tab === "create" &&
               (!status.ready ||
-                (!legacy && Boolean(layoutError || timingError))))
+                (!legacy &&
+                  Boolean(layoutError || institutionError || timingError))))
           }
         >
           {pending ? (

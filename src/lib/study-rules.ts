@@ -46,7 +46,7 @@ export const STUDY_RULES = {
   cdaExecutionPrice: "resting-order",
   cdaOrderHistory: "public-ended-resting-orders-all-periods-with-status",
   studentHistoryDisplay: "current-institution-five-periods",
-  teacherHistoryDisplay: "all-fifteen-periods-with-institution-filter",
+  teacherHistoryDisplay: "all-selected-periods-with-institution-filter",
   postedOffers:
     "sealed-until-configured-offer-deadline-single-price-final-quantity",
   postedSubmissionQuantity: "one-or-two-units",
@@ -63,6 +63,7 @@ export const STUDY_RULES = {
   grouping: "random-balanced-seat-assignment",
   comparisonUnit: "market",
   marketStart: "after-teacher-opens-and-configured-market-capacity-is-reached",
-  periodProgression: "independent-per-market-auto-start-next-period-through-15",
+  periodProgression:
+    "independent-per-market-auto-start-through-selected-institutions",
   earlyEnd: "pending-orders-cancelled-period-marked-interrupted",
 } as const;

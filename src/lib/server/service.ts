@@ -6,6 +6,8 @@ import {
   studyMarketSize,
   studyRole,
   studyRoleIndex,
+  studyInstitutions,
+  DEFAULT_STUDY_INSTITUTIONS,
 } from "../study-config";
 import { timed, timedSync } from "./performance";
 import { randomInt, randomUUID } from "node:crypto";
@@ -36,6 +38,7 @@ import {
   newStudy,
   settleStudy,
   studyTimingSchema,
+  studyInstitutionsSchema,
   unitLimits,
 } from "./study";
 
@@ -50,6 +53,16 @@ export class AuctionService {
       const size = studyMarketSize(config);
       const layoutError = studyLayoutError(config.markets ?? 0, size);
       if (layoutError) throw new AuctionError(layoutError);
+      const selection = studyInstitutionsSchema.safeParse(
+        studyInstitutions(config),
+      );
+      if (!selection.success)
+        throw new AuctionError(
+          "実施する制度を重複せず1つ以上選択してください。",
+        );
+      const institutions = DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
+        selection.data.includes(i),
+      );
       const timing = studyTimingSchema.safeParse(studyTiming(config));
       if (!timing.success)
         throw new AuctionError("各時間は1〜3600秒の整数で設定してください。");
@@ -57,7 +70,8 @@ export class AuctionService {
         ...config,
         marketSize: size,
         capacity: config.markets! * size,
-        rounds: 15,
+        studyInstitutions: institutions,
+        rounds: institutions.length * 5,
         duration: timing.data.cdaSeconds,
         studyTiming: timing.data,
       };
@@ -92,7 +106,11 @@ export class AuctionService {
           ...(config.protocol === "institutions-v1"
             ? {
                 study: {
-                  ...newStudy(config.markets!, studyMarketSize(config)),
+                  ...newStudy(
+                    config.markets!,
+                    studyMarketSize(config),
+                    studyInstitutions(config),
+                  ),
                   lobby: { revision: 0, randomizedAt: null },
                 },
               }

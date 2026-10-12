@@ -28,7 +28,7 @@ import { StudyTimingEditor } from "./study-timing-settings";
 import { studyTiming } from "@/lib/study-timing";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
-import { studyMarketSize } from "@/lib/study-config";
+import { studyMarketSize, studyInstitutions } from "@/lib/study-config";
 import type {
   Institution,
   StudyMarketView,
@@ -119,9 +119,11 @@ export function StudyRoom({
       : market.trades.filter((trade) => trade.institution === priceScope);
   const priceStart =
     priceScope === "all" ? 1 : market.order.indexOf(priceScope) * 5 + 1;
-  const pricePeriods = priceScope === "all" ? 15 : 5;
+  const pricePeriods = priceScope === "all" ? view.config.rounds : 5;
   const priceScopeLabel =
-    priceScope === "all" ? "全15期" : INSTITUTIONS[priceScope].short;
+    priceScope === "all"
+      ? `全${view.config.rounds}期`
+      : INSTITUTIONS[priceScope].short;
   const cdaLayout = !teacher && market.institution === "cda";
   const callLayout = !teacher && market.institution === "call";
   const postedLayout = !teacher && market.institution === "posted";
@@ -217,7 +219,8 @@ export function StudyRoom({
               <div>
                 <span className="phase-label">{stageLabel}</span>
                 <strong>
-                  第 <b>{market.round || "—"}</b> 期 <small>/ 15</small>
+                  第 <b>{market.round || "—"}</b> 期{" "}
+                  <small>/ {view.config.rounds}</small>
                 </strong>
               </div>
               <span className="vertical-line" />
@@ -225,7 +228,7 @@ export function StudyRoom({
                 <span>
                   <Clock3 size={13} />
                   {market.stage === "feedback"
-                    ? market.round === 15
+                    ? market.round === view.config.rounds
                       ? "実験終了まで"
                       : "次の制度まで"
                     : "この段階の残り時間"}
@@ -304,9 +307,13 @@ export function StudyRoom({
                         <tr>
                           <th>市場</th>
                           <th>人数</th>
-                          <th>第1〜5期</th>
-                          <th>第6〜10期</th>
-                          <th>第11〜15期</th>
+                          {studyInstitutions(view.config).map(
+                            (institution, index) => (
+                              <th key={institution}>
+                                第{index * 5 + 1}〜{(index + 1) * 5}期
+                              </th>
+                            ),
+                          )}
                           <th>現在</th>
                         </tr>
                       </thead>
@@ -386,7 +393,8 @@ export function StudyRoom({
                   <section className="panel study-section">
                     <h2>実験データを保存</h2>
                     <p className="muted">
-                      すべての市場・15期の記録を、制度・市場番号・単位番号とともに保存します。
+                      すべての市場・{view.config.rounds}
+                      期の記録を、制度・市場番号・単位番号とともに保存します。
                     </p>
                     <div className="study-actions">
                       {[
@@ -470,6 +478,7 @@ export function StudyRoom({
                 offerHistory={market.offerHistory}
                 participantId={view.me.id}
                 institution={market.institution}
+                rounds={view.config.rounds}
                 standalone
               />
             )}
@@ -510,7 +519,7 @@ export function StudyRoom({
                       )
                     }
                   >
-                    <option value="all">全15期</option>
+                    <option value="all">全{view.config.rounds}期</option>
                     {market.order.map((institution) => (
                       <option key={institution} value={institution}>
                         {INSTITUTIONS[institution].short}・制度内1〜5期
@@ -526,7 +535,7 @@ export function StudyRoom({
                   round: trade.round - priceStart + 1,
                 }))}
                 rounds={pricePeriods}
-                ariaLabel={`${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? "全体の第1〜15期" : "制度内の第1〜5期"}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
+                ariaLabel={`${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? `全体の第1〜${view.config.rounds}期` : "制度内の第1〜5期"}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
                 periodAxis
                 fill
                 equilibrium={teacher?.equilibrium}
@@ -687,6 +696,7 @@ function MarketActivity(props: MarketProps) {
           orders={market.orderHistory}
           clearings={market.clearings}
           offerHistory={market.offerHistory}
+          rounds={view.config.rounds}
           showParticipants
         />
       )}
@@ -799,7 +809,8 @@ function TeacherControls({
         {view.study?.lobby
           ? "全員の入室とランダム割り当てを確認して開始します。全市場で5秒後に取引が始まります。"
           : `実験を開始すると、各市場は${studyMarketSize(view.config)}人そろい次第、取引を開始します。`}
-        各期の終了後は自動で次の期へ進みます。制度の最終期は8秒間の結果確認後に進み、15期で終了します。
+        各期の終了後は自動で次の期へ進みます。制度の最終期は8秒間の結果確認後に進み、
+        {view.config.rounds}期で終了します。
       </p>
       {confirm && (
         <ConfirmDialog
@@ -918,6 +929,7 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
           orders={market.orderHistory}
           clearings={market.clearings}
           offerHistory={market.offerHistory}
+          rounds={view.config.rounds}
           showParticipants
         />
       )}

@@ -1,6 +1,6 @@
 import { STUDY_RULES } from "../study-rules";
 import { STUDY_START_SECONDS } from "../study-types";
-import { studyMarketSize } from "../study-config";
+import { studyMarketSize, studyInstitutions } from "../study-config";
 import { studyTiming } from "../study-timing";
 import { studyView } from "./study-view";
 import { marketRound } from "./study";
@@ -34,6 +34,8 @@ export function studyExport(
             ...STUDY_RULES,
             ...studyTiming(room.config),
             tradersPerMarket: studyMarketSize(room.config),
+            institutions: studyInstitutions(room.config),
+            periods: room.config.rounds,
           },
           settingsRevision: study.revision,
           ...(study.lobby

@@ -11,7 +11,10 @@ import type {
   StudyTrade,
   Clearing,
   StudyLobby,
+  StudyGeneration,
+  StudyGeneratorConfig,
 } from "./study-types";
+import { generatedStudySettings, seededStudySeats } from "./study-generator";
 import { STUDY_FEEDBACK_SECONDS, STUDY_START_SECONDS } from "./study-types";
 import { STUDY_RULES } from "./study-rules";
 import { MAX_STAGE_SECONDS, studyTiming } from "./study-timing";
@@ -73,6 +76,7 @@ export type Study = {
   // Absent in existing rooms, which retain their independent admission flow.
   lobby?: StudyLobby;
   settings: StudySettings;
+  generation?: StudyGeneration;
   revision: number;
   markets: StudyMarket[];
 };
@@ -130,6 +134,70 @@ export function shuffled<T>(items: T[]): T[] {
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
+}
+
+function assignStudySeats(room: Room) {
+  for (const [i, person] of room.participants.entries()) {
+    person.seat = room.seats[i];
+    person.role = studyRole(room.config, person.seat);
+    person.alias = `${person.role === "buyer" ? "買" : "売"}${String(studyRoleIndex(room.config, person.seat) + 1).padStart(2, "0")}`;
+    person.limits = {
+      apple: unitLimits(room, person)[0],
+      banana: 0,
+      orange: 0,
+    };
+  }
+}
+
+export function recordStudyGeneratedAssignments(room: Room) {
+  const generation = room.study?.generation;
+  if (!generation) return;
+  const perSide = studyMarketSize(room.config) / 2;
+  generation.assignments = room.participants.map((p) => {
+    const index = studyRoleIndex(room.config, p.seat);
+    return {
+      participantId: p.id,
+      nickname: p.nickname,
+      market: studyMarketId(room.config, p.seat),
+      seat: p.seat,
+      alias: p.alias,
+      role: p.role,
+      sortedUnits: [index + 1, index + 1 + perSide],
+      limits: [...unitLimits(room, p)],
+    };
+  });
+}
+
+// Creation and later teacher edits save the same canonical conditions and seed.
+export function applyStudyGenerator(
+  room: Room,
+  generator: StudyGeneratorConfig,
+  now: number,
+) {
+  if (!room.study || room.phase !== "waiting" || room.round > 0)
+    throw new AuctionError("条件は実験開始前のみ変更できます。", 409);
+  let settings: StudySettings;
+  try {
+    settings = generatedStudySettings(generator, studyMarketSize(room.config));
+  } catch (error) {
+    throw new AuctionError(
+      error instanceof Error ? error.message : "生成条件を確認してください。",
+    );
+  }
+  room.study.settings = settings;
+  room.study.generation = {
+    ...structuredClone(generator),
+    appliedAt: now,
+    assignmentConfirmedAt: null,
+    assignments: [],
+  };
+  room.seats = seededStudySeats(room.config.capacity, generator.seed);
+  assignStudySeats(room);
+  if (room.study.lobby) {
+    room.study.lobby.revision++;
+    room.study.lobby.randomizedAt = null;
+  }
+  recordStudyGeneratedAssignments(room);
 }
 export const ORDERS = studyInstitutionOrders(DEFAULT_STUDY_INSTITUTIONS);
 export function createStudy(
@@ -647,23 +715,19 @@ export function executeStudy(
       seat: p.seat,
       role: p.role,
     }));
-    room.seats = shuffled(
-      Array.from({ length: room.config.capacity }, (_, i) => i),
-    );
-    for (const [i, person] of room.participants.entries()) {
-      person.seat = room.seats[i];
-      person.role = studyRole(room.config, person.seat);
-      person.alias = `${person.role === "buyer" ? "買" : "売"}${String(studyRoleIndex(room.config, person.seat) + 1).padStart(2, "0")}`;
-      person.limits = {
-        apple: unitLimits(room, person)[0],
-        banana: 0,
-        orange: 0,
-      };
-    }
+    room.seats = study.generation
+      ? seededStudySeats(room.config.capacity, study.generation.seed)
+      : shuffled(Array.from({ length: room.config.capacity }, (_, i) => i));
+    assignStudySeats(room);
     study.lobby.revision++;
     study.lobby.randomizedAt = now;
+    if (study.generation) {
+      study.generation.assignmentConfirmedAt = now;
+      recordStudyGeneratedAssignments(room);
+    }
     emit(room, events, now, "participants-randomized", actorId, {
       revision: study.lobby.revision,
+      ...(study.generation ? { seed: study.generation.seed } : {}),
       before,
       assignments: room.participants.map((p) => ({
         id: p.id,
@@ -706,10 +770,38 @@ export function executeStudy(
         throw new AuctionError(
           `買い手・売り手それぞれ${studyMarketSize(room.config) / 2}人×2単位の条件を確認してください。評価値は低下、費用は上昇するように設定します。`,
         );
+      // Recompute on the authoritative engine; client metadata cannot mislabel
+      // a manually edited schedule as a reproducible generated condition.
+      if (cmd.generator) {
+        try {
+          const generated = generatedStudySettings(
+            cmd.generator,
+            studyMarketSize(room.config),
+          );
+          if (JSON.stringify(generated) !== JSON.stringify(parsed.data))
+            throw new Error(
+              "生成条件と価値・費用が一致しません。再度プレビューしてください。",
+            );
+        } catch (error) {
+          throw new AuctionError(
+            error instanceof Error
+              ? error.message
+              : "生成条件を確認してください。",
+          );
+        }
+      }
       study.settings = parsed.data;
+      if (cmd.generator) {
+        applyStudyGenerator(room, cmd.generator, now);
+      } else {
+        delete study.generation;
+      }
       study.revision++;
       emit(room, events, now, "study-settings", "teacher", {
         settings: study.settings,
+        ...(study.generation
+          ? { generation: structuredClone(study.generation) }
+          : {}),
         revision: study.revision,
       });
     }
@@ -739,6 +831,10 @@ export function executeStudy(
           startsAt: now + STUDY_START_SECONDS * 1000,
           assignmentRevision: study.lobby.revision,
         });
+      }
+      if (study.generation) {
+        study.generation.assignmentConfirmedAt ??= now;
+        recordStudyGeneratedAssignments(room);
       }
       room.phase = "running";
       emit(room, events, now, "experiment-started", actorId);

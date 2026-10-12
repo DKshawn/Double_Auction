@@ -3,6 +3,7 @@ import { ArrowLeft, GraduationCap } from "lucide-react";
 import { Header, Footer } from "@/components/shell";
 import { TeacherForm } from "@/components/teacher-form";
 import { getServerStatus } from "@/lib/server/config";
+import { pptStudySettings } from "@/lib/server/study";
 
 export default async function Teacher({
   searchParams,
@@ -30,11 +31,15 @@ export default async function Teacher({
           initialCode={code}
           status={getServerStatus()}
           legacy={legacy === "1"}
+          conditionPreset={{
+            label: "既存 PPT プリセット",
+            settings: pptStudySettings(),
+          }}
         />
         <div className="demo-entry-link">
           <span>授業の前に、ひとりで操作を確認</span>
           <Link href="/demo">ひとりデモを試す</Link>
-          <small>ルームの作成や参加者の入室は不要です。</small>
+          <small>実験の設定から開始。仮想参加者が自動で入室します。</small>
         </div>
       </main>
       <Footer />

@@ -15,6 +15,8 @@ import { timed, timedSync } from "./performance";
 import { randomInt, randomUUID } from "node:crypto";
 import type { CommandRequest, RoomConfig, RoomView } from "../types";
 import type { RoomSummary } from "../room-management";
+import type { StudyGeneratorConfig } from "../study-types";
+import { generatedStudySettings } from "../study-generator";
 import {
   authenticate,
   assertTeacherAccess,
@@ -46,6 +48,8 @@ import {
   studyInstitutionsSchema,
   studyPeriodsSchema,
   unitLimits,
+  recordStudyGeneratedAssignments,
+  applyStudyGenerator,
 } from "./study";
 
 type Outcome<T> =
@@ -54,8 +58,17 @@ type Outcome<T> =
 export class AuctionService {
   constructor(private db: Database) {}
 
-  async create(config: RoomConfig, password: string, accessKey: string) {
+  async create(
+    config: RoomConfig,
+    password: string,
+    accessKey: string,
+    generator?: StudyGeneratorConfig,
+  ) {
     assertTeacherAccess(accessKey);
+    if (generator && config.protocol !== "institutions-v1")
+      throw new AuctionError(
+        "この供需プリセットは制度比較実験で選択してください。",
+      );
     if (config.protocol === "institutions-v1") {
       const size = studyMarketSize(config);
       const layoutError = studyLayoutError(config.markets ?? 0, size);
@@ -94,6 +107,18 @@ export class AuctionService {
         duration: timing.data.cdaSeconds,
         studyTiming: timing.data,
       };
+    }
+    if (generator) {
+      generator = structuredClone(generator);
+      try {
+        generatedStudySettings(generator, studyMarketSize(config));
+      } catch (error) {
+        throw new AuctionError(
+          error instanceof Error
+            ? error.message
+            : "生成条件を確認してください。",
+        );
+      }
     }
     const token = newToken();
     const hash = passwordHash(password);
@@ -149,6 +174,7 @@ export class AuctionService {
           receipts: [],
         };
         const events: AuditEvent[] = [];
+        if (generator) applyStudyGenerator(room, generator, now);
         emit(room, events, now, "room-created", "teacher", {
           config,
           marketSettings: room.marketSettings,
@@ -156,6 +182,9 @@ export class AuctionService {
             ? {
                 protocol: room.study.protocol,
                 settings: room.study.settings,
+                ...(room.study.generation
+                  ? { generation: structuredClone(room.study.generation) }
+                  : {}),
                 orders: room.study.markets.map((m) => ({
                   market: m.id,
                   order: m.order,
@@ -331,6 +360,7 @@ export class AuctionService {
             : room.round,
         );
         if (room.study) settleStudy(room, now, events);
+        recordStudyGeneratedAssignments(room);
       }
       return { code, token };
     });

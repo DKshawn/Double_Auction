@@ -2,22 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuctionError } from "./model";
 import { marketSettingsSchema } from "./market-settings";
+import { studySettingsSchema, studyTimingSchema } from "./study";
+import { studyRoomConfigSchema } from "../study-room-config";
 import {
-  studySettingsSchema,
-  studyTimingSchema,
-  studyInstitutionsSchema,
-  studyPeriodsSchema,
-} from "./study";
-import { MAX_STAGE_SECONDS } from "../study-timing";
+  generatedStudySettings,
+  studyGeneratorConfigSchema,
+} from "../study-generator";
 import { MAX_NICKNAME_LENGTH } from "../participant-config";
-import {
-  MAX_STUDY_MARKETS,
-  MAX_STUDY_PARTICIPANTS,
-  studyLayoutError,
-  studyMarketSize,
-  studyTotalRounds,
-  MAX_STUDY_ROUNDS,
-} from "../study-config";
+import { MAX_STUDY_ROUNDS, studyMarketSize } from "../study-config";
 
 export const NO_STORE = {
   "Cache-Control": "private, no-store, max-age=0",
@@ -68,10 +60,19 @@ export async function body<T>(
     throw new AuctionError("送信内容を読み取れません。");
   }
   const parsed = schema.safeParse(data);
-  if (!parsed.success)
-    throw new AuctionError(
-      "入力内容を確認してください。価格・人数・文字数が範囲内か確認してください。",
+  if (!parsed.success) {
+    // Preserve the generator's precise range/integer diagnosis on creation too.
+    const generatorIssue = parsed.error.issues.find(
+      (issue) =>
+        issue.code === "custom" &&
+        issue.path.length === 1 &&
+        issue.path[0] === "generator",
     );
+    throw new AuctionError(
+      generatorIssue?.message ??
+        "入力内容を確認してください。価格・人数・文字数が範囲内か確認してください。",
+    );
+  }
   return parsed.data;
 }
 
@@ -126,37 +127,36 @@ export const joinSchema = z
   .strict();
 export const configSchema = z.union([
   legacyConfigSchema,
-  z
-    .object({
-      protocol: z.literal("institutions-v1"),
-      title: z.string().trim().min(1).max(60),
-      markets: z.number().int().min(1).max(MAX_STUDY_MARKETS),
-      marketSize: z
-        .number()
-        .int()
-        .min(2)
-        .max(MAX_STUDY_PARTICIPANTS)
-        .multipleOf(2)
-        .optional(),
-      capacity: z.number().int().min(2).max(MAX_STUDY_PARTICIPANTS),
-      rounds: z.number().int().min(1).max(MAX_STUDY_ROUNDS),
-      duration: z.number().int().min(1).max(MAX_STAGE_SECONDS),
-      studyTiming: studyTimingSchema.optional(),
-      studyInstitutions: studyInstitutionsSchema.optional(),
-      studyPeriods: studyPeriodsSchema.optional(),
-    })
-    .strict()
-    .refine(
-      (c) =>
-        !studyLayoutError(c.markets, studyMarketSize(c)) &&
-        c.capacity === c.markets * studyMarketSize(c),
-      "市場数・1市場の人数・合計人数を確認してください。",
-    )
-    .refine(
-      (c) => c.rounds === studyTotalRounds(c),
-      "合計期数は選択した各制度の期数と一致させてください。",
-    ),
+  studyRoomConfigSchema,
 ]);
+export const createRoomSchema = z
+  .object({
+    config: configSchema,
+    password: z.string().min(8).max(128),
+    accessKey: z.string().max(256).default(""),
+    generator: studyGeneratorConfigSchema.optional(),
+  })
+  .strict()
+  .superRefine((data, context) => {
+    if (!data.generator) return;
+    try {
+      if (
+        !("protocol" in data.config) ||
+        data.config.protocol !== "institutions-v1"
+      )
+        throw new Error("この供需プリセットは制度比較実験で選択してください。");
+      generatedStudySettings(data.generator, studyMarketSize(data.config));
+    } catch (error) {
+      context.addIssue({
+        code: "custom",
+        path: ["generator"],
+        message:
+          error instanceof Error
+            ? error.message
+            : "生成条件を確認してください。",
+      });
+    }
+  });
 const good = z.enum(["apple", "banana", "orange"]);
 export const commandSchema = z
   .object({
@@ -181,6 +181,7 @@ export const commandSchema = z
         .object({
           type: z.literal("study-settings"),
           settings: studySettingsSchema,
+          generator: studyGeneratorConfigSchema.optional(),
           expectedRevision: z.number().int().min(0),
         })
         .strict(),

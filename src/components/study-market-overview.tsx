@@ -5,7 +5,7 @@ import { decimal } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { StudyView } from "@/lib/study-types";
 import type { RoomConfig, RoomView } from "@/lib/types";
-import { studyPeriodAt } from "@/lib/study-config";
+import { studyMarketSize, studyPeriodAt } from "@/lib/study-config";
 
 export function StudyMarketOverview({
   teacher,
@@ -189,7 +189,9 @@ export function StudyMarketOverview({
       </div>
       {demo && (
         <p className="study-overview-note">
-          市場1はあなた＋仮想参加者15人。他市場は全員が仮想参加者です。
+          あなたの市場はあなた1人＋仮想参加者{studyMarketSize(config) - 1}
+          人です。
+          {config.markets! > 1 && "他市場は全員が仮想参加者です。"}
         </p>
       )}
     </section>

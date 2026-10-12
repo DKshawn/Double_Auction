@@ -12,6 +12,7 @@ import {
 } from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { studyTiming } from "@/lib/study-timing";
+import { StudyPresetGenerator } from "./study-preset-generator";
 
 export function StudySettingsEditor({
   view,
@@ -72,6 +73,12 @@ export function StudySettingsEditor({
           </button>
         )}
       </div>
+      <StudyPresetGenerator
+        view={view}
+        command={command}
+        disabled={disabled}
+        onApplied={() => setDraft(null)}
+      />
       <details open={Boolean(draft)}>
         <summary>{marketSize}人の条件を確認する</summary>
         <div className="study-settings-grid">
@@ -223,7 +230,9 @@ export function StudySettingsEditor({
             期実施します。1市場はこの順序で、多市場は選択した制度の順序を均等に割り当てます。
           </li>
           <li>
-            数量比の分母は正の余剰が生じる均衡数量です。初期条件では10単位、ゼロ余剰を含む上限は11単位です。途中終了した期は収束の傾きの計算から除きます。
+            数量比の分母は正の余剰が生じる均衡数量です。
+            {eq && `現在の均衡数量は${equilibriumQuantity(eq)}単位です。`}
+            ゼロ余剰の取引を含む数量比は1を超える場合があります。非効率取引は価値が費用を下回る取引を数え、効率性は実現余剰で計算します。途中終了した期は収束の傾きの計算から除きます。
           </li>
           <li>
             各市場の全期の取引価格は学生にも公開します。全員の価値・費用と理論均衡は教員だけに表示します。

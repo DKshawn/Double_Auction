@@ -56,6 +56,7 @@ export function studyExport(
               }
             : {}),
           schedules: study.settings,
+          ...(study.generation ? { generation: study.generation } : {}),
           equilibrium: teacher.equilibrium,
           participants: teacher.participants,
           markets: study.markets.map((m) => ({

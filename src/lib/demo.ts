@@ -1,6 +1,10 @@
 import type { Participant, Room } from "./auction-model";
-import type { Command, Role, RoomView } from "./types";
-import type { Institution, StudySettings } from "./study-types";
+import type { Command, Role, RoomConfig, RoomView } from "./types";
+import type {
+  Institution,
+  StudySettings,
+  StudyGeneratorConfig,
+} from "./study-types";
 import { randomUUID } from "./random";
 import {
   createStudy,
@@ -11,8 +15,18 @@ import {
   stageKey,
   unitLimits,
   unitsUsed,
+  applyStudyGenerator,
 } from "./study-core";
 import { studyView } from "./study-view";
+import {
+  resizeStudySettings,
+  studyInstitutions,
+  studyMarketId,
+  studyMarketSize,
+  studyRole,
+  studyRoleIndex,
+} from "./study-config";
+import { studyRoomConfigSchema } from "./study-room-config";
 
 export const DEMO_MARKETS = 12;
 export const DEMO_CAPACITY = DEMO_MARKETS * 16;
@@ -36,6 +50,7 @@ export type DemoSnapshot = {
 /** In-memory demo only: no cookies, API requests or classroom persistence. */
 export class DemoSession {
   private room!: Room;
+  private config: RoomConfig;
   private now: number;
   private humanId = "";
   private role: Role;
@@ -54,8 +69,26 @@ export class DemoSession {
     institution: Institution = "cda",
     role: Role = "buyer",
     now = Date.now(),
-    private options: { lobby?: boolean } = {},
+    private options: {
+      lobby?: boolean;
+      teacher?: boolean;
+      config?: RoomConfig;
+      generator?: StudyGeneratorConfig;
+    } = {},
   ) {
+    this.config = studyRoomConfigSchema.parse(
+      options.config ?? {
+        title: "ひとりデモ",
+        protocol: "institutions-v1",
+        markets: DEMO_MARKETS,
+        capacity: DEMO_CAPACITY,
+        rounds: 15,
+        duration: 180,
+      },
+    );
+    this.teacher = options.teacher ?? false;
+    if (options.generator)
+      this.options.generator = structuredClone(options.generator);
     this.now = now;
     this.role = role;
     this.institution = institution;
@@ -69,6 +102,16 @@ export class DemoSession {
     };
   };
   getSnapshot = () => this.snapshot;
+  getGeneratorConfig = (): StudyGeneratorConfig | undefined => {
+    const saved = this.room.study?.generation;
+    return saved
+      ? {
+          kind: saved.kind,
+          parameters: { ...saved.parameters },
+          seed: saved.seed,
+        }
+      : undefined;
+  };
 
   private get market() {
     return marketFor(this.room, this.human);
@@ -81,13 +124,22 @@ export class DemoSession {
   }
 
   private publish() {
+    const view = studyView(
+      this.room,
+      this.teacher ? "teacher" : this.human,
+      this.now,
+      "local",
+    );
+    if (view.study?.teacher)
+      view.study.teacher.preset = {
+        label: "既存プリセット（練習用）",
+        settings: resizeStudySettings(
+          DEMO_SETTINGS,
+          studyMarketSize(this.config),
+        ),
+      };
     this.snapshot = {
-      view: studyView(
-        this.room,
-        this.teacher ? "teacher" : this.human,
-        this.now,
-        "local",
-      ),
+      view,
       now: this.now,
       role: this.role,
       institution: this.institution,
@@ -104,21 +156,31 @@ export class DemoSession {
     this.error = "";
     this.botClocks.clear();
     this.generation++;
-    const study = createStudy(DEMO_MARKETS, DEMO_SETTINGS);
+    const config = structuredClone(this.config);
+    const size = studyMarketSize(config);
+    const institutions = studyInstitutions(config);
+    const study = createStudy(
+      config.markets!,
+      resizeStudySettings(DEMO_SETTINGS, size),
+      institutions,
+    );
     if (this.options.lobby) study.lobby = { revision: 0, randomizedAt: null };
-    const firstOrder = [
-      institution,
-      ...(["cda", "call", "posted"] as const).filter((i) => i !== institution),
-    ];
-    // Let the human choose market 1's first institution without changing the
-    // balanced assignment: each of the six sequences still has two markets.
-    const preferred = study.markets.find(
-      (market) => market.order.join() === firstOrder.join(),
-    )!;
-    [study.markets[0].order, preferred.order] = [
-      preferred.order,
-      study.markets[0].order,
-    ];
+    if (!this.options.config) {
+      const firstOrder = [
+        institution,
+        ...institutions.filter((i) => i !== institution),
+      ];
+      // Older demo callers can still choose their first institution while
+      // keeping the balanced assignment. Configured demos use the real order.
+      const preferred = study.markets.find(
+        (market) => market.order.join() === firstOrder.join(),
+      )!;
+      [study.markets[0].order, preferred.order] = [
+        preferred.order,
+        study.markets[0].order,
+      ];
+    }
+    this.institution = study.markets[0].order[0];
     for (const market of study.markets)
       this.botClocks.set(market.id, {
         nextAt: this.now,
@@ -128,14 +190,7 @@ export class DemoSession {
     this.room = {
       code: "DEMO",
       study,
-      config: {
-        title: "ひとりデモ",
-        protocol: "institutions-v1",
-        markets: DEMO_MARKETS,
-        capacity: DEMO_CAPACITY,
-        rounds: 15,
-        duration: 180,
-      },
+      config,
       phase: "waiting",
       round: 0,
       version: 1,
@@ -153,11 +208,11 @@ export class DemoSession {
       sequence: 0,
       receipts: [],
     };
-    for (let seat = 0; seat < DEMO_CAPACITY; seat++) {
-      const side = seat % 16 < 8 ? "buyer" : "seller";
-      const market = Math.floor(seat / 16) + 1;
-      const alias = `${side === "buyer" ? "買" : "売"}${String((seat % 8) + 1).padStart(2, "0")}`;
-      const human = seat === (role === "buyer" ? 0 : 8);
+    for (let seat = 0; seat < config.capacity; seat++) {
+      const side = studyRole(config, seat);
+      const market = studyMarketId(config, seat);
+      const alias = `${side === "buyer" ? "買" : "売"}${String(studyRoleIndex(config, seat) + 1).padStart(2, "0")}`;
+      const human = seat === (role === "buyer" ? 0 : size / 2);
       const id = randomUUID();
       if (human) this.humanId = id;
       this.room.participants.push({
@@ -177,6 +232,11 @@ export class DemoSession {
         failedLogins: 0,
         lockedUntil: 0,
       });
+    }
+    if (this.options.generator) {
+      applyStudyGenerator(this.room, this.options.generator, this.now);
+      this.role = this.human.role;
+      this.institution = this.market.order[0];
     }
     this.publish();
   };
@@ -236,7 +296,10 @@ export class DemoSession {
     this.error = "";
     try {
       this.send(asTeacher ? "teacher" : this.human, command);
-      if (command.type === "study-randomize") {
+      if (
+        command.type === "study-randomize" ||
+        command.type === "study-settings"
+      ) {
         this.role = this.human.role;
         this.institution = this.market.order[0];
       }
@@ -309,8 +372,9 @@ export class DemoSession {
   skipToHuman = () => {
     if (this.room.phase !== "running" || this.role !== "buyer") return;
     if (this.market.stage === "offer") this.skipStage();
-    // At most seven preceding buyers, each with at most two purchases and a pass.
-    for (let i = 0; i < 24 && this.market.stage === "purchase"; i++) {
+    // Each preceding buyer needs at most two purchases and a pass.
+    const attempts = (studyMarketSize(this.room.config) / 2) * 3;
+    for (let i = 0; i < attempts && this.market.stage === "purchase"; i++) {
       const id = this.market.buyerOrder[this.market.buyerIndex];
       if (id === this.humanId) break;
       this.buyAsBot(this.room.participants.find((p) => p.id === id)!);

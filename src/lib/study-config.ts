@@ -1,5 +1,5 @@
 import type { RoomConfig, Role } from "./types";
-import type { Institution, StudyPeriods } from "./study-types";
+import type { Institution, StudyPeriods, StudySettings } from "./study-types";
 
 export const DEFAULT_STUDY_INSTITUTIONS: readonly Institution[] = [
   "cda",
@@ -83,6 +83,24 @@ export function studyInstitutionOrders(
 }
 
 export const DEFAULT_MARKET_SIZE = 16;
+
+export function resizeStudySettings(
+  settings: StudySettings,
+  marketSize: number,
+) {
+  const perSide = marketSize / 2;
+  // Sample all profiles at equal quantiles, repeating them for larger groups.
+  const resize = (pairs: StudySettings["values"]) =>
+    Array.from(
+      { length: perSide },
+      (_, i) =>
+        [...pairs[Math.floor(((i + 0.5) * pairs.length) / perSide)]] as [
+          number,
+          number,
+        ],
+    );
+  return { values: resize(settings.values), costs: resize(settings.costs) };
+}
 export const MAX_STUDY_PARTICIPANTS = 192;
 export const MAX_STUDY_MARKETS = MAX_STUDY_PARTICIPANTS / 2;
 

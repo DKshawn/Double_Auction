@@ -14,6 +14,9 @@ import {
   studyPeriodCount,
   studyTotalRounds,
   studyPeriodsError,
+  studyInstitutions,
+  studyMarketSize,
+  resizeStudySettings,
 } from "@/lib/study-config";
 import type { ServerStatus } from "@/lib/server/config";
 import { Spinner } from "./shell";
@@ -24,31 +27,73 @@ import {
   studyTimingForInstitutions,
 } from "@/lib/study-timing";
 import { INSTITUTIONS } from "@/lib/study-rules";
-import type { Institution, StudyPeriods } from "@/lib/study-types";
+import type {
+  Institution,
+  StudyPeriods,
+  StudyGeneratorConfig,
+  StudySettings,
+} from "@/lib/study-types";
 import { TeacherRooms } from "./teacher-rooms";
+import type { RoomConfig } from "@/lib/types";
+import { studyRoomConfigSchema } from "@/lib/study-room-config";
+import { StudyPresetPicker } from "./study-preset-picker";
 
 export function TeacherForm({
   initialCode = "",
   status,
   legacy = false,
+  initialConfig,
+  initialGenerator,
+  conditionPreset,
+  onCreateDemo,
 }: {
   initialCode?: string;
   status: ServerStatus;
   legacy?: boolean;
+  initialConfig?: RoomConfig;
+  initialGenerator?: StudyGeneratorConfig;
+  conditionPreset?: { label: string; settings: StudySettings };
+  onCreateDemo?: (config: RoomConfig, generator?: StudyGeneratorConfig) => void;
 }) {
-  const [tab, setTab] = useState(initialCode ? "reenter" : "create");
+  const [tab, setTab] = useState(
+    !onCreateDemo && initialCode ? "reenter" : "create",
+  );
   const [reenterCode, setReenterCode] = useState(initialCode);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [preset, setPreset] = useState("1");
-  const [marketCount, setMarketCount] = useState("1");
-  const [marketSize, setMarketSize] = useState("16");
-  const [timing, setTiming] = useState(() => ({ ...DEFAULT_STUDY_TIMING }));
+  const [preset, setPreset] = useState(() =>
+    !initialConfig
+      ? "1"
+      : studyMarketSize(initialConfig) === 16 &&
+          [1, 6, 12].includes(initialConfig.markets!)
+        ? String(initialConfig.markets)
+        : "custom",
+  );
+  const [marketCount, setMarketCount] = useState(
+    String(initialConfig?.markets ?? 1),
+  );
+  const [marketSize, setMarketSize] = useState(
+    String(studyMarketSize(initialConfig ?? {})),
+  );
+  const [timing, setTiming] = useState(() => ({
+    ...DEFAULT_STUDY_TIMING,
+    ...initialConfig?.studyTiming,
+  }));
   const [institutions, setInstitutions] = useState<Institution[]>(() => [
-    ...DEFAULT_STUDY_INSTITUTIONS,
+    ...studyInstitutions(initialConfig ?? {}),
   ]);
   const [periods, setPeriods] = useState<StudyPeriods>(() => ({
     ...DEFAULT_STUDY_PERIODS,
+    ...initialConfig?.studyPeriods,
+  }));
+  const [adoptedConditions, setAdoptedConditions] = useState<{
+    marketSize: number;
+    generator?: StudyGeneratorConfig;
+  } | null>(() => ({
+    marketSize: studyMarketSize(initialConfig ?? {}),
+    ...(initialGenerator
+      ? { generator: structuredClone(initialGenerator) }
+      : {}),
   }));
   const institutionError = institutions.length
     ? ""
@@ -65,14 +110,28 @@ export function TeacherForm({
     size = Number(marketSize);
   const layoutError = studyLayoutError(count, size);
   const timingError = studyTimingError(timing, institutions);
+  const conditionError =
+    !adoptedConditions || adoptedConditions.marketSize !== size
+      ? "供需条件を生成・プレビューし、確認して採用してください。"
+      : "";
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (
       tab === "create" &&
       !legacy &&
-      (layoutError || institutionError || periodsError || timingError)
+      (layoutError ||
+        institutionError ||
+        periodsError ||
+        timingError ||
+        conditionError)
     ) {
-      setError(layoutError || institutionError || periodsError || timingError);
+      setError(
+        layoutError ||
+          institutionError ||
+          periodsError ||
+          timingError ||
+          conditionError,
+      );
       return;
     }
     setError("");
@@ -80,32 +139,45 @@ export function TeacherForm({
     const form = new FormData(event.currentTarget);
     try {
       const selectedTiming = studyTimingForInstitutions(timing, institutions);
+      const config: RoomConfig = legacy
+        ? {
+            title: String(form.get("title")),
+            capacity: Number(form.get("capacity")),
+            rounds: Number(form.get("rounds")),
+            duration: Number(form.get("duration")),
+          }
+        : {
+            protocol: "institutions-v1",
+            title: String(form.get("title")),
+            markets: count,
+            marketSize: size,
+            capacity: count * size,
+            rounds,
+            duration: selectedTiming.cdaSeconds,
+            studyTiming: selectedTiming,
+            studyInstitutions: institutions,
+            studyPeriods: Object.fromEntries(
+              institutions.map((i) => [i, periods[i]]),
+            ),
+          };
+      if (onCreateDemo) {
+        const parsed = studyRoomConfigSchema.safeParse(config);
+        if (!parsed.success) {
+          setError("実験名・人数・期数・時間の入力内容を確認してください。");
+          return;
+        }
+        onCreateDemo(parsed.data, adoptedConditions?.generator);
+        return;
+      }
       const result =
         tab === "create"
           ? await api<{ code: string }>("/api/rooms", {
-              config: legacy
-                ? {
-                    title: form.get("title"),
-                    capacity: Number(form.get("capacity")),
-                    rounds: Number(form.get("rounds")),
-                    duration: Number(form.get("duration")),
-                  }
-                : {
-                    protocol: "institutions-v1",
-                    title: form.get("title"),
-                    markets: count,
-                    marketSize: size,
-                    capacity: count * size,
-                    rounds,
-                    duration: selectedTiming.cdaSeconds,
-                    studyTiming: selectedTiming,
-                    studyInstitutions: institutions,
-                    studyPeriods: Object.fromEntries(
-                      institutions.map((i) => [i, periods[i]]),
-                    ),
-                  },
+              config,
               password: form.get("password"),
               accessKey: form.get("accessKey") || "",
+              ...(!legacy && adoptedConditions?.generator
+                ? { generator: adoptedConditions.generator }
+                : {}),
             })
           : await api<{ code: string }>(
               `/api/rooms/${String(form.get("code")).toUpperCase()}/teacher`,
@@ -122,35 +194,37 @@ export function TeacherForm({
   }
   return (
     <div className="teacher-form-card panel">
-      <div className="segmented">
-        <button
-          aria-pressed={tab === "create"}
-          onClick={() => {
-            setTab("create");
-            setError("");
-          }}
-        >
-          新しい実験
-        </button>
-        <button
-          aria-pressed={tab === "reenter"}
-          onClick={() => {
-            setTab("reenter");
-            setError("");
-          }}
-        >
-          教員として再入室
-        </button>
-        <button
-          aria-pressed={tab === "manage"}
-          onClick={() => {
-            setTab("manage");
-            setError("");
-          }}
-        >
-          ルーム管理
-        </button>
-      </div>
+      {!onCreateDemo && (
+        <div className="segmented">
+          <button
+            aria-pressed={tab === "create"}
+            onClick={() => {
+              setTab("create");
+              setError("");
+            }}
+          >
+            新しい実験
+          </button>
+          <button
+            aria-pressed={tab === "reenter"}
+            onClick={() => {
+              setTab("reenter");
+              setError("");
+            }}
+          >
+            教員として再入室
+          </button>
+          <button
+            aria-pressed={tab === "manage"}
+            onClick={() => {
+              setTab("manage");
+              setError("");
+            }}
+          >
+            ルーム管理
+          </button>
+        </div>
+      )}
       {tab === "manage" ? (
         <TeacherRooms
           status={status}
@@ -169,7 +243,12 @@ export function TeacherForm({
                 <input
                   name="title"
                   defaultValue={
-                    legacy ? "ダブルオークション実験" : "実験1：市場制度の比較"
+                    initialConfig?.title ??
+                    (onCreateDemo
+                      ? "ひとりデモ"
+                      : legacy
+                        ? "ダブルオークション実験"
+                        : "実験1：市場制度の比較")
                   }
                   maxLength={60}
                   required
@@ -354,21 +433,27 @@ export function TeacherForm({
                   </p>
                   <div className="callout">
                     <Info size={18} />
-                    <p>
-                      1商品を各自2単位、選択した{institutions.length}
-                      制度を設定した期数で、計{rounds}期実施します。
-                      {institutions
-                        .map(
-                          (i) =>
-                            `${INSTITUTIONS[i].short} ${studyPeriodCount({ studyPeriods: periods }, i)}期`,
-                        )
-                        .join("・")}
-                      。
-                      {count === 1
-                        ? `制度の順序は${institutions.map((i) => INSTITUTIONS[i].short).join(" → ")}です。`
-                        : `${orderCount}通りの制度順序を市場ごとに均等に割り当てます。`}
-                      市場・役割は学生がそろってからランダムに割り当てます。
-                    </p>
+                    {institutionError || periodsError || layoutError ? (
+                      <p>
+                        制度・期数・人数を設定すると、実験の概要を表示します。
+                      </p>
+                    ) : (
+                      <p>
+                        1商品を各自2単位、選択した{institutions.length}
+                        制度を設定した期数で、計{rounds}期実施します。
+                        {institutions
+                          .map(
+                            (i) =>
+                              `${INSTITUTIONS[i].short} ${studyPeriodCount({ studyPeriods: periods }, i)}期`,
+                          )
+                          .join("・")}
+                        。
+                        {count === 1
+                          ? `制度の順序は${institutions.map((i) => INSTITUTIONS[i].short).join(" → ")}です。`
+                          : `${orderCount}通りの制度順序を市場ごとに均等に割り当てます。`}
+                        市場・役割は学生がそろってからランダムに割り当てます。
+                      </p>
+                    )}
                   </div>
                   <h3>実験時間の設定</h3>
                   <p className="field-help">
@@ -392,6 +477,60 @@ export function TeacherForm({
                         `市場数が${orderCount}の倍数以外では、${orderCount}通りの制度順序の割当数に差が出ます。`}
                     </p>
                   )}
+                  <section
+                    className="study-generator teacher-condition-settings"
+                    aria-labelledby="teacher-condition-heading"
+                  >
+                    <h3 id="teacher-condition-heading">供需条件の設定</h3>
+                    <p className="field-help">
+                      作成前に生成・プレビューし、確認して採用できます。学生の価値・費用を設定します。実際の注文価格は生成しません。
+                      作成後も実験開始前なら「価値と費用の設定」から変更できます。
+                    </p>
+                    {!layoutError && (
+                      <StudyPresetPicker
+                        key={size}
+                        existingPreset={
+                          conditionPreset
+                            ? {
+                                label: conditionPreset.label,
+                                settings: resizeStudySettings(
+                                  conditionPreset.settings,
+                                  size,
+                                ),
+                              }
+                            : undefined
+                        }
+                        units={size}
+                        initialGenerator={initialGenerator}
+                        disabled={pending}
+                        actionLabel="この条件を確認して採用"
+                        onDraftChange={() => setAdoptedConditions(null)}
+                        onConfirm={(preview) => {
+                          setAdoptedConditions({
+                            marketSize: size,
+                            generator: preview.generator,
+                          });
+                          setError("");
+                          return true;
+                        }}
+                      />
+                    )}
+                    {conditionError ? (
+                      <p className="field-help" role="status">
+                        {conditionError}
+                      </p>
+                    ) : (
+                      <p
+                        className="callout teacher-adopted-conditions"
+                        role="status"
+                      >
+                        作成時の条件：
+                        {adoptedConditions?.generator
+                          ? `横向き重なり階段 ／ p=${adoptedConditions.generator.parameters.p}・K=${adoptedConditions.generator.parameters.K}・L=${adoptedConditions.generator.parameters.L}・d=${adoptedConditions.generator.parameters.d} ／ シード ${adoptedConditions.generator.seed}`
+                          : `${conditionPreset?.label ?? "既存 PPT プリセット"}（既定）`}
+                      </p>
+                    )}
+                  </section>
                 </>
               )}
             </>
@@ -410,28 +549,30 @@ export function TeacherForm({
               />
             </label>
           )}
-          <label className="field">
-            この実験の教員パスワード
-            <input
-              type="password"
-              name="password"
-              placeholder={
-                tab === "create"
-                  ? "8文字以上で設定"
-                  : "作成時に設定したパスワード"
-              }
-              minLength={8}
-              maxLength={128}
-              required
-              autoComplete={
-                tab === "create" ? "new-password" : "current-password"
-              }
-            />
-            <span className="field-help">
-              別の端末から管理画面に戻る際に必要です。学生には共有しないでください。
-            </span>
-          </label>
-          {tab === "create" && status.keyRequired && (
+          {!onCreateDemo && (
+            <label className="field">
+              この実験の教員パスワード
+              <input
+                type="password"
+                name="password"
+                placeholder={
+                  tab === "create"
+                    ? "8文字以上で設定"
+                    : "作成時に設定したパスワード"
+                }
+                minLength={8}
+                maxLength={128}
+                required
+                autoComplete={
+                  tab === "create" ? "new-password" : "current-password"
+                }
+              />
+              <span className="field-help">
+                別の端末から管理画面に戻る際に必要です。学生には共有しないでください。
+              </span>
+            </label>
+          )}
+          {!onCreateDemo && tab === "create" && status.keyRequired && (
             <label className="field">
               教員用キー
               <input
@@ -445,7 +586,7 @@ export function TeacherForm({
               </span>
             </label>
           )}
-          {tab === "create" && !status.ready && (
+          {!onCreateDemo && tab === "create" && !status.ready && (
             <p className="error-message" role="alert">
               アプリの接続設定が完了していません。管理者がデータベースと教員用キーを設定してください。
             </p>
@@ -460,13 +601,14 @@ export function TeacherForm({
             disabled={
               pending ||
               (tab === "create" &&
-                (!status.ready ||
+                ((!onCreateDemo && !status.ready) ||
                   (!legacy &&
                     Boolean(
                       layoutError ||
                       institutionError ||
                       periodsError ||
-                      timingError,
+                      timingError ||
+                      conditionError,
                     ))))
             }
           >
@@ -474,7 +616,11 @@ export function TeacherForm({
               <Spinner />
             ) : (
               <>
-                {tab === "create" ? "実験ルームを作成" : "管理画面に入る"}
+                {onCreateDemo
+                  ? "デモルームを作成"
+                  : tab === "create"
+                    ? "実験ルームを作成"
+                    : "管理画面に入る"}
                 <ArrowRight size={17} />
               </>
             )}
@@ -486,16 +632,20 @@ export function TeacherForm({
                 {legacy
                   ? "ルーム作成後、教員用画面で各商品の価値と費用を変更できます。"
                   : "ルーム作成後、教員用画面で全員の価値・費用を確認・変更できます。"}
-                {legacy
-                  ? "参加人数がそろうと開始でき、実験開始後は条件が固定されます。"
-                  : "作成後は学生の入室を確認し、全員をランダムに割り当ててから実験を開始します。5秒後に全市場の取引が始まり、条件は固定されます。"}
+                {onCreateDemo
+                  ? "仮想参加者が自動で入室します。教員画面で設定を確認・変更し、全員をランダムに割り当ててから実験を開始してください。学生画面に切り替えて入室待機や取引も確認できます。"
+                  : legacy
+                    ? "参加人数がそろうと開始でき、実験開始後は条件が固定されます。"
+                    : "作成後は学生の入室を確認し、全員をランダムに割り当ててから実験を開始します。5秒後に全市場の取引が始まり、条件は固定されます。"}
               </p>
             </div>
           )}
-          {status.mode === "local" && (
+          {(onCreateDemo || status.mode === "local") && (
             <p className="local-note">
               <FlaskConical size={14} />
-              ローカル環境で実行中。データはこのコンピューターに保存されます。
+              {onCreateDemo
+                ? "デモの進行はこの画面内で保持されます。再読み込みすると実験設定からやり直せます。"
+                : "ローカル環境で実行中。データはこのコンピューターに保存されます。"}
             </p>
           )}
         </form>

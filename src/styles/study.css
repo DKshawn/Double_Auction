@@ -752,6 +752,152 @@
   border-radius: 6px;
   background: #fff;
 }
+.study-generator {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #faf9ff;
+}
+.study-generator > summary {
+  font-weight: 700;
+  font-size: 14px;
+}
+.study-preset-picker > .field {
+  margin: 16px 0;
+  max-width: 380px;
+}
+.teacher-condition-settings > h3 {
+  margin-top: 0;
+}
+/* The creation form is narrow even on wide screens; keep its preview stacked. */
+.teacher-condition-settings .study-condition-preview-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.teacher-condition-settings .teacher-adopted-conditions {
+  overflow-wrap: anywhere;
+}
+.study-generator-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.study-generated-preview {
+  margin-top: 24px;
+}
+.study-condition-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.study-condition-summary > div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+.study-condition-summary dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.study-condition-summary dd {
+  margin: 6px 0 0;
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 700;
+}
+.study-condition-preview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+.study-condition-chart {
+  margin: 0;
+  min-width: 0;
+}
+.study-condition-chart svg {
+  width: 100%;
+  height: auto;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.study-condition-chart svg text {
+  font-size: 13px;
+  fill: var(--muted);
+}
+.study-curve-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.study-demand-curve,
+.study-supply-curve {
+  fill: none;
+  stroke-width: 3;
+  stroke-linejoin: miter;
+}
+.study-demand-curve {
+  stroke: #087f83;
+}
+.study-supply-curve {
+  stroke: #b9661b;
+}
+.study-overlap-curve {
+  stroke: var(--accent);
+  stroke-width: 7;
+  stroke-linecap: butt;
+}
+.study-condition-chart .study-overlap-label {
+  fill: var(--accent);
+  font-weight: 700;
+}
+.study-curve-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.study-curve-legend .demand {
+  color: #087f83;
+}
+.study-curve-legend .supply {
+  color: #b9661b;
+}
+.study-curve-legend .overlap {
+  color: var(--accent);
+}
+.study-condition-chart figcaption {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.study-unit-preview caption {
+  text-align: left;
+  font-weight: 700;
+  padding-bottom: 10px;
+}
+.study-generator table th,
+.study-generator table td {
+  font-size: 13px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.study-zero-surplus-row {
+  background: #eeeaff;
+}
+.study-saved-generation {
+  margin-top: 16px;
+}
+@media (max-width: 900px) {
+  .study-condition-preview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .study-rules li {
   margin: 12px 0;
   font-size: 12px;

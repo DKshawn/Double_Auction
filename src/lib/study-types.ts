@@ -8,6 +8,32 @@ export type StudyTiming = {
   buyerSeconds: number;
 };
 export type StudySettings = { values: UnitPair[]; costs: UnitPair[] };
+export type StaircaseParameters = {
+  p: number;
+  K: number;
+  L: number;
+  d: number;
+};
+export type StudyGeneratorConfig = {
+  kind: "overlap-staircase";
+  parameters: StaircaseParameters;
+  seed: number;
+};
+export type StudyGeneratedAssignment = {
+  participantId: string;
+  nickname: string;
+  market: number;
+  seat: number;
+  alias: string;
+  role: "buyer" | "seller";
+  sortedUnits: UnitPair;
+  limits: UnitPair;
+};
+export type StudyGeneration = StudyGeneratorConfig & {
+  appliedAt: number;
+  assignmentConfirmedAt: number | null;
+  assignments: StudyGeneratedAssignment[];
+};
 export type StudyStage =
   | "waiting"
   | "countdown"
@@ -137,6 +163,8 @@ export type StudyView = {
   myTradeNotifications?: StudyView["myTrades"];
   teacher?: {
     settings: StudySettings;
+    preset?: { label: string; settings: StudySettings };
+    generation?: StudyGeneration;
     markets: StudyMarketView[];
     participants: {
       id: string;
@@ -175,6 +203,7 @@ export type StudyCommand =
   | {
       type: "study-settings";
       settings: StudySettings;
+      generator?: StudyGeneratorConfig;
       expectedRevision: number;
     }
   | { type: "study-quote"; price: number }

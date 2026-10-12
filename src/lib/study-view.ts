@@ -312,6 +312,7 @@ export function studyView(
     const metrics = studyMetrics(room, now);
     view.study!.teacher = {
       settings: study.settings,
+      ...(study.generation ? { generation: study.generation } : {}),
       markets: study.markets.map((m) =>
         publicMarket(room, m, actor, now, cache),
       ),

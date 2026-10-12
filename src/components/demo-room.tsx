@@ -11,17 +11,36 @@ import {
   UserRound,
   GraduationCap,
 } from "lucide-react";
-import { DemoSession, DEMO_CAPACITY, DEMO_MARKETS } from "@/lib/demo";
+import { DemoSession } from "@/lib/demo";
 import { INSTITUTIONS } from "@/lib/study-rules";
-import type { Institution } from "@/lib/study-types";
-import type { Role } from "@/lib/types";
+import type { Role, RoomConfig } from "@/lib/types";
+import type { StudyGeneratorConfig } from "@/lib/study-types";
 import { StudyRoom } from "./study-room";
 import { StudyDetailDialog } from "./study-detail-dialog";
 import { studyTiming } from "@/lib/study-timing";
+import {
+  studyInstitutions,
+  studyMarketSize,
+  studyPeriodCount,
+} from "@/lib/study-config";
 
-export default function DemoRoom() {
+export default function DemoRoom({
+  config,
+  generator,
+  onConfigure,
+}: {
+  config: RoomConfig;
+  generator?: StudyGeneratorConfig;
+  onConfigure: (config: RoomConfig, generator?: StudyGeneratorConfig) => void;
+}) {
   const [session] = useState(
-    () => new DemoSession("cda", "buyer", Date.now(), { lobby: true }),
+    () =>
+      new DemoSession(studyInstitutions(config)[0], "buyer", Date.now(), {
+        lobby: true,
+        teacher: true,
+        config,
+        generator,
+      }),
   );
   // DemoEntry mounts only in the browser. The preview supplies a same-origin
   // toolbar host before loading this iframe; ordinary /demo keeps its toolbar.
@@ -37,6 +56,8 @@ export default function DemoRoom() {
   );
   const { view, now, teacher, role, institution } = state;
   const market = view.study!.market;
+  const institutions = studyInstitutions(view.config);
+  const perSide = studyMarketSize(view.config) / 2;
   const needsAssignment =
     view.phase === "waiting" && view.study!.lobby?.randomizedAt === null;
   useEffect(() => {
@@ -80,21 +101,6 @@ export default function DemoRoom() {
             </span>
           </div>
           <label className="field">
-            開始制度（リセット）
-            <select
-              value={institution}
-              onChange={(e) =>
-                session.reset(e.target.value as Institution, role)
-              }
-            >
-              {Object.entries(INSTITUTIONS).map(([id, info]) => (
-                <option key={id} value={id}>
-                  {info.short} · {info.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
             {teacher ? "表示対象" : "あなたの役割"}
             <select
               value={teacher ? "all" : role}
@@ -115,7 +121,7 @@ export default function DemoRoom() {
           </label>
           <button className="button secondary" onClick={session.toggleTeacher}>
             {teacher ? <UserRound size={16} /> : <GraduationCap size={16} />}
-            {teacher ? "学生画面に戻る" : "教員画面を見る"}
+            {teacher ? "学生画面を見る" : "教員画面を見る"}
           </button>
         </div>
         <div className="demo-actions">
@@ -160,11 +166,20 @@ export default function DemoRoom() {
           <button className="text-button" onClick={() => session.reset()}>
             <RotateCcw size={14} /> やり直す
           </button>
+          <button
+            className="text-button"
+            onClick={() =>
+              onConfigure(view.config, session.getGeneratorConfig())
+            }
+          >
+            実験設定に戻る
+          </button>
         </div>
       </div>
       <div className="demo-caption">
         <span className="demo-count">
-          {DEMO_MARKETS}市場・あなた1人 ＋ 仮想参加者{DEMO_CAPACITY - 1}人
+          {view.config.markets}市場・あなた1人 ＋ 仮想参加者
+          {view.config.capacity - 1}人
         </span>
         <p className="demo-hint">
           {needsAssignment
@@ -180,7 +195,7 @@ export default function DemoRoom() {
                     : view.phase === "paused"
                       ? "時計と仮想参加者を停止中です。説明が終わったら「再開」を押してください。"
                       : market.stage === "done"
-                        ? "市場1の実験は終了しました。教員画面で全市場の進行状況と結果を確認できます。"
+                        ? "あなたの市場の実験は終了しました。教員画面で全市場の進行状況と結果を確認できます。"
                         : market.stage === "cda"
                           ? "注文板の最良価格で取引するか、自分の希望価格を入力してください。各期2単位まで取引できます。"
                           : market.stage === "call"
@@ -195,13 +210,24 @@ export default function DemoRoom() {
         </p>
         <StudyDetailDialog label="デモについて">
           <p>
-            12市場・192人の実験を体験できます。あなた1人と仮想参加者191人が入室済みです。教員画面で市場と役割をランダムに割り当て、開始すると5秒後に取引が始まります。あなた以外の参加者は自動で取引します。
+            設定した{view.config.markets}市場・{view.config.capacity}
+            人の実験を体験できます。あなた1人と仮想参加者
+            {view.config.capacity - 1}
+            人が入室済みです。教員画面で市場と役割をランダムに割り当て、開始すると5秒後に取引が始まります。あなた以外の参加者は自動で取引します。
           </p>
           <p className="demo-note">
-            各市場は買い手8人・売り手8人です。3制度の6通りの順序を各2市場に割り当てます。各市場は終了した期から自動で次の期へ進みます。各制度の最終期は全員で8秒間の結果確認を行い、15期で終了します。「30秒進める」で全市場の時間を進められます。教員画面でも、あなたの注文や購入は自動では行いません。取引するときは学生画面に戻ってください。
+            各市場は買い手{perSide}人・売り手{perSide}人です。
+            {institutions
+              .map(
+                (i) =>
+                  `${INSTITUTIONS[i].short} ${studyPeriodCount(view.config, i)}期`,
+              )
+              .join("・")}
+            、計{view.config.rounds}
+            期を実施します。制度の順序と各段階の時間は設定に従います。各市場は終了した期から自動で次の期へ進みます。各制度の最終期は全員で8秒間の結果確認を行います。「30秒進める」で全市場の時間を進められます。教員画面でも、あなたの注文や購入は自動では行いません。取引するときは学生画面に戻ってください。
           </p>
           <p className="demo-note">
-            デモ用の条件を使用します。制度・役割の変更と再読み込みでリセットされ、実験データには保存されません。仮想取引の結果は学生の収束を示すものではありません。
+            デモ用の価値・費用を使用します。「実験設定に戻る」から設定を変更して作成し直せます。やり直し・役割の変更・再読み込みで進行がリセットされます。仮想取引の結果は学生の収束を示すものではありません。
           </p>
           <p className="demo-note">
             <Link

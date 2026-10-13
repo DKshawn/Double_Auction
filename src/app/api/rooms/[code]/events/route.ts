@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { codeFor, failure, tokenFor } from "@/lib/server/http";
 import { database } from "@/lib/server/database";
 import { AuctionService } from "@/lib/server/service";
@@ -24,32 +24,42 @@ export async function GET(
       token = tokenFor(request, code);
     const db = await database();
     await new AuctionService(db).view(code, token);
-    let stop: (() => void) | undefined;
+    let subscription: Promise<() => Promise<void>> | undefined;
+    let cleanup: Promise<void> | undefined;
     let closed = false;
     let rotating = false;
     let periodRotationPlanned = false;
     let rotate: ReturnType<typeof setTimeout> | undefined;
     let handoff: ReturnType<typeof setTimeout> | undefined;
     const rotation = new RoomStreamRotation();
-    let finish: () => void = () => {};
+    let finish: () => Promise<void> = async () => {};
     const stream = new ReadableStream<Uint8Array>(
       {
         async start(controller) {
           const encoder = new TextEncoder();
+          const abort = () => {
+            void finish();
+          };
           finish = () => {
-            if (closed) return;
+            if (cleanup) return cleanup;
             closed = true;
             clearTimeout(rotate);
             clearTimeout(handoff);
-            stop?.();
-            request.signal.removeEventListener("abort", finish);
+            request.signal.removeEventListener("abort", abort);
+            // Cancellation may arrive before the subscription's initial read
+            // completes. Keep ownership until its unsubscribe is available.
+            cleanup = (async () => {
+              const stop = await subscription?.catch(() => undefined);
+              await stop?.();
+            })();
             try {
               controller.close();
             } catch {
               /* Reader already cancelled. */
             }
+            return cleanup;
           };
-          request.signal.addEventListener("abort", finish, { once: true });
+          request.signal.addEventListener("abort", abort, { once: true });
           if (request.signal.aborted) {
             finish();
             return;
@@ -85,7 +95,7 @@ export async function GET(
             reason: "timeout",
           });
           try {
-            stop = await broker(db).subscribe(
+            subscription = broker(db).subscribe(
               code,
               token,
               (event) => {
@@ -110,17 +120,22 @@ export async function GET(
                 planRotation(rotation.observe(view, Date.now() - requestedAt));
               },
             );
-            if (closed) stop();
+            await subscription;
+            if (closed) await finish();
           } catch {
-            finish();
+            await finish();
           }
         },
         cancel() {
-          finish();
+          return finish();
         },
       },
       { highWaterMark: 1024 * 1024, size: (chunk) => chunk.byteLength },
     );
+    // after() registers this cleanup with the platform's waitUntil lifecycle,
+    // including client cancellation. Never leave listener shutdown to a timer
+    // that can be suspended as soon as the response closes.
+    after(() => finish());
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream; charset=utf-8",

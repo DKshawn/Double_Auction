@@ -62,9 +62,8 @@ class RoomFeed {
       db.listen ? 15_000 : 1000,
     );
   }
-  async add(sub: Subscriber) {
+  add(sub: Subscriber) {
     this.subscribers.add(sub);
-    await this.refresh(0);
   }
   remove(sub: Subscriber) {
     this.subscribers.delete(sub);
@@ -254,33 +253,35 @@ export class RealtimeBroker {
   private feeds = new Map<string, RoomFeed>();
   private listening?: Promise<void>;
   private unlisten?: () => Promise<void>;
+  private stopping?: Promise<void>;
   private reconnect?: ReturnType<typeof setTimeout>;
-  private idle?: ReturnType<typeof setTimeout>;
   constructor(private db: Database) {}
 
   private startListener() {
     if (!this.db.listen || this.listening || this.unlisten)
       return this.listening;
-    this.listening = this.db
-      .listen(
-        (payload) => {
-          try {
-            const event = JSON.parse(payload) as {
-              code: string;
-              market: number;
-            };
-            if (
-              typeof event.code === "string" &&
-              Number.isInteger(event.market)
-            )
-              void this.feeds.get(event.code)?.refresh(event.market);
-          } catch {
-            /* Notifications are hints; periodic revision checks repair gaps. */
-          }
-        },
-        () => {
-          void this.restartListener();
-        },
+    this.listening = Promise.resolve(this.stopping)
+      .then(() =>
+        this.db.listen!(
+          (payload) => {
+            try {
+              const event = JSON.parse(payload) as {
+                code: string;
+                market: number;
+              };
+              if (
+                typeof event.code === "string" &&
+                Number.isInteger(event.market)
+              )
+                void this.feeds.get(event.code)?.refresh(event.market);
+            } catch {
+              /* Notifications are hints; periodic revision checks repair gaps. */
+            }
+          },
+          () => {
+            void this.restartListener();
+          },
+        ),
       )
       .then((stop) => {
         this.unlisten = stop;
@@ -302,11 +303,27 @@ export class RealtimeBroker {
       }, 1000);
   }
   private async restartListener() {
-    const stop = this.unlisten;
-    this.unlisten = undefined;
-    await stop?.();
+    await this.stopListener();
     for (const feed of this.feeds.values()) void feed.refresh(0);
     this.retryListener();
+  }
+  private stopListener() {
+    if (this.stopping) return this.stopping;
+    const stop = this.unlisten;
+    this.unlisten = undefined;
+    if (!stop) return Promise.resolve();
+    this.stopping = stop().finally(() => {
+      this.stopping = undefined;
+    });
+    return this.stopping;
+  }
+  private async releaseListener() {
+    await this.listening;
+    if (this.feeds.size) return;
+    clearTimeout(this.reconnect);
+    // The request must await this close; a detached idle timer can be frozen
+    // after the last serverless response has ended.
+    await this.stopListener();
   }
   async subscribe(
     code: string,
@@ -314,45 +331,41 @@ export class RealtimeBroker {
     send: Subscriber["send"],
     observe?: Subscriber["observe"],
   ) {
-    clearTimeout(this.idle);
     let feed = this.feeds.get(code);
     if (!feed) {
       feed = new RoomFeed(this.db, code);
       this.feeds.set(code, feed);
     }
-    await this.startListener();
     const sub: Subscriber = { token, send, observe };
-    await feed.add(sub);
-    return () => {
+    // Reserve the subscription before awaiting I/O so an older stream closing
+    // during a handoff cannot remove this feed or its shared listener.
+    feed.add(sub);
+    let cleanup: Promise<void> | undefined;
+    const stop = () => {
+      if (cleanup) return cleanup;
       feed!.remove(sub);
       if (!feed!.subscribers.size) {
         feed!.close();
-        this.feeds.delete(code);
+        if (this.feeds.get(code) === feed) this.feeds.delete(code);
       }
-      if (!this.feeds.size) {
-        clearTimeout(this.idle);
-        this.idle = setTimeout(() => {
-          void (async () => {
-            await this.listening;
-            if (this.feeds.size) return;
-            clearTimeout(this.reconnect);
-            const stop = this.unlisten;
-            this.unlisten = undefined;
-            await stop?.();
-          })();
-        }, 1000);
-      }
+      cleanup = this.releaseListener();
+      return cleanup;
     };
+    try {
+      await this.startListener();
+      await feed.refresh(0);
+      return stop;
+    } catch (error) {
+      await stop();
+      throw error;
+    }
   }
   async close() {
     for (const feed of this.feeds.values()) feed.close();
     this.feeds.clear();
     clearTimeout(this.reconnect);
-    clearTimeout(this.idle);
     await this.listening;
-    const stop = this.unlisten;
-    this.unlisten = undefined;
-    await stop?.();
+    await this.stopListener();
   }
 }
 

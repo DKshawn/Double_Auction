@@ -54,7 +54,6 @@ test("teacher creation renders presets and editable p/K/L/d with a restored adop
     }),
   );
   assert.match(markup, /供需条件の設定/);
-  assert.match(markup, /作成前に生成・プレビュー/);
   assert.match(markup, /横向き重なり階段（候補）/);
   for (const label of [
     "均衡価格 p",

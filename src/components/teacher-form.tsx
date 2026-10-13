@@ -222,12 +222,7 @@ export function TeacherForm({
   }
   const studyCreation = tab === "create" && !legacy;
   const conditionHeading = (
-    <>
-      <h2 id="teacher-condition-heading">供需条件の設定</h2>
-      <p className="field-help">
-        学生の価値・費用と取引成立への報酬を設定します。作成前に生成・プレビューし、確認して採用してください。作成後も実験開始前なら「供需条件の設定」から変更できます。
-      </p>
-    </>
+    <h2 id="teacher-condition-heading">供需条件の設定</h2>
   );
   const conditionFooter = conditionError ? (
     <p className="field-help" role="status">
@@ -403,7 +398,11 @@ export function TeacherForm({
                   <>
                     <fieldset
                       className="study-institution-picker teacher-settings-section panel"
-                      aria-describedby="study-institution-help"
+                      aria-describedby={
+                        institutionError || periodsError
+                          ? "study-institution-help"
+                          : undefined
+                      }
                     >
                       <legend>実施する制度</legend>
                       <div className="study-institution-options">
@@ -433,10 +432,20 @@ export function TeacherForm({
                           </label>
                         ))}
                       </div>
-                      <div className="study-period-fields">
+                      <h3
+                        className="study-period-heading"
+                        id="study-period-heading"
+                      >
+                        期数
+                      </h3>
+                      <div
+                        className="study-period-fields"
+                        role="group"
+                        aria-labelledby="study-period-heading"
+                      >
                         {institutions.map((institution) => (
                           <label className="field" key={institution}>
-                            {INSTITUTIONS[institution].short}の期数
+                            {INSTITUTIONS[institution].short}
                             <input
                               type="number"
                               name={`studyPeriods.${institution}`}
@@ -446,7 +455,12 @@ export function TeacherForm({
                               required
                               disabled={pending}
                               value={periods[institution] || ""}
-                              aria-describedby="study-institution-help"
+                              aria-label={`${INSTITUTIONS[institution].short}の期数`}
+                              aria-describedby={
+                                institutionError || periodsError
+                                  ? "study-institution-help"
+                                  : undefined
+                              }
                               onChange={(event) =>
                                 setPeriods((previous) => ({
                                   ...previous,
@@ -457,19 +471,15 @@ export function TeacherForm({
                           </label>
                         ))}
                       </div>
-                      <p
-                        id="study-institution-help"
-                        className={
-                          institutionError || periodsError
-                            ? "error-message"
-                            : "field-help"
-                        }
-                        aria-live="polite"
-                      >
-                        {institutionError ||
-                          periodsError ||
-                          `各制度1〜${MAX_INSTITUTION_PERIODS}期・計${rounds}期。制度と期数はルーム作成後に変更できません。`}
-                      </p>
+                      {(institutionError || periodsError) && (
+                        <p
+                          id="study-institution-help"
+                          className="error-message"
+                          aria-live="polite"
+                        >
+                          {institutionError || periodsError}
+                        </p>
+                      )}
                     </fieldset>
                     <section
                       className="teacher-settings-section panel"
@@ -702,22 +712,15 @@ export function TeacherForm({
                     : tab === "create"
                       ? "実験ルームを作成"
                       : "管理画面に入る"}
-                  <ArrowRight size={17} />
+                  {tab !== "create" && <ArrowRight size={17} />}
                 </>
               )}
             </button>
-            {tab === "create" && (
+            {tab === "create" && legacy && !onCreateDemo && (
               <div className="callout">
                 <Info size={17} />
                 <p>
-                  {legacy
-                    ? "ルーム作成後、教員用画面で各商品の価値と費用を変更できます。"
-                    : "ルーム作成後、教員用画面で全員の価値・費用を確認・変更できます。"}
-                  {onCreateDemo
-                    ? "仮想参加者が自動で入室します。教員画面で設定を確認・変更し、全員をランダムに割り当ててから実験を開始してください。学生画面に切り替えて入室待機や取引も確認できます。"
-                    : legacy
-                      ? "参加人数がそろうと開始でき、実験開始後は条件が固定されます。"
-                      : "作成後は学生の入室を確認し、全員をランダムに割り当ててから実験を開始します。5秒後に全市場の取引が始まり、条件は固定されます。"}
+                  ルーム作成後、教員用画面で各商品の価値と費用を変更できます。参加人数がそろうと開始でき、実験開始後は条件が固定されます。
                 </p>
               </div>
             )}

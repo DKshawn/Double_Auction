@@ -129,7 +129,10 @@ export function Room({ code, entry }: { code: string; entry?: string }) {
     <>
       <Header homeHref={navigation.homeHref}>
         {teacher && (
-          <Link className="text-button" href={navigation.homeHref}>
+          <Link
+            className="button secondary small-button"
+            href={navigation.homeHref}
+          >
             教員の管理・設定へ
           </Link>
         )}

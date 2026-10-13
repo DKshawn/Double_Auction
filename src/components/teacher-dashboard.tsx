@@ -111,7 +111,7 @@ export function TeacherDashboard({
           )}
           {view.phase !== "finished" && (
             <button
-              className="text-button danger-text"
+              className="button danger"
               disabled={disabled}
               onClick={() => setConfirm("finish")}
             >

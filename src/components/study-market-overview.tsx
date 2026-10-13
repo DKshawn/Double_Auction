@@ -86,7 +86,7 @@ export function StudyMarketOverview({
               <th scope="col">進行期</th>
               <th scope="col">入室</th>
               <th scope="col">状態</th>
-              <th scope="col">数量</th>
+              <th scope="col">約定数量（単位）</th>
               <th scope="col">平均（円）</th>
               <th scope="col">Smith α</th>
               <th scope="col">効率（%）</th>

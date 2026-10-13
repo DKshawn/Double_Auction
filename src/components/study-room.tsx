@@ -322,7 +322,7 @@ export function StudyRoom({
           onHome={onConfigure}
         >
           <Link
-            className="text-button"
+            className="button secondary small-button"
             href={demo ? "/demo" : teacherSetupHref(view.code)}
             onNavigate={
               onConfigure
@@ -862,7 +862,7 @@ function TeacherControls({
         )}
         {view.phase !== "finished" && (
           <button
-            className="button secondary"
+            className="button danger"
             disabled={disabled}
             onClick={() => setConfirm("finish")}
           >

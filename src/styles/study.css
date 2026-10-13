@@ -2564,6 +2564,22 @@
 .study-detail-content > .study-table-wrap {
   margin: 0;
 }
+.field.study-dashboard-market {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+.field.study-dashboard-market select {
+  width: 160px;
+  max-width: 100%;
+}
+.study-dashboard-price .price-chart.fill {
+  height: clamp(240px, 32vh, 380px);
+  flex: none;
+}
 @media (max-width: 1199px) {
   /* Stacked layouts have no fixed grid height; keep quote growth independent
      of the page height while retaining a useful preview on small screens. */

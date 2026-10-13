@@ -191,6 +191,40 @@ export function StudyRoom({
       </span>
     </>
   ) : null;
+  const priceScopeControl = teacher ? (
+    <label className="field study-price-scope">
+      表示範囲
+      <select
+        aria-label="価格履歴の表示範囲"
+        value={teacherPriceScope}
+        onChange={(event) =>
+          setTeacherPriceScope(event.target.value as Institution | "all")
+        }
+      >
+        <option value="all">全{view.config.rounds}期</option>
+        {market.order.map((institution) => (
+          <option key={institution} value={institution}>
+            {INSTITUTIONS[institution].short}・制度内1〜
+            {studyPeriodCount(view.config, institution)}期
+          </option>
+        ))}
+      </select>
+    </label>
+  ) : null;
+  const priceChart = (
+    <PriceChart
+      trades={priceTrades.map((trade) => ({
+        ...trade,
+        good: "apple",
+        round: trade.round - priceStart + 1,
+      }))}
+      rounds={pricePeriods}
+      ariaLabel={`${teacher ? `市場${market.id}・` : ""}${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? `全体の第1〜${view.config.rounds}期` : `制度内の第1〜${pricePeriods}期`}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
+      periodAxis
+      fill
+      equilibrium={teacher?.equilibrium}
+    />
+  );
   const teacherNavigation = teacher ? (
     <>
       <StudyDetailDialog
@@ -204,7 +238,7 @@ export function StudyRoom({
           command={command}
           disabled={disabled}
         />
-        <TeacherParticipants view={view} market={market} display="conditions" />
+        <TeacherParticipants view={view} market={market} />
       </StudyDetailDialog>
       <StudyDetailDialog
         label="Dashboard"
@@ -219,8 +253,27 @@ export function StudyRoom({
           </p>
           <ExportDownloads code={view.code} loadExport={loadExport} />
         </section>
+        <label className="field study-dashboard-market">
+          表示する市場
+          <select
+            value={market.id}
+            onChange={(event) => setSelected(Number(event.target.value))}
+          >
+            {teacher.markets.map((item) => (
+              <option key={item.id} value={item.id}>
+                市場{item.id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <section className="panel study-section study-price-panel study-dashboard-price">
+          <h2>
+            市場{market.id}・{priceScopeLabel}の取引価格
+          </h2>
+          {priceScopeControl}
+          {priceChart}
+        </section>
         <TeacherMetrics view={view} market={market} />
-        <TeacherParticipants view={view} market={market} display="results" />
       </StudyDetailDialog>
     </>
   ) : null;
@@ -480,40 +533,8 @@ export function StudyRoom({
                   ? `市場${market.id}・${priceScopeLabel}の取引価格`
                   : "取引価格"}
               </h2>
-              {teacher && (
-                <label className="field study-price-scope">
-                  表示範囲
-                  <select
-                    aria-label="価格履歴の表示範囲"
-                    value={teacherPriceScope}
-                    onChange={(event) =>
-                      setTeacherPriceScope(
-                        event.target.value as Institution | "all",
-                      )
-                    }
-                  >
-                    <option value="all">全{view.config.rounds}期</option>
-                    {market.order.map((institution) => (
-                      <option key={institution} value={institution}>
-                        {INSTITUTIONS[institution].short}・制度内1〜
-                        {studyPeriodCount(view.config, institution)}期
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <PriceChart
-                trades={priceTrades.map((trade) => ({
-                  ...trade,
-                  good: "apple",
-                  round: trade.round - priceStart + 1,
-                }))}
-                rounds={pricePeriods}
-                ariaLabel={`${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? `全体の第1〜${view.config.rounds}期` : `制度内の第1〜${pricePeriods}期`}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
-                periodAxis
-                fill
-                equilibrium={teacher?.equilibrium}
-              />
+              {priceScopeControl}
+              {priceChart}
               <StudyDetailDialog
                 key={`${market.id}-${priceScope}`}
                 label={`${priceScopeLabel}の取引履歴（${priceTrades.length}件）`}
@@ -681,19 +702,13 @@ function MarketActivity(props: MarketProps) {
 function TeacherParticipants({
   view,
   market,
-  display,
 }: {
   view: RoomView;
   market: StudyMarketView;
-  display: "conditions" | "results";
 }) {
-  const conditions = display === "conditions";
   return (
     <section className="panel study-section">
-      <h2>
-        市場{market.id}の
-        {conditions ? "参加者と条件（買い手・売り手）" : "参加者別利益"}
-      </h2>
+      <h2>市場{market.id}の参加者と条件（買い手・売り手）</h2>
       <div className="study-table-wrap">
         <table>
           <thead>
@@ -701,13 +716,11 @@ function TeacherParticipants({
               <th>市場</th>
               <th>名前</th>
               <th>役割</th>
-              {conditions ? (
-                Array.from(
-                  { length: studyUnits(view.config, market.institution) },
-                  (_, unit) => <th key={unit}>第{unit + 1}単位</th>,
-                )
-              ) : (
-                <th>累積利益</th>
+              {Array.from(
+                { length: studyUnits(view.config, market.institution) },
+                (_, unit) => (
+                  <th key={unit}>第{unit + 1}単位</th>
+                ),
               )}
             </tr>
           </thead>
@@ -721,13 +734,9 @@ function TeacherParticipants({
                   <td>{person.market}</td>
                   <td>{person.nickname}</td>
                   <td>{person.alias}</td>
-                  {conditions ? (
-                    person.limits.map((value, unit) => (
-                      <td key={unit}>{money(value)}</td>
-                    ))
-                  ) : (
-                    <td>{money(person.profit)}</td>
-                  )}
+                  {person.limits.map((value, unit) => (
+                    <td key={unit}>{money(value)}</td>
+                  ))}
                 </tr>
               ))}
           </tbody>

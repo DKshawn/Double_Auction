@@ -25,10 +25,14 @@ export function StudyRoster({
   view,
   command,
   disabled,
+  onSelectMarket,
+  onOpenMarket,
 }: {
   view: RoomView;
   command: (command: Command) => Promise<boolean>;
   disabled: boolean;
+  onSelectMarket: (market: number) => void;
+  onOpenMarket: (market: number) => void;
 }) {
   const study = view.study!,
     teacher = study.teacher!,
@@ -59,13 +63,13 @@ export function StudyRoster({
       </summary>
       <div className="study-roster-content">
         <div className="study-roster-actions">
-          <p>
-            {waiting
-              ? assigned
+          {(!waiting || assigned) && (
+            <p>
+              {waiting
                 ? "市場と買い手・売り手の割り当てが完了しました。「実験を開始」で全市場の5秒カウントダウンが始まります。"
-                : "買い手・売り手の枠は固定です。入室順に仮配置し、全員がそろったら学生をランダムに割り当ててください。"
-              : "実験開始時の割り当てです。各市場の買い手・売り手は実験終了まで固定されます。"}
-          </p>
+                : "実験開始時の割り当てです。各市場の買い手・売り手は実験終了まで固定されます。"}
+            </p>
+          )}
           {waiting && (
             <button
               className="button primary"
@@ -105,11 +109,29 @@ export function StudyRoster({
                 className={`study-roster-room ${people.length === size ? "full" : ""}`}
                 key={market.id}
                 aria-label={`市場${market.id}の学生`}
+                onDoubleClick={() => onOpenMarket(market.id)}
               >
                 <header>
                   <div>
                     <DoorOpen size={20} />
-                    <h3>市場 {market.id}</h3>
+                    <h3>
+                      <button
+                        type="button"
+                        className="text-button study-market-open"
+                        aria-label={`市場${market.id}の注文・清算を表示`}
+                        aria-haspopup="dialog"
+                        title="ダブルクリックで注文・清算を表示"
+                        onClick={() => onSelectMarket(market.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onOpenMarket(market.id);
+                          }
+                        }}
+                      >
+                        市場 {market.id}
+                      </button>
+                    </h3>
                   </div>
                   <span>
                     {people.length} / {size}人
@@ -144,18 +166,14 @@ export function StudyRoster({
                     );
                   })}
                 </ul>
-                <footer>
-                  {assigned ? (
-                    <>
-                      <Check size={14} />
-                      買い手{people.filter((p) => p.role === "buyer").length}
-                      人・売り手
-                      {people.filter((p) => p.role === "seller").length}人
-                    </>
-                  ) : (
-                    "役割はランダム割り当て後に確定"
-                  )}
-                </footer>
+                {assigned && (
+                  <footer>
+                    <Check size={14} />
+                    買い手{people.filter((p) => p.role === "buyer").length}
+                    人・売り手
+                    {people.filter((p) => p.role === "seller").length}人
+                  </footer>
+                )}
               </section>
             );
           })}

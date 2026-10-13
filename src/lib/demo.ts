@@ -1,4 +1,9 @@
-import type { Participant, Room } from "./auction-model";
+import {
+  AuctionError,
+  type AuditEvent,
+  type Participant,
+  type Room,
+} from "./auction-model";
 import type { Command, Role, RoomConfig, RoomView } from "./types";
 import type {
   Institution,
@@ -30,6 +35,9 @@ import {
 import { studyRoomConfigSchema } from "./study-room-config";
 import { generatedStudySettings } from "./study-generator";
 import { studyCommission, studyCommissionError } from "./study-commission";
+import { csv } from "./csv";
+import { studyExport } from "./study-export";
+import { EXPORTS, type ExportKind, type ExportFile } from "./exports";
 
 export const DEMO_MARKETS = 12;
 export const DEMO_CAPACITY = DEMO_MARKETS * 16;
@@ -61,6 +69,7 @@ export class DemoSession {
   private teacher = false;
   private error = "";
   private generation = 0;
+  private events: AuditEvent[] = [];
   private botClocks = new Map<
     number,
     { nextAt: number; round: number; indices: Record<Role, number> }
@@ -107,6 +116,17 @@ export class DemoSession {
     };
   };
   getSnapshot = () => this.snapshot;
+  exportData = (kind: ExportKind): ExportFile => {
+    if (!this.teacher)
+      throw new AuctionError("教員画面でダウンロードしてください。", 403);
+    const result = studyExport(this.room, this.events, this.now, kind, csv);
+    if (result.rowCount === 0)
+      throw new AuctionError(
+        EXPORTS.find((item) => item.kind === kind)!.empty,
+        422,
+      );
+    return result;
+  };
   getGeneratorConfig = (): StudyGeneratorConfig | undefined => {
     const saved = this.room.study?.generation;
     return saved
@@ -160,6 +180,7 @@ export class DemoSession {
     this.role = role;
     this.error = "";
     this.botClocks.clear();
+    this.events = [];
     this.generation++;
     const config = structuredClone(this.config);
     const size = studyMarketSize(config);
@@ -268,14 +289,17 @@ export class DemoSession {
   private send(actor: Participant | "teacher", command: Command) {
     // Match the server's transactional behavior: rejected commands cannot partially mutate the room.
     const candidate = structuredClone(this.room);
-    this.applyCommand(candidate, actor, command);
+    const events: AuditEvent[] = [];
+    this.applyCommand(candidate, actor, command, events);
     this.room = candidate;
+    this.events.push(...events);
   }
 
   private applyCommand(
     room: Room,
     actor: Participant | "teacher",
     command: Command,
+    events: AuditEvent[],
   ) {
     const person =
       actor === "teacher"
@@ -299,7 +323,7 @@ export class DemoSession {
         command,
       },
       this.now,
-      [],
+      events,
     );
     room.version++;
   }
@@ -307,7 +331,7 @@ export class DemoSession {
   private sendBot(bot: Participant, command: Command) {
     // Bots build valid commands from the current state, synchronously. They use
     // the same validating engine without copying all 192 participants per order.
-    this.applyCommand(this.room, bot, command);
+    this.applyCommand(this.room, bot, command, this.events);
   }
 
   command = async (command: Command, asTeacher = this.teacher) => {
@@ -335,7 +359,7 @@ export class DemoSession {
   tick = (elapsedMs: number) => {
     if (this.room.phase !== "running") return;
     this.now += Math.max(0, Math.min(1000, elapsedMs));
-    settleStudy(this.room, this.now, []);
+    settleStudy(this.room, this.now, this.events);
     this.runBots();
     this.publish();
   };
@@ -369,7 +393,7 @@ export class DemoSession {
       stageKey(this.room, this.market) !== initialFeedback;
     while (this.now < target && this.room.phase === "running") {
       this.now = Math.min(target, this.now + 1000);
-      settleStudy(this.room, this.now, []);
+      settleStudy(this.room, this.now, this.events);
       if (reachedFeedback()) break;
       if (this.now < target) {
         this.runBots();

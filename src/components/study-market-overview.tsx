@@ -14,6 +14,7 @@ export function StudyMarketOverview({
   now,
   selected,
   onSelect,
+  onOpen,
   demo,
 }: {
   teacher: NonNullable<StudyView["teacher"]>;
@@ -22,6 +23,7 @@ export function StudyMarketOverview({
   now: number;
   selected: number;
   onSelect: (market: number) => void;
+  onOpen: (market: number) => void;
   demo: boolean;
 }) {
   const [chosenRound, setChosenRound] = useState<number | null>(null);
@@ -67,7 +69,7 @@ export function StudyMarketOverview({
         {chosenRound === null
           ? "各市場の現在の期を集計（Callは4回分）。期の右の時間は現在の段階の残り時間です。"
           : `第${chosenRound}期の集計です。進行期・残り時間・入室・状態は現在の状況です。`}
-        市場名を押すと詳細を切り替えます。
+        市場名を押すと表示を切り替え、ダブルクリックで注文・清算を開きます。
       </p>
       <div className="study-overview-table">
         <table
@@ -138,6 +140,7 @@ export function StudyMarketOverview({
               return (
                 <tr
                   key={market.id}
+                  onDoubleClick={() => onOpen(market.id)}
                   className={
                     market.id === selected ? "selected-row" : undefined
                   }
@@ -148,7 +151,15 @@ export function StudyMarketOverview({
                       className="text-button"
                       aria-label={`市場${market.id}の詳細を表示`}
                       aria-pressed={market.id === selected}
+                      aria-haspopup="dialog"
+                      title="ダブルクリックで注文・清算を表示"
                       onClick={() => onSelect(market.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onOpen(market.id);
+                        }
+                      }}
                     >
                       市場{market.id}
                     </button>

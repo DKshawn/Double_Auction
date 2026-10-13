@@ -1,9 +1,27 @@
 import Link from "next/link";
 import { ArrowLeftRight } from "lucide-react";
 
-export function Brand({ homeHref = "/" }: { homeHref?: string }) {
+export function Brand({
+  homeHref = "/",
+  onHome,
+}: {
+  homeHref?: string;
+  onHome?: () => void;
+}) {
   return (
-    <Link href={homeHref} className="brand" aria-label="市場実験室 ホーム">
+    <Link
+      href={homeHref}
+      className="brand"
+      aria-label="市場実験室 ホーム"
+      onNavigate={
+        onHome
+          ? (event) => {
+              event.preventDefault();
+              onHome();
+            }
+          : undefined
+      }
+    >
       <span className="brand-mark">
         <ArrowLeftRight size={21} />
       </span>
@@ -18,14 +36,16 @@ export function Brand({ homeHref = "/" }: { homeHref?: string }) {
 export function Header({
   children,
   homeHref,
+  onHome,
 }: {
   children?: React.ReactNode;
   homeHref?: string;
+  onHome?: () => void;
 }) {
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Brand homeHref={homeHref} />
+        <Brand homeHref={homeHref} onHome={onHome} />
         <div className="header-right">{children}</div>
       </div>
     </header>

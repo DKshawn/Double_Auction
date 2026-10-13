@@ -102,6 +102,10 @@
   margin: 0;
   font-size: 16px;
 }
+.study-roster-room .study-market-open {
+  color: inherit;
+  font: inherit;
+}
 .study-roster-room header > span {
   color: var(--muted);
   font-size: 13px;
@@ -300,6 +304,15 @@
   .study-waiting-steps {
     gap: 14px;
   }
+}
+.demo-workspace {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.demo-workspace > .study-shell {
+  flex: 1;
+  min-height: 0;
 }
 .demo-panel {
   border: 1px solid #d7d0f0;
@@ -2378,18 +2391,6 @@
   .posted-layout .study-purchase-conditions .callout {
     margin: 0;
   }
-}
-.study-main .room-bottom-note {
-  margin: 8px 0 0;
-  padding: 0;
-  font-size: 10px;
-}
-.study-teacher-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  align-items: center;
-  margin-bottom: 12px;
 }
 .study-trading-grid.teacher-layout {
   grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);

@@ -3,14 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  SkipForward,
-  UserRound,
-  GraduationCap,
-} from "lucide-react";
+import { RotateCcw, SkipForward, UserRound, GraduationCap } from "lucide-react";
 import { DemoSession } from "@/lib/demo";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { Role, RoomConfig } from "@/lib/types";
@@ -68,18 +61,6 @@ export default function DemoRoom({
     }, 250);
     return () => window.clearInterval(timer);
   }, [session]);
-  const control =
-    view.phase === "paused"
-      ? "resume"
-      : view.phase === "running"
-        ? "pause"
-        : "start";
-  const controlLabel =
-    view.phase === "paused"
-      ? "再開"
-      : view.phase === "running"
-        ? "一時停止"
-        : "実験を開始";
   const skipLabel = teacher
     ? "30秒進める"
     : market.stage === "done"
@@ -129,14 +110,6 @@ export default function DemoRoom({
         </div>
         <div className="demo-actions">
           <button
-            className="button primary"
-            disabled={view.phase === "finished" || needsAssignment}
-            onClick={() => session.command({ type: control }, true)}
-          >
-            {control === "pause" ? <Pause size={16} /> : <Play size={16} />}
-            {controlLabel}
-          </button>
-          <button
             className="button secondary"
             disabled={
               view.phase !== "running" ||
@@ -170,14 +143,6 @@ export default function DemoRoom({
           <button className="text-button" onClick={() => session.reset()}>
             <RotateCcw size={14} /> やり直す
           </button>
-          <button
-            className="text-button"
-            onClick={() =>
-              onConfigure(view.config, session.getGeneratorConfig())
-            }
-          >
-            実験設定に戻る
-          </button>
         </div>
       </div>
       <div className="demo-caption">
@@ -195,9 +160,9 @@ export default function DemoRoom({
                 : teacher
                   ? "各市場は独立して次の期へ進みます。一時停止・再開は全市場に適用されます。"
                   : view.phase === "waiting"
-                    ? "割り当てが完了しました。「実験を開始」で5秒後に取引が始まります。"
+                    ? "割り当てが完了しました。教員画面の「実験を開始」で5秒後に取引が始まります。"
                     : view.phase === "paused"
-                      ? "時計と仮想参加者を停止中です。説明が終わったら「再開」を押してください。"
+                      ? "時計と仮想参加者を停止中です。教員画面の「全市場を再開」で再開できます。"
                       : market.stage === "done"
                         ? "あなたの市場の実験は終了しました。教員画面で全市場の進行状況と結果を確認できます。"
                         : market.stage === "cda"
@@ -211,8 +176,8 @@ export default function DemoRoom({
                                   ? "販売価格と数量を送信し、「提示を締め切って公開」を押してください。"
                                   : "「自分の購入順へ進む」を押すと、売り手の価格を見て購入できます。"
                                 : role === "seller"
-                                  ? "仮想の買い手が順番に購入します。説明中は「一時停止」で時計を止められます。"
-                                  : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。説明中は「一時停止」で時計を止められます。`}
+                                  ? "仮想の買い手が順番に購入します。教員画面の「全市場を一時停止」で時計を止められます。"
+                                  : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。教員画面で時計を止められます。`}
         </p>
         <StudyDetailDialog label="デモについて">
           <p>
@@ -233,7 +198,7 @@ export default function DemoRoom({
             期を実施します。制度の順序と各段階の時間は設定に従います。各市場は終了した期から自動で次の期へ進みます。各制度の最終期は全員で8秒間の結果確認を行います。「30秒進める」で全市場の時間を進められます。教員画面でも、あなたの注文や購入は自動では行いません。取引するときは学生画面に戻ってください。
           </p>
           <p className="demo-note">
-            デモ用の価値・費用を使用します。「実験設定に戻る」から設定を変更して作成し直せます。やり直し・役割の変更・再読み込みで進行がリセットされます。仮想取引の結果は学生の収束を示すものではありません。
+            デモ用の価値・費用を使用します。教員画面右上の「教員の管理・設定へ」から設定を変更して作成し直せます。やり直し・役割の変更・再読み込みで進行がリセットされます。仮想取引の結果は学生の収束を示すものではありません。
           </p>
           <p className="demo-note">
             <Link
@@ -249,8 +214,8 @@ export default function DemoRoom({
     </section>
   );
   return (
-    <>
-      {controlsTarget && createPortal(toolbar, controlsTarget)}
+    <div className="demo-workspace">
+      {controlsTarget ? createPortal(toolbar, controlsTarget) : toolbar}
       <StudyRoom
         key={`${state.generation}-${teacher}`}
         view={view}
@@ -262,8 +227,11 @@ export default function DemoRoom({
         notice=""
         retry={() => {}}
         demo
-        toolbar={controlsTarget ? undefined : toolbar}
+        onConfigure={() =>
+          onConfigure(view.config, session.getGeneratorConfig())
+        }
+        loadExport={session.exportData}
       />
-    </>
+    </div>
   );
 }

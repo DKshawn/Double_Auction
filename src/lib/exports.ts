@@ -18,5 +18,14 @@ export const EXPORTS = [
 ] as const;
 
 export type ExportKind = (typeof EXPORTS)[number]["kind"];
+export type ExportFile = {
+  extension: "csv" | "json";
+  contentType: string;
+  content: string;
+  rowCount?: number;
+};
+export type ExportProvider = (
+  kind: ExportKind,
+) => ExportFile | Promise<ExportFile>;
 export const isExportKind = (kind: string): kind is ExportKind =>
   EXPORTS.some((item) => item.kind === kind);

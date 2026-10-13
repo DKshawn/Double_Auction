@@ -390,9 +390,12 @@ for (const institutions of selections)
       assert.deepEqual(final.config.studyInstitutions, institutions);
       const teacherHtml = render(final);
       assert.ok(teacherHtml.includes(`全${final.config.rounds}期`));
-      assert.equal(
-        teacherHtml.includes("第11〜15期"),
-        !periods && institutions.length === 3,
+      assert.ok(
+        teacherHtml.includes(
+          market.order
+            .map((institution) => INSTITUTIONS[institution].short)
+            .join(" → "),
+        ),
       );
       for (const omitted of DEFAULT_STUDY_INSTITUTIONS.filter(
         (i) => !institutions.includes(i),

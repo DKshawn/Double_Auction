@@ -4,28 +4,8 @@ import type { AuditEvent, Room } from "./model";
 import { studyExport } from "./study-export";
 import { isExportKind } from "../exports";
 import { AuctionError } from "./model";
-
-export function csv(rows: unknown[][]) {
-  return (
-    "\uFEFF" +
-    rows
-      .map((row) =>
-        row
-          .map((value) => {
-            let text = String(value ?? "");
-            // Protect spreadsheet users from formulas in participant-controlled names.
-            if (
-              typeof value === "string" &&
-              /^(?:\s*[=+\-@]|[\t\r\n])/.test(text)
-            )
-              text = "'" + text;
-            return `"${text.replaceAll('"', '""')}"`;
-          })
-          .join(","),
-      )
-      .join("\r\n")
-  );
-}
+import { csv } from "../csv";
+export { csv } from "../csv";
 
 export function exportData(
   room: Room,

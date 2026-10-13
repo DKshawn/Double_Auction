@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Clock3,
   LockKeyhole,
@@ -119,30 +119,46 @@ export function StudyRoom({
     sourceMarket.round,
   );
   const institutionStart = institutionRange.first;
-  // Scope student displays without changing the stored experiment or teacher data.
-  const market = teacher
-    ? sourceMarket
-    : {
-        ...sourceMarket,
-        trades: sourceMarket.trades.filter(
-          (trade) => trade.institution === sourceMarket.institution,
-        ),
-        orderHistory: sourceMarket.orderHistory.filter(
-          (order) =>
-            order.round >= institutionStart &&
-            order.round <= institutionRange.last,
-        ),
-        offerHistory: (sourceMarket.offerHistory ?? []).filter(
-          (offer) =>
-            offer.round >= institutionStart &&
-            offer.round <= institutionRange.last,
-        ),
-        clearings: sourceMarket.clearings.filter(
-          (clearing) =>
-            clearing.round >= institutionStart &&
-            clearing.round <= institutionRange.last,
-        ),
-      };
+  const institutionEnd = institutionRange.last;
+  const {
+    trades: sourceTrades,
+    orderHistory: sourceOrders,
+    offerHistory: sourceOffers,
+    clearings: sourceClearings,
+    institution: sourceInstitution,
+  } = sourceMarket;
+  // Stable history props isolate the table from the 250ms clock and live book
+  // updates. Student scope remains the current market and institution.
+  const history = useMemo(
+    () => ({
+      trades: sourceTrades.filter(
+        (trade) => trade.institution === sourceInstitution,
+      ),
+      orderHistory: sourceOrders.filter(
+        (order) =>
+          order.round >= institutionStart && order.round <= institutionEnd,
+      ),
+      offerHistory: (sourceOffers ?? []).filter(
+        (offer) =>
+          offer.round >= institutionStart && offer.round <= institutionEnd,
+      ),
+      clearings: sourceClearings.filter(
+        (clearing) =>
+          clearing.round >= institutionStart &&
+          clearing.round <= institutionEnd,
+      ),
+    }),
+    [
+      sourceTrades,
+      sourceOrders,
+      sourceOffers,
+      sourceClearings,
+      sourceInstitution,
+      institutionStart,
+      institutionEnd,
+    ],
+  );
+  const market = teacher ? sourceMarket : { ...sourceMarket, ...history };
   const priceScope = teacher ? teacherPriceScope : market.institution;
   const priceTrades =
     priceScope === "all"

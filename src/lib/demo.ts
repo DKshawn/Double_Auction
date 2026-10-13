@@ -76,6 +76,7 @@ export class DemoSession {
   >();
   private listeners = new Set<() => void>();
   private snapshot!: DemoSnapshot;
+  private publishedEventCount = -1;
 
   constructor(
     institution: Institution = "cda",
@@ -155,6 +156,34 @@ export class DemoSession {
       this.now,
       "local",
     );
+    const previous = this.snapshot;
+    if (
+      previous &&
+      previous.generation === this.generation &&
+      previous.view.me.id === view.me.id &&
+      previous.view.version === view.version &&
+      this.publishedEventCount === this.events.length
+    ) {
+      // Clock-only ticks still refresh deadlines and time-weighted metrics,
+      // while immutable history keeps the same references as a live SSE view.
+      const reuseHistory = (
+        next: NonNullable<RoomView["study"]>["market"],
+        old: NonNullable<RoomView["study"]>["market"],
+      ) => {
+        if (next.id !== old.id || next.institution !== old.institution) return;
+        next.orderHistory = old.orderHistory;
+        next.trades = old.trades;
+        next.clearings = old.clearings;
+        next.offerHistory = old.offerHistory;
+      };
+      reuseHistory(view.study!.market, previous.view.study!.market);
+      const oldMarkets = previous.view.study!.teacher?.markets;
+      for (const market of view.study!.teacher?.markets ?? []) {
+        const old = oldMarkets?.find((item) => item.id === market.id);
+        if (old) reuseHistory(market, old);
+      }
+    }
+    this.publishedEventCount = this.events.length;
     if (view.study?.teacher)
       view.study.teacher.preset = {
         label: "Default",

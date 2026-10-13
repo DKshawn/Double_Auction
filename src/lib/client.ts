@@ -30,14 +30,25 @@ export const errorMessage = (error: unknown) =>
       ? "接続が途切れました。通信状況を確認してください。"
       : error.message
     : "操作に失敗しました。";
-export const timeLabel = (at: number) =>
-  new Intl.DateTimeFormat("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: "Asia/Tokyo",
-    hour12: false,
-  }).format(at);
+const timeFormatter = new Intl.DateTimeFormat("ja-JP", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  timeZone: "Asia/Tokyo",
+  hour12: false,
+});
+// Visible history rows reuse their labels when orders arrive or the user
+// scrolls. Bound this cache independently of the experiment's total history.
+const timeLabels = new Map<number, string>();
+export function timeLabel(at: number): string {
+  const cached = timeLabels.get(at);
+  if (cached !== undefined) return cached;
+  const label = timeFormatter.format(at);
+  if (timeLabels.size >= 1024)
+    timeLabels.delete(timeLabels.keys().next().value!);
+  timeLabels.set(at, label);
+  return label;
+}
 export const decimal = (value: number | null | undefined) =>
   value == null
     ? "—"

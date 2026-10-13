@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type {
@@ -10,6 +10,7 @@ import type {
   StudyMarketView,
   StudyOrderHistory,
 } from "@/lib/study-types";
+import { useHistoryWindow } from "./use-history-window";
 
 const ORDER_STATUS: Record<StudyOrderHistory["status"], string> = {
   replaced: "変更済み",
@@ -98,7 +99,7 @@ function historyEntries(
   return entries.sort((a, b) => b.at - a.at || b.sequence - a.sequence);
 }
 
-export function StudyMarketHistory({
+export const StudyMarketHistory = memo(function StudyMarketHistory({
   trades,
   orders,
   clearings = EMPTY_CLEARINGS,
@@ -123,17 +124,42 @@ export function StudyMarketHistory({
   firstPeriod?: number;
   institutionPeriods?: number;
 }) {
-  const list = useRef<HTMLDivElement>(null);
-  const newestFirst = historyEntries(orders, trades, clearings, offerHistory);
+  const newestFirst = useMemo(
+    () => historyEntries(orders, trades, clearings, offerHistory),
+    [orders, trades, clearings, offerHistory],
+  );
+  const ids = useMemo(
+    () => newestFirst.map((entry) => entry.id),
+    [newestFirst],
+  );
+  const { list, onScroll, onKeyDown, start, end, before, after } =
+    useHistoryWindow(ids, showParticipants ? 48 : 24);
   // Existing history must not flash on entry. Remember completed highlights so
   // polling, scrolling and reopening the teacher dialog do not replay them.
-  const [seenIds, setSeenIds] = useState(
-    () => new Set(newestFirst.map((entry) => entry.id)),
-  );
-  const finishHighlight = (id: string) =>
-    setSeenIds((previous) =>
-      previous.has(id) ? previous : new Set(previous).add(id),
-    );
+  const [seenIds, setSeenIds] = useState(() => new Set(ids));
+  const knownIds = useRef<Set<string> | null>(null);
+  if (knownIds.current === null) knownIds.current = new Set(ids);
+  const highlightTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    const known = knownIds.current!;
+    const arrivals = ids.filter((id) => !known.has(id));
+    if (!arrivals.length) return;
+    for (const id of arrivals) known.add(id);
+    // Expire off-screen highlights as well: scrolling old rows back into view
+    // must not announce them as new. Each batch expires even during rapid input.
+    const timer = setTimeout(() => {
+      highlightTimers.current.delete(timer);
+      setSeenIds((previous) => new Set([...previous, ...arrivals]));
+    }, 2400);
+    highlightTimers.current.add(timer);
+  }, [ids]);
+  useEffect(() => {
+    const timers = highlightTimers.current;
+    return () => {
+      for (const timer of timers) clearTimeout(timer);
+      timers.clear();
+    };
+  }, []);
   const latest = newestFirst[0];
   const scopeLabel = institution
     ? `${INSTITUTIONS[institution].short}・制度内1〜${institutionPeriods}期`
@@ -154,7 +180,6 @@ export function StudyMarketHistory({
                 ? "study-history-count study-history-new"
                 : "study-history-count"
             }
-            onAnimationEnd={() => latest && finishHighlight(latest.id)}
           >
             {newestFirst.length}件
           </span>
@@ -183,14 +208,19 @@ export function StudyMarketHistory({
       </p>
       <div
         ref={list}
+        onScroll={onScroll}
+        onKeyDown={onKeyDown}
         tabIndex={0}
         role="region"
         aria-label="注文履歴・歩み値の一覧・スクロールで全件表示"
         className="study-tape-rows"
       >
-        <table aria-label={`本市場の注文履歴・歩み値・${scopeLabel}・新しい順`}>
+        <table
+          aria-label={`本市場の注文履歴・歩み値・${scopeLabel}・新しい順`}
+          aria-rowcount={newestFirst.length + 1}
+        >
           <thead>
-            <tr>
+            <tr aria-rowindex={1}>
               <th scope="col">{institution ? "制度内の期" : "期・制度"}</th>
               <th scope="col">時刻</th>
               <th scope="col">{institution === "call" ? "清算回" : "種別"}</th>
@@ -201,12 +231,19 @@ export function StudyMarketHistory({
             </tr>
           </thead>
           <tbody>
-            {newestFirst.map((entry) => {
+            {before > 0 && (
+              <tr className="study-history-spacer" aria-hidden="true">
+                <td colSpan={5} style={{ height: before }} />
+              </tr>
+            )}
+            {newestFirst.slice(start, end).map((entry, index) => {
               if (entry.kind === "clearing") {
                 const clearing = entry.clearing;
                 return (
                   <tr
                     key={entry.id}
+                    data-history-id={entry.id}
+                    aria-rowindex={start + index + 2}
                     className={[
                       clearing.quantity
                         ? "study-history-trade"
@@ -215,7 +252,6 @@ export function StudyMarketHistory({
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    onAnimationEnd={() => finishHighlight(entry.id)}
                   >
                     <td title={`全体の第${clearing.round}期`}>
                       第
@@ -242,6 +278,8 @@ export function StudyMarketHistory({
                 return (
                   <tr
                     key={entry.id}
+                    data-history-id={entry.id}
+                    aria-rowindex={start + index + 2}
                     className={[
                       offer.participantId === participantId
                         ? "study-own-order"
@@ -250,7 +288,6 @@ export function StudyMarketHistory({
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    onAnimationEnd={() => finishHighlight(entry.id)}
                   >
                     <td title={`全体の第${offer.round}期`}>
                       第
@@ -287,6 +324,8 @@ export function StudyMarketHistory({
               return (
                 <tr
                   key={entry.id}
+                  data-history-id={entry.id}
+                  aria-rowindex={start + index + 2}
                   className={[
                     order ? "study-ended-order" : "study-history-trade",
                     own ? "study-own-order" : "",
@@ -294,7 +333,6 @@ export function StudyMarketHistory({
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  onAnimationEnd={() => finishHighlight(entry.id)}
                 >
                   <td title={`全体の第${order?.round ?? trade!.round}期`}>
                     第
@@ -355,6 +393,11 @@ export function StudyMarketHistory({
                 </tr>
               );
             })}
+            {after > 0 && (
+              <tr className="study-history-spacer" aria-hidden="true">
+                <td colSpan={5} style={{ height: after }} />
+              </tr>
+            )}
           </tbody>
         </table>
         {!newestFirst.length && (
@@ -369,7 +412,7 @@ export function StudyMarketHistory({
       </div>
     </section>
   );
-}
+});
 
 const EMPTY_CLEARINGS: Clearing[] = [];
 const EMPTY_OFFERS: PostedOfferHistory[] = [];

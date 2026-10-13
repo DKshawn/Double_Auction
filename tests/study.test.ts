@@ -331,10 +331,16 @@ test("public Call book projects only order fields and never another market or pa
     "secret-cost",
     "secret-name",
     "secret-token",
-    "777",
     buyers[0].nickname,
   ])
     assert.ok(!publicBook.includes(secret));
+  // A random UUID can contain "777"; inspect order prices and the full ID
+  // instead of mistaking that substring for another market's quote.
+  assert.deepEqual(
+    view.study!.market.orders.map((order) => order.price).sort((a, b) => a - b),
+    [98, 123],
+  );
+  assert.ok(!publicBook.includes(study.markets[1].orders[0].id));
   assert.deepEqual(view.study!.market.myOrders, []);
 });
 

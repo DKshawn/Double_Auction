@@ -2132,6 +2132,8 @@
 .study-tape-rows {
   position: relative;
   overflow: auto;
+  /* The virtual table preserves the visible record itself on arrivals. */
+  overflow-anchor: none;
   max-height: 420px;
   scrollbar-gutter: stable;
 }
@@ -2178,6 +2180,11 @@
 }
 .study-tape-rows td {
   font-size: var(--study-table-body-font-size);
+}
+.study-tape-rows .study-history-spacer td {
+  padding: 0;
+  border: 0;
+  line-height: 0;
 }
 .study-tape-rows th:nth-last-child(-n + 2),
 .study-tape-rows td:nth-last-child(-n + 2) {

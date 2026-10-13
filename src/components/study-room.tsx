@@ -811,7 +811,7 @@ function TeacherControls({
         </button>
         {["waiting", "review"].includes(view.phase) && (
           <button
-            className="button primary"
+            className="button success"
             disabled={
               disabled ||
               Boolean(

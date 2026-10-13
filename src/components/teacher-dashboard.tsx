@@ -65,7 +65,7 @@ export function TeacherDashboard({
           </span>
           {(view.phase === "waiting" || view.phase === "review") && (
             <button
-              className="button primary"
+              className="button success"
               disabled={
                 disabled ||
                 view.participantCount !== view.config.capacity ||

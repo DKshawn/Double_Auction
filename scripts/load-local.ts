@@ -1,6 +1,7 @@
 // Deliberately restricted to loopback apps. Never point a load test at a cloud deployment.
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { performance, monitorEventLoopDelay } from "node:perf_hooks";
 import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
 import type { Command, RoomView } from "../src/lib/types";
@@ -18,6 +19,11 @@ for (const base of bases) {
 }
 const seconds = Number(process.env.LOCAL_LOAD_SECONDS ?? 330);
 assert.ok(Number.isInteger(seconds) && seconds >= 5 && seconds <= 7200);
+// An empty path keeps the aggregate report in stdout only.
+const reportFile =
+  process.env.LOCAL_LOAD_REPORT_FILE ?? "work/local-load-report.json";
+const scenario = process.env.LOCAL_LOAD_SCENARIO ?? "mixed";
+assert.ok(["mixed", "cda"].includes(scenario));
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function until(fn: () => boolean, ms = 15_000) {
   const end = Date.now() + ms;
@@ -40,6 +46,9 @@ type Client = {
 };
 const stats = {
   commands: 0,
+  successfulCommands: 0,
+  commandTypes: {} as Record<string, number>,
+  conflictReasons: {} as Record<string, number>,
   rejected: 0,
   errors: [] as string[],
   snapshots: 0,
@@ -171,6 +180,16 @@ function choice(view: RoomView, tick: number): Command | undefined {
     return { type: "call-submit", prices: s.unitLimits!.slice(s.unitsUsed) };
   if (m.stage === "offer" && view.me.role === "seller" && !m.myOffer)
     return { type: "posted-offer", price: 80, quantity: 2 };
+  if (m.stage === "purchase" && view.me.role === "buyer" && m.posted) {
+    const reserved = m.posted.bids
+      .filter((bid) => bid.alias === view.me.alias)
+      .reduce((sum, bid) => sum + bid.remaining, 0);
+    const available = 2 - s.unitsUsed - reserved;
+    // Equal-price bids exercise the current one-second batch lottery.
+    return available > 0
+      ? { type: "posted-bid", price: 100, quantity: available }
+      : undefined;
+  }
   if (
     m.stage === "purchase" &&
     view.me.role === "buyer" &&
@@ -214,8 +233,9 @@ async function main() {
       protocol: "institutions-v1",
       markets: 12,
       capacity: 192,
-      rounds: 15,
+      rounds: scenario === "cda" ? 5 : 15,
       duration: 180,
+      ...(scenario === "cda" ? { studyInstitutions: ["cda"] } : {}),
     },
     password: "Local-Load-2026",
     accessKey: "",
@@ -271,16 +291,21 @@ async function main() {
     );
     if (measure) {
       stats.commands++;
+      stats.commandTypes[action.type] =
+        (stats.commandTypes[action.type] ?? 0) + 1;
       stats.responseMs.push(performance.now() - started);
     }
     if (result.response.status === 409) {
       stats.rejected++;
+      const reason = `${action.type}: ${result.body.error}`;
+      stats.conflictReasons[reason] = (stats.conflictReasons[reason] ?? 0) + 1;
       return;
     }
     if (!result.response.ok) {
       stats.errors.push(`HTTP ${result.response.status}: ${result.body.error}`);
       return;
     }
+    if (measure) stats.successfulCommands++;
     if (!client.view || client.view.version <= result.body.version)
       client.view = result.body;
     if (measure && before.me.role !== "teacher") {
@@ -321,11 +346,13 @@ async function main() {
       clients: 193,
       markets: 12,
       processes: bases.length,
+      scenario,
       setupSeconds: Math.round((start - setup) / 1000),
       durationSeconds: seconds,
     }),
   );
   let tick = 0;
+  let nextProgress = 30_000;
   while (performance.now() - start < seconds * 1000) {
     for (const client of clients.slice(0, 192)) {
       if (client.busy) continue;
@@ -341,6 +368,21 @@ async function main() {
     }
     tick++;
     await delay(2000);
+    const elapsed = performance.now() - start;
+    if (elapsed >= nextProgress) {
+      console.log(
+        JSON.stringify({
+          stage: "progress",
+          elapsedSeconds: Math.round(elapsed / 1000),
+          commands: stats.commands,
+          successfulCommands: stats.successfulCommands,
+          conflicts: stats.rejected,
+          errors: stats.errors.length,
+          fanoutP95Ms: percentile(stats.fanoutMs, 0.95),
+        }),
+      );
+      nextProgress += 30_000;
+    }
   }
   await Promise.all(clients.map((c) => c.busy));
   if (teacher.view!.phase === "running")
@@ -392,14 +434,18 @@ async function main() {
       },
     },
     appTargets: bases,
-    database: "local PostgreSQL on 127.0.0.1:55433",
+    database: "local PostgreSQL (loopback only)",
     code,
     elapsedSeconds: Math.round((performance.now() - start) / 1000),
     students: 192,
     teachers: 1,
     markets: 12,
+    scenario,
     commands: stats.commands,
-    expectedConflictRejections: stats.rejected,
+    successfulCommands: stats.successfulCommands,
+    commandTypes: stats.commandTypes,
+    conflictRejections: stats.rejected,
+    conflictReasons: stats.conflictReasons,
     errors: stats.errors,
     responseMs: {
       p50: percentile(stats.responseMs, 0.5),
@@ -433,11 +479,10 @@ async function main() {
       ordersInHistory: m.orderHistory.length,
     })),
   };
-  await mkdir("work", { recursive: true });
-  await writeFile(
-    "work/local-load-report.json",
-    JSON.stringify(report, null, 2),
-  );
+  if (reportFile) {
+    await mkdir(dirname(reportFile), { recursive: true });
+    await writeFile(reportFile, JSON.stringify(report, null, 2));
+  }
   console.log(JSON.stringify(report, null, 2));
   clientLoop.disable();
   running = false;

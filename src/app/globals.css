@@ -142,6 +142,14 @@ svg {
   background: var(--accent-hover);
   color: #fff;
 }
+.button.success {
+  background: var(--green);
+  color: #fff;
+}
+.button.success:not(:disabled):hover {
+  background: #1c6953;
+  color: #fff;
+}
 .button.danger {
   background: var(--red);
   color: #fff;

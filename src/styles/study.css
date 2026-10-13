@@ -882,19 +882,38 @@
 }
 .teacher-units-panel {
   padding: 22px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
 }
 .teacher-units-panel h2,
 .teacher-units-panel caption {
   margin: 0;
   font-size: 16px;
 }
+.teacher-units-panel h2 {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
 .teacher-units-panel .study-table-wrap {
   margin-top: 0;
   max-width: 520px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .teacher-units-panel td,
 .teacher-units-panel th[scope="col"]:not(:first-child) {
   text-align: right;
+}
+.teacher-units-panel thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.study-unit-preview:focus-visible {
+  outline: 3px solid #9998ed;
+  outline-offset: -3px;
 }
 @container preset-columns (min-width: 800px) {
   .study-preset-with-units {
@@ -903,13 +922,6 @@
   .teacher-units-panel {
     position: sticky;
     top: 24px;
-    max-height: calc(100dvh - 48px);
-    overflow-y: auto;
-  }
-  .teacher-units-panel thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
   }
 }
 .teacher-condition-settings .teacher-adopted-conditions {
@@ -1000,14 +1012,37 @@
   margin: 0;
   min-width: 0;
 }
-.study-condition-chart svg {
+.study-condition-chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.study-condition-chart-controls .button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+.study-chart-range {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.study-chart-outside-range {
+  fill: var(--bg);
+}
+.study-equilibrium-point {
+  fill: var(--accent);
+}
+.study-condition-chart > svg {
   width: 100%;
   height: auto;
   background: white;
   border: 1px solid var(--line);
   border-radius: 10px;
 }
-.study-condition-chart svg text {
+.study-condition-chart > svg text {
   font-size: 13px;
   fill: var(--muted);
 }

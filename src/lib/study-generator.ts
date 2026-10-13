@@ -13,7 +13,7 @@ export const DEFAULT_STAIRCASE_PARAMETERS: Readonly<StaircaseParameters> = {
   L: 4,
   d: 4,
 };
-export const DEFAULT_ASSIGNMENT_SEED = 20261012;
+export const DEFAULT_ASSIGNMENT_SEED = 123456;
 
 export const studyGeneratorConfigSchema = z
   .object({

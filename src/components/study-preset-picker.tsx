@@ -142,7 +142,7 @@ export function StudyPresetPicker({
           }}
         >
           <option value="existing">{existingPreset?.label ?? "Default"}</option>
-          <option value="overlap">横向き重なり階段（候補）</option>
+          <option value="overlap">カスタム</option>
         </select>
       </label>
       {preset === "overlap" && (
@@ -227,7 +227,7 @@ export function StudyPresetPicker({
         <div className="study-generated-preview">
           <h3>
             {preview.generator
-              ? "横向き重なり階段のプレビュー"
+              ? "カスタムのプレビュー"
               : `${existingPreset?.label}のプレビュー`}
           </h3>
           <StudyConditionPreview
@@ -290,7 +290,7 @@ export function StudyPresetPicker({
       </section>
       <section className="panel teacher-units-panel" aria-label="全単位の数値">
         {preview ? (
-          <StudyUnitValues settings={preview.settings} />
+          <StudyUnitValues settings={preview.settings} fixedHeading />
         ) : (
           <>
             <h2>全単位の数値</h2>

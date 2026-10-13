@@ -212,7 +212,8 @@ test("chart steps cover k-1..k with no diagonal interpolation and expose the ent
   );
   assert.equal((html.match(/<th scope="row">\d+<\/th>/g) ?? []).length, 16);
   assert.equal((html.match(/study-zero-surplus-row/g) ?? []).length, 4);
-  assert.ok(html.includes("288") && !html.includes("<path"));
+  const chart = html.match(/<svg[^>]*role="img"[^>]*>[\s\S]*?<\/svg>/)?.[0];
+  assert.ok(html.includes("288") && chart && !chart.includes("<path"));
 });
 
 test("PPT remains the unchanged default with equilibrium 10–11 and maximum surplus 440", () => {

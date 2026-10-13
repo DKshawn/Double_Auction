@@ -232,7 +232,7 @@ export function TeacherForm({
     <p className="callout teacher-adopted-conditions" role="status">
       作成時の条件：
       {adoptedConditions?.generator
-        ? `横向き重なり階段 ／ p=${adoptedConditions.generator.parameters.p}・K=${adoptedConditions.generator.parameters.K}・L=${adoptedConditions.generator.parameters.L}・d=${adoptedConditions.generator.parameters.d} ／ シード ${adoptedConditions.generator.seed}`
+        ? `カスタム ／ p=${adoptedConditions.generator.parameters.p}・K=${adoptedConditions.generator.parameters.K}・L=${adoptedConditions.generator.parameters.L}・d=${adoptedConditions.generator.parameters.d} ／ シード ${adoptedConditions.generator.seed}`
         : `${conditionPreset?.label ?? "Default"}（既定）`}
       ／ Commission 各{commission}円・1単位
     </p>

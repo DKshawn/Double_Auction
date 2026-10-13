@@ -137,7 +137,7 @@ export function StudyPresetGenerator({
       {teacher.generation && (
         <div className="study-saved-generation">
           <p className="callout">
-            保存済み：横向き重なり階段 ／ p={teacher.generation.parameters.p}
+            保存済み：カスタム ／ p={teacher.generation.parameters.p}
             ・K={teacher.generation.parameters.K}・L=
             {teacher.generation.parameters.L}
             ・d={teacher.generation.parameters.d} ／ シード{" "}

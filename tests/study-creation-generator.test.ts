@@ -54,7 +54,7 @@ test("teacher creation renders presets and editable p/K/L/d with a restored adop
     }),
   );
   assert.match(markup, /供需条件の設定/);
-  assert.match(markup, /横向き重なり階段（候補）/);
+  assert.match(markup, /カスタム/);
   for (const label of [
     "均衡価格 p",
     "正の余剰の単位数 K",
@@ -66,7 +66,7 @@ test("teacher creation renders presets and editable p/K/L/d with a restored adop
   assert.match(markup, /作成時の条件：.*p=80・K=8・L=4・d=4/);
   assert.match(markup, /シード 87654321/);
   assert.doesNotMatch(markup, /<button[^>]*disabled=""/);
-  assert.doesNotMatch(markup, /横向き重なり階段のプレビュー/);
+  assert.doesNotMatch(markup, /カスタムのプレビュー/);
 });
 
 test("creation request accepts only validated generator parameters and rejects stale size and forged schedules", async () => {

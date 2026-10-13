@@ -245,7 +245,11 @@ for (const units of [1, 2, 3, 4, 5])
     for (const actor of [buyer, seller]) {
       const markup = studentMarkup(studyView(room, actor, now(), "local"));
       assert.equal((currentValues(markup).match(/<b>/g) ?? []).length, 0);
-      assert.ok(markup.includes(`今期の${units}単位の取引は完了しました。`));
+      assert.ok(
+        markup.includes(
+          `今期の全${units}単位を${actor.role === "buyer" ? "購入" : "販売"}しました。`,
+        ),
+      );
       const before = JSON.stringify(room);
       assert.throws(
         () => send(actor, { type: "study-quote", price: 100 }),

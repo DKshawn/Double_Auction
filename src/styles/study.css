@@ -1453,6 +1453,15 @@
   grid-area: order;
   min-width: 0;
 }
+.study-private-order.study-completed-order {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+.private-panel .study-completion-message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
 :is(.cda-layout, .call-layout, .posted-layout)
   .study-private-order
   .study-order-form {

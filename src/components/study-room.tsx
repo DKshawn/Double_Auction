@@ -640,6 +640,8 @@ export function StudyRoom({
 function StudentConditions(props: MarketProps) {
   const { view, market } = props;
   const study = view.study!;
+  const totalUnits = studyUnits(view.config, market.institution);
+  const completed = study.unitsUsed >= totalUnits;
   return (
     <aside
       className={`panel study-section private-panel ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}`}
@@ -678,11 +680,20 @@ function StudentConditions(props: MarketProps) {
           )}
         </div>
       </div>
-      <div className="study-private-order">
-        <StudentOrder
-          key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
-          {...props}
-        />
+      <div
+        className={`study-private-order${completed ? " study-completed-order" : ""}`}
+      >
+        {completed ? (
+          <p className="success-message study-completion-message" role="status">
+            今期の全{totalUnits}単位を
+            {view.me.role === "buyer" ? "購入" : "販売"}しました。
+          </p>
+        ) : (
+          <StudentOrder
+            key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
+            {...props}
+          />
+        )}
       </div>
     </aside>
   );

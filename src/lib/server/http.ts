@@ -132,6 +132,12 @@ export const joinSchema = z
     pin: z.string().regex(/^\d{4}$/),
   })
   .strict();
+export const deleteRoomSchema = z
+  .object({
+    confirmed: z.literal(true),
+    accessKey: z.string().max(256).default(""),
+  })
+  .strict();
 export const configSchema = z.union([
   legacyConfigSchema,
   studyRoomConfigSchema,

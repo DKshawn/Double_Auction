@@ -486,49 +486,33 @@ export class AuctionService {
     }));
   }
 
-  async deleteRoom(code: string, password: string, accessKey: string) {
+  async deleteRoom(code: string, accessKey: string) {
     assertTeacherAccess(accessKey);
-    const outcome = await this.db.transaction(
-      async (tx): Promise<Outcome<void>> => {
-        // Scoped commands take a SHARE lock on this row. This UPDATE lock waits
-        // for them and prevents new commands while all room data is removed.
-        const result = await tx.query<{ state: Room }>(
-          "SELECT state FROM auction_rooms WHERE code = $1 FOR UPDATE",
+    await this.db.transaction(async (tx) => {
+      // Scoped commands take a SHARE lock on this row. This UPDATE lock waits
+      // for them and prevents new commands while all room data is removed.
+      const result = await tx.query<{ code: string }>(
+        "SELECT code FROM auction_rooms WHERE code = $1 FOR UPDATE",
+        [code],
+      );
+      if (!result.rows.length)
+        throw new AuctionError("ルームが見つかりません。", 404);
+      for (const table of [
+        "auction_market_events",
+        "auction_order_history",
+        "auction_markets",
+        "auction_events",
+        "auction_rooms",
+      ]) {
+        await tx.query(
+          `DELETE FROM ${table} WHERE ${table === "auction_rooms" ? "code" : "room_code"} = $1`,
           [code],
         );
-        if (!result.rows.length)
-          throw new AuctionError("ルームが見つかりません。", 404);
-        const room = result.rows[0].state;
-        try {
-          verifyTeacherPassword(room, await databaseTime(tx), password);
-        } catch (error) {
-          if (!(error instanceof AuctionError)) throw error;
-          room.version++;
-          await tx.query(
-            "UPDATE auction_rooms SET state = $2::jsonb, updated_at = clock_timestamp() WHERE code = $1",
-            [code, JSON.stringify(room)],
-          );
-          return { error };
-        }
-        for (const table of [
-          "auction_market_events",
-          "auction_order_history",
-          "auction_markets",
-          "auction_events",
-          "auction_rooms",
-        ]) {
-          await tx.query(
-            `DELETE FROM ${table} WHERE ${table === "auction_rooms" ? "code" : "room_code"} = $1`,
-            [code],
-          );
-        }
-        await tx.query("SELECT pg_notify('auction_changes', $1)", [
-          JSON.stringify({ code, market: 0 }),
-        ]);
-        return { value: undefined };
-      },
-    );
-    if (outcome.error) throw outcome.error;
+      }
+      await tx.query("SELECT pg_notify('auction_changes', $1)", [
+        JSON.stringify({ code, market: 0 }),
+      ]);
+    });
   }
 
   async view(code: string, token?: string): Promise<RoomView> {

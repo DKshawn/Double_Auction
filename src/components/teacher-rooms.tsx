@@ -82,11 +82,11 @@ export function TeacherRooms({
       setPending(false);
     }
   }
-  async function remove(room: RoomSummary, password: string) {
+  async function remove(room: RoomSummary) {
     const response = await fetch(`/api/rooms/${room.code}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, accessKey }),
+      body: JSON.stringify({ confirmed: true, accessKey }),
       cache: "no-store",
     });
     const result = await response.json();
@@ -316,7 +316,7 @@ export function TeacherRooms({
         <DeleteRoomDialog
           room={deleting}
           onCancel={() => setDeleting(null)}
-          onDelete={(password) => remove(deleting, password)}
+          onDelete={() => remove(deleting)}
         />
       )}
     </section>
@@ -330,7 +330,7 @@ function DeleteRoomDialog({
 }: {
   room: RoomSummary;
   onCancel: () => void;
-  onDelete: (password: string) => Promise<void>;
+  onDelete: () => Promise<void>;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [pending, setPending] = useState(false);
@@ -362,13 +362,10 @@ function DeleteRoomDialog({
       <form
         onSubmit={async (event) => {
           event.preventDefault();
-          const password = String(
-            new FormData(event.currentTarget).get("password"),
-          );
           setPending(true);
           setError("");
           try {
-            await onDelete(password);
+            await onDelete();
           } catch (e) {
             setError(errorMessage(e));
           } finally {
@@ -376,18 +373,6 @@ function DeleteRoomDialog({
           }
         }}
       >
-        <label className="field">
-          このルームの教員パスワード
-          <input
-            type="password"
-            name="password"
-            minLength={8}
-            maxLength={128}
-            required
-            autoComplete="current-password"
-            disabled={pending}
-          />
-        </label>
         {error && (
           <p className="error-message" role="alert">
             {error}

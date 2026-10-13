@@ -18,6 +18,7 @@ import { execute, settleDeadline } from "../src/lib/server/engine";
 import { marketRound, stageKey } from "../src/lib/server/study";
 import type { AuditEvent, Participant } from "../src/lib/server/model";
 import type { Command, RoomConfig } from "../src/lib/types";
+import { deleteRoomSchema } from "../src/lib/server/http";
 
 let pg: PGlite, db: Database, service: AuctionService;
 before(async () => {
@@ -217,7 +218,7 @@ test("management requires the existing teacher access key and fails closed on an
     process.env.TEACHER_ACCESS_KEY = "test-management-access";
     for (const key of ["", "wrong-key"]) {
       await assert.rejects(service.listRooms(key), { status: 403 });
-      await assert.rejects(service.deleteRoom(teacher.code, password, key), {
+      await assert.rejects(service.deleteRoom(teacher.code, key), {
         status: 403,
       });
     }
@@ -229,7 +230,7 @@ test("management requires the existing teacher access key and fails closed on an
     delete process.env.TEACHER_ACCESS_KEY;
     process.env.VERCEL = "1";
     await assert.rejects(service.listRooms(""), { status: 503 });
-    await assert.rejects(service.deleteRoom(teacher.code, password, ""), {
+    await assert.rejects(service.deleteRoom(teacher.code, ""), {
       status: 503,
     });
   } finally {
@@ -244,21 +245,40 @@ test("management requires the existing teacher access key and fails closed on an
   );
 });
 
-test("incorrect deletion passwords preserve data and share teacher login lockout", async () => {
+test("deletion requires explicit confirmation without a room password", () => {
+  assert.deepEqual(deleteRoomSchema.parse({ confirmed: true }), {
+    confirmed: true,
+    accessKey: "",
+  });
+  for (const input of [{}, { confirmed: false }, { confirmed: "true" }])
+    assert.equal(deleteRoomSchema.safeParse(input).success, false);
+});
+
+test("management key authorizes deletion without a room password, independently of reentry lockout", async () => {
   const teacher = await service.create(config, password, "");
   const before = await counts(teacher.code);
   for (let attempt = 0; attempt < 5; attempt++)
     await assert.rejects(
-      service.deleteRoom(teacher.code, "wrong-password", ""),
+      service.recoverTeacher(teacher.code, "wrong-password"),
       { status: 403 },
     );
-  assert.deepEqual(await counts(teacher.code), before);
-  await assert.rejects(service.deleteRoom(teacher.code, password, ""), {
-    status: 429,
-  });
   await assert.rejects(service.recoverTeacher(teacher.code, password), {
     status: 429,
   });
+  const oldKey = process.env.TEACHER_ACCESS_KEY;
+  try {
+    process.env.TEACHER_ACCESS_KEY = "test-delete-access";
+    for (const key of ["", "wrong-key", teacher.token])
+      await assert.rejects(service.deleteRoom(teacher.code, key), {
+        status: 403,
+      });
+    assert.deepEqual(await counts(teacher.code), before);
+    await service.deleteRoom(teacher.code, "test-delete-access");
+    assert.deepEqual(await counts(teacher.code), [0, 0, 0, 0, 0]);
+  } finally {
+    if (oldKey === undefined) delete process.env.TEACHER_ACCESS_KEY;
+    else process.env.TEACHER_ACCESS_KEY = oldKey;
+  }
 });
 
 test("a failed database deletion rolls back every table", async () => {
@@ -278,7 +298,7 @@ test("a failed database deletion rolls back every table", async () => {
       ),
   };
   await assert.rejects(
-    new AuctionService(failing).deleteRoom(teacher.code, password, ""),
+    new AuctionService(failing).deleteRoom(teacher.code, ""),
     /test rollback/,
   );
   assert.deepEqual(await counts(teacher.code), before);
@@ -305,7 +325,7 @@ test("deletion removes all room data, notifies live clients, and preserves other
     },
   );
   try {
-    await service.deleteRoom(teacher.code, password, "");
+    await service.deleteRoom(teacher.code, "");
     const until = Date.now() + 3000;
     while (!deleted && Date.now() < until)
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -323,7 +343,7 @@ test("deletion removes all room data, notifies live clients, and preserves other
     await assert.rejects(service.join(teacher.code, "new", "1234"), {
       status: 404,
     });
-    await assert.rejects(service.deleteRoom(teacher.code, password, ""), {
+    await assert.rejects(service.deleteRoom(teacher.code, ""), {
       status: 404,
     });
     assert.equal(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   DEFAULT_STUDY_TIMING,
   MAX_STAGE_SECONDS,
@@ -32,6 +32,7 @@ export function StudyTimingFields({
   postedBatch?: boolean;
 }) {
   const error = studyTimingError(timing, institutions);
+  const cdaHintId = useId();
   return (
     <>
       <div className="form-grid">
@@ -49,10 +50,12 @@ export function StudyTimingFields({
             <input
               type="number"
               name={`studyTiming.${key}`}
+              aria-label={label}
               min={1}
               max={MAX_STAGE_SECONDS}
               step={1}
               required
+              aria-describedby={key === "cdaSeconds" ? cdaHintId : undefined}
               disabled={disabled}
               value={
                 (key === "purchaseSeconds"
@@ -64,6 +67,11 @@ export function StudyTimingFields({
                 onChange({ ...timing, [key]: Number(e.target.value) })
               }
             />
+            {key === "cdaSeconds" && (
+              <small id={cdaHintId} className="field-help">
+                1期240秒（4分）以内を推奨します。超える時間も設定できますが、取引中も約4分ごとに接続を更新します。
+              </small>
+            )}
           </label>
         ))}
       </div>

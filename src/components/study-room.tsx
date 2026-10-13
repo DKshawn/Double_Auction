@@ -31,6 +31,7 @@ import {
   studyTiming,
   studyCountdownLabel,
   studyRemainingMs,
+  studyPeriodTransition,
 } from "@/lib/study-timing";
 import { decimal, timeLabel } from "@/lib/client";
 import { isValidPrice, MAX_PRICE } from "@/lib/price";
@@ -166,6 +167,12 @@ export function StudyRoom({
   const postedLayout = !teacher && market.institution === "posted";
   const remaining = studyRemainingMs(view.phase, market, now);
   const seconds = Math.ceil(remaining / 1000);
+  const transition = studyPeriodTransition(
+    view.config,
+    view.phase,
+    market,
+    now,
+  );
   const stageLabel =
     view.phase === "finished" || market.stage === "done"
       ? "実験終了"
@@ -607,7 +614,7 @@ export function StudyRoom({
             </section>
           </div>
         )}
-        {!teacher && market.stage === "countdown" && (
+        {!teacher && (market.stage === "countdown" || transition) && (
           <div
             className="study-start-countdown"
             role="status"
@@ -619,15 +626,19 @@ export function StudyRoom({
                 {view.me.role === "buyer" ? "買い手" : "売り手"}
               </span>
               <h2>
-                {view.phase === "paused"
-                  ? "開始前に一時停止しています"
-                  : "まもなく実験が始まります"}
+                {transition
+                  ? `第${transition.period}期 ${transition.kind}`
+                  : view.phase === "paused"
+                    ? "開始前に一時停止しています"
+                    : "まもなく実験が始まります"}
               </h2>
-              <strong>{seconds || "開始中"}</strong>
+              <strong>{(transition?.seconds ?? seconds) || "開始中"}</strong>
               <p>
                 {view.phase === "paused"
                   ? "教員が再開するまでお待ちください。"
-                  : "あなたの条件を確認してください。カウントダウン後に注文できます。"}
+                  : transition?.kind === "End"
+                    ? "今期の取引は終了しました。"
+                    : "あなたの条件を確認してください。カウントダウン後に注文できます。"}
               </p>
             </div>
           </div>
@@ -886,7 +897,7 @@ function TeacherControls({
         {view.study?.lobby
           ? "全員の入室とランダム割り当てを確認して開始します。全市場で5秒後に取引が始まります。"
           : `実験を開始すると、各市場は${studyMarketSize(view.config)}人そろい次第、取引を開始します。`}
-        各期の終了後は自動で次の期へ進みます。制度の最終期は8秒間の結果確認後に進み、
+        各期の終了後は自動で次の期へ進みます。CDAの各期と他制度の最終期は8秒間の結果確認後に進み、
         {view.config.rounds}期で終了します。
       </p>
       {confirm && (

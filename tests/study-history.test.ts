@@ -178,8 +178,10 @@ test("Call history shows the fourth clearing after automatic period advance, inc
 test("sellers see Call history in institution-relative periods without the previous institution's trades", async () => {
   const session = new DemoSession("cda", "seller", 1000);
   await session.command({ type: "start" }, true);
-  for (let period = 0; period < 5; period++) session.skipStage();
-  session.advanceTime(8);
+  for (let period = 0; period < 5; period++) {
+    session.skipStage();
+    session.advanceTime(8);
+  }
   assert.equal(session.getSnapshot().view.study!.market.round, 6);
   assert.equal(session.getSnapshot().view.study!.market.institution, "call");
   assert.deepEqual(history(session).rows, []);

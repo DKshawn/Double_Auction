@@ -99,6 +99,8 @@ test("CDA demo preserves the thinking delay across pause and repeats it in new p
   demo.tick(1);
   assert.equal(demo.getSnapshot().view.study!.market.orders.length, 2);
   demo.advanceTime(177);
+  assert.equal(demo.getSnapshot().view.study!.market.stage, "feedback");
+  demo.advanceTime(8);
   assert.equal(demo.getSnapshot().view.study!.market.round, 2);
   assert.deepEqual(demo.getSnapshot().view.study!.market.orders, []);
   demo.advanceTime(2);
@@ -106,6 +108,8 @@ test("CDA demo preserves the thinking delay across pause and repeats it in new p
   demo.advanceTime(1);
   assert.equal(demo.getSnapshot().view.study!.market.orders.length, 2);
   demo.skipStage();
+  assert.equal(demo.getSnapshot().view.study!.market.stage, "feedback");
+  demo.advanceTime(8);
   assert.equal(demo.getSnapshot().view.study!.market.round, 3);
   assert.deepEqual(demo.getSnapshot().view.study!.market.orders, []);
   demo.advanceTime(3);

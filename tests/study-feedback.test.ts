@@ -72,7 +72,10 @@ test("students with no final-period fills receive unfilled feedback even if they
 test("the demo renders unfilled feedback, blocks stage skipping and switches at the shared eight-second deadline", async () => {
   const session = new DemoSession("cda", "buyer", 1000);
   await session.command({ type: "start" }, true);
-  for (let period = 0; period < 5; period++) session.skipStage();
+  for (let period = 0; period < 5; period++) {
+    session.skipStage();
+    if (period < 4) session.advanceTime(8);
+  }
   const state = session.getSnapshot();
   assert.equal(state.view.study!.market.stage, "feedback");
   assert.equal(state.view.study!.market.round, 5);
@@ -90,7 +93,7 @@ test("the demo renders unfilled feedback, blocks stage skipping and switches at 
     }),
   );
   assert.match(html, /第5期の取引結果：未約定/);
-  assert.match(html, /次の制度まで/);
+  assert.match(html, /次の取引開始まで/);
   assert.match(html, /00:08/);
   assert.equal(
     await session.command({ type: "study-quote", price: 100 }),
@@ -111,7 +114,7 @@ test("demo fast-forward stops at a new feedback stage without consuming its eigh
     await session.command({ type: "start" }, true);
     session.advanceTime(3000);
     const state = session.getSnapshot();
-    assert.equal(state.view.study!.market.round, 5);
+    assert.equal(state.view.study!.market.round, first === "cda" ? 1 : 5);
     assert.equal(state.view.study!.market.stage, "feedback");
     assert.equal(state.view.study!.market.remainingMs, 8000);
     assert.equal(state.view.study!.market.deadline, state.now + 8000);

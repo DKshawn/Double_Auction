@@ -955,6 +955,14 @@ test("legacy saved rooms: each full market starts once and late arrivals begin i
   started.room.study!.markets[0].deadline = started.room.deadline;
   await saveFixture(started.room);
   assert.equal(
+    (await service.view(teacher.code, teacher.token)).study!.market.stage,
+    "feedback",
+  );
+  const ended = await service.export(teacher.code, teacher.token);
+  ended.room.study!.markets[0].deadline = Date.now() - 10;
+  ended.room.deadline = ended.room.study!.markets[0].deadline;
+  await saveFixture(ended.room);
+  assert.equal(
     (await service.view(teacher.code, teacher.token)).study!.market.round,
     2,
   );

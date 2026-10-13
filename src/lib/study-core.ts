@@ -534,8 +534,9 @@ function finishMarket(
   m.spreadValue = null;
   if (
     showFeedback &&
-    marketRound(room, m) ===
-      studyPeriodAt(room.config, m.order, marketRound(room, m)).last
+    (institutionFor(room, m) === "cda" ||
+      marketRound(room, m) ===
+        studyPeriodAt(room.config, m.order, marketRound(room, m)).last)
   ) {
     // Hold the finished period and its fills for every participant in this market.
     schedule(m, "feedback", at, STUDY_FEEDBACK_SECONDS);

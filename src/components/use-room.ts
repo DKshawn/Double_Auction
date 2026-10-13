@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Command, CommandRequest, RoomView } from "@/lib/types";
-import { applyPatch, type RoomPatch } from "@/lib/room-sync";
+import { RoomEventStream } from "@/lib/room-event-stream";
 import { goodName } from "@/lib/catalog";
 import { api, ApiError, errorMessage } from "@/lib/client";
 
@@ -22,10 +22,17 @@ export function useRoom(code: string) {
   const lastSuccess = useRef(0);
   const refresh = useRef<() => void>(() => {});
   const busy = useRef(false);
+  const latest = useRef<RoomView | null>(null);
 
   const acceptView = useCallback((next: RoomView) => {
     // A response already in flight must not re-enable trading while offline.
-    if (!navigator.onLine) return;
+    if (
+      !navigator.onLine ||
+      (latest.current?.code === next.code &&
+        latest.current.version > next.version)
+    )
+      return false;
+    latest.current = next;
     offset.current = next.serverTime - Date.now();
     lastSuccess.current = Date.now();
     setNow(next.serverTime);
@@ -35,12 +42,12 @@ export function useRoom(code: string) {
     setConnected(true);
     setAuthError("");
     setConnectionError("");
+    return true;
   }, []);
 
   useEffect(() => {
     let disposed = false;
-    let stream: EventSource | undefined;
-    let wireView: RoomView | null = null;
+    let stream: RoomEventStream | undefined;
     let fallback: ReturnType<typeof setTimeout> | undefined;
     let inflight = false;
     let lastFetch = 0;
@@ -97,44 +104,15 @@ export function useRoom(code: string) {
     }
     function connect() {
       if (disposed || !navigator.onLine) return;
-      stream?.close();
-      wireView = null;
-      stream = new EventSource(`/api/rooms/${code}/events`);
-      stream.addEventListener("snapshot", (event: MessageEvent<string>) => {
-        if (disposed) return;
-        try {
-          wireView = JSON.parse(event.data) as RoomView;
-          acceptView(wireView);
+      stream ??= new RoomEventStream(`/api/rooms/${code}/events`, {
+        view(next) {
+          if (disposed || !acceptView(next)) return false;
           clearTimeout(fallback);
-        } catch {
-          connect();
-        }
-      });
-      stream.addEventListener("patch", (event: MessageEvent<string>) => {
-        if (disposed) return;
-        try {
-          if (!wireView) throw new Error("Snapshot required");
-          wireView = applyPatch(wireView, JSON.parse(event.data) as RoomPatch);
-          acceptView(wireView);
-          clearTimeout(fallback);
-        } catch {
-          connect();
-        }
-      });
-      stream.addEventListener("heartbeat", (event: MessageEvent<string>) => {
-        if (!disposed)
-          healthy(
-            (JSON.parse(event.data) as { serverTime: number }).serverTime,
-          );
-      });
-      stream.addEventListener(
-        "session-error",
-        (event: MessageEvent<string>) => {
+          return true;
+        },
+        heartbeat: healthy,
+        sessionError(error) {
           if (disposed) return;
-          const error = JSON.parse(event.data) as {
-            status: number;
-            message: string;
-          };
           setConnected(false);
           setConnectionError(error.message);
           if ([401, 404].includes(error.status)) {
@@ -144,15 +122,16 @@ export function useRoom(code: string) {
             stream?.close();
           } else retrySnapshot();
         },
-      );
-      stream.onerror = () => {
-        if (disposed) return;
-        setConnected(false);
-        setConnectionError(
-          "再接続しています。接続が戻るまで注文は送信できません。",
-        );
-        retrySnapshot();
-      };
+        error() {
+          if (disposed) return;
+          setConnected(false);
+          setConnectionError(
+            "再接続しています。接続が戻るまで注文は送信できません。",
+          );
+          retrySnapshot();
+        },
+      });
+      stream.connect();
     }
     refresh.current = () => {
       authFailed = false;

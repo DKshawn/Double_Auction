@@ -18,6 +18,7 @@ export type StreamEvent = {
 type Subscriber = {
   token?: string;
   send: (event: StreamEvent) => void;
+  observe?: (view: RoomView) => void;
   previous?: RoomView;
 };
 
@@ -166,6 +167,7 @@ class RoomFeed {
           sub.send({ type: "patch", data: patch });
         }
         sub.previous = view;
+        sub.observe?.(view);
       } catch (error) {
         sub.send({
           type: "session-error",
@@ -310,6 +312,7 @@ export class RealtimeBroker {
     code: string,
     token: string | undefined,
     send: Subscriber["send"],
+    observe?: Subscriber["observe"],
   ) {
     clearTimeout(this.idle);
     let feed = this.feeds.get(code);
@@ -318,7 +321,7 @@ export class RealtimeBroker {
       this.feeds.set(code, feed);
     }
     await this.startListener();
-    const sub: Subscriber = { token, send };
+    const sub: Subscriber = { token, send, observe };
     await feed.add(sub);
     return () => {
       feed!.remove(sub);

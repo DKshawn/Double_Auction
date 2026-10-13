@@ -1,6 +1,11 @@
 import { STUDY_RULES } from "./study-rules";
 import type { Institution, StudyTiming, StudyMarketView } from "./study-types";
-import { DEFAULT_STUDY_INSTITUTIONS, studyMarketSize } from "./study-config";
+import { STUDY_START_SECONDS } from "./study-types";
+import {
+  DEFAULT_STUDY_INSTITUTIONS,
+  studyMarketSize,
+  studyPeriodAt,
+} from "./study-config";
 import type { RoomConfig, Phase } from "./types";
 
 export function studyRemainingMs(
@@ -14,16 +19,53 @@ export function studyRemainingMs(
 }
 
 export function studyCountdownLabel(
-  market: Pick<StudyMarketView, "stage" | "round">,
+  market: Pick<StudyMarketView, "stage" | "round"> &
+    Partial<Pick<StudyMarketView, "institution">>,
   totalRounds: number,
 ) {
   if (market.stage === "call") return "次の清算まで";
   if (market.stage === "purchase") return "取引終了まで";
   if (market.stage === "offer") return "価格提示の締切まで";
   if (market.stage === "feedback")
-    return market.round === totalRounds ? "実験終了まで" : "次の制度まで";
+    return market.round === totalRounds
+      ? "実験終了まで"
+      : market.institution === "cda"
+        ? "次の取引開始まで"
+        : "次の制度まで";
   if (market.stage === "countdown") return "取引開始まで";
   return "この段階の残り時間";
+}
+
+// CDA uses the existing eight-second server-side feedback stage: End for
+// three seconds, then Start for five. The trading deadline is never shortened.
+export function studyPeriodTransition(
+  config: RoomConfig,
+  phase: Phase,
+  market: StudyMarketView,
+  now: number,
+): { kind: "Start" | "End"; period: number; seconds: number } | null {
+  if (phase !== "running" && phase !== "paused") return null;
+  const remaining = studyRemainingMs(phase, market, now);
+  if (market.stage === "countdown" && market.institution === "cda")
+    return { kind: "Start", period: 1, seconds: Math.ceil(remaining / 1000) };
+  if (market.stage !== "feedback") return null;
+  const next =
+    market.round < config.rounds
+      ? studyPeriodAt(config, market.order, market.round + 1)
+      : null;
+  if (remaining <= STUDY_START_SECONDS * 1000 && next?.institution === "cda")
+    return {
+      kind: "Start",
+      period: next.period,
+      seconds: Math.ceil(remaining / 1000),
+    };
+  if (market.institution === "cda" && remaining > STUDY_START_SECONDS * 1000)
+    return {
+      kind: "End",
+      period: market.institutionPeriod,
+      seconds: Math.ceil(remaining / 1000) - STUDY_START_SECONDS,
+    };
+  return null;
 }
 
 export const postedPurchaseSeconds = (

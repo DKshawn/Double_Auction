@@ -265,6 +265,80 @@ test("configured demos reject the same invalid room settings as formal creation"
   }
 });
 
+test("teacher settings stay locked after starting, including pauses and completion, until the demo is reset", async () => {
+  const demo = new DemoSession("cda", "buyer", 1000, {
+    config: config(["cda"]),
+    lobby: true,
+    teacher: true,
+  });
+  function assertSettingsLocked(expected: boolean) {
+    const snapshot = demo.getSnapshot();
+    for (const demoMode of [false, true]) {
+      const markup = renderToStaticMarkup(
+        createElement(StudyRoom, {
+          view: snapshot.view,
+          now: snapshot.now,
+          command: demo.command,
+          disabled: false,
+          connected: true,
+          error: "",
+          notice: "",
+          retry: () => {},
+          demo: demoMode,
+        }),
+      );
+      const settings = markup.match(
+        /<button\b([^>]*)>実験設定を変更<\/button>/,
+      );
+      assert.ok(settings, "the teacher settings trigger must be present");
+      assert.equal(
+        settings[1].includes('disabled=""'),
+        expected,
+        `settings trigger during ${snapshot.view.phase}/${snapshot.view.study!.market.stage}`,
+      );
+      const dashboard = markup.match(/<button\b([^>]*)>Dashboard<\/button>/);
+      assert.ok(
+        dashboard,
+        "results remain available throughout the experiment",
+      );
+      assert.equal(dashboard[1].includes('disabled=""'), false);
+    }
+  }
+
+  assertSettingsLocked(false);
+  assert.equal(
+    await demo.command({ type: "study-randomize", expectedRevision: 0 }),
+    true,
+  );
+  assertSettingsLocked(false);
+  assert.equal(await demo.command({ type: "start" }), true);
+  assert.equal(demo.getSnapshot().view.study!.market.stage, "countdown");
+  assertSettingsLocked(true);
+  assert.equal(await demo.command({ type: "pause" }), true);
+  assertSettingsLocked(true);
+  assert.equal(await demo.command({ type: "resume" }), true);
+  demo.advanceTime(5);
+  assert.equal(demo.getSnapshot().view.study!.market.stage, "cda");
+  assertSettingsLocked(true);
+  assert.equal(await demo.command({ type: "pause" }), true);
+  demo.toggleTeacher();
+  demo.toggleTeacher();
+  assert.equal(demo.getSnapshot().view.phase, "paused");
+  assertSettingsLocked(true);
+  assert.equal(await demo.command({ type: "resume" }), true);
+  demo.advanceTime(4);
+  assert.equal(demo.getSnapshot().view.study!.market.stage, "feedback");
+  assertSettingsLocked(true);
+  demo.advanceTime(8);
+  assert.equal(demo.getSnapshot().view.phase, "finished");
+  assertSettingsLocked(true);
+
+  demo.reset();
+  assert.equal(demo.getSnapshot().view.phase, "waiting");
+  assert.equal(demo.getSnapshot().view.round, 0);
+  assertSettingsLocked(false);
+});
+
 test("Posted demo opens a shared bid window for more than eight buyers", async () => {
   const settings = {
     ...config(["posted"]),

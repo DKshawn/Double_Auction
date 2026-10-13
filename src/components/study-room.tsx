@@ -202,6 +202,7 @@ export function StudyRoom({
     view.phase !== "running" ||
     remaining <= 0 ||
     ["done", "waiting", "countdown", "feedback"].includes(market.stage);
+  const settingsLocked = view.phase !== "waiting" || view.round > 0;
   const roomStatus = !demo ? (
     <>
       <span className={`connection ${connected ? "" : "disconnected"}`}>
@@ -256,6 +257,7 @@ export function StudyRoom({
         label="実験設定を変更"
         title="実験設定"
         triggerClassName="button secondary"
+        disabled={disabled || settingsLocked}
       >
         <StudyTimingEditor view={view} command={command} disabled={disabled} />
         <StudySettingsEditor

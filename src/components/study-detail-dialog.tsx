@@ -9,6 +9,7 @@ export function StudyDetailDialog({
   title = label,
   children,
   triggerClassName = "text-button study-detail-trigger",
+  disabled = false,
   open,
   onClose,
 }: {
@@ -16,6 +17,7 @@ export function StudyDetailDialog({
   title?: string;
   children: ReactNode;
   triggerClassName?: string;
+  disabled?: boolean;
   open?: boolean;
   onClose?: () => void;
 }) {
@@ -33,6 +35,7 @@ export function StudyDetailDialog({
           type="button"
           className={triggerClassName}
           aria-haspopup="dialog"
+          disabled={disabled}
           onClick={() => dialog.current?.showModal()}
         >
           {label}

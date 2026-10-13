@@ -25,6 +25,7 @@ import { PriceChart } from "./price-chart";
 import { ConfirmDialog } from "./confirm-dialog";
 import { StudySettingsEditor } from "./study-settings";
 import { StudyTimingEditor } from "./study-timing-settings";
+import { studyCommission, studyUnitProfit } from "@/lib/study-commission";
 import { studyTiming } from "@/lib/study-timing";
 import { decimal, timeLabel } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
@@ -676,6 +677,10 @@ function StudentConditions(props: MarketProps) {
             ? "購入する単位ごとの価値"
             : "販売する単位ごとの費用"}
         </p>
+        <p className="study-commission-note">
+          Commission {money(studyCommission(view.config))}／単位
+          <span>成立時に加算・表示利益に含む</span>
+        </p>
         <div className="study-values">
           {study.unitLimits!.map((v, i) => (
             <div key={i} className={i < study.unitsUsed ? "used-unit" : ""}>
@@ -1009,7 +1014,15 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
               market.institution === "call" && i === 1
                 ? Number(second)
                 : Number(price);
-            return sum + (buyer ? v - p : p - v);
+            return (
+              sum +
+              studyUnitProfit(
+                buyer ? "buyer" : "seller",
+                v,
+                p,
+                studyCommission(view.config),
+              )
+            );
           }, 0)
       : null;
   if (!remaining)
@@ -1133,7 +1146,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
         {market.institution === "call"
           ? "入力価格で成立した場合の利益"
           : "この提示価格での利益"}
-        ：{money(expected)}
+        ：{money(expected)}（Commission込み）
       </p>
       {market.institution === "posted" && (
         <p className="field-help">
@@ -1197,7 +1210,13 @@ function ExpectedProfit({
     .slice(study.unitsUsed, study.unitsUsed + quantity)
     .reduce(
       (sum, value) =>
-        sum + (view.me.role === "buyer" ? value - price : price - value),
+        sum +
+        studyUnitProfit(
+          view.me.role === "buyer" ? "buyer" : "seller",
+          value,
+          price,
+          studyCommission(view.config),
+        ),
       0,
     );
   return (
@@ -1225,6 +1244,9 @@ function TeacherMetrics({
         正余剰の数量 {eq.quantity}、ゼロ余剰を含む上限 {eq.quantityMax} ／
         最大総余剰 {money(eq.surplus)}
       </p>
+      <p className="field-help">
+        個人利益はCommission込みです。総余剰・効率性・均衡の計算にはCommissionを含めません。
+      </p>
       <div className="study-table-wrap">
         <table>
           <thead>
@@ -1238,6 +1260,7 @@ function TeacherMetrics({
               <th>価格偏離</th>
               <th>Smith α</th>
               <th>総余剰</th>
+              <th>Commission支給総額</th>
               <th>効率</th>
               <th>非効率取引</th>
               <th>平均気配差</th>
@@ -1267,6 +1290,7 @@ function TeacherMetrics({
                   <td>{decimal(m.deviation)}</td>
                   <td>{m.alpha === null ? "—" : m.alpha.toFixed(4)}</td>
                   <td>{decimal(m.surplus)}</td>
+                  <td>{decimal(m.commissionPaid)}</td>
                   <td>{decimal(m.efficiency)}%</td>
                   <td>{m.inefficientTrades}</td>
                   <td>{decimal(m.spread)}</td>

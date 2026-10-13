@@ -40,7 +40,7 @@ export function DemoEntry() {
       <Header>
         <span className="demo-header-tag">ひとりデモ</span>
       </Header>
-      <main className="narrow-main">
+      <main className="narrow-main teacher-setup-main">
         <Link className="back-link" href="/teacher">
           <ArrowLeft size={15} />
           教員用ページへ
@@ -58,7 +58,7 @@ export function DemoEntry() {
           initialConfig={config}
           initialGenerator={generator}
           conditionPreset={{
-            label: "既存プリセット（練習用）",
+            label: "Default",
             settings: DEMO_SETTINGS,
           }}
           onCreateDemo={(created, adoptedGenerator) => {

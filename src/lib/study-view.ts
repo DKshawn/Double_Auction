@@ -3,6 +3,7 @@ import type { Institution, StudyMarketView, StudyMetric } from "./study-types";
 import type { RoomView } from "./types";
 import type { Participant, Room } from "./auction-model";
 import { studyPeriodAt } from "./study-config";
+import { studyTradeProfit } from "./study-commission";
 import {
   institutionFor,
   marketFor,
@@ -57,6 +58,10 @@ export function studyMetrics(room: Room, now: number): StudyMetric[] {
             ) / benchmark
           : null,
         surplus,
+        commissionPaid: trades.reduce(
+          (sum, t) => sum + 2 * (t.commission ?? 0),
+          0,
+        ),
         efficiency: eq.surplus ? (100 * surplus) / eq.surplus : null,
         inefficientTrades: trades.filter((t) => t.value < t.cost).length,
         spread: spreadMs ? spreadArea / spreadMs : null,
@@ -214,6 +219,7 @@ function publicMarket(
           sellerAlias: t.sellerAlias,
           buyerUnit: t.buyerUnit,
           sellerUnit: t.sellerUnit,
+          commission: t.commission ?? 0,
         };
         cache?.trades.set(t, value);
         return value;
@@ -248,7 +254,11 @@ export function studyView(
           institution: t.institution,
           price: t.price,
           unit: t.buyerId === actor.id ? t.buyerUnit : t.sellerUnit,
-          profit: t.buyerId === actor.id ? t.value - t.price : t.price - t.cost,
+          profit: studyTradeProfit(
+            t,
+            t.buyerId === actor.id ? "buyer" : "seller",
+          ),
+          commission: t.commission ?? 0,
         }));
   let legacyTrades = cache?.legacyTrades.get(publicState.trades);
   if (!legacyTrades) {

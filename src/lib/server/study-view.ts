@@ -7,7 +7,7 @@ export function studyView(...args: Parameters<typeof sharedStudyView>) {
   const view = sharedStudyView(...args);
   if (view.study?.teacher)
     view.study.teacher.preset = {
-      label: "既存 PPT プリセット",
+      label: "Default",
       settings: pptStudySettings(studyMarketSize(args[0].config)),
     };
   return view;

@@ -17,6 +17,7 @@ import {
   studyPeriodCount,
 } from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
+import { studyCommission } from "@/lib/study-commission";
 import { Header } from "./shell";
 
 export function StudyRoster({
@@ -226,6 +227,10 @@ export function StudyWaitingRoom({
             </ul>
             <span>計{view.config.rounds}期</span>
           </div>
+          <p className="study-waiting-commission">
+            成立1単位につき、買い手・売り手に各 {studyCommission(view.config)}{" "}
+            円のCommission
+          </p>
           <ol className="study-waiting-steps">
             <li className="complete">
               <Check size={16} />

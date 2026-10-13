@@ -2,16 +2,35 @@ import { useId } from "react";
 import { equilibrium } from "@/lib/equilibrium";
 import { staircasePoints } from "@/lib/study-generator";
 import type { StudySettings } from "@/lib/study-types";
+import {
+  studyCommissionEquilibrium,
+  studyCommissionSchema,
+} from "@/lib/study-commission";
 
 export function StudyConditionPreview({
   settings,
+  commission = 0,
+  showUnitValues = true,
 }: {
   settings: StudySettings;
+  commission?: number;
+  showUnitValues?: boolean;
 }) {
   const titleId = useId();
   const demand = settings.values.flat().sort((a, b) => b - a);
   const supply = settings.costs.flat().sort((a, b) => a - b);
   const eq = equilibrium(demand, supply);
+  const rewarded = studyCommissionSchema.safeParse(commission).success
+    ? studyCommissionEquilibrium(settings, commission)
+    : null;
+  const price = (value: typeof eq | null) =>
+    !value
+      ? "—"
+      : `${value.low === value.high ? value.low : `${value.low}〜${value.high}`} 円`;
+  const quantity = (value: typeof eq | null) =>
+    !value
+      ? "—"
+      : `${value.quantity === value.quantityMax ? value.quantity : `${value.quantity}〜${value.quantityMax}`} 単位`;
   const count = demand.length;
   const lowest = Math.min(...supply, ...demand);
   const highest = Math.max(...supply, ...demand);
@@ -47,6 +66,39 @@ export function StudyConditionPreview({
   ];
   return (
     <div className="study-condition-preview">
+      <div
+        className="study-table-wrap study-equilibrium-comparison"
+        aria-live="polite"
+      >
+        <table>
+          <caption>理論均衡の比較</caption>
+          <thead>
+            <tr>
+              <th scope="col">計算条件</th>
+              <th scope="col">均衡価格</th>
+              <th scope="col">均衡数量</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">原始供需（Commissionなし）</th>
+              <td>{price(eq)}</td>
+              <td>{quantity(eq)}</td>
+            </tr>
+            <tr>
+              <th scope="row">
+                Commission込み（各
+                {Number.isFinite(commission) ? commission : "—"}円／単位）
+              </th>
+              <td>{price(rewarded)}</td>
+              <td>{quantity(rewarded)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="field-help">
+        Commission込みは価値＋Commission、費用−Commissionで計算します。実際の注文価格や取引結果を保証するものではありません。最大総余剰・以下の図と単位表はCommissionを除く原始供需です。
+      </p>
       <dl className="study-condition-summary">
         {stats.map(([label, value]) => (
           <div key={label}>
@@ -55,7 +107,9 @@ export function StudyConditionPreview({
           </div>
         ))}
       </dl>
-      <div className="study-condition-preview-grid">
+      <div
+        className={`study-condition-preview-grid${showUnitValues ? "" : " study-chart-only"}`}
+      >
         <figure className="study-condition-chart">
           <svg viewBox="0 0 760 310" role="img" aria-labelledby={titleId}>
             <title id={titleId}>
@@ -126,35 +180,44 @@ export function StudyConditionPreview({
             第k単位は数量k−1〜kを覆います。参加者の実際の注文価格ではありません。
           </figcaption>
         </figure>
-        <div className="study-table-wrap study-unit-preview">
-          <table>
-            <caption>全単位の数値（片側{count}単位）</caption>
-            <thead>
-              <tr>
-                <th scope="col">単位 k</th>
-                <th scope="col">価値 D(k)</th>
-                <th scope="col">費用 S(k)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {demand.map((value, i) => (
-                <tr
-                  key={i}
-                  className={
-                    i >= eq.quantity && i < eq.quantityMax
-                      ? "study-zero-surplus-row"
-                      : undefined
-                  }
-                >
-                  <th scope="row">{i + 1}</th>
-                  <td>{value}</td>
-                  <td>{supply[i]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {showUnitValues && <StudyUnitValues settings={settings} />}
       </div>
+    </div>
+  );
+}
+
+export function StudyUnitValues({ settings }: { settings: StudySettings }) {
+  const demand = settings.values.flat().sort((a, b) => b - a);
+  const supply = settings.costs.flat().sort((a, b) => a - b);
+  const eq = equilibrium(demand, supply);
+  return (
+    <div className="study-table-wrap study-unit-preview">
+      <table>
+        <caption>全単位の数値（片側{demand.length}単位）</caption>
+        <thead>
+          <tr>
+            <th scope="col">単位 k</th>
+            <th scope="col">価値 D(k)</th>
+            <th scope="col">費用 S(k)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {demand.map((value, i) => (
+            <tr
+              key={i}
+              className={
+                i >= eq.quantity && i < eq.quantityMax
+                  ? "study-zero-surplus-row"
+                  : undefined
+              }
+            >
+              <th scope="row">{i + 1}</th>
+              <td>{value}</td>
+              <td>{supply[i]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   studyPeriodAt,
 } from "../study-config";
 import { studyTiming } from "../study-timing";
+import { studyCommission, studyTradeProfit } from "../study-commission";
 import { studyView } from "./study-view";
 import { marketRound } from "./study";
 import type { AuditEvent, Room } from "./model";
@@ -37,6 +38,7 @@ export function studyExport(
           phase: room.phase,
           rules: {
             ...STUDY_RULES,
+            commission: studyCommission(room.config),
             ...studyTiming(room.config),
             tradersPerMarket: studyMarketSize(room.config),
             institutions: studyInstitutions(room.config),
@@ -131,6 +133,8 @@ export function studyExport(
         "均衡数量_ゼロ余剰含む",
         "alpha傾き",
         "傾きに用いた期数",
+        "Commission支給総額_円",
+        "参加者利益合計_commission込み_円",
       ],
       ...teacher.metrics.map((m) => {
         const slope = teacher.slopes.find(
@@ -159,6 +163,8 @@ export function studyExport(
           teacher.equilibrium.quantityMax,
           slope?.slope,
           slope?.n,
+          m.commissionPaid,
+          m.surplus + m.commissionPaid,
         ];
       }),
     ];
@@ -186,6 +192,9 @@ export function studyExport(
         "買い手利益_円",
         "売り手利益_円",
         "実現余剰_円",
+        "買い手利益_commission除く_円",
+        "売り手利益_commission除く_円",
+        "Commission_片側1単位_円",
       ],
       ...study.markets
         .flatMap((m) => m.trades)
@@ -216,9 +225,12 @@ export function studyExport(
           t.sellerUnit,
           t.value,
           t.cost,
+          studyTradeProfit(t, "buyer"),
+          studyTradeProfit(t, "seller"),
+          t.value - t.cost,
           t.value - t.price,
           t.price - t.cost,
-          t.value - t.cost,
+          t.commission ?? 0,
         ]),
     ];
   return {

@@ -48,7 +48,7 @@ test("teacher creation renders presets and editable p/K/L/d with a restored adop
       initialConfig: config,
       initialGenerator: generator,
       conditionPreset: {
-        label: "既存 PPT プリセット",
+        label: "Default",
         settings: pptStudySettings(),
       },
     }),

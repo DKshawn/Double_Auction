@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { equilibrium, equilibriumQuantity } from "@/lib/equilibrium";
-import { decimal } from "@/lib/client";
 import type { Command, RoomView } from "@/lib/types";
 import type { StudySettings } from "@/lib/study-types";
 import {
@@ -12,7 +11,10 @@ import {
 } from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { studyTiming } from "@/lib/study-timing";
+import { studyCommission, studyCommissionError } from "@/lib/study-commission";
 import { StudyPresetGenerator } from "./study-preset-generator";
+import { StudyCommissionField } from "./study-commission-settings";
+import { StudyConditionPreview } from "./study-condition-preview";
 
 export function StudySettingsEditor({
   view,
@@ -28,8 +30,10 @@ export function StudySettingsEditor({
   const timing = studyTiming(view.config);
   const institutions = studyInstitutions(view.config);
   const [draft, setDraft] = useState<StudySettings | null>(null);
+  const [commissionDraft, setCommissionDraft] = useState<number | null>(null);
   const [revision, setRevision] = useState(0);
   const settings = draft ?? teacher.settings;
+  const commission = commissionDraft ?? studyCommission(view.config);
   const valid =
     [...settings.values, ...settings.costs].every((pair) =>
       pair.every((n) => Number.isInteger(n) && n >= 1 && n <= 999),
@@ -40,6 +44,9 @@ export function StudySettingsEditor({
     ? equilibrium(settings.values.flat(), settings.costs.flat())
     : null;
   const stale = draft && revision !== view.study!.settingsRevision;
+  const commissionError = valid
+    ? studyCommissionError(commission, settings)
+    : "";
   function update(
     side: keyof StudySettings,
     row: number,
@@ -51,10 +58,10 @@ export function StudySettingsEditor({
     setDraft(next);
   }
   return (
-    <section className="panel study-section">
+    <section className="panel study-section" aria-label="供需条件の設定">
       <div className="study-section-heading">
         <div>
-          <h2>価値と費用の設定</h2>
+          <h2>供需条件の設定</h2>
           <p className="muted">
             全市場・選択した制度の全{view.config.rounds}
             期で同じ条件を使います。開始後は変更できません。
@@ -66,18 +73,31 @@ export function StudySettingsEditor({
             disabled={disabled || view.round > 0 || view.phase !== "waiting"}
             onClick={() => {
               setDraft(structuredClone(teacher.settings));
+              setCommissionDraft(studyCommission(view.config));
               setRevision(view.study!.settingsRevision);
             }}
           >
-            価値・費用を変更
+            供需条件・Commissionを変更
           </button>
         )}
       </div>
+      <StudyCommissionField
+        amount={commission}
+        settings={valid ? settings : teacher.settings}
+        onChange={setCommissionDraft}
+        disabled={
+          disabled || !draft || view.round > 0 || view.phase !== "waiting"
+        }
+      />
       <StudyPresetGenerator
+        key={view.study!.settingsRevision}
         view={view}
         command={command}
         disabled={disabled}
-        onApplied={() => setDraft(null)}
+        onApplied={() => {
+          setDraft(null);
+          setCommissionDraft(null);
+        }}
       />
       <details open={Boolean(draft)}>
         <summary>{marketSize}人の条件を確認する</summary>
@@ -137,10 +157,7 @@ export function StudySettingsEditor({
         </div>
       </details>
       {eq && (
-        <p className="callout">
-          理論均衡：{decimal(eq.low)}〜{decimal(eq.high)}円 ／ 数量{" "}
-          {equilibriumQuantity(eq)} ／ 最大余剰 {decimal(eq.surplus)}円
-        </p>
+        <StudyConditionPreview settings={settings} commission={commission} />
       )}
       {draft && (
         <>
@@ -161,6 +178,7 @@ export function StudySettingsEditor({
               disabled={
                 disabled ||
                 !valid ||
+                Boolean(commissionError) ||
                 Boolean(stale) ||
                 view.phase !== "waiting" ||
                 view.round > 0
@@ -170,10 +188,13 @@ export function StudySettingsEditor({
                   await command({
                     type: "study-settings",
                     settings: draft,
+                    commission,
                     expectedRevision: revision,
                   })
-                )
+                ) {
                   setDraft(null);
+                  setCommissionDraft(null);
+                }
               }}
             >
               この条件を保存
@@ -181,7 +202,10 @@ export function StudySettingsEditor({
             <button
               className="button secondary"
               disabled={disabled}
-              onClick={() => setDraft(null)}
+              onClick={() => {
+                setDraft(null);
+                setCommissionDraft(null);
+              }}
             >
               キャンセル
             </button>
@@ -193,7 +217,10 @@ export function StudySettingsEditor({
         <ul>
           <li>
             各市場は買い手{marketSize / 2}人・売り手{marketSize / 2}
-            人。全員が毎期2単位まで取引し、役割・価値・費用は固定です。手数料は0円で、損失が出る取引も認めます。
+            人。全員が毎期2単位まで取引し、役割・価値・費用は固定です。
+            成立1単位につき、買い手・売り手それぞれに
+            {studyCommission(view.config)}
+            円のCommissionを加算します。損失が出る取引も認めます。
           </li>
           {institutions.includes("cda") && (
             <li>
@@ -232,7 +259,7 @@ export function StudySettingsEditor({
           <li>
             数量比の分母は正の余剰が生じる均衡数量です。
             {eq && `現在の均衡数量は${equilibriumQuantity(eq)}単位です。`}
-            ゼロ余剰の取引を含む数量比は1を超える場合があります。非効率取引は価値が費用を下回る取引を数え、効率性は実現余剰で計算します。途中終了した期は収束の傾きの計算から除きます。
+            ゼロ余剰の取引を含む数量比は1を超える場合があります。非効率取引は価値が費用を下回る取引を数え、効率性はCommissionを除く実現余剰で計算します。途中終了した期は収束の傾きの計算から除きます。
           </li>
           <li>
             各市場の全期の取引価格は学生にも公開します。全員の価値・費用と理論均衡は教員だけに表示します。

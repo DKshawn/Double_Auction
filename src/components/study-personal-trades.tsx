@@ -128,6 +128,10 @@ function TradeDetails({
 }) {
   const prices = [...new Set(trades.map((trade) => trade.price))];
   const profit = trades.reduce((sum, trade) => sum + trade.profit, 0);
+  const commission = trades.reduce(
+    (sum, trade) => sum + (trade.commission ?? 0),
+    0,
+  );
   return (
     <p>
       {trades.length}単位を
@@ -135,6 +139,7 @@ function TradeDetails({
       {buyer ? "購入" : "販売"}
       <span className={profit < 0 ? "loss" : ""}>
         利益 {decimal(profit)} 円{profit < 0 ? "（損失）" : ""}
+        {commission > 0 && `（Commission ${decimal(commission)} 円込み）`}
       </span>
     </p>
   );

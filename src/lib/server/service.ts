@@ -1,6 +1,12 @@
 import { inMarketQueue } from "./market-queue";
 import { studyTiming } from "../study-timing";
 import {
+  studyCommission,
+  studyCommissionError,
+  studyCommissionSchema,
+  STUDY_COMMISSION_ERROR,
+} from "../study-commission";
+import {
   studyLayoutError,
   studyMarketId,
   studyMarketSize,
@@ -50,6 +56,7 @@ import {
   unitLimits,
   recordStudyGeneratedAssignments,
   applyStudyGenerator,
+  pptStudySettings,
 } from "./study";
 
 type Outcome<T> =
@@ -94,6 +101,10 @@ export class AuctionService {
       const timing = studyTimingSchema.safeParse(studyTiming(config));
       if (!timing.success)
         throw new AuctionError("各時間は1〜3600秒の整数で設定してください。");
+      const commission = studyCommissionSchema.safeParse(
+        studyCommission(config),
+      );
+      if (!commission.success) throw new AuctionError(STUDY_COMMISSION_ERROR);
       config = {
         ...config,
         marketSize: size,
@@ -106,6 +117,7 @@ export class AuctionService {
         }),
         duration: timing.data.cdaSeconds,
         studyTiming: timing.data,
+        studyCommission: commission.data,
       };
     }
     if (generator) {
@@ -119,6 +131,13 @@ export class AuctionService {
             : "生成条件を確認してください。",
         );
       }
+    }
+    if (config.protocol === "institutions-v1") {
+      const settings = generator
+        ? generatedStudySettings(generator, studyMarketSize(config))
+        : pptStudySettings(studyMarketSize(config));
+      const error = studyCommissionError(studyCommission(config), settings);
+      if (error) throw new AuctionError(error);
     }
     const token = newToken();
     const hash = passwordHash(password);

@@ -27,6 +27,7 @@ import {
   studyRoleIndex,
 } from "./study-config";
 import { studyRoomConfigSchema } from "./study-room-config";
+import { studyCommission, studyCommissionError } from "./study-commission";
 
 export const DEMO_MARKETS = 12;
 export const DEMO_CAPACITY = DEMO_MARKETS * 16;
@@ -132,7 +133,7 @@ export class DemoSession {
     );
     if (view.study?.teacher)
       view.study.teacher.preset = {
-        label: "既存プリセット（練習用）",
+        label: "Default",
         settings: resizeStudySettings(
           DEMO_SETTINGS,
           studyMarketSize(this.config),
@@ -238,6 +239,11 @@ export class DemoSession {
       this.role = this.human.role;
       this.institution = this.market.order[0];
     }
+    const commissionError = studyCommissionError(
+      studyCommission(config),
+      this.room.study!.settings,
+    );
+    if (commissionError) throw new Error(commissionError);
     this.publish();
   };
 

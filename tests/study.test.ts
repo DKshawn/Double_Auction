@@ -1279,9 +1279,18 @@ test("the final Call clearing stays visible to both counterparties and late noti
   assert.equal(after.study!.myTradeNotifications!.at(-1)!.id, trade.id);
   assert.deepEqual(applyPatch(before, diffViews(before, after)), after);
   const notification = after.study!.myTradeNotifications![0];
+  assert.equal(notification.commission, 0);
   assert.deepEqual(
     Object.keys(notification).sort(),
-    ["id", "round", "institution", "price", "unit", "profit"].sort(),
+    [
+      "id",
+      "round",
+      "institution",
+      "price",
+      "unit",
+      "profit",
+      "commission",
+    ].sort(),
   );
 });
 

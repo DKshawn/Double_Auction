@@ -14,7 +14,11 @@ export default async function Teacher({
   return (
     <>
       <Header />
-      <main className="narrow-main">
+      <main
+        className={
+          legacy === "1" ? "narrow-main" : "narrow-main teacher-setup-main"
+        }
+      >
         <Link className="back-link" href="/">
           <ArrowLeft size={15} />
           学生の入室画面へ
@@ -32,7 +36,7 @@ export default async function Teacher({
           status={getServerStatus()}
           legacy={legacy === "1"}
           conditionPreset={{
-            label: "既存 PPT プリセット",
+            label: "Default",
             settings: pptStudySettings(),
           }}
         />

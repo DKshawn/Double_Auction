@@ -95,6 +95,8 @@ export type StudyTrade = {
   sellerUnit: number;
   value: number;
   cost: number;
+  // Reward to each party for this filled unit; absent on pre-commission fills.
+  commission?: number;
 };
 export type Clearing = {
   round: number;
@@ -115,6 +117,7 @@ export type StudyMetric = {
   deviation: number | null;
   alpha: number | null;
   surplus: number;
+  commissionPaid: number;
   efficiency: number | null;
   inefficientTrades: number;
   spread: number | null;
@@ -158,6 +161,7 @@ export type StudyView = {
     price: number;
     unit: number;
     profit: number;
+    commission?: number;
   }[];
   // Keep own fills available to notifications even after the visible institution changes.
   myTradeNotifications?: StudyView["myTrades"];
@@ -195,6 +199,7 @@ export type StudyView = {
 };
 export type StudyCommand =
   | { type: "study-randomize"; expectedRevision: number }
+  | { type: "study-commission"; commission: number; expectedRevision: number }
   | {
       type: "study-timing";
       timing: StudyTiming;
@@ -204,6 +209,7 @@ export type StudyCommand =
       type: "study-settings";
       settings: StudySettings;
       generator?: StudyGeneratorConfig;
+      commission?: number;
       expectedRevision: number;
     }
   | { type: "study-quote"; price: number }

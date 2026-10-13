@@ -13,6 +13,7 @@ import {
   studyTimingSchema,
 } from "./study-core";
 import { MAX_STAGE_SECONDS } from "./study-timing";
+import { studyCommissionSchema } from "./study-commission";
 
 // Room creation and the in-memory demo validate the same experiment settings.
 export const studyRoomConfigSchema = z
@@ -33,6 +34,7 @@ export const studyRoomConfigSchema = z
     studyTiming: studyTimingSchema.optional(),
     studyInstitutions: studyInstitutionsSchema.optional(),
     studyPeriods: studyPeriodsSchema.optional(),
+    studyCommission: studyCommissionSchema.optional(),
   })
   .strict()
   .refine(

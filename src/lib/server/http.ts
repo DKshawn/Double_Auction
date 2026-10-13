@@ -10,6 +10,7 @@ import {
 } from "../study-generator";
 import { MAX_NICKNAME_LENGTH } from "../participant-config";
 import { MAX_STUDY_ROUNDS, studyMarketSize } from "../study-config";
+import { studyCommissionSchema } from "../study-commission";
 
 export const NO_STORE = {
   "Cache-Control": "private, no-store, max-age=0",
@@ -166,6 +167,13 @@ export const commandSchema = z
     command: z.discriminatedUnion("type", [
       z
         .object({
+          type: z.literal("study-commission"),
+          commission: studyCommissionSchema,
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
+      z
+        .object({
           type: z.literal("study-randomize"),
           expectedRevision: z.number().int().min(0),
         })
@@ -182,6 +190,7 @@ export const commandSchema = z
           type: z.literal("study-settings"),
           settings: studySettingsSchema,
           generator: studyGeneratorConfigSchema.optional(),
+          commission: studyCommissionSchema.optional(),
           expectedRevision: z.number().int().min(0),
         })
         .strict(),

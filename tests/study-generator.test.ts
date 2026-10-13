@@ -210,7 +210,7 @@ test("chart steps cover k-1..k with no diagonal interpolation and expose the ent
   assert.ok(
     html.includes("重なり ") && html.includes("8") && html.includes("12"),
   );
-  assert.equal((html.match(/scope="row"/g) ?? []).length, 16);
+  assert.equal((html.match(/<th scope="row">\d+<\/th>/g) ?? []).length, 16);
   assert.equal((html.match(/study-zero-surplus-row/g) ?? []).length, 4);
   assert.ok(html.includes("288") && !html.includes("<path"));
 });

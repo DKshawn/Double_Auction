@@ -216,7 +216,7 @@ test("configured multi-market demo fills the chosen seats, balances selected ord
       demo: true,
     }),
   );
-  assert.match(markup, /価値・費用を変更/);
+  assert.match(markup, /供需条件・Commissionを変更/);
   assert.equal(
     await demo.command({ type: "study-randomize", expectedRevision: 0 }),
     true,

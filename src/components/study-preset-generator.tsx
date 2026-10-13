@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { studyCommission } from "@/lib/study-commission";
 import { seededStudySeats } from "@/lib/study-generator";
 import {
   studyMarketId,
@@ -59,6 +61,7 @@ export function StudyPresetGenerator({
   const locked = view.phase !== "waiting" || view.round > 0;
   const units = studyMarketSize(view.config);
   const perSide = units / 2;
+  const [commission, setCommission] = useState(studyCommission(view.config));
   return (
     <details className="study-generator">
       <summary>供需プリセットを生成・プレビュー</summary>
@@ -77,11 +80,14 @@ export function StudyPresetGenerator({
         initialGenerator={teacher.generation}
         disabled={disabled}
         locked={locked}
+        commission={commission}
+        onCommissionChange={setCommission}
         actionLabel="この条件を確認して適用"
-        onConfirm={async (preview) => {
+        onConfirm={async (preview, amount) => {
           const applied = await command({
             type: "study-settings",
             settings: preview.settings,
+            commission: amount,
             ...(preview.generator ? { generator: preview.generator } : {}),
             expectedRevision: preview.revision,
           });

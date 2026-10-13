@@ -19,6 +19,11 @@ import { STUDY_FEEDBACK_SECONDS, STUDY_START_SECONDS } from "./study-types";
 import { STUDY_RULES } from "./study-rules";
 import { MAX_STAGE_SECONDS, studyTiming } from "./study-timing";
 import {
+  studyCommission,
+  studyCommissionError,
+  studyTradeProfit,
+} from "./study-commission";
+import {
   MAX_STUDY_PARTICIPANTS,
   DEFAULT_STUDY_INSTITUTIONS,
   studyInstitutionOrders,
@@ -273,7 +278,7 @@ export const studyProfit = (room: Room, p: Participant, round?: number) =>
     )
     .reduce(
       (sum, t) =>
-        sum + (t.buyerId === p.id ? t.value - t.price : t.price - t.cost),
+        sum + studyTradeProfit(t, t.buyerId === p.id ? "buyer" : "seller"),
       0,
     );
 
@@ -515,6 +520,7 @@ function trade(
     sellerUnit,
     value,
     cost,
+    commission: studyCommission(room.config),
   };
   entry.sequence = log(room, m, events, at, "trade", "system", { ...entry });
   m.trades.push(entry);
@@ -738,7 +744,11 @@ export function executeStudy(
         unitLimits: unitLimits(room, p),
       })),
     });
-  } else if (cmd.type === "study-settings" || cmd.type === "study-timing") {
+  } else if (
+    cmd.type === "study-settings" ||
+    cmd.type === "study-timing" ||
+    cmd.type === "study-commission"
+  ) {
     if (actor !== "teacher")
       throw new AuctionError("この操作は教員のみ利用できます。", 403);
     if (room.round !== 0 || room.phase !== "waiting")
@@ -748,7 +758,17 @@ export function executeStudy(
         "条件が更新されています。再読込してください。",
         409,
       );
-    if (cmd.type === "study-timing") {
+    if (cmd.type === "study-commission") {
+      const error = studyCommissionError(cmd.commission, study.settings);
+      if (error) throw new AuctionError(error);
+      room.config.studyCommission = cmd.commission;
+      study.revision++;
+      emit(room, events, now, "study-commission", "teacher", {
+        commission: cmd.commission,
+        basis: "per-filled-unit-per-participant",
+        revision: study.revision,
+      });
+    } else if (cmd.type === "study-timing") {
       const parsed = studyTimingSchema.safeParse(cmd.timing);
       if (!parsed.success)
         throw new AuctionError(
@@ -790,7 +810,11 @@ export function executeStudy(
           );
         }
       }
+      const commission = cmd.commission ?? studyCommission(room.config);
+      const error = studyCommissionError(commission, parsed.data);
+      if (error) throw new AuctionError(error);
       study.settings = parsed.data;
+      room.config.studyCommission = commission;
       if (cmd.generator) {
         applyStudyGenerator(room, cmd.generator, now);
       } else {
@@ -799,6 +823,7 @@ export function executeStudy(
       study.revision++;
       emit(room, events, now, "study-settings", "teacher", {
         settings: study.settings,
+        commission,
         ...(study.generation
           ? { generation: structuredClone(study.generation) }
           : {}),
@@ -813,6 +838,13 @@ export function executeStudy(
     if (cmd.type === "start") {
       if (!["waiting", "review"].includes(room.phase))
         throw new AuctionError("今は実験を開始できません。", 409);
+      if (room.round === 0) {
+        const error = studyCommissionError(
+          studyCommission(room.config),
+          study.settings,
+        );
+        if (error) throw new AuctionError(error);
+      }
       if (study.lobby) {
         if (room.participants.length !== room.config.capacity)
           throw new AuctionError(

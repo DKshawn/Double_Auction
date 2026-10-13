@@ -531,6 +531,22 @@
   font-weight: 600;
   line-height: 1.4;
 }
+.study-private-values > .study-commission-note {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.study-commission-note > span {
+  display: block;
+  color: var(--muted);
+}
+.study-commission-field {
+  max-width: 460px;
+}
+.study-waiting-card .study-waiting-commission {
+  color: var(--accent);
+}
 .private-panel h2 small {
   margin-left: auto;
   font-size: 10px;
@@ -763,16 +779,133 @@
   font-weight: 700;
   font-size: 14px;
 }
-.study-preset-picker > .field {
+.study-preset-picker > .field,
+.study-preset-settings > .field {
   margin: 16px 0;
   max-width: 380px;
 }
 .teacher-condition-settings > h3 {
   margin-top: 0;
 }
-/* The creation form is narrow even on wide screens; keep its preview stacked. */
-.teacher-condition-settings .study-condition-preview-grid {
+.narrow-main.teacher-setup-main {
+  max-width: 1680px;
+}
+.teacher-setup-main .teacher-form-card.panel {
+  max-width: 720px;
+  margin: auto;
+}
+.teacher-form-card.teacher-create-card {
+  padding: 0;
+}
+.teacher-create-layout {
+  display: grid;
+  grid-template-columns: minmax(380px, 0.8fr) minmax(0, 2.2fr);
+  align-items: start;
+  gap: 24px;
+}
+.teacher-primary-settings {
+  min-width: 0;
+}
+.teacher-settings-section,
+.teacher-condition-settings {
+  padding: 22px;
+  min-width: 0;
+}
+.teacher-settings-section {
+  margin: 0 0 18px;
+}
+.teacher-settings-section.study-institution-picker {
+  border: 1px solid var(--line);
+  margin: 0 0 18px;
+  padding: 22px;
+}
+.teacher-settings-section.study-institution-picker legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.teacher-settings-section.study-institution-picker legend + * {
+  clear: both;
+}
+.teacher-settings-section .study-period-fields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 102px), 1fr));
+}
+.teacher-settings-section .study-institution-option {
+  padding-inline: 10px;
+}
+.teacher-settings-section h2,
+.teacher-condition-settings h2 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+.teacher-settings-section > .field:first-of-type {
+  margin-top: 12px;
+}
+.teacher-create-layout > .teacher-form-actions {
+  grid-column: 1 / -1;
+  max-width: 560px;
+}
+.teacher-form-actions > .primary {
+  margin-top: 21px;
+}
+.teacher-condition-layout {
+  min-width: 0;
+  container: preset-columns / inline-size;
+}
+.study-preset-with-units {
+  display: grid;
   grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+.study-preset-settings,
+.teacher-units-panel {
+  min-width: 0;
+}
+.study-preset-settings {
+  container: preview-settings / inline-size;
+}
+.study-preset-settings .study-condition-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@container preview-settings (min-width: 480px) {
+  .study-preset-settings .study-condition-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.teacher-units-panel {
+  padding: 22px;
+}
+.teacher-units-panel h2,
+.teacher-units-panel caption {
+  margin: 0;
+  font-size: 16px;
+}
+.teacher-units-panel .study-table-wrap {
+  margin-top: 0;
+  max-width: 520px;
+}
+.teacher-units-panel td,
+.teacher-units-panel th[scope="col"]:not(:first-child) {
+  text-align: right;
+}
+@container preset-columns (min-width: 800px) {
+  .study-preset-with-units {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+  .teacher-units-panel {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+  }
+  .teacher-units-panel thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
 }
 .teacher-condition-settings .teacher-adopted-conditions {
   overflow-wrap: anywhere;
@@ -782,6 +915,9 @@
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 14px;
   margin-top: 16px;
+}
+.study-generator-fields .field {
+  margin: 0;
 }
 .study-generated-preview {
   margin-top: 24px;
@@ -813,6 +949,50 @@
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
   align-items: start;
   gap: 20px;
+}
+.study-condition-preview-grid.study-chart-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+.study-condition-preview table,
+.study-unit-preview table {
+  width: 100%;
+  min-width: 0;
+}
+.study-equilibrium-comparison {
+  margin-top: 18px;
+}
+.study-equilibrium-comparison table {
+  width: 100%;
+}
+.study-equilibrium-comparison caption {
+  text-align: left;
+  font-weight: 700;
+  padding-bottom: 8px;
+}
+.study-equilibrium-comparison th,
+.study-equilibrium-comparison td {
+  font-size: 12px;
+  padding: 8px;
+}
+.study-equilibrium-comparison tbody tr:last-child {
+  background: #eeeaff;
+}
+.study-equilibrium-comparison th[scope="row"] {
+  white-space: normal;
+}
+.study-equilibrium-comparison td {
+  white-space: nowrap;
+}
+.study-commission-field > p {
+  margin: 0;
+}
+@media (max-width: 1100px) {
+  .teacher-create-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .teacher-create-layout > .teacher-form-actions {
+    max-width: none;
+  }
 }
 .study-condition-chart {
   margin: 0;
@@ -882,7 +1062,9 @@
   padding-bottom: 10px;
 }
 .study-generator table th,
-.study-generator table td {
+.study-generator table td,
+.study-unit-preview table th,
+.study-unit-preview table td {
   font-size: 13px;
   padding: 5px 8px;
   white-space: nowrap;

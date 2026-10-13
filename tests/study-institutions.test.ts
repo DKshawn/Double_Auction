@@ -185,7 +185,7 @@ test("time settings show and validate only selected institutions, restoring defa
       institutions.includes("posted"),
     );
     assert.equal(
-      html.includes('name="studyTiming.buyerSeconds"'),
+      html.includes('name="studyTiming.purchaseSeconds"'),
       institutions.includes("posted"),
     );
   }
@@ -295,13 +295,12 @@ for (const institutions of selections)
           now = market.deadline!;
           settleDeadline(room, now, events);
           trade(buyer, {
-            type: "posted-buy",
-            offerId: market.offers[0].id,
+            type: "posted-bid",
+            price: 120,
             quantity: 2,
           });
         }
-        // Finish all Call clearings or the CDA deadline. Posted completes as soon
-        // as the only buyer buys both units; this can advance the market immediately.
+        // Each institution advances at its own deadline; Posted fills at the next batch.
         while (market.round === round && market.stage !== "feedback") {
           assert.ok(market.deadline);
           now = market.deadline!;

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import {
   CircleHelp,
   Clock3,
@@ -17,6 +18,7 @@ import { TeacherDashboard } from "./teacher-dashboard";
 import { useRoom } from "./use-room";
 import { StudyRoom } from "./study-room";
 import type { Phase } from "@/lib/types";
+import { roomNavigation } from "@/lib/room-navigation";
 
 const labels: Record<Phase, string> = {
   waiting: "開始待ち",
@@ -26,7 +28,7 @@ const labels: Record<Phase, string> = {
   finished: "実験終了",
 };
 
-export function Room({ code }: { code: string }) {
+export function Room({ code, entry }: { code: string; entry?: string }) {
   const {
     view,
     connected,
@@ -39,15 +41,37 @@ export function Room({ code }: { code: string }) {
     command,
     retry,
   } = useRoom(code);
+  const navigation = roomNavigation(code, view?.me.role, entry);
+  const authenticatedRole = view?.me.role;
+  useEffect(() => {
+    if (!authenticatedRole) return;
+    // Remember only the entry route on refresh. The room API still authenticates
+    // its HttpOnly cookie and determines all data and permissions.
+    const url = new URL(window.location.href);
+    if (authenticatedRole === "teacher")
+      url.searchParams.set("entry", "teacher");
+    else url.searchParams.delete("entry");
+    window.history.replaceState(
+      null,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }, [authenticatedRole]);
   if (authError)
     return (
       <>
-        <Header />
+        <Header homeHref={navigation.homeHref} />
         <main className="narrow-main">
           <p className="callout">{authError}</p>
-          <div className="join-card">
-            <JoinForm initialCode={code} />
-          </div>
+          {navigation.teacher ? (
+            <Link className="button primary" href={navigation.recoveryHref}>
+              教員として再認証
+            </Link>
+          ) : (
+            <div className="join-card">
+              <JoinForm initialCode={code} />
+            </div>
+          )}
         </main>
         <Footer />
       </>
@@ -55,7 +79,7 @@ export function Room({ code }: { code: string }) {
   if (!view)
     return (
       <>
-        <Header />
+        <Header homeHref={navigation.homeHref} />
         <main className="loading-state">
           <Spinner />
           <h2>
@@ -69,7 +93,11 @@ export function Room({ code }: { code: string }) {
             <RefreshCw size={15} />
             再接続
           </button>
-          <Link href="/">ホームに戻る</Link>
+          <Link href={navigation.homeHref}>
+            {navigation.teacher
+              ? "教員の管理・設定へ戻る"
+              : "学生の入室画面へ戻る"}
+          </Link>
         </main>
       </>
     );
@@ -99,7 +127,12 @@ export function Room({ code }: { code: string }) {
     pending || !connected || view.phase !== "running" || remaining <= 0;
   return (
     <>
-      <Header>
+      <Header homeHref={navigation.homeHref}>
+        {teacher && (
+          <Link className="text-button" href={navigation.homeHref}>
+            教員の管理・設定へ
+          </Link>
+        )}
         <span className={`connection ${connected ? "" : "disconnected"}`}>
           {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
           {connected ? "接続中" : "再接続中"}

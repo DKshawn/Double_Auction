@@ -4,6 +4,7 @@ import type { RoomView } from "./types";
 import type { Participant, Room } from "./auction-model";
 import { studyPeriodAt } from "./study-config";
 import { studyTradeProfit } from "./study-commission";
+import { postedBookOrders } from "./posted-auction";
 import {
   institutionFor,
   marketFor,
@@ -132,6 +133,8 @@ function publicMarket(
   const visible = (round: number) =>
     isTeacher || (round >= firstPeriod && round <= period.last);
   const key = `${m.id}:${isTeacher ? "all" : firstPeriod}:${room.version}:${now}`;
+  const postedPurchase = m.stage === "purchase" && m.posted;
+  const deadline = postedPurchase ? postedPurchase.endsAt : m.deadline;
   const common: PublicMarket = cache?.markets.get(key) ?? {
     id: m.id,
     round: marketRound(room, m),
@@ -140,29 +143,86 @@ function publicMarket(
     institutionPeriod: period.period,
     stage: m.stage,
     stageKey: stageKey(room, m),
-    deadline: m.deadline,
+    deadline,
     remainingMs:
-      room.phase === "running" && m.deadline !== null
-        ? Math.max(0, m.deadline - now)
-        : m.remainingMs,
+      room.phase === "running" && deadline !== null
+        ? Math.max(0, deadline - now)
+        : postedPurchase
+          ? postedPurchase.remainingMs
+          : m.remainingMs,
     call: m.call,
     participantCount: room.participants.filter(
       (p) => marketFor(room, p).id === m.id,
     ).length,
     activeBuyer:
-      m.stage === "purchase"
+      m.stage === "purchase" && !m.posted
         ? (room.participants.find((p) => p.id === m.buyerOrder[m.buyerIndex])
             ?.alias ?? null)
         : null,
     // Stable transport order avoids moving every row when one trader requotes.
     // The matching engine and displayed book still use price/time priority.
     orders:
-      m.stage === "cda"
-        ? [...m.orders].sort(
-            (a, b) =>
-              a.participantId.localeCompare(b.participantId) || a.unit - b.unit,
-          )
-        : [],
+      m.stage === "cda" || m.stage === "call"
+        ? m.orders
+            .map(
+              ({
+                id,
+                participantId,
+                alias,
+                side,
+                price,
+                unit,
+                sequence,
+                at,
+              }) => ({
+                id,
+                participantId,
+                alias,
+                side,
+                price,
+                unit,
+                sequence,
+                at,
+              }),
+            )
+            .sort(
+              (a, b) =>
+                a.participantId.localeCompare(b.participantId) ||
+                a.unit - b.unit,
+            )
+        : postedPurchase
+          ? postedBookOrders(postedPurchase.bids, m.offers)
+          : [],
+    ...(m.posted
+      ? {
+          posted: {
+            batch: m.posted.batch,
+            bids: m.posted.bids
+              .filter((bid) => bid.remaining > 0)
+              .map(
+                ({
+                  id,
+                  participantId,
+                  alias,
+                  price,
+                  quantity,
+                  remaining,
+                  sequence,
+                  at,
+                }) => ({
+                  id,
+                  participantId,
+                  alias,
+                  price,
+                  quantity,
+                  remaining,
+                  sequence,
+                  at,
+                }),
+              ),
+          },
+        }
+      : {}),
     orderHistory: (m.orderHistory ?? [])
       .filter((o) => visible(o.round))
       .map((o) => {
@@ -231,7 +291,11 @@ function publicMarket(
   cache?.markets.set(key, common);
   return {
     ...common,
-    myOrders: isTeacher ? [] : m.orders.filter((o) => o.participantId === id),
+    myOrders: isTeacher
+      ? []
+      : (m.posted ? common.orders : m.orders).filter(
+          (o) => o.participantId === id,
+        ),
     submitted: m.submitted.includes(id),
     myOffer: m.offers.find((o) => o.participantId === id) ?? null,
   };

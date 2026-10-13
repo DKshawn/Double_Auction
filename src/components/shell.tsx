@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ArrowLeftRight } from "lucide-react";
 
-export function Brand() {
+export function Brand({ homeHref = "/" }: { homeHref?: string }) {
   return (
-    <Link href="/" className="brand" aria-label="市場実験室 ホーム">
+    <Link href={homeHref} className="brand" aria-label="市場実験室 ホーム">
       <span className="brand-mark">
         <ArrowLeftRight size={21} />
       </span>
@@ -15,11 +15,17 @@ export function Brand() {
   );
 }
 
-export function Header({ children }: { children?: React.ReactNode }) {
+export function Header({
+  children,
+  homeHref,
+}: {
+  children?: React.ReactNode;
+  homeHref?: string;
+}) {
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Brand />
+        <Brand homeHref={homeHref} />
         <div className="header-right">{children}</div>
       </div>
     </header>

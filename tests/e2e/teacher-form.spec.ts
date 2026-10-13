@@ -20,11 +20,11 @@ test("teacher can create and reenter a room with an eight-digit password without
   const create = page.getByRole("button", { name: "実験ルームを作成" });
   await expect(create).toBeEnabled();
   await create.click();
-  await expect(page).toHaveURL(/\/room\/[A-Z2-9]{6}$/);
+  await expect(page).toHaveURL(/\/room\/[A-Z2-9]{6}\?entry=teacher$/);
   await expect(
     page.getByRole("button", { name: "実験を開始", exact: true }),
   ).toBeVisible();
-  const code = page.url().split("/").at(-1)!;
+  const code = new URL(page.url()).pathname.split("/").at(-1)!;
   const response = await page.request.get(`/api/rooms/${code}`);
   expect(response.ok()).toBe(true);
   const snapshot = await response.json();
@@ -40,7 +40,7 @@ test("teacher can create and reenter a room with an eight-digit password without
       .getByLabel("この実験の教員パスワード", { exact: false })
       .fill("12345678");
     await reentry.getByRole("button", { name: "管理画面に入る" }).click();
-    await expect(reentry).toHaveURL(`/room/${code}`);
+    await expect(reentry).toHaveURL(`/room/${code}?entry=teacher`);
     await expect(
       reentry.getByRole("button", { name: "実験を開始", exact: true }),
     ).toBeVisible();

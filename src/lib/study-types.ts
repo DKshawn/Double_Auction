@@ -13,6 +13,7 @@ export type StudyTiming = {
   callSeconds: number;
   offerSeconds: number;
   buyerSeconds: number;
+  purchaseSeconds?: number;
 };
 export type StudySettings = { values: UnitValues[]; costs: UnitValues[] };
 export type StaircaseParameters = {
@@ -79,6 +80,24 @@ export type PostedOffer = {
   price: number;
   quantity: number;
   remaining: number;
+  sequence?: number;
+  at?: number;
+};
+export type PostedBid = {
+  id: string;
+  participantId: string;
+  alias: string;
+  price: number;
+  quantity: number;
+  remaining: number;
+  sequence: number;
+  at: number;
+};
+export type PostedBatchState = {
+  bids: PostedBid[];
+  batch: number;
+  endsAt: number | null;
+  remainingMs: number;
 };
 export type PostedOfferHistory = Omit<PostedOffer, "remaining"> & {
   round: number;
@@ -152,6 +171,7 @@ export type StudyMarketView = {
   myOrders: StudyOrder[];
   submitted: boolean;
   myOffer: PostedOffer | null;
+  posted?: { batch: number; bids: PostedBid[] };
 };
 export type StudyView = {
   protocol: "institutions-v1";
@@ -221,5 +241,6 @@ export type StudyCommand =
   | { type: "study-accept"; orderId: string }
   | { type: "call-submit"; prices: number[] }
   | { type: "posted-offer"; price: number; quantity: number }
+  | { type: "posted-bid"; price: number; quantity: number }
   | { type: "posted-buy"; offerId: string; quantity: number }
   | { type: "posted-pass" };

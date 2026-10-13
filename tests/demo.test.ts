@@ -154,10 +154,10 @@ test("CDA demo trades two marginal units through the real engine without bots ev
   assert.equal(idle.getSnapshot().view.study!.unitsUsed, 0);
 });
 
-test("Call demo keeps orders sealed, clears uniformly, retains unit limits across calls and rolls back invalid orders", async () => {
+test("Call demo publishes orders, clears uniformly, retains unit limits across calls and rolls back invalid orders", async () => {
   const demo = new DemoSession("call", "buyer", 1000);
   await demo.command({ type: "start" }, true);
-  assert.deepEqual(demo.getSnapshot().view.study!.market.orders, []);
+  assert.ok(demo.getSnapshot().view.study!.market.orders.length > 0);
   assert.equal(
     await demo.command({ type: "call-submit", prices: [100, 120] }),
     false,
@@ -266,30 +266,31 @@ test("all 12 demo markets finish 15 periods with isolated trades and all Call cl
   assert.deepEqual(demo.getSnapshot().view.study!.myTrades, []);
 });
 
-test("Posted demo skips preceding bot buyers, preserves human stock and uses actual published offers", async () => {
-  // Repeat to exercise different random positions in the buyer queue.
+test("Posted demo collects human bids with bots and only trades at a one-second clearing", async () => {
   for (let run = 0; run < 12; run++) {
     const demo = new DemoSession("posted", "buyer", 1000);
     await demo.command({ type: "start" }, true);
     assert.deepEqual(demo.getSnapshot().view.study!.market.offers, []);
     demo.skipToHuman();
     let state = demo.getSnapshot().view.study!;
-    assert.equal(state.market.activeBuyer, "買01");
+    assert.equal(state.market.activeBuyer, null);
     assert.equal(state.unitsUsed, 0);
-    assert.equal(state.market.remainingMs, 10000);
+    assert.equal(state.market.remainingMs, 80000);
     for (let unit = 0; unit < 2; unit++) {
       state = demo.getSnapshot().view.study!;
       const offer = state.market.offers.find((o) => o.remaining > 0)!;
       assert.ok(offer);
       assert.equal(
         await demo.command({
-          type: "posted-buy",
-          offerId: offer.id,
+          type: "posted-bid",
+          price: 99999,
           quantity: 1,
         }),
         true,
       );
     }
+    assert.equal(demo.getSnapshot().view.study!.myTrades.length, 0);
+    demo.skipStage();
     assert.equal(demo.getSnapshot().view.study!.myTrades.length, 2);
     assert.equal(
       demo.getSnapshot().view.study!.unitsUsed,

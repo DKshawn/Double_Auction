@@ -13,12 +13,14 @@ export const INSTITUTIONS: Record<
   call: {
     name: "一括約定市場",
     short: "Call Market",
-    description: "非公開注文を集め、共通の価格で一括して取引します。",
+    description:
+      "注文板に価格と数量を公開し、清算時刻に共通の価格で一括して取引します。",
   },
   posted: {
     name: "売り手価格提示市場",
     short: "Posted Offer",
-    description: "売り手が価格を決め、買い手が決められた順番で購入します。",
+    description:
+      "売り手の提示後、買い手が買値を注文し、1秒ごとに価格優先で約定します。",
   },
 };
 export const STUDY_RULES = {
@@ -41,6 +43,7 @@ export const STUDY_RULES = {
   inventoryReset: "period-only",
   callUnfilledOrders: "expire-at-each-call",
   callSubmission: "one-final-monotone-schedule-per-participant-per-call",
+  callOrderVisibility: "public-price-and-remaining-quantity-during-collection",
   callAbstention: "no-submission-by-deadline",
   callTieBreak: "random-participant-priority-per-call-then-unit",
   cdaPriority: "price-then-time",

@@ -9,6 +9,7 @@ import type {
   StudyOrderHistory,
   PostedOffer,
   PostedOfferHistory,
+  PostedBatchState,
   StudyTrade,
   Clearing,
   StudyLobby,
@@ -18,7 +19,12 @@ import type {
 import { generatedStudySettings, seededStudySeats } from "./study-generator";
 import { STUDY_FEEDBACK_SECONDS, STUDY_START_SECONDS } from "./study-types";
 import { STUDY_RULES } from "./study-rules";
-import { MAX_STAGE_SECONDS, studyTiming } from "./study-timing";
+import {
+  MAX_STAGE_SECONDS,
+  postedPurchaseSeconds,
+  studyTiming,
+} from "./study-timing";
+import { POSTED_BATCH_MS, postedBatchPlan } from "./posted-auction";
 import {
   studyCommission,
   studyCommissionError,
@@ -63,6 +69,7 @@ export type StudyMarket = {
   // Optional for rooms saved before public CDA order history was introduced.
   orderHistory?: StudyOrderHistory[];
   offers: PostedOffer[];
+  posted?: PostedBatchState;
   // Added only when prices become public; optional for older saved rooms.
   offerHistory?: PostedOfferHistory[];
   submitted: string[];
@@ -113,6 +120,7 @@ export const studyTimingSchema = z
     callSeconds: stageSeconds,
     offerSeconds: stageSeconds,
     buyerSeconds: stageSeconds,
+    purchaseSeconds: stageSeconds.optional(),
   })
   .strict();
 const institutionPeriods = z.number().int().min(1).max(MAX_INSTITUTION_PERIODS);
@@ -367,7 +375,7 @@ function archiveOrders(
   at: number,
 ) {
   // Only orders that actually rested on the public CDA book enter this history.
-  // Incoming marketable limits and sealed Call orders remain private.
+  // Only ended CDA resting orders enter this history. Call results are stored in clearings.
   for (const order of orders) {
     const closedSequence = log(
       room,
@@ -452,6 +460,7 @@ function startMarket(
   m.buyerOrder = [];
   m.buyerIndex = 0;
   m.call = 0;
+  delete m.posted;
   m.spreadAt = at;
   m.spreadValue = null;
   const institution = institutionFor(room, m);
@@ -469,7 +478,11 @@ function startMarket(
   else if (institution === "call") {
     m.call = 1;
     schedule(m, "call", at, timing.callSeconds);
-  } else schedule(m, "offer", at, timing.offerSeconds);
+  } else {
+    if (room.config.studyPostedMechanism === "batch-bids-v1")
+      m.posted = { bids: [], batch: 0, endsAt: null, remainingMs: 0 };
+    schedule(m, "offer", at, timing.offerSeconds);
+  }
   log(room, m, events, at, "period-started", "system");
 }
 function finishMarket(
@@ -501,8 +514,18 @@ function finishMarket(
   }
   log(room, m, events, at, "period-ended", "system", {
     completion,
-    cancelledOrders: m.orders.map((o) => o.id),
+    cancelledOrders: [
+      ...m.orders.map((o) => o.id),
+      ...(m.posted?.bids
+        .filter((bid) => bid.remaining > 0)
+        .map((bid) => bid.id) ?? []),
+    ],
   });
+  if (m.posted) {
+    m.posted.bids = [];
+    m.posted.endsAt = null;
+    m.posted.remainingMs = 0;
+  }
   m.orders = [];
   m.stage = "done";
   m.epoch++;
@@ -643,6 +666,49 @@ function nextBuyer(
     });
   }
 }
+function clearPosted(
+  room: Room,
+  m: StudyMarket,
+  events: AuditEvent[],
+  at: number,
+) {
+  const posted = m.posted!;
+  const plan = postedBatchPlan(posted.bids, m.offers, at);
+  posted.batch++;
+  // Persist the exact eligible cohort and random priority before applying fills.
+  log(room, m, events, at, "posted-batch-cleared", "system", {
+    batch: posted.batch,
+    ...plan,
+  });
+  for (const match of plan.matches) {
+    const bid = posted.bids.find((bid) => bid.id === match.bidId)!;
+    const offer = m.offers.find((offer) => offer.id === match.offerId)!;
+    const buyer = room.participants.find((p) => p.id === bid.participantId)!;
+    const seller = room.participants.find((p) => p.id === offer.participantId)!;
+    if (match.quantity > bid.remaining || match.quantity > offer.remaining)
+      throw new AuctionError("在庫または注文残数量が更新されています。", 409);
+    for (let unit = 0; unit < match.quantity; unit++)
+      trade(room, m, buyer, seller, match.price, events, at);
+    bid.remaining -= match.quantity;
+    offer.remaining -= match.quantity;
+  }
+  if (
+    at >= posted.endsAt! ||
+    m.offers.every((offer) => offer.remaining === 0)
+  ) {
+    log(room, m, events, at, "posted-bids-expired", "system", {
+      bids: posted.bids
+        .filter((bid) => bid.remaining > 0)
+        .map((bid) => ({ ...bid })),
+    });
+    posted.bids = [];
+    finishMarket(room, m, events, at, "complete");
+  } else {
+    m.deadline = Math.min(at + POSTED_BATCH_MS, posted.endsAt!);
+    m.remainingMs = m.deadline - at;
+    // A batch boundary does not change the submission stage or invalidate forms.
+  }
+}
 export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
   if (room.phase !== "running") return false;
   let changed = false;
@@ -681,13 +747,29 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
           schedule(m, "call", at, studyTiming(room.config).callSeconds);
         }
       } else if (m.stage === "offer") {
-        m.buyerOrder = shuffled(
-          room.participants
-            .filter((p) => marketFor(room, p).id === m.id && p.role === "buyer")
-            .map((p) => p.id),
-        );
+        m.buyerOrder = m.posted
+          ? []
+          : shuffled(
+              room.participants
+                .filter(
+                  (p) => marketFor(room, p).id === m.id && p.role === "buyer",
+                )
+                .map((p) => p.id),
+            );
         m.buyerIndex = 0;
-        schedule(m, "purchase", at, studyTiming(room.config).buyerSeconds);
+        schedule(
+          m,
+          "purchase",
+          at,
+          m.posted
+            ? POSTED_BATCH_MS / 1000
+            : studyTiming(room.config).buyerSeconds,
+        );
+        if (m.posted) {
+          m.posted.endsAt = at + postedPurchaseSeconds(room.config) * 1000;
+          m.posted.remainingMs = m.posted.endsAt - at;
+          m.deadline = Math.min(m.deadline!, m.posted.endsAt);
+        }
         const sequence = log(
           room,
           m,
@@ -697,7 +779,13 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
           "system",
           {
             offers: m.offers,
-            buyerOrder: m.buyerOrder,
+            ...(m.posted
+              ? {
+                  mechanism: "batch-bids-v1",
+                  batchMs: POSTED_BATCH_MS,
+                  endsAt: m.posted.endsAt,
+                }
+              : { buyerOrder: m.buyerOrder }),
           },
         );
         (m.offerHistory ??= []).push(
@@ -713,8 +801,11 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
           })),
         );
       } else if (m.stage === "purchase") {
-        log(room, m, events, at, "buyer-timeout", m.buyerOrder[m.buyerIndex]);
-        nextBuyer(room, m, events, at);
+        if (m.posted) clearPosted(room, m, events, at);
+        else {
+          log(room, m, events, at, "buyer-timeout", m.buyerOrder[m.buyerIndex]);
+          nextBuyer(room, m, events, at);
+        }
       } else break;
     }
   }
@@ -966,6 +1057,10 @@ export function executeStudy(
           spreadAccumulate(m, now);
           m.remainingMs = Math.max(0, m.deadline - now);
           m.deadline = null;
+          if (m.stage === "purchase" && m.posted) {
+            m.posted.remainingMs = Math.max(0, m.posted.endsAt! - now);
+            m.posted.endsAt = null;
+          }
         }
       room.phase = "paused";
       emit(room, events, now, "paused", actorId);
@@ -975,6 +1070,8 @@ export function executeStudy(
       for (const m of study.markets)
         if (!["done", "waiting"].includes(m.stage)) {
           m.deadline = now + m.remainingMs;
+          if (m.stage === "purchase" && m.posted)
+            m.posted.endsAt = now + m.posted.remainingMs;
           m.spreadAt = now;
         }
       room.phase = "running";
@@ -1040,7 +1137,7 @@ export function executeStudy(
       throw new AuctionError("現在は取引時間外です。", 409);
     if (request.expectedStage !== stageKey(room, m))
       throw new AuctionError(
-        "受付時間または購入順が切り替わりました。最新の画面を確認してください。",
+        "受付時間または取引段階が切り替わりました。最新の画面を確認してください。",
         409,
       );
     const maximumUnits = studyUnits(room.config, institutionFor(room, m));
@@ -1193,7 +1290,7 @@ export function executeStudy(
         throw new AuctionError(
           `数量は1〜${maximumUnits}単位で、残りの取引可能数以内にしてください。`,
         );
-      const offer = {
+      const offer: PostedOffer = {
         id: randomUUID(),
         participantId: actor.id,
         alias: actor.alias,
@@ -1201,11 +1298,47 @@ export function executeStudy(
         quantity: cmd.quantity,
         remaining: cmd.quantity,
       };
+      if (m.posted) {
+        offer.sequence = room.sequence + 1;
+        offer.at = now;
+      }
       m.offers.push(offer);
       m.submitted.push(actor.id);
       log(room, m, events, now, "posted-offer", actor.id, { ...offer });
+    } else if (cmd.type === "posted-bid") {
+      if (m.stage !== "purchase" || !m.posted || actor.role !== "buyer")
+        throw new AuctionError(
+          "買い手は共通の取引時間中に買い注文を送信できます。",
+          409,
+        );
+      checkPrice(cmd.price);
+      const reserved = m.posted.bids
+        .filter((bid) => bid.participantId === actor.id)
+        .reduce((sum, bid) => sum + bid.remaining, 0);
+      if (
+        !Number.isInteger(cmd.quantity) ||
+        cmd.quantity < 1 ||
+        cmd.quantity > remaining - reserved
+      )
+        throw new AuctionError(
+          "注文中の数量を含め、残りの購入可能数を確認してください。",
+          409,
+        );
+      const bid = {
+        id: randomUUID(),
+        participantId: actor.id,
+        alias: actor.alias,
+        price: cmd.price,
+        quantity: cmd.quantity,
+        remaining: cmd.quantity,
+        at: now,
+        sequence: room.sequence + 1,
+      };
+      m.posted.bids.push(bid);
+      log(room, m, events, now, "posted-bid", actor.id, { ...bid });
     } else if (cmd.type === "posted-buy" || cmd.type === "posted-pass") {
       if (
+        m.posted ||
         m.stage !== "purchase" ||
         actor.role !== "buyer" ||
         m.buyerOrder[m.buyerIndex] !== actor.id

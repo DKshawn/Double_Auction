@@ -35,6 +35,7 @@ export const studyRoomConfigSchema = z
     rounds: z.number().int().min(1).max(MAX_STUDY_ROUNDS),
     duration: z.number().int().min(1).max(MAX_STAGE_SECONDS),
     studyTiming: studyTimingSchema.optional(),
+    studyPostedMechanism: z.literal("batch-bids-v1").optional(),
     studyInstitutions: studyInstitutionsSchema.optional(),
     studyPeriods: studyPeriodsSchema.optional(),
     studyCommission: studyCommissionSchema.optional(),

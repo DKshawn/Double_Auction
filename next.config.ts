@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
+  // Separate build output for a second, local verification server.
+  distDir: process.env.LOCAL_NEXT_DIST_DIR || ".next",
   // Allow the numeric loopback URL when `next dev` starts with localhost.
   allowedDevOrigins: ["127.0.0.1"],
   poweredByHeader: false,

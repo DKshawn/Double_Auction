@@ -3,10 +3,15 @@ import { Room } from "@/components/room";
 
 export default async function RoomPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ entry?: string }>;
 }) {
   const { code } = await params;
   if (!/^[A-Za-z2-9]{6}$/.test(code)) notFound();
-  return <Room key={code.toUpperCase()} code={code.toUpperCase()} />;
+  const { entry } = await searchParams;
+  return (
+    <Room key={code.toUpperCase()} code={code.toUpperCase()} entry={entry} />
+  );
 }

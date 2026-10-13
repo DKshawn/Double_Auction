@@ -46,9 +46,11 @@ import { studyRoomConfigSchema } from "@/lib/study-room-config";
 import { StudyPresetPicker } from "./study-preset-picker";
 import { generatedStudySettings } from "@/lib/study-generator";
 import { StudyUnitFields } from "./study-unit-settings";
+import { teacherRoomHref } from "@/lib/room-navigation";
 
 export function TeacherForm({
   initialCode = "",
+  initialTab,
   status,
   legacy = false,
   initialConfig,
@@ -57,6 +59,7 @@ export function TeacherForm({
   onCreateDemo,
 }: {
   initialCode?: string;
+  initialTab?: "manage" | "create" | "reenter";
   status: ServerStatus;
   legacy?: boolean;
   initialConfig?: RoomConfig;
@@ -65,7 +68,7 @@ export function TeacherForm({
   onCreateDemo?: (config: RoomConfig, generator?: StudyGeneratorConfig) => void;
 }) {
   const [tab, setTab] = useState(
-    !onCreateDemo && initialCode ? "reenter" : "create",
+    initialTab ?? (!onCreateDemo && initialCode ? "reenter" : "create"),
   );
   const [reenterCode, setReenterCode] = useState(initialCode);
   const [pending, setPending] = useState(false);
@@ -264,8 +267,7 @@ export function TeacherForm({
               { password: form.get("password") },
             );
       // Re-entry may switch back from a student's session in the same browser.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Discard the previous user's client-side room state.
-      window.location.assign(`/room/${result.code}`);
+      window.location.assign(teacherRoomHref(result.code));
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -705,6 +707,7 @@ export function TeacherForm({
                         時間・価値・費用の条件は全市場で共通です。作成後も実験開始前なら教員画面で変更できます。
                       </p>
                       <StudyTimingFields
+                        marketSize={size}
                         timing={timing}
                         onChange={setTiming}
                         disabled={settingsDisabled}

@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Clock3,
   LockKeyhole,
-  Download,
   UsersRound,
   Wifi,
   WifiOff,
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Header } from "./shell";
 import { StudyDetailDialog } from "./study-detail-dialog";
+import { ExportDownloads } from "./export-downloads";
 import { StudyMarketOverview } from "./study-market-overview";
 import { StudyMarketHistory } from "./study-market-history";
 import { StudyOrderBook } from "./study-order-book";
@@ -26,7 +27,11 @@ import { ConfirmDialog } from "./confirm-dialog";
 import { StudySettingsEditor } from "./study-settings";
 import { StudyTimingEditor } from "./study-timing-settings";
 import { studyCommission, studyUnitProfit } from "@/lib/study-commission";
-import { studyTiming } from "@/lib/study-timing";
+import {
+  studyTiming,
+  studyCountdownLabel,
+  studyRemainingMs,
+} from "@/lib/study-timing";
 import { decimal, timeLabel } from "@/lib/client";
 import { isValidPrice, MAX_PRICE } from "@/lib/price";
 import { INSTITUTIONS } from "@/lib/study-rules";
@@ -44,6 +49,7 @@ import type {
   StudyStage,
 } from "@/lib/study-types";
 import type { Command, RoomView } from "@/lib/types";
+import { teacherSetupHref } from "@/lib/room-navigation";
 
 type Props = {
   view: RoomView;
@@ -67,9 +73,9 @@ const stages: Record<StudyStage, string> = {
   waiting: "開始待ち",
   countdown: "開始カウントダウン",
   cda: "連続取引",
-  call: "非公開注文の受付",
+  call: "注文受付・清算待ち",
   offer: "売り手の価格提示",
-  purchase: "順番に購入",
+  purchase: "買い手の取引",
   feedback: "取引結果の確認",
   done: "実験終了",
 };
@@ -147,17 +153,16 @@ export function StudyRoom({
   const cdaLayout = !teacher && market.institution === "cda";
   const callLayout = !teacher && market.institution === "call";
   const postedLayout = !teacher && market.institution === "posted";
-  const remaining =
-    view.phase === "running" && market.deadline !== null
-      ? Math.max(0, market.deadline - now)
-      : market.remainingMs;
+  const remaining = studyRemainingMs(view.phase, market, now);
   const seconds = Math.ceil(remaining / 1000);
   const stageLabel =
     view.phase === "finished" || market.stage === "done"
       ? "実験終了"
       : view.phase === "paused"
         ? "一時停止中"
-        : stages[market.stage];
+        : market.stage === "purchase" && market.posted
+          ? "全買い手の取引時間"
+          : stages[market.stage];
   const blocked =
     disabled ||
     view.phase !== "running" ||
@@ -201,7 +206,16 @@ export function StudyRoom({
           feedbackPeriod={market.institutionPeriod}
         />
       )}
-      {teacher && <Header>{roomStatus}</Header>}
+      {teacher && (
+        <Header homeHref={demo ? "/demo" : teacherSetupHref(view.code)}>
+          {!demo && (
+            <Link className="text-button" href={teacherSetupHref(view.code)}>
+              教員の管理・設定へ
+            </Link>
+          )}
+          {roomStatus}
+        </Header>
+      )}
       <main className="room-main study-main">
         {toolbar}
         <div
@@ -230,8 +244,12 @@ export function StudyRoom({
                   {INSTITUTIONS[market.institution].short}{" "}
                   <small>{INSTITUTIONS[market.institution].name}</small>
                 </h2>
-                {market.institution === "posted" && (
-                  <p>{INSTITUTIONS[market.institution].description}</p>
+                {market.institution === "posted" && !market.posted && (
+                  <p>
+                    {view.config.studyPostedMechanism === "batch-bids-v1"
+                      ? INSTITUTIONS.posted.description
+                      : "旧ルーム：買い手が順番に購入します。"}
+                  </p>
                 )}
               </div>
             </section>
@@ -249,11 +267,7 @@ export function StudyRoom({
               <div className="timer">
                 <span>
                   <Clock3 size={13} />
-                  {market.stage === "feedback"
-                    ? market.round === view.config.rounds
-                      ? "実験終了まで"
-                      : "次の制度まで"
-                    : "この段階の残り時間"}
+                  {studyCountdownLabel(market, view.config.rounds)}
                 </span>
                 <b>{`${Math.floor(seconds / 60)
                   .toString()
@@ -293,6 +307,18 @@ export function StudyRoom({
         )}
         {teacher && (
           <div className="study-teacher-tools">
+            {!demo && (
+              <StudyDetailDialog
+                label="データをダウンロード（CSV・JSON）"
+                title="実験データを保存"
+              >
+                <p>
+                  ルーム {view.code} の全市場・全{view.config.rounds}
+                  期が対象です。CSVはExcelで開けます。
+                </p>
+                <ExportDownloads code={view.code} />
+              </StudyDetailDialog>
+            )}
             <StudyDetailDialog
               label={`市場${market.id}の注文・清算`}
               title={`市場${market.id}・第${market.round || 1}期の注文・清算`}
@@ -424,32 +450,6 @@ export function StudyRoom({
                     </table>
                   </div>
                 </section>
-                {!demo && (
-                  <section className="panel study-section">
-                    <h2>実験データを保存</h2>
-                    <p className="muted">
-                      すべての市場・{view.config.rounds}
-                      期の記録を、制度・市場番号・単位番号とともに保存します。
-                    </p>
-                    <div className="study-actions">
-                      {[
-                        ["trades", "取引履歴 CSV"],
-                        ["metrics", "市場・期別集計 CSV"],
-                        ["events", "操作ログ CSV"],
-                        ["settings", "実験条件 JSON"],
-                      ].map(([kind, name]) => (
-                        <a
-                          className="button secondary"
-                          href={`/api/rooms/${view.code}/export?kind=${kind}`}
-                          key={kind}
-                        >
-                          <Download size={15} />
-                          {name}
-                        </a>
-                      ))}
-                    </div>
-                  </section>
-                )}
               </StudyDetailDialog>
             )}
           </div>
@@ -726,10 +726,13 @@ function MarketActivity(props: MarketProps) {
   if (market.institution === "cda") return <StudyOrderBook {...props} />;
   if (market.institution === "posted") return <OfferBoard {...props} />;
   return (
-    <section className="panel study-section study-market-workspace">
-      <h2>一括約定・第{market.call || 1}回 / 4回</h2>
+    <StudyOrderBook
+      view={view}
+      market={market}
+      title={`一括約定・第${market.call || 1}回 / 4回`}
+    >
       <p className="muted">
-        注文は締切まで非公開です。締切までに送信しない場合、その回は注文なしとして進みます。未約定注文は各回で失効し、残り数量を次の回で再注文できます。
+        注文板に価格と残数量を公開します。取引は清算時刻にまとめて成立します。未約定注文は各回で失効し、残り数量を次の回で再注文できます。未送信の場合は注文なしとして進みます。
       </p>
       <p className="field-help study-call-guidance">
         送信は各回1回です。
@@ -740,18 +743,7 @@ function MarketActivity(props: MarketProps) {
             : "2単位目の売値は1単位目以上にしてください。"}
         実際の利益は清算価格で決まります。
       </p>
-      {view.study!.teacher && (
-        <StudyMarketHistory
-          key={market.id}
-          trades={market.trades}
-          orders={market.orderHistory}
-          clearings={market.clearings}
-          offerHistory={market.offerHistory}
-          rounds={view.config.rounds}
-          showParticipants
-        />
-      )}
-    </section>
+    </StudyOrderBook>
   );
 }
 
@@ -887,6 +879,27 @@ function TeacherControls({
 }
 
 function OfferBoard({ view, market, command, disabled }: MarketProps) {
+  if (view.config.studyPostedMechanism === "batch-bids-v1")
+    return (
+      <StudyOrderBook view={view} market={market}>
+        <p className="muted">
+          {market.stage === "offer"
+            ? "価格提示の締切後、売り注文を公開し、すべての買い手が買い注文を送信できます。"
+            : "1秒ごとに高い買値・安い売値から約定します。同じ買値は抽選、同じ売値は提示順。取引価格は売り手の提示価格です。"}
+        </p>
+      </StudyOrderBook>
+    );
+  return (
+    <LegacyOfferBoard
+      view={view}
+      market={market}
+      command={command}
+      disabled={disabled}
+    />
+  );
+}
+
+function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
   const mine = market.activeBuyer === view.me.alias && view.me.role === "buyer";
   const timing = studyTiming(view.config);
   const myTurn = market.stage === "purchase" && mine;
@@ -988,7 +1001,110 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
   );
 }
 
-function StudentOrder({ view, market, command, disabled }: MarketProps) {
+function StudentOrder(props: MarketProps) {
+  if (
+    props.view.config.studyPostedMechanism === "batch-bids-v1" &&
+    props.market.institution === "posted" &&
+    props.view.me.role === "buyer"
+  )
+    return <PostedBidForm {...props} />;
+  return <ExistingStudentOrder {...props} />;
+}
+
+function PostedBidForm({ view, market, command, disabled }: MarketProps) {
+  const [price, setPrice] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [error, setError] = useState("");
+  const mine =
+    market.posted?.bids.filter((bid) => bid.participantId === view.me.id) ?? [];
+  const reserved = mine.reduce((sum, bid) => sum + bid.remaining, 0);
+  const available = 2 - view.study!.unitsUsed - reserved;
+  return (
+    <div className="study-order-form">
+      {mine.length > 0 && (
+        <p role="status">
+          注文受付済み：
+          {mine
+            .map((bid) => `${bid.price}円 × 残${bid.remaining}単位`)
+            .join("、")}
+          。変更・取消はできません。
+        </p>
+      )}
+      {available > 0 ? (
+        <form
+          className="study-order-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (disabled || market.stage !== "purchase") return;
+            if (!isValidPrice(Number(price))) {
+              setError(`買値は1〜${MAX_PRICE}円の整数で入力してください。`);
+              return;
+            }
+            setError("");
+            if (
+              await command({
+                type: "posted-bid",
+                price: Number(price),
+                quantity: Math.min(quantity, available),
+              })
+            )
+              setPrice("");
+          }}
+        >
+          <label className="field">
+            買いたい価格（円）
+            <input
+              type="number"
+              min="1"
+              max={MAX_PRICE}
+              step="1"
+              required
+              value={price}
+              onChange={(event) => setPrice(event.target.value)}
+              disabled={disabled || market.stage !== "purchase"}
+            />
+          </label>
+          <label className="field">
+            今回注文する数量
+            <select
+              value={Math.min(quantity, available)}
+              onChange={(event) => setQuantity(Number(event.target.value))}
+              disabled={disabled || market.stage !== "purchase"}
+            >
+              {Array.from({ length: available }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}単位
+                </option>
+              ))}
+            </select>
+          </label>
+          {error && (
+            <p className="error-message" role="alert">
+              {error}
+            </p>
+          )}
+          <button
+            className="button primary full"
+            disabled={disabled || market.stage !== "purchase"}
+          >
+            買い注文を出す
+          </button>
+        </form>
+      ) : (
+        !reserved && (
+          <p className="success-message">今期の2単位の取引は完了しました。</p>
+        )
+      )}
+    </div>
+  );
+}
+
+function ExistingStudentOrder({
+  view,
+  market,
+  command,
+  disabled,
+}: MarketProps) {
   const [price, setPrice] = useState(""),
     [second, setSecond] = useState(""),
     [quantity, setQuantity] = useState(

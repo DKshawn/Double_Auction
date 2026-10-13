@@ -18,6 +18,8 @@ export type RoomConfig = {
   markets?: number;
   marketSize?: number;
   studyTiming?: StudyTiming;
+  // Absent on old rooms, whose saved sequential protocol remains readable.
+  studyPostedMechanism?: "batch-bids-v1";
   studyInstitutions?: Institution[];
   studyPeriods?: Partial<StudyPeriods>;
   studyCommission?: number;

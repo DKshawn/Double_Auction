@@ -1,9 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { ChartBar, List } from "lucide-react";
 import { studyMarketSize } from "@/lib/study-config";
-import { studyPriceLevels, type StudyPriceLevel } from "@/lib/study-order-book";
+import {
+  MIN_STUDY_BOOK_ROWS,
+  STUDY_BOOK_ROW_HEIGHT,
+  studyBookChartRows,
+  studyBookRowCapacity,
+  studyPriceLevels,
+  type StudyPriceLevel,
+} from "@/lib/study-order-book";
 import type { StudyMarketView, StudyOrder } from "@/lib/study-types";
 import type { RoomView } from "@/lib/types";
 import { StudyMarketHistory } from "./study-market-history";
@@ -17,9 +30,13 @@ type BookSide = {
 export function StudyOrderBook({
   view,
   market,
+  children,
+  title = "注文板",
 }: {
   view: RoomView;
   market: StudyMarketView;
+  children?: ReactNode;
+  title?: string;
 }) {
   const [display, setDisplay] = useState<"list" | "chart">("list");
   const teacher = view.me.role === "teacher";
@@ -42,9 +59,11 @@ export function StudyOrderBook({
     ...sides.flatMap(({ rows }) => rows.map((r) => r.quantity)),
   );
   return (
-    <section className="panel study-section study-order-book">
+    <section
+      className={`panel study-section study-order-book${market.institution === "call" ? " study-call-book" : ""}`}
+    >
       <div className="study-book-heading">
-        <h2>注文板</h2>
+        <h2>{title}</h2>
         <div
           className="study-book-display"
           role="group"
@@ -66,6 +85,17 @@ export function StudyOrderBook({
           </button>
         </div>
       </div>
+      {children}
+      {(market.institution === "call" || market.posted) && (
+        <p className="study-call-best" aria-label="最良買値と最良売値">
+          <span className="buy-text">
+            最良買値 {sides[0].rows[0]?.price ?? "—"} 円
+          </span>
+          <span className="sell-text">
+            最良売値 {sides[1].rows[0]?.price ?? "—"} 円
+          </span>
+        </p>
+      )}
       {display === "chart" ? (
         <StudyBookChart sides={sides} slots={slots} maximum={maximum} />
       ) : (
@@ -84,7 +114,9 @@ export function StudyOrderBook({
                   <thead>
                     <tr>
                       <th>価格（円）</th>
-                      <th>数量</th>
+                      <th>
+                        {market.institution === "call" ? "残数量" : "数量"}
+                      </th>
                       {teacher && <th>参加者</th>}
                     </tr>
                   </thead>
@@ -159,53 +191,72 @@ export function StudyBookChart({
   slots: number;
   maximum: number;
 }) {
-  const buyers = new Map(
-    sides
-      .find(({ side }) => side === "buyer")
-      ?.rows.map((row) => [row.price, row]),
+  const rowArea = useRef<HTMLDivElement>(null);
+  const [capacity, setCapacity] = useState(
+    Math.max(MIN_STUDY_BOOK_ROWS, slots),
   );
-  const sellers = new Map(
-    sides
-      .find(({ side }) => side === "seller")
-      ?.rows.map((row) => [row.price, row]),
+  useEffect(() => {
+    const element = rowArea.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const next = studyBookRowCapacity(entry.contentRect.height);
+      setCapacity((previous) => (previous === next ? previous : next));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const rows = studyBookChartRows(
+    sides.find(({ side }) => side === "buyer")?.rows ?? [],
+    sides.find(({ side }) => side === "seller")?.rows ?? [],
+    capacity,
   );
-  const prices = [...new Set([...buyers.keys(), ...sellers.keys()])].sort(
-    (a, b) => b - a,
+  const scaleMaximum = Math.max(
+    maximum,
+    ...rows.flatMap((row) => [
+      row.buyer?.quantity ?? 0,
+      row.seller?.quantity ?? 0,
+    ]),
   );
   return (
     <div
       className="study-book-chart"
       role="region"
       aria-label="価格別の注文数量の棒グラフ"
+      style={
+        {
+          "--book-chart-row-height": `${STUDY_BOOK_ROW_HEIGHT}px`,
+        } as CSSProperties
+      }
     >
       <div className="study-book-chart-heading">
         <h3 className="sell-text">売り気配単位</h3>
         <span className="study-book-chart-price-header">気配値</span>
         <h3 className="buy-text">買い気配単位</h3>
       </div>
-      <div
-        className="study-book-chart-rows"
-        style={{ minHeight: `${slots * 24}px` }}
-      >
+      <div className="study-book-chart-rows" ref={rowArea}>
         <ol aria-label="価格別の買い注文と売り注文">
-          {prices.map((price) => {
-            const buyer = buyers.get(price);
-            const seller = sellers.get(price);
+          {rows.map(({ kind, price, buyer, seller }) => {
             const ownQuantity =
               (buyer?.ownQuantity ?? 0) + (seller?.ownQuantity ?? 0);
+            const range =
+              kind === "above" ? "> " : kind === "below" ? "< " : "";
+            const priceLabel = `${price}円${kind === "above" ? "より高い注文の合計" : kind === "below" ? "より安い注文の合計" : ""}`;
+            const label = `${priceLabel}、買い${buyer?.quantity ?? 0}単位、売り${seller?.quantity ?? 0}単位${ownQuantity ? `、あなたの注文${ownQuantity}単位を含む` : ""}`;
             return (
-              <li key={price}>
+              <li key={`${kind}-${price}`}>
                 <div
-                  className="study-book-chart-row"
+                  className={`study-book-chart-row${kind !== "price" ? " study-book-chart-summary" : ""}`}
                   role="img"
-                  aria-label={`${price}円、買い${buyer?.quantity ?? 0}単位、売り${seller?.quantity ?? 0}単位${ownQuantity ? `、あなたの注文${ownQuantity}単位を含む` : ""}`}
+                  aria-label={label}
+                  title={kind === "price" ? undefined : label}
                 >
                   <StudyBookChartBar
                     side="seller"
                     level={seller}
-                    maximum={maximum}
+                    maximum={scaleMaximum}
                   />
                   <span className="study-book-chart-price">
+                    {range}
                     {price}
                     {ownQuantity > 0 && (
                       <span
@@ -220,14 +271,14 @@ export function StudyBookChart({
                   <StudyBookChartBar
                     side="buyer"
                     level={buyer}
-                    maximum={maximum}
+                    maximum={scaleMaximum}
                   />
                 </div>
               </li>
             );
           })}
         </ol>
-        {!prices.length && (
+        {!rows.length && (
           <p className="study-book-chart-empty">まだ注文はありません</p>
         )}
       </div>
@@ -241,7 +292,7 @@ function StudyBookChartBar({
   maximum,
 }: {
   side: StudyOrder["side"];
-  level: StudyPriceLevel | undefined;
+  level: Pick<StudyPriceLevel, "quantity" | "ownQuantity"> | undefined;
   maximum: number;
 }) {
   return (
@@ -250,7 +301,7 @@ function StudyBookChartBar({
       aria-hidden="true"
     >
       <span className="study-book-chart-track">
-        {level && (
+        {level && level.quantity > 0 && (
           <span
             className="study-book-chart-bar"
             style={{ width: `${(level.quantity / maximum) * 100}%` }}

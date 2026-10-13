@@ -33,6 +33,123 @@ after(async () => {
   await pg.close();
 });
 
+test("room credentials cannot read or export another room, and expired/student credentials remain rejected", async () => {
+  const first = await classroom(1, 2);
+  const second = await classroom(1, 2);
+  for (const token of [
+    first.teacher.token,
+    first.students[0].token,
+    undefined,
+    "expired-token",
+  ]) {
+    await assert.rejects(service.view(second.teacher.code, token));
+    await assert.rejects(service.export(second.teacher.code, token));
+  }
+  await assert.rejects(
+    service.export(first.teacher.code, first.students[0].token),
+  );
+  const before = await service.export(first.teacher.code, first.teacher.token);
+  assert.equal(
+    exportData(before.room, before.events, before.now, "trades").rowCount,
+    0,
+  );
+  assert.throws(() =>
+    exportData(before.room, before.events, before.now, "xlsx"),
+  );
+  const renewed = await service.recoverTeacher(
+    first.teacher.code,
+    "Test-Teacher-2026",
+  );
+  await assert.rejects(service.export(first.teacher.code, first.teacher.token));
+  assert.equal(
+    (await service.view(first.teacher.code, renewed.token)).me.role,
+    "teacher",
+  );
+});
+
+test("Posted database transactions reserve concurrent bids and persist one lottery/fill across concurrent reads and retries", async () => {
+  const { teacher, students, send } = await classroom(1, 6);
+  const initial = await service.export(teacher.code, teacher.token);
+  initial.room.study!.markets[0].order = ["posted", "call", "cda"];
+  await saveFixture(initial.room);
+  await send(teacher.token, { type: "start" });
+  const sellers = students.filter((s) => s.view.me.role === "seller");
+  const buyers = students.filter((s) => s.view.me.role === "buyer");
+  await send(sellers[0].token, {
+    type: "posted-offer",
+    price: 80,
+    quantity: 1,
+  });
+  await send(sellers[1].token, {
+    type: "posted-offer",
+    price: 99999,
+    quantity: 2,
+  });
+  const offered = await service.export(teacher.code, teacher.token);
+  settleDeadline(offered.room, offered.room.study!.markets[0].deadline!, []);
+  const market = offered.room.study!.markets[0];
+  market.deadline = Date.now() + 60000;
+  market.posted!.endsAt = Date.now() + 120000;
+  await saveFixture(offered.room);
+  const attempts = await Promise.allSettled(
+    Array.from({ length: 3 }, () =>
+      send(buyers[0].token, { type: "posted-bid", price: 100, quantity: 1 }),
+    ),
+  );
+  assert.equal(
+    attempts.filter((attempt) => attempt.status === "fulfilled").length,
+    2,
+  );
+  assert.equal(
+    attempts.filter((attempt) => attempt.status === "rejected").length,
+    1,
+  );
+  const view = await service.view(teacher.code, buyers[1].token);
+  const request = {
+    requestId: randomUUID(),
+    expectedRound: view.round,
+    expectedStage: view.study!.market.stageKey,
+    command: { type: "posted-bid" as const, price: 100, quantity: 2 },
+  };
+  await Promise.all([
+    service.command(teacher.code, buyers[1].token, request),
+    service.command(teacher.code, buyers[1].token, request),
+  ]);
+  const pending = await service.export(teacher.code, teacher.token);
+  assert.equal(pending.room.study!.markets[0].posted!.bids.length, 3);
+  assert.equal(pending.room.study!.markets[0].trades.length, 0);
+  pending.room.study!.markets[0].deadline = Date.now() - 1;
+  await saveFixture(pending.room);
+  await Promise.all(
+    buyers.map((buyer) => service.view(teacher.code, buyer.token)),
+  );
+  await service.command(teacher.code, buyers[1].token, request);
+  const cleared = await service.export(teacher.code, teacher.token);
+  const finalMarket = cleared.room.study!.markets[0];
+  assert.equal(finalMarket.trades.length, 1);
+  assert.equal(finalMarket.trades[0].price, 80);
+  assert.equal(finalMarket.offers[0].remaining, 0);
+  assert.ok(finalMarket.posted!.bids.every((bid) => bid.remaining >= 0));
+  for (const buyer of buyers)
+    assert.ok(
+      finalMarket.trades.filter((trade) => trade.buyerId === buyer.view.me.id)
+        .length <= 2,
+    );
+  const clearing = cleared.events.filter(
+    (event) => event.type === "posted-batch-cleared",
+  );
+  assert.equal(clearing.length, 1);
+  assert.equal(
+    (clearing[0].detail.lotteries as { candidates: string[] }[])[0].candidates
+      .length,
+    3,
+  );
+  assert.equal(
+    cleared.events.filter((event) => event.type === "trade").length,
+    1,
+  );
+});
+
 async function saveFixture(room: Room) {
   await db.transaction(async (tx) => {
     const before = await lockBundle(tx, room.code, undefined, true);

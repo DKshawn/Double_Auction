@@ -2,6 +2,8 @@ import { GOODS } from "../catalog";
 import { toView } from "./engine";
 import type { AuditEvent, Room } from "./model";
 import { studyExport } from "./study-export";
+import { isExportKind } from "../exports";
+import { AuctionError } from "./model";
 
 export function csv(rows: unknown[][]) {
   return (
@@ -12,7 +14,10 @@ export function csv(rows: unknown[][]) {
           .map((value) => {
             let text = String(value ?? "");
             // Protect spreadsheet users from formulas in participant-controlled names.
-            if (typeof value === "string" && /^[\s]*[=+\-@\t\r]/.test(text))
+            if (
+              typeof value === "string" &&
+              /^(?:\s*[=+\-@]|[\t\r\n])/.test(text)
+            )
               text = "'" + text;
             return `"${text.replaceAll('"', '""')}"`;
           })
@@ -28,6 +33,8 @@ export function exportData(
   now: number,
   kind: string,
 ) {
+  if (!isExportKind(kind))
+    throw new AuctionError("ダウンロード形式が正しくありません。", 400);
   if (room.study) return studyExport(room, events, now, kind, csv);
   const teacher = toView(room, "teacher", now, "online").teacher!;
   if (kind === "settings")
@@ -151,5 +158,6 @@ export function exportData(
     extension: "csv",
     contentType: "text/csv; charset=utf-8",
     content: csv(rows),
+    rowCount: rows.length - 1,
   };
 }

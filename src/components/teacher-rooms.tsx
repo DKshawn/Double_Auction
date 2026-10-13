@@ -130,7 +130,7 @@ export function TeacherRooms({
         </button>
       </div>
       <p className="muted small">
-        保存済みの実験ルームを確認・再入室・削除できます。
+        保存済みの実験ルームを確認できます。再入室後の「データをダウンロード」から、全市場・全期のCSVと実験条件JSONを保存できます。
       </p>
       {status.keyRequired && (
         <form
@@ -274,7 +274,7 @@ export function TeacherRooms({
                       onClick={() => onEnter(room.code)}
                       aria-label={`${room.code} に教員として再入室`}
                     >
-                      再入室 <ArrowRight size={14} />
+                      結果・ダウンロード / 再入室 <ArrowRight size={14} />
                     </button>
                     <button
                       className="button secondary small-button danger-text"

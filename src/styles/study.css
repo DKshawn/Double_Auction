@@ -1423,7 +1423,7 @@
   overflow: auto;
 }
 .cda-layout .study-order-book > .study-book-chart {
-  overflow-x: hidden;
+  overflow: hidden;
 }
 :is(.cda-layout, .call-layout, .posted-layout) > .private-panel h2 {
   grid-area: title;
@@ -1558,6 +1558,17 @@
   line-height: 1.6;
 }
 .study-section .study-call-guidance {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.study-call-best {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+.study-call-book > .muted {
   font-size: 14px;
   line-height: 1.6;
 }
@@ -1847,13 +1858,17 @@
 }
 .study-book-chart {
   margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  height: clamp(132px, 40dvh, 420px);
+  min-height: 132px;
   font-size: var(--study-table-body-font-size);
   font-variant-numeric: tabular-nums;
 }
 .study-book-chart-heading,
 .study-book-chart-row {
-  --book-quantity-width: 16px;
-  --book-price-width: 52px;
+  --book-quantity-width: 20px;
+  --book-price-width: 70px;
   --book-chart-gap: 4px;
   display: grid;
   grid-template-columns:
@@ -1863,6 +1878,7 @@
   gap: var(--book-chart-gap);
 }
 .study-book-chart-heading {
+  flex-shrink: 0;
   min-height: 36px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--line);
@@ -1908,15 +1924,26 @@
 }
 .study-book-chart-rows {
   position: relative;
+  flex: 1;
+  min-height: 96px;
+  overflow: hidden;
 }
 .study-book-chart-rows ol {
+  position: absolute;
+  inset: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .study-book-chart-row {
-  min-height: 24px;
+  height: var(--book-chart-row-height, 24px);
+  min-height: var(--book-chart-row-height, 24px);
   line-height: 1.4;
+}
+.study-book-chart-summary {
+  background: #f7f7fc;
+  font-weight: 600;
+  border-block: 1px solid var(--line);
 }
 .study-book-chart-track {
   display: flex;
@@ -1979,8 +2006,8 @@
 @container (max-width: 320px) {
   .study-book-chart-heading,
   .study-book-chart-row {
-    --book-quantity-width: 12px;
-    --book-price-width: 46px;
+    --book-quantity-width: 20px;
+    --book-price-width: 70px;
     --book-chart-gap: 3px;
   }
 }
@@ -2537,6 +2564,11 @@
   margin: 0;
 }
 @media (max-width: 1199px) {
+  /* Stacked layouts have no fixed grid height; keep quote growth independent
+     of the page height while retaining a useful preview on small screens. */
+  .cda-layout .study-order-book > .study-book-chart {
+    flex: none;
+  }
   .study-trade-feedback {
     top: auto;
     bottom: 12px;

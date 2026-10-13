@@ -7,7 +7,7 @@ import {
   studyPeriodCount,
   studyPeriodAt,
 } from "../study-config";
-import { studyTiming } from "../study-timing";
+import { postedPurchaseSeconds, studyTiming } from "../study-timing";
 import { studyCommission, studyTradeProfit } from "../study-commission";
 import { studyView } from "./study-view";
 import { marketRound } from "./study";
@@ -51,6 +51,20 @@ export function studyExport(
             },
             commission: studyCommission(room.config),
             ...studyTiming(room.config),
+            postedMechanism:
+              room.config.studyPostedMechanism ?? "sequential-v1",
+            ...(room.config.studyPostedMechanism === "batch-bids-v1"
+              ? {
+                  postedPurchaseSeconds: postedPurchaseSeconds(room.config),
+                  postedBatchMs: 1000,
+                  postedBuyerOrder:
+                    "bid-price-desc-random-equal-bids-per-batch",
+                  postedSellerOrder: "offer-price-asc-then-submission-sequence",
+                  postedExecutionPrice: "seller-offer",
+                  postedBidAmendment: "not-allowed",
+                  postedBidCancellation: "not-allowed",
+                }
+              : {}),
             tradersPerMarket: studyMarketSize(room.config),
             institutions: studyInstitutions(room.config),
             periodsPerInstitution: Object.fromEntries(
@@ -86,6 +100,7 @@ export function studyExport(
             clearings: m.clearings,
             orderHistory: m.orderHistory ?? [],
             offerHistory: m.offerHistory ?? [],
+            ...(m.posted ? { posted: m.posted } : {}),
           })),
           metrics: teacher.metrics,
           convergenceSlopes: teacher.slopes,
@@ -254,5 +269,6 @@ export function studyExport(
     extension: "csv",
     contentType: "text/csv; charset=utf-8",
     content: csv(rows),
+    rowCount: rows.length - 1,
   };
 }

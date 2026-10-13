@@ -121,7 +121,7 @@ test("demo fast-forward stops at a new feedback stage without consuming its eigh
 test("skipping a Posted stage stops when bot purchases finish the last period early", async () => {
   const session = new DemoSession("posted", "seller", 1000);
   await session.command({ type: "start" }, true);
-  for (let step = 0; step < 50; step++) {
+  for (let step = 0; step < 450; step++) {
     if (session.getSnapshot().view.study!.market.stage === "feedback") break;
     session.skipStage();
   }

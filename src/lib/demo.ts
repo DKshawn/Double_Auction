@@ -89,6 +89,8 @@ export class DemoSession {
         duration: 180,
       },
     );
+    if (studyInstitutions(this.config).includes("posted"))
+      this.config.studyPostedMechanism = "batch-bids-v1";
     this.teacher = options.teacher ?? false;
     if (options.generator)
       this.options.generator = structuredClone(options.generator);
@@ -388,6 +390,7 @@ export class DemoSession {
   skipToHuman = () => {
     if (this.room.phase !== "running" || this.role !== "buyer") return;
     if (this.market.stage === "offer") this.skipStage();
+    if (this.market.posted) return;
     // Each preceding buyer needs at most two purchases and a pass.
     const attempts = (studyMarketSize(this.room.config) / 2) * 3;
     for (let i = 0; i < attempts && this.market.stage === "purchase"; i++) {
@@ -435,6 +438,20 @@ export class DemoSession {
   private buyAsBot(bot: Participant) {
     if (bot.id === this.humanId) return;
     const used = unitsUsed(this.room, bot);
+    const market = marketFor(this.room, bot);
+    if (market.posted) {
+      const reserved = market.posted.bids
+        .filter((bid) => bid.participantId === bot.id)
+        .reduce((sum, bid) => sum + bid.remaining, 0);
+      const available = 2 - used - reserved;
+      if (available > 0)
+        this.sendBot(bot, {
+          type: "posted-bid",
+          price: unitLimits(this.room, bot)[used + reserved] - 12,
+          quantity: 1,
+        });
+      return;
+    }
     const limit = unitLimits(this.room, bot)[used];
     const offer = marketFor(this.room, bot)
       .offers.filter((o) => o.remaining > 0 && o.price <= limit)
@@ -471,6 +488,11 @@ export class DemoSession {
       clock.nextAt = this.now + BOT_INTERVAL_MS;
       const bots = this.bots.filter((p) => marketFor(this.room, p).id === id);
       if (market.stage === "purchase") {
+        if (market.posted) {
+          for (const bot of bots.filter((p) => p.role === "buyer"))
+            this.buyAsBot(bot);
+          continue;
+        }
         const bot = bots.find(
           (p) => p.id === market.buyerOrder[market.buyerIndex],
         );

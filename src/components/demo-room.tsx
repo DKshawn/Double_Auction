@@ -89,7 +89,9 @@ export default function DemoRoom({
         : market.stage === "call"
           ? "今の注文を清算"
           : market.stage === "purchase"
-            ? "今の購入時間を終了"
+            ? market.posted
+              ? "次の1秒清算へ"
+              : "今の購入時間を終了"
             : "今期を終了";
   const toolbar = (
     <section className="demo-panel" aria-label="ひとりデモの操作">
@@ -152,6 +154,7 @@ export default function DemoRoom({
           {!teacher &&
             role === "buyer" &&
             market.institution === "posted" &&
+            !market.posted &&
             ["offer", "purchase"].includes(market.stage) && (
               <button
                 className="button secondary"
@@ -201,13 +204,15 @@ export default function DemoRoom({
                           ? `注文板の最良価格で取引するか、自分の希望価格を入力してください。各期${studyUnits(view.config)}単位まで取引できます。`
                           : market.stage === "call"
                             ? "希望価格を送信し、「今の注文を清算」を押すと待たずに結果を確認できます。"
-                            : market.stage === "offer"
-                              ? role === "seller"
-                                ? "販売価格と数量を送信し、「提示を締め切って公開」を押してください。"
-                                : "「自分の購入順へ進む」を押すと、売り手の価格を見て購入できます。"
-                              : role === "seller"
-                                ? "仮想の買い手が順番に購入します。説明中は「一時停止」で時計を止められます。"
-                                : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。説明中は「一時停止」で時計を止められます。`}
+                            : market.posted
+                              ? "提示の締切後は、すべての買い手が買値と数量を送信できます。1秒ごとに約定します。"
+                              : market.stage === "offer"
+                                ? role === "seller"
+                                  ? "販売価格と数量を送信し、「提示を締め切って公開」を押してください。"
+                                  : "「自分の購入順へ進む」を押すと、売り手の価格を見て購入できます。"
+                                : role === "seller"
+                                  ? "仮想の買い手が順番に購入します。説明中は「一時停止」で時計を止められます。"
+                                  : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。説明中は「一時停止」で時計を止められます。`}
         </p>
         <StudyDetailDialog label="デモについて">
           <p>

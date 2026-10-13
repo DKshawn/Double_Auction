@@ -37,7 +37,7 @@ export function DemoEntry() {
     );
   return (
     <>
-      <Header>
+      <Header homeHref="/demo">
         <span className="demo-header-tag">ひとりデモ</span>
       </Header>
       <main className="narrow-main teacher-setup-main">

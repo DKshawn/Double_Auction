@@ -19,6 +19,7 @@ import { decimal } from "@/lib/client";
 import { equilibriumQuantity } from "@/lib/equilibrium";
 import { PriceChart } from "./price-chart";
 import { ConfirmDialog } from "./confirm-dialog";
+import { ExportDownloads } from "./export-downloads";
 import { MarketSettingsPanel } from "./market-settings";
 
 export function TeacherDashboard({
@@ -324,27 +325,7 @@ export function TeacherDashboard({
             </h2>
           </div>
           <p>授業の振り返りや、ラウンド間の比較に使えます。</p>
-          <div className="export-buttons">
-            {[
-              ["trades", "取引履歴"],
-              ["metrics", "ラウンド集計"],
-              ["events", "操作ログ"],
-              ["settings", "実験条件"],
-            ].map(([kind, label]) => (
-              <a
-                className="button secondary small-button"
-                key={kind}
-                href={`/api/rooms/${view.code}/export?kind=${kind}`}
-                download
-              >
-                <Download size={14} />
-                {label}
-                <span className="file-type">
-                  {kind === "settings" ? "JSON" : "CSV"}
-                </span>
-              </a>
-            ))}
-          </div>
+          <ExportDownloads code={view.code} />
         </section>
         <section className="panel experiment-summary">
           <div className="panel-heading">

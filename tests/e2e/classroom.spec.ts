@@ -62,8 +62,8 @@ test("12 independent students trade, recover, finish rounds and export with serv
     .getByLabel("この実験の教員パスワード", { exact: false })
     .fill("Classroom-test-only");
   await teacherPage.getByRole("button", { name: "実験ルームを作成" }).click();
-  await expect(teacherPage).toHaveURL(/\/room\/[A-Z2-9]{6}$/);
-  const code = teacherPage.url().split("/").at(-1)!;
+  await expect(teacherPage).toHaveURL(/\/room\/[A-Z2-9]{6}\?entry=teacher$/);
+  const code = new URL(teacherPage.url()).pathname.split("/").at(-1)!;
   await expect(
     teacherPage.getByRole("button", { name: "実験を開始", exact: true }),
   ).toBeDisabled();

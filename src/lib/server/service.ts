@@ -126,6 +126,9 @@ export class AuctionService {
         }),
         duration: timing.data.cdaSeconds,
         studyTiming: timing.data,
+        ...(institutions.includes("posted")
+          ? { studyPostedMechanism: "batch-bids-v1" as const }
+          : {}),
         studyCommission: commission.data,
         studyCdaUnits: studyUnits(config),
       };

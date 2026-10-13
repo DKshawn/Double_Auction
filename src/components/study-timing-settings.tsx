@@ -21,18 +21,28 @@ export function StudyTimingFields({
   onChange,
   disabled = false,
   institutions = DEFAULT_STUDY_INSTITUTIONS,
+  marketSize = 16,
+  postedBatch = true,
 }: {
   timing: StudyTiming;
   onChange: (timing: StudyTiming) => void;
   disabled?: boolean;
   institutions?: readonly Institution[];
+  marketSize?: number;
+  postedBatch?: boolean;
 }) {
   const error = studyTimingError(timing, institutions);
   return (
     <>
       <div className="form-grid">
-        {STUDY_TIMING_FIELDS.filter((field) =>
-          institutions.includes(field.institution),
+        {STUDY_TIMING_FIELDS.filter(
+          (field) =>
+            institutions.includes(field.institution) &&
+            (field.key === "buyerSeconds"
+              ? !postedBatch
+              : field.key === "purchaseSeconds"
+                ? postedBatch
+                : true),
         ).map(({ key, label }) => (
           <label className="field" key={key}>
             {label}
@@ -44,7 +54,12 @@ export function StudyTimingFields({
               step={1}
               required
               disabled={disabled}
-              value={timing[key] || ""}
+              value={
+                (key === "purchaseSeconds"
+                  ? (timing.purchaseSeconds ??
+                    (timing.buyerSeconds * marketSize) / 2)
+                  : timing[key]) || ""
+              }
               onChange={(e) =>
                 onChange({ ...timing, [key]: Number(e.target.value) })
               }
@@ -54,7 +69,7 @@ export function StudyTimingFields({
       </div>
       <p className={error ? "error-message" : "field-help"} aria-live="polite">
         {error ||
-          `1〜3600秒の整数。${institutions.includes("call") ? "Call Marketは1期に4回受付します。" : ""}${institutions.includes("posted") ? "購入完了・辞退などで予定より早く次へ進む場合があります。" : ""}`}
+          `1〜3600秒の整数。${institutions.includes("call") ? "Call Marketは1期に4回受付します。" : ""}${institutions.includes("posted") && postedBatch ? "Posted Offerは全買い手が同じ取引時間を使い、1秒ごとに約定します。" : ""}`}
       </p>
     </>
   );
@@ -105,6 +120,8 @@ export function StudyTimingEditor({
         onChange={setDraft}
         disabled={disabled || locked || !draft}
         institutions={institutions}
+        marketSize={view.config.marketSize ?? 16}
+        postedBatch={view.config.studyPostedMechanism === "batch-bids-v1"}
       />
       {stale && (
         <p className="error-message">

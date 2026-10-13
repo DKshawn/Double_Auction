@@ -2,7 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { studyRole, studyRoleIndex } from "../src/lib/study-config";
-import { studyTiming, DEFAULT_STUDY_TIMING } from "../src/lib/study-timing";
+import {
+  studyTiming,
+  DEFAULT_STUDY_TIMING,
+  studyRemainingMs,
+  studyCountdownLabel,
+} from "../src/lib/study-timing";
 import {
   STUDY_FEEDBACK_SECONDS,
   type StudySettings,
@@ -250,7 +255,85 @@ test("custom Call timing controls all four clearing deadlines and the following 
   assert.equal(m.deadline, 36000);
 });
 
-test("custom Posted timing preserves sealed offers and gives each next buyer a full turn", () => {
+test("five-second Call uses the server deadline across pause, resume and persisted reconnect", () => {
+  const { room, study, send, events, buyers } = classroom(1, "call", 4);
+  send("teacher", {
+    type: "study-timing",
+    expectedRevision: 0,
+    timing: { ...DEFAULT_STUDY_TIMING, callSeconds: 5 },
+  });
+  send("teacher", { type: "start" }, 1000);
+  const market = study.markets[0];
+  assert.equal(market.deadline, 6000);
+  assert.equal(
+    studyCountdownLabel({ stage: market.stage, round: 1 }, 15),
+    "次の清算まで",
+  );
+  send("teacher", { type: "pause" }, 3500);
+  assert.equal(studyRemainingMs(room.phase, market, 90000), 2500);
+  send("teacher", { type: "resume" }, 100000);
+  assert.equal(market.deadline, 102500);
+  const restored = JSON.parse(JSON.stringify(room)) as Room;
+  settleDeadline(restored, 102499, events);
+  assert.equal(restored.study!.markets[0].clearings.length, 0);
+  settleDeadline(restored, 102500, events);
+  const reconnected = toView(restored, buyers[0], 103000, "local");
+  assert.equal(reconnected.study!.market.call, 2);
+  assert.equal(
+    studyRemainingMs(
+      reconnected.phase,
+      reconnected.study!.market,
+      reconnected.serverTime,
+    ),
+    4500,
+  );
+  settleDeadline(restored, 117500, events);
+  assert.equal(restored.study!.markets[0].clearings.length, 4);
+  assert.equal(restored.study!.markets[0].round, 2);
+  assert.equal(restored.study!.markets[0].call, 1);
+  assert.equal(restored.study!.markets[0].deadline, 122500);
+  assert.equal(restored.config.studyTiming!.callSeconds, 5);
+});
+
+test("public Call book projects only order fields and never another market or participant's secrets", () => {
+  const { room, study, send, buyers } = classroom(2, "call", 4);
+  study.markets.forEach((market) => (market.order = ["call", "cda", "posted"]));
+  send("teacher", { type: "start" }, 1000);
+  send(buyers[0], { type: "call-submit", prices: [123, 98] }, 2000);
+  send(buyers[2], { type: "call-submit", prices: [777] }, 2000);
+  Object.assign(study.markets[0].orders[0], {
+    cost: "secret-cost",
+    nickname: "secret-name",
+    tokenHash: "secret-token",
+  });
+  const view = toView(room, buyers[1], 2500, "local");
+  assert.equal(view.study!.market.orders.length, 2);
+  assert.deepEqual(
+    Object.keys(view.study!.market.orders[0]).sort(),
+    [
+      "id",
+      "participantId",
+      "alias",
+      "side",
+      "price",
+      "unit",
+      "sequence",
+      "at",
+    ].sort(),
+  );
+  const publicBook = JSON.stringify(view.study!.market);
+  for (const secret of [
+    "secret-cost",
+    "secret-name",
+    "secret-token",
+    "777",
+    buyers[0].nickname,
+  ])
+    assert.ok(!publicBook.includes(secret));
+  assert.deepEqual(view.study!.market.myOrders, []);
+});
+
+test("legacy saved Posted timing preserves sealed offers and gives each next buyer a full turn", () => {
   const { room, study, send, events, buyers, sellers } = classroom(
     1,
     "posted",
@@ -512,7 +595,7 @@ test("CDA uses best price then time, rejects stale stages and is idempotent", ()
   );
 });
 
-test("Call hides submitted orders, clears all trades at 97.5, expires unfilled orders, and retains period inventory", () => {
+test("Call publishes submitted prices, clears only at the deadline at 97.5, expires unfilled orders, and retains inventory", () => {
   const { room, study, send, buyers, sellers, events } = classroom(1, "call");
   send("teacher", { type: "start" });
   [110, 105, 100, 90].forEach((price, i) =>
@@ -522,15 +605,21 @@ test("Call hides submitted orders, clears all trades at 97.5, expires unfilled o
     send(sellers[i], { type: "call-submit", prices: [price] }),
   );
   const before = toView(room, buyers[0], 1000, "local");
-  assert.equal(before.study!.market.orders.length, 0);
+  assert.equal(before.study!.market.orders.length, 8);
   assert.deepEqual(before.study!.market.orderHistory, []);
   assert.equal(before.study!.market.myOrders.length, 1);
   assert.equal(before.study!.teacher, undefined);
   assert.equal(before.study!.market.trades.length, 0);
   assert.equal(
     toView(room, "teacher", 1000, "local").study!.market.orders.length,
-    0,
+    8,
   );
+  for (const command of [
+    { type: "study-accept", orderId: study.markets[0].orders[0].id },
+    { type: "study-cancel" },
+    { type: "study-quote", price: 120 },
+  ] as const)
+    assert.throws(() => send(buyers[0], command), /CDA/);
   assert.throws(
     () => send(buyers[0], { type: "call-submit", prices: [100] }),
     /送信済み/,
@@ -1249,7 +1338,7 @@ test("shared market projections preserve each actor's private orders and current
   assert.equal(stranger.study!.market.submitted, false);
   assert.equal(sealed.study!.market.myOrders.length, 2);
   assert.deepEqual(stranger.study!.market.myOrders, []);
-  assert.deepEqual(stranger.study!.market.orders, []);
+  assert.equal(stranger.study!.market.orders.length, 2);
   assert.deepEqual(stranger.study!.market.orderHistory, []);
   assert.equal(stranger.study!.teacher, undefined);
   assert.deepEqual(stranger, toView(room, second, 12001, "local"));

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { exportData } from "@/lib/server/export";
-import { codeFor, failure, NO_STORE, tokenFor } from "@/lib/server/http";
+import { codeFor, failure, json, NO_STORE, tokenFor } from "@/lib/server/http";
+import { EXPORTS, isExportKind } from "@/lib/exports";
 import { service } from "@/lib/server/service";
 
 export const runtime = "nodejs";
@@ -12,15 +13,22 @@ export async function GET(
   try {
     const code = codeFor((await ctx.params).code);
     const kind = request.nextUrl.searchParams.get("kind") || "trades";
+    if (!isExportKind(kind))
+      return json({ error: "ダウンロード形式が正しくありません。" }, 400);
     const { room, events, now } = await (
       await service()
     ).export(code, tokenFor(request, code));
     const result = exportData(room, events, now, kind);
+    if (result.rowCount === 0)
+      return json(
+        { error: EXPORTS.find((item) => item.kind === kind)!.empty },
+        422,
+      );
     return new Response(result.content, {
       headers: {
         ...NO_STORE,
         "Content-Type": result.contentType,
-        "Content-Disposition": `attachment; filename="auction-${code}-${kind.replace(/[^a-z]/g, "")}.${result.extension}"`,
+        "Content-Disposition": `attachment; filename="auction-${code}-${kind}.${result.extension}"`,
       },
     });
   } catch (error) {

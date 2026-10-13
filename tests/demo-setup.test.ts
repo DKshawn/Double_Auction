@@ -51,7 +51,8 @@ test("demo starts at the shared teacher settings form and restores the last expe
   assert.match(markup, /value="custom" selected=""/);
   assert.match(markup, /name="studyPeriods.call"[^>]*value="1"/);
   assert.match(markup, /name="studyPeriods.posted"[^>]*value="2"/);
-  assert.match(markup, /name="studyTiming.buyerSeconds"[^>]*value="3"/);
+  assert.match(markup, /name="studyTiming.purchaseSeconds"[^>]*value="9"/);
+  assert.doesNotMatch(markup, /name="studyTiming.buyerSeconds"/);
   assert.doesNotMatch(markup, /name="password"|name="accessKey"/);
   assert.doesNotMatch(markup, /接続設定が完了していません/);
   assert.doesNotMatch(markup, /name="studyPeriods.cda"/);
@@ -85,7 +86,12 @@ for (const selected of selections) {
       teacher: true,
     });
     let view = demo.getSnapshot().view;
-    assert.deepEqual(view.config, settings);
+    assert.deepEqual(view.config, {
+      ...settings,
+      ...(selected.includes("posted")
+        ? { studyPostedMechanism: "batch-bids-v1" }
+        : {}),
+    });
     assert.equal(view.me.role, "teacher");
     assert.equal(view.participantCount, settings.capacity);
     assert.deepEqual(
@@ -148,7 +154,12 @@ for (const selected of selections) {
       ),
     );
     demo.reset();
-    assert.deepEqual(demo.getSnapshot().view.config, settings);
+    assert.deepEqual(demo.getSnapshot().view.config, {
+      ...settings,
+      ...(selected.includes("posted")
+        ? { studyPostedMechanism: "batch-bids-v1" }
+        : {}),
+    });
     assert.equal(demo.getSnapshot().view.phase, "waiting");
     assert.equal(demo.getSnapshot().view.study!.lobby!.randomizedAt, null);
   });
@@ -254,7 +265,7 @@ test("configured demos reject the same invalid room settings as formal creation"
   }
 });
 
-test("Posted demo supports purchase queues larger than the original eight buyers", async () => {
+test("Posted demo opens a shared bid window for more than eight buyers", async () => {
   const settings = {
     ...config(["posted"]),
     marketSize: 64,
@@ -264,8 +275,9 @@ test("Posted demo supports purchase queues larger than the original eight buyers
   assert.equal(await demo.command({ type: "start" }, true), true);
   demo.skipToHuman();
   const view = demo.getSnapshot().view;
-  assert.equal(view.study!.market.activeBuyer, view.me.alias);
-  assert.equal(view.study!.market.remainingMs, 3000);
+  assert.equal(view.study!.market.activeBuyer, null);
+  assert.equal(view.study!.market.remainingMs, 96000);
+  assert.ok(view.study!.market.posted);
   assert.equal(view.study!.unitsUsed, 0);
   assert.ok(view.study!.market.offers.some((offer) => offer.remaining > 0));
 });

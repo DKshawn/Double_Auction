@@ -50,22 +50,29 @@ test("Posted history retains published quotes and sold-out trades across periods
   );
   assert.equal(quotedRows.length, 8);
   assert.ok(quotedRows.every((row) => row[4] === "2単位"));
-  const offer = market.offers.find((offer) => offer.remaining === 2)!;
+  const offer = market.offers
+    .filter((offer) => offer.remaining === 2)
+    .sort((a, b) => a.price - b.price)[0];
   assert.ok(
     offer,
-    "inventory must be available when the human buyer's turn starts",
+    "inventory must be available when the shared bid window starts",
   );
   const tradeCount = market.trades.length;
   assert.equal(
     await session.command({
-      type: "posted-buy",
-      offerId: offer.id,
+      type: "posted-bid",
+      price: 99999,
       quantity: 2,
     }),
     true,
   );
+  assert.equal(
+    session.getSnapshot().view.study!.market.trades.length,
+    tradeCount,
+  );
+  session.skipStage();
   const afterPurchase = session.getSnapshot().view.study!.market;
-  assert.equal(afterPurchase.trades.length, tradeCount + 2);
+  assert.equal(session.getSnapshot().view.study!.myTrades.length, 2);
   assert.ok(!afterPurchase.offers.some((item) => item.id === offer.id));
   assert.equal(
     afterPurchase.offerHistory.find((item) => item.id === offer.id)!.quantity,
@@ -75,13 +82,13 @@ test("Posted history retains published quotes and sold-out trades across periods
   assert.equal(rows.filter((row) => row[2] === "価格提示").length, 8);
   assert.equal(
     rows.filter((row) => row[2].startsWith("約定")).length,
-    tradeCount + 2,
+    afterPurchase.trades.length,
   );
-  assert.ok(rows.slice(0, 2).every((row) => row[2] === "約定あなた"));
+  assert.equal(rows.filter((row) => row[2] === "約定あなた").length, 2);
 
   for (
     let turn = 0;
-    turn < 8 && session.getSnapshot().view.study!.market.round === 1;
+    turn < 81 && session.getSnapshot().view.study!.market.round === 1;
     turn++
   ) {
     session.skipStage();

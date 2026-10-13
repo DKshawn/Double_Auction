@@ -233,6 +233,13 @@ export const commandSchema = z
         .strict(),
       z
         .object({
+          type: z.literal("posted-bid"),
+          price: z.number().int().min(1).max(MAX_PRICE),
+          quantity: z.number().int().min(1).max(2),
+        })
+        .strict(),
+      z
+        .object({
           type: z.literal("posted-buy"),
           offerId: z.uuid(),
           quantity: z.number().int().min(1).max(2),

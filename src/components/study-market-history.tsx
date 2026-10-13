@@ -174,7 +174,7 @@ export function StudyMarketHistory({
           ? `制度内1〜${institutionPeriods}期`
           : scopeLabel}
         {institution === "call"
-          ? "・新しい順。各回の清算価格と約定数量を表示します。個別の注文価格は公開しません。"
+          ? "・新しい順。各回の清算価格と約定数量を表示します。受付中の注文は注文板に表示します。"
           : institution === "posted"
             ? "・新しい順。提示数量は価格公開時の数量です。"
             : institution === "cda"

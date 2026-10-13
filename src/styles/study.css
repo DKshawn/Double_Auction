@@ -2580,6 +2580,15 @@
   height: clamp(240px, 32vh, 380px);
   flex: none;
 }
+.study-dashboard-institution + .study-dashboard-institution {
+  margin-top: 24px;
+}
+.study-dashboard-institution > h2 {
+  margin-bottom: 12px;
+}
+.study-dashboard-institution > .study-section:last-child {
+  margin-bottom: 0;
+}
 @media (max-width: 1199px) {
   /* Stacked layouts have no fixed grid height; keep quote growth independent
      of the page height while retaining a useful preview on small screens. */

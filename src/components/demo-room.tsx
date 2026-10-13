@@ -113,6 +113,17 @@ export default function DemoRoom({
             className="button secondary"
             disabled={
               view.phase !== "running" ||
+              ["waiting", "countdown", "done"].includes(market.stage)
+            }
+            title={`市場${market.id}の次の期まで時間を進める`}
+            onClick={() => session.skipPeriod(market.id)}
+          >
+            <SkipForward size={16} /> 次の期へ
+          </button>
+          <button
+            className="button secondary"
+            disabled={
+              view.phase !== "running" ||
               ["countdown", "feedback"].includes(market.stage)
             }
             onClick={

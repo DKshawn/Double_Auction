@@ -36,6 +36,7 @@ import { decimal, timeLabel } from "@/lib/client";
 import { isValidPrice, MAX_PRICE } from "@/lib/price";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import {
+  studyInstitutions,
   studyMarketSize,
   studyUnits,
   studyPeriodAt,
@@ -100,6 +101,7 @@ export function StudyRoom({
   const study = view.study!,
     teacher = study.teacher;
   const [selected, setSelected] = useState(1);
+  const [dashboardAllMarkets, setDashboardAllMarkets] = useState(false);
   const [marketActivityOpen, setMarketActivityOpen] = useState(false);
   function openMarketActivity(id: number) {
     setSelected(id);
@@ -256,24 +258,37 @@ export function StudyRoom({
         <label className="field study-dashboard-market">
           表示する市場
           <select
-            value={market.id}
-            onChange={(event) => setSelected(Number(event.target.value))}
+            value={dashboardAllMarkets ? "all" : market.id}
+            onChange={(event) => {
+              const all = event.target.value === "all";
+              setDashboardAllMarkets(all);
+              if (!all) setSelected(Number(event.target.value));
+            }}
           >
-            {teacher.markets.map((item) => (
-              <option key={item.id} value={item.id}>
-                市場{item.id}
-              </option>
-            ))}
+            <option value="all">すべての市場</option>
+            {[...teacher.markets]
+              .sort((a, b) => a.id - b.id)
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  市場{item.id}
+                </option>
+              ))}
           </select>
         </label>
-        <section className="panel study-section study-price-panel study-dashboard-price">
-          <h2>
-            市場{market.id}・{priceScopeLabel}の取引価格
-          </h2>
-          {priceScopeControl}
-          {priceChart}
-        </section>
-        <TeacherMetrics view={view} market={market} />
+        {dashboardAllMarkets ? (
+          <StudyAllMarketResults view={view} />
+        ) : (
+          <>
+            <section className="panel study-section study-price-panel study-dashboard-price">
+              <h2>
+                市場{market.id}・{priceScopeLabel}の取引価格
+              </h2>
+              {priceScopeControl}
+              {priceChart}
+            </section>
+            <TeacherMetrics view={view} market={market} />
+          </>
+        )}
       </StudyDetailDialog>
     </>
   ) : null;
@@ -1381,18 +1396,33 @@ function ExpectedProfit({
   );
 }
 
+type TeacherMetricsProps = { view: RoomView } & (
+  | { market: StudyMarketView; markets?: never; institution?: Institution }
+  | { market?: never; markets: StudyMarketView[]; institution: Institution }
+);
+
 function TeacherMetrics({
   view,
   market,
-}: {
-  view: RoomView;
-  market: StudyMarketView;
-}) {
+  markets,
+  institution,
+}: TeacherMetricsProps) {
   const teacher = view.study!.teacher!,
-    eq = teacher.equilibria?.[market.institution] ?? teacher.equilibrium;
+    eq =
+      teacher.equilibria?.[institution ?? market!.institution] ??
+      teacher.equilibrium;
+  const selectedMarkets = market ? [market] : markets;
+  const marketIds = new Set(selectedMarkets.map((item) => item.id));
+  const metrics = teacher.metrics
+    .filter(
+      (m) =>
+        marketIds.has(m.market) &&
+        (!institution || m.institution === institution),
+    )
+    .sort((a, b) => a.market - b.market || a.round - b.round);
   return (
     <section className="panel study-section">
-      <h2>市場{market.id}の価格・数量・効率性</h2>
+      <h2>{market ? `市場${market.id}の` : ""}価格・数量・効率性</h2>
       <p className="muted">
         均衡価格{" "}
         {eq.low === eq.high ? money(eq.low) : `${eq.low}〜${eq.high}円`} ／
@@ -1403,11 +1433,18 @@ function TeacherMetrics({
         個人利益はCommission込みです。総余剰・効率性・均衡の計算にはCommissionを含めません。
       </p>
       <div className="study-table-wrap">
-        <table>
+        <table
+          aria-label={
+            markets
+              ? `${INSTITUTIONS[institution!].short}の市場別統計`
+              : undefined
+          }
+        >
           <thead>
             <tr>
-              <th>期</th>
-              <th>制度</th>
+              {markets && <th>市場</th>}
+              <th>{institution ? "制度内の期" : "期"}</th>
+              {!markets && <th>制度</th>}
               <th>状態</th>
               <th>数量</th>
               <th>Q/Q*</th>
@@ -1422,12 +1459,20 @@ function TeacherMetrics({
             </tr>
           </thead>
           <tbody>
-            {teacher.metrics
-              .filter((m) => m.market === market.id)
-              .map((m) => (
-                <tr key={m.round}>
-                  <td>{m.round}</td>
-                  <td>{INSTITUTIONS[m.institution].short}</td>
+            {selectedMarkets.flatMap((item) => {
+              const rows = metrics.filter((m) => m.market === item.id);
+              if (!rows.length && markets)
+                return [
+                  <tr key={`${item.id}-empty`}>
+                    <td>市場{item.id}</td>
+                    <td colSpan={12}>まだ集計データはありません。</td>
+                  </tr>,
+                ];
+              return rows.map((m) => (
+                <tr key={`${m.market}-${m.round}`}>
+                  {markets && <td>市場{m.market}</td>}
+                  <td>{institution ? m.institutionPeriod : m.round}</td>
+                  {!markets && <td>{INSTITUTIONS[m.institution].short}</td>}
                   <td>
                     {m.completion === "complete"
                       ? "完了"
@@ -1450,7 +1495,8 @@ function TeacherMetrics({
                   <td>{m.inefficientTrades}</td>
                   <td>{decimal(m.spread)}</td>
                 </tr>
-              ))}
+              ));
+            })}
           </tbody>
         </table>
       </div>
@@ -1459,10 +1505,16 @@ function TeacherMetrics({
       </p>
       <div className="study-actions">
         {teacher.slopes
-          .filter((s) => s.market === market.id)
+          .filter(
+            (s) =>
+              marketIds.has(s.market) &&
+              (!institution || s.institution === institution),
+          )
+          .sort((a, b) => a.market - b.market)
           .map((s) => (
-            <p key={s.institution}>
-              {INSTITUTIONS[s.institution].short}のα傾き：
+            <p key={`${s.market}-${s.institution}`}>
+              {markets ? `市場${s.market}` : INSTITUTIONS[s.institution].short}
+              のα傾き：
               <b>{s.slope === null ? "—" : s.slope.toFixed(4)}</b>（完了した
               {s.n}期）
             </p>
@@ -1473,4 +1525,56 @@ function TeacherMetrics({
       </p>
     </section>
   );
+}
+
+export function StudyAllMarketResults({ view }: { view: RoomView }) {
+  const teacher = view.study?.teacher;
+  if (!teacher) return null;
+  const markets = [...teacher.markets].sort((a, b) => a.id - b.id);
+  return studyInstitutions(view.config).map((institution) => {
+    const group = markets.filter((market) =>
+      market.order.includes(institution),
+    );
+    if (!group.length) return null;
+    const label = INSTITUTIONS[institution].short;
+    const periods = studyPeriodCount(view.config, institution);
+    return (
+      <section
+        className="study-dashboard-institution"
+        aria-label={`${label}の市場別結果`}
+        key={institution}
+      >
+        <h2>{label}</h2>
+        <section className="panel study-section study-price-panel study-dashboard-price">
+          <h3>取引価格</h3>
+          <PriceChart
+            series={group.map((market) => {
+              const first = studyPeriodRanges(view.config, market.order).find(
+                (range) => range.institution === institution,
+              )!.first;
+              return {
+                id: String(market.id),
+                label: `市場${market.id}`,
+                trades: market.trades
+                  .filter((trade) => trade.institution === institution)
+                  .map((trade) => ({
+                    ...trade,
+                    good: "apple" as const,
+                    round: trade.round - first + 1,
+                  })),
+              };
+            })}
+            rounds={periods}
+            ariaLabel={`${label}の全市場の取引価格（円）を制度内の第1〜${periods}期で比較したグラフ。色付きの帯は理論上の均衡価格区間です。`}
+            periodAxis
+            fill
+            equilibrium={
+              teacher.equilibria?.[institution] ?? teacher.equilibrium
+            }
+          />
+        </section>
+        <TeacherMetrics view={view} markets={group} institution={institution} />
+      </section>
+    );
+  });
 }

@@ -382,7 +382,11 @@ export class DemoSession {
 
   // Advance every market through its own deadlines so intermediate Call
   // clearings and Posted Offer purchases still run through the real engine.
-  private advanceTo(target: number, stopAtFeedback = false) {
+  private advanceTo(
+    target: number,
+    stopAtFeedback = false,
+    stopWhen?: () => boolean,
+  ) {
     const initialFeedback =
       this.market.stage === "feedback"
         ? stageKey(this.room, this.market)
@@ -394,10 +398,10 @@ export class DemoSession {
     while (this.now < target && this.room.phase === "running") {
       this.now = Math.min(target, this.now + 1000);
       settleStudy(this.room, this.now, this.events);
-      if (reachedFeedback()) break;
+      if (reachedFeedback() || stopWhen?.()) break;
       if (this.now < target) {
         this.runBots();
-        if (reachedFeedback()) break;
+        if (reachedFeedback() || stopWhen?.()) break;
       }
     }
   }
@@ -407,6 +411,29 @@ export class DemoSession {
     this.error = "";
     this.runBots();
     this.advanceTo(this.now + seconds * 1000, true);
+    this.runBots();
+    this.publish();
+  };
+
+  skipPeriod = (marketId = this.market.id) => {
+    const market = this.room.study!.markets.find((m) => m.id === marketId);
+    if (
+      this.room.phase !== "running" ||
+      !market ||
+      ["waiting", "countdown", "done"].includes(market.stage)
+    )
+      return;
+    this.error = "";
+    const round = marketRound(this.room, market);
+    const completed = () =>
+      marketRound(this.room, market) !== round || market.stage === "done";
+    // Fast-forward the clock through every clearing, purchase and feedback
+    // deadline, rather than interrupting a period or discarding its orders.
+    while (this.room.phase === "running" && !completed()) {
+      this.runBots();
+      if (completed() || market.deadline === null) break;
+      this.advanceTo(market.deadline, false, completed);
+    }
     this.runBots();
     this.publish();
   };

@@ -22,6 +22,7 @@ import {
   studyInstitutions,
   studyMarketSize,
   studyPeriodCount,
+  studyUnits,
 } from "@/lib/study-config";
 
 export default function DemoRoom({
@@ -197,7 +198,7 @@ export default function DemoRoom({
                       : market.stage === "done"
                         ? "あなたの市場の実験は終了しました。教員画面で全市場の進行状況と結果を確認できます。"
                         : market.stage === "cda"
-                          ? "注文板の最良価格で取引するか、自分の希望価格を入力してください。各期2単位まで取引できます。"
+                          ? `注文板の最良価格で取引するか、自分の希望価格を入力してください。各期${studyUnits(view.config)}単位まで取引できます。`
                           : market.stage === "call"
                             ? "希望価格を送信し、「今の注文を清算」を押すと待たずに結果を確認できます。"
                             : market.stage === "offer"

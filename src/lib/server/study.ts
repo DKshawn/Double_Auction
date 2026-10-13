@@ -3,6 +3,7 @@ import {
   DEFAULT_MARKET_SIZE,
   DEFAULT_STUDY_INSTITUTIONS,
   resizeStudySettings,
+  DEFAULT_STUDY_UNITS,
 } from "../study-config";
 import type { Institution, StudySettings } from "../study-types";
 export * from "../study-core";
@@ -10,6 +11,7 @@ export * from "../study-core";
 // Load classroom presets only for teacher previews/rooms; the demo has practice values.
 export function pptStudySettings(
   marketSize = DEFAULT_MARKET_SIZE,
+  unitsPerParticipant = DEFAULT_STUDY_UNITS,
 ): StudySettings {
   const defaults: StudySettings = {
     values: [
@@ -33,13 +35,21 @@ export function pptStudySettings(
       [84, 100],
     ],
   };
-  return resizeStudySettings(defaults, marketSize);
+  return resizeStudySettings(defaults, marketSize, unitsPerParticipant);
 }
 
 export function newStudy(
   count: number,
   marketSize = DEFAULT_MARKET_SIZE,
   institutions: readonly Institution[] = DEFAULT_STUDY_INSTITUTIONS,
+  unitsPerParticipant = DEFAULT_STUDY_UNITS,
 ) {
-  return createStudy(count, pptStudySettings(marketSize), institutions);
+  return createStudy(
+    count,
+    pptStudySettings(marketSize, unitsPerParticipant),
+    institutions,
+    unitsPerParticipant === DEFAULT_STUDY_UNITS
+      ? undefined
+      : pptStudySettings(marketSize),
+  );
 }

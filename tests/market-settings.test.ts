@@ -59,6 +59,43 @@ function customSettings() {
   return settings;
 }
 
+test("legacy stored conditions and matching accept 99999 and reject 100000", async () => {
+  const { teacher, students, send } = await classroom();
+  const settings = defaultMarketSettings();
+  settings.apple = {
+    values: Array(6).fill(99999),
+    costs: Array(6).fill(60000),
+  };
+  const saved = await send(teacher.token, {
+    type: "update-markets",
+    settings,
+    expectedRevision: 0,
+  });
+  assert.deepEqual(saved.teacher!.marketSettings, settings);
+  const views = await Promise.all(
+    students.map((p) => service.view(teacher.code, p.token)),
+  );
+  const buyer = students[views.findIndex((p) => p.me.role === "buyer")];
+  const seller = students[views.findIndex((p) => p.me.role === "seller")];
+  await send(teacher.token, { type: "start" });
+  await assert.rejects(
+    send(seller.token, { type: "quote", good: "apple", price: 100000 }, 1),
+    /1〜99999/,
+  );
+  await send(seller.token, { type: "quote", good: "apple", price: 99999 }, 1);
+  const traded = await send(
+    buyer.token,
+    { type: "quote", good: "apple", price: 99999 },
+    1,
+  );
+  assert.equal(traded.trades[0].price, 99999);
+  assert.equal(traded.me.roundProfit, 0);
+  assert.equal(
+    (await service.view(teacher.code, seller.token)).me.roundProfit,
+    39999,
+  );
+});
+
 test("custom conditions persist, update existing and later students, drive trades and remain private", async () => {
   const { teacher, students, send } = await classroom(12, 1);
   const settings = customSettings();
@@ -175,7 +212,7 @@ test("settings require a teacher, reject invalid values and stale edits, and loc
   for (const values of [
     [1, 2],
     [0, 2, 3, 4, 5, 6],
-    [1000, 2, 3, 4, 5, 6],
+    [100000, 2, 3, 4, 5, 6],
     [1.5, 2, 3, 4, 5, 6],
   ]) {
     const invalid: MarketSettings = {
@@ -184,7 +221,7 @@ test("settings require a teacher, reject invalid values and stale edits, and loc
     };
     await assert.rejects(
       send(teacher.token, { ...update, settings: invalid }),
-      /1〜999/,
+      /1〜99999/,
     );
   }
   assert.equal(

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isValidPrice, MAX_PRICE } from "../price";
 import { GOODS, type GoodId } from "../catalog";
 import type { CommandRequest, LegacyCommand, RoomView } from "../types";
 import { executeStudy, settleStudy } from "./study";
@@ -86,8 +87,8 @@ export function profit(room: Room, p: Participant, round?: number) {
 }
 
 function verifyPrice(p: Participant, good: GoodId, price: number) {
-  if (!Number.isInteger(price) || price < 1 || price > 999)
-    throw new AuctionError("価格は 1〜999 の整数で入力してください。");
+  if (!isValidPrice(price))
+    throw new AuctionError(`価格は 1〜${MAX_PRICE} の整数で入力してください。`);
   if (
     (p.role === "buyer" && price > p.limits[good]) ||
     (p.role === "seller" && price < p.limits[good])
@@ -152,7 +153,7 @@ export function execute(
     const parsed = marketSettingsSchema.safeParse(cmd.settings);
     if (!parsed.success)
       throw new AuctionError(
-        "各商品の価値と費用を6つずつ、1〜999の整数で設定してください。",
+        `各商品の価値と費用を6つずつ、1〜${MAX_PRICE}の整数で設定してください。`,
       );
     room.marketSettings = parsed.data;
     room.settingsRevision = (room.settingsRevision ?? 0) + 1;

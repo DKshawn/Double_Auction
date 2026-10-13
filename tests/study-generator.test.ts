@@ -101,7 +101,7 @@ test("invalid parameters are rejected without silently rounding, clipping, or mu
     { d: 0.5 },
     { p: 80.5 },
     { p: 1 },
-    { p: 999 },
+    { p: 99999 },
     { p: NaN },
     { d: Infinity },
   ])
@@ -133,22 +133,121 @@ test("generator diagnostics identify the actual unit, calculation and range or i
   assert.equal(adjusted.equilibrium.quantity, 10);
   assert.equal(adjusted.equilibrium.quantityMax, 16);
   assert.throws(
-    () => generateStaircase({ ...defaults, p: 999 }),
-    /買い手側の価値 D\(1\)＝1031円.*上限999円/,
+    () => generateStaircase({ ...defaults, p: 99999 }),
+    /買い手側の価値 D\(1\)＝100031円.*上限99999円/s,
   );
   assert.throws(
     () => generateStaircase({ ...defaults, d: 0.5 }),
-    /買い手側の価値 D\(2\)＝83.5円.*整数ではありません/,
+    /買い手側の価値 D\(2\)＝83.5円.*整数ではありません/s,
   );
   assert.throws(
     () => generateStaircase({ p: 20, K: 1, L: 1, d: 4 }),
-    /買い手側の価値 D\(7\)＝0円.*下限1円/,
+    /買い手側の価値 D\(7\)＝0円.*下限1円/s,
   );
   assert.throws(
     () => generateStaircase({ ...screenshot, p: 99 }),
-    /売り手側の費用 S\(1\)＝-1円.*下限1円/,
+    /売り手側の費用 S\(1\)＝-1円.*下限1円/s,
   );
   assert.deepEqual(screenshot, { p: 100, K: 10, L: 6, d: 10 });
+});
+
+test("diagnostics expand symbolic formulas and substitutions for the head, overlap and tail", () => {
+  const cases = [
+    {
+      parameters: { p: 100, K: 10, L: 6, d: 10 },
+      units: 16,
+      expected: [
+        "式（k ≤ K）：S(k)＝p − d × (K + 1 − k)",
+        "S(1)＝100 − 10 × (10 + 1 − 1)＝100 − 10 × 10＝0",
+        "必要条件：1 ≤ p − d × (K + 1 − k) ≤ 99999",
+        "S(1)＝p − d × K",
+        "現在のK・L・dでは 101 ≤ p ≤ 99899",
+      ],
+    },
+    {
+      parameters: { ...defaults, p: 99999 },
+      units: 16,
+      expected: [
+        "D(k)＝p + d × (K + 1 − k)",
+        "D(1)＝99999 + 4 × (8 + 1 − 1)＝99999 + 4 × 8＝100031",
+        "現在のK・L・dでは 33 ≤ p ≤ 99967",
+      ],
+    },
+    {
+      parameters: { p: 0, K: 1, L: 1, d: 1 },
+      units: 4,
+      expected: [
+        "式（K ＜ k ≤ K + L）：D(k)＝p",
+        "D(2)＝p＝0",
+        "必要条件：1 ≤ p ≤ 99999",
+      ],
+    },
+    {
+      parameters: { p: 20, K: 1, L: 1, d: 4 },
+      units: 16,
+      expected: [
+        "式（k ＞ K + L）：D(k)＝p − d × (k − K − L)",
+        "D(7)＝20 − 4 × (7 − 1 − 1)＝20 − 4 × 5＝0",
+        "現在のK・L・dでは 57 ≤ p ≤ 99943",
+      ],
+    },
+    {
+      parameters: { p: 99796, K: 8, L: 12, d: 6 },
+      units: 54,
+      expected: [
+        "式（k ＞ K + L）：S(k)＝p + d × (k − K − L)",
+        "k=54、p=99796、K=8、L=12、d=6",
+        "S(54)＝99796 + 6 × (54 − 8 − 12)＝99796 + 6 × 34＝100000",
+        "必要条件：1 ≤ p + d × (k − K − L) ≤ 99999",
+        "全単位の範囲条件（片側の総単位数 N=54）",
+        "1 + d × max(K, N − K − L) ≤ p ≤ 99999 − d × max(K, N − K − L)",
+        "現在のK・L・dでは 205 ≤ p ≤ 99795",
+      ],
+    },
+    {
+      parameters: { ...defaults, d: 0.5 },
+      units: 16,
+      expected: [
+        "D(k)＝p + d × (K + 1 − k)",
+        "D(2)＝80 + 0.5 × (8 + 1 − 2)＝80 + 0.5 × 7＝83.5",
+        "全単位を整数にするにはp・dを整数にしてください。丸めは行いません。",
+      ],
+    },
+  ];
+  for (const { parameters, units, expected } of cases)
+    assert.throws(
+      () => generateStaircase(parameters, units),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        for (const text of expected)
+          assert.ok(error.message.includes(text), text);
+        return true;
+      },
+    );
+});
+
+test("suggested p bounds validate every unit without clipping, including the far tail", () => {
+  const parameters = { p: 99796, K: 8, L: 12, d: 6 };
+  for (const p of [205, 99795]) {
+    const generated = generateStaircase({ ...parameters, p }, 54);
+    assert.ok(
+      [...generated.demand, ...generated.supply].every(
+        (value) => Number.isInteger(value) && value >= 1 && value <= 99999,
+      ),
+    );
+    assert.equal(generated.supply[53], p + 6 * (54 - 8 - 12));
+  }
+  for (const p of [204, 99796])
+    assert.throws(() => generateStaircase({ ...parameters, p }, 54));
+  assert.throws(
+    () => generateStaircase({ p: 60000, K: 1, L: 1, d: 60000 }, 4),
+    /120001 ≤ p ≤ -20001.*条件を満たすpはありません/s,
+  );
+  // The user's earlier 800 + 6 × 34 is valid under the expanded price range.
+  assert.equal(
+    generateStaircase({ ...parameters, p: 800 }, 54).supply[53],
+    1004,
+  );
 });
 
 test("pairing uses i and i+peoplePerSide for every supported market size and preserves each unit exactly once", () => {

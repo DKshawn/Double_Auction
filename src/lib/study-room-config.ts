@@ -3,8 +3,11 @@ import {
   MAX_STUDY_MARKETS,
   MAX_STUDY_PARTICIPANTS,
   MAX_STUDY_ROUNDS,
+  MAX_STUDY_UNITS,
   studyLayoutError,
   studyMarketSize,
+  studyInstitutions,
+  studyUnits,
   studyTotalRounds,
 } from "./study-config";
 import {
@@ -35,8 +38,13 @@ export const studyRoomConfigSchema = z
     studyInstitutions: studyInstitutionsSchema.optional(),
     studyPeriods: studyPeriodsSchema.optional(),
     studyCommission: studyCommissionSchema.optional(),
+    studyCdaUnits: z.number().int().min(1).max(MAX_STUDY_UNITS).optional(),
   })
   .strict()
+  .refine(
+    (c) => studyInstitutions(c).includes("cda") || studyUnits(c) === 2,
+    "Call Market・Posted Offerの単位数は2で固定です。",
+  )
   .refine(
     (c) =>
       !studyLayoutError(c.markets, studyMarketSize(c)) &&

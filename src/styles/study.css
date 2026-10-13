@@ -872,6 +872,20 @@
 .study-preset-settings {
   container: preview-settings / inline-size;
 }
+.study-condition-edit {
+  background: var(--red);
+  color: #fff;
+}
+.study-condition-edit:not(:disabled):hover {
+  background: #a53346;
+  color: #fff;
+}
+.teacher-create-layout input:disabled,
+.teacher-create-layout select:disabled {
+  background: #f7f7fb;
+  color: var(--muted);
+  cursor: not-allowed;
+}
 .study-preset-settings .study-condition-summary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -935,6 +949,44 @@
 }
 .study-generator-fields .field {
   margin: 0;
+}
+.study-generator-error {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.study-unit-settings {
+  min-width: 0;
+  padding: 0;
+  margin: 18px 0;
+  border: 0;
+}
+.study-unit-settings legend {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.study-unit-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.study-unit-fields .field {
+  min-width: 0;
+  margin: 0;
+  font-size: 11px;
+}
+.study-unit-fields input {
+  width: 100%;
+  min-width: 0;
+}
+.study-unit-fields input:disabled {
+  color: var(--muted);
+  background: var(--surface-muted, #f5f5fa);
+  opacity: 1;
+  cursor: not-allowed;
+}
+.study-trading-grid .study-values.study-current-value {
+  grid-template-columns: minmax(0, 1fr);
 }
 .study-generated-preview {
   margin-top: 24px;

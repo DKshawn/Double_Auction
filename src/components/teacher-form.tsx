@@ -17,6 +17,8 @@ import {
   studyInstitutions,
   studyMarketSize,
   resizeStudySettings,
+  studyUnits,
+  studyUnitsError,
 } from "@/lib/study-config";
 import type { ServerStatus } from "@/lib/server/config";
 import { Spinner } from "./shell";
@@ -43,6 +45,7 @@ import type { RoomConfig } from "@/lib/types";
 import { studyRoomConfigSchema } from "@/lib/study-room-config";
 import { StudyPresetPicker } from "./study-preset-picker";
 import { generatedStudySettings } from "@/lib/study-generator";
+import { StudyUnitFields } from "./study-unit-settings";
 
 export function TeacherForm({
   initialCode = "",
@@ -67,6 +70,16 @@ export function TeacherForm({
   const [reenterCode, setReenterCode] = useState(initialCode);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [title, setTitle] = useState(
+    initialConfig?.title ??
+      (onCreateDemo
+        ? "ひとりデモ"
+        : legacy
+          ? "ダブルオークション実験"
+          : "実験1：市場制度の比較"),
+  );
+  const [conditionsConfirmed, setConditionsConfirmed] = useState(false);
+  const settingsDisabled = pending || conditionsConfirmed;
   const [preset, setPreset] = useState(() =>
     !initialConfig
       ? "1"
@@ -80,6 +93,9 @@ export function TeacherForm({
   );
   const [marketSize, setMarketSize] = useState(
     String(studyMarketSize(initialConfig ?? {})),
+  );
+  const [cdaUnits, setCdaUnits] = useState(
+    String(studyUnits(initialConfig ?? {})),
   );
   const [timing, setTiming] = useState(() => ({
     ...DEFAULT_STUDY_TIMING,
@@ -97,23 +113,45 @@ export function TeacherForm({
   }));
   const [adoptedConditions, setAdoptedConditions] = useState<{
     marketSize: number;
+    units: number;
     generator?: StudyGeneratorConfig;
     settings?: StudySettings;
+    otherSettings?: StudySettings;
   } | null>(() => ({
     marketSize: studyMarketSize(initialConfig ?? {}),
+    units: studyUnits(initialConfig ?? {}),
     settings: initialGenerator
       ? generatedStudySettings(
           initialGenerator,
-          studyMarketSize(initialConfig ?? {}),
+          (studyMarketSize(initialConfig ?? {}) / 2) *
+            studyUnits(initialConfig ?? {}),
+          studyUnits(initialConfig ?? {}),
         )
       : conditionPreset
         ? resizeStudySettings(
             conditionPreset.settings,
             studyMarketSize(initialConfig ?? {}),
+            studyUnits(initialConfig ?? {}),
           )
         : undefined,
     ...(initialGenerator
       ? { generator: structuredClone(initialGenerator) }
+      : {}),
+    ...(studyUnits(initialConfig ?? {}) !== 2 &&
+    studyInstitutions(initialConfig ?? {}).some((i) => i !== "cda")
+      ? {
+          otherSettings: initialGenerator
+            ? generatedStudySettings(
+                initialGenerator,
+                studyMarketSize(initialConfig ?? {}),
+              )
+            : conditionPreset
+              ? resizeStudySettings(
+                  conditionPreset.settings,
+                  studyMarketSize(initialConfig ?? {}),
+                )
+              : undefined,
+        }
       : {}),
   }));
   const institutionError = institutions.length
@@ -129,14 +167,25 @@ export function TeacherForm({
     : 0;
   const count = Number(marketCount),
     size = Number(marketSize);
+  const units = institutions.includes("cda") ? Number(cdaUnits) : 2;
+  const unitsError = studyUnitsError(units);
+  const otherSettings =
+    units !== 2 && institutions.some((i) => i !== "cda") && conditionPreset
+      ? resizeStudySettings(conditionPreset.settings, size)
+      : undefined;
   const layoutError = studyLayoutError(count, size);
   const timingError = studyTimingError(timing, institutions);
   const commissionError = studyCommissionError(
     commission,
     adoptedConditions?.settings,
+    institutions.some((i) => i !== "cda")
+      ? adoptedConditions?.otherSettings
+      : undefined,
   );
   const conditionError =
-    !adoptedConditions || adoptedConditions.marketSize !== size
+    !adoptedConditions ||
+    adoptedConditions.marketSize !== size ||
+    adoptedConditions.units !== units
       ? "供需条件を生成・プレビューし、確認して採用してください。"
       : "";
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -145,6 +194,7 @@ export function TeacherForm({
       tab === "create" &&
       !legacy &&
       (layoutError ||
+        unitsError ||
         institutionError ||
         periodsError ||
         timingError ||
@@ -153,6 +203,7 @@ export function TeacherForm({
     ) {
       setError(
         layoutError ||
+          unitsError ||
           institutionError ||
           periodsError ||
           timingError ||
@@ -175,7 +226,7 @@ export function TeacherForm({
           }
         : {
             protocol: "institutions-v1",
-            title: String(form.get("title")),
+            title,
             markets: count,
             marketSize: size,
             capacity: count * size,
@@ -183,6 +234,7 @@ export function TeacherForm({
             duration: selectedTiming.cdaSeconds,
             studyTiming: selectedTiming,
             studyCommission: commission,
+            studyCdaUnits: units,
             studyInstitutions: institutions,
             studyPeriods: Object.fromEntries(
               institutions.map((i) => [i, periods[i]]),
@@ -239,20 +291,37 @@ export function TeacherForm({
   );
   const conditionSection = (
     <div className="teacher-condition-layout">
-      {!layoutError ? (
+      {!layoutError && !unitsError ? (
         <StudyPresetPicker
-          key={size}
+          key={`${size}-${units}`}
           existingPreset={
             conditionPreset
               ? {
                   label: conditionPreset.label,
-                  settings: resizeStudySettings(conditionPreset.settings, size),
+                  settings: resizeStudySettings(
+                    conditionPreset.settings,
+                    size,
+                    units,
+                  ),
                 }
               : undefined
           }
-          units={size}
+          units={(size / 2) * units}
+          unitsPerParticipant={units}
+          otherSettings={otherSettings}
+          otherUnits={
+            units !== 2 && institutions.some((i) => i !== "cda")
+              ? size
+              : undefined
+          }
           initialGenerator={initialGenerator}
           disabled={pending}
+          confirmed={conditionsConfirmed}
+          onEdit={() => {
+            setConditionsConfirmed(false);
+            setAdoptedConditions(null);
+            setError("");
+          }}
           commission={commission}
           onCommissionChange={setCommission}
           keepPreview
@@ -264,11 +333,25 @@ export function TeacherForm({
           actionLabel="この条件を確認して採用"
           onDraftChange={() => setAdoptedConditions(null)}
           onConfirm={(preview) => {
+            const invalid =
+              (!title.trim() ? "実験名を入力してください。" : "") ||
+              layoutError ||
+              unitsError ||
+              institutionError ||
+              periodsError ||
+              timingError;
+            if (invalid) {
+              setError(invalid);
+              return false;
+            }
             setAdoptedConditions({
               marketSize: size,
+              units,
               generator: preview.generator,
               settings: preview.settings,
+              otherSettings: preview.otherSettings,
             });
+            setConditionsConfirmed(true);
             setError("");
             return true;
           }}
@@ -279,6 +362,11 @@ export function TeacherForm({
           aria-labelledby="teacher-condition-heading"
         >
           {conditionHeading}
+          {unitsError && (
+            <p className="error-message" role="alert">
+              {unitsError}
+            </p>
+          )}
           {conditionFooter}
         </section>
       )}
@@ -347,13 +435,10 @@ export function TeacherForm({
                     実験名
                     <input
                       name="title"
-                      defaultValue={
-                        initialConfig?.title ??
-                        (onCreateDemo
-                          ? "ひとりデモ"
-                          : legacy
-                            ? "ダブルオークション実験"
-                            : "実験1：市場制度の比較")
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      disabled={
+                        pending || (studyCreation && conditionsConfirmed)
                       }
                       maxLength={60}
                       required
@@ -416,7 +501,7 @@ export function TeacherForm({
                               name="studyInstitutions"
                               value={institution}
                               checked={institutions.includes(institution)}
-                              disabled={pending}
+                              disabled={settingsDisabled}
                               onChange={(event) => {
                                 const checked = event.target.checked;
                                 setInstitutions((previous) =>
@@ -453,7 +538,7 @@ export function TeacherForm({
                               max={MAX_INSTITUTION_PERIODS}
                               step={1}
                               required
-                              disabled={pending}
+                              disabled={settingsDisabled}
                               value={periods[institution] || ""}
                               aria-label={`${INSTITUTIONS[institution].short}の期数`}
                               aria-describedby={
@@ -491,6 +576,7 @@ export function TeacherForm({
                         <select
                           name="marketPreset"
                           value={preset}
+                          disabled={settingsDisabled}
                           onChange={(event) => {
                             setPreset(event.target.value);
                             if (event.target.value !== "custom") {
@@ -531,6 +617,7 @@ export function TeacherForm({
                               step={2}
                               required
                               value={marketSize}
+                              disabled={settingsDisabled}
                               onChange={(e) => setMarketSize(e.target.value)}
                               aria-describedby="study-layout-help"
                             />
@@ -545,6 +632,7 @@ export function TeacherForm({
                               step={1}
                               required
                               value={marketCount}
+                              disabled={settingsDisabled}
                               onChange={(e) => setMarketCount(e.target.value)}
                               aria-describedby="study-layout-help"
                             />
@@ -559,6 +647,17 @@ export function TeacherForm({
                         {layoutError ||
                           `${size}人 × ${count}市場 ＝ 合計${size * count}人。各市場は買い手${size / 2}人・売り手${size / 2}人です。`}
                       </p>
+                      <StudyUnitFields
+                        cdaUnits={cdaUnits}
+                        onChange={setCdaUnits}
+                        disabled={settingsDisabled}
+                        cdaEnabled={institutions.includes("cda")}
+                      />
+                      {unitsError && (
+                        <p className="error-message" role="alert">
+                          {unitsError}
+                        </p>
+                      )}
                       <div className="callout">
                         <Info size={18} />
                         {institutionError || periodsError || layoutError ? (
@@ -567,7 +666,8 @@ export function TeacherForm({
                           </p>
                         ) : (
                           <p>
-                            1商品を各自2単位、選択した{institutions.length}
+                            1商品をCDAは各自{units}単位、Call Market・Posted
+                            Offerは各自2単位、選択した{institutions.length}
                             制度を設定した期数で、計{rounds}期実施します。
                             {institutions
                               .map(
@@ -607,7 +707,7 @@ export function TeacherForm({
                       <StudyTimingFields
                         timing={timing}
                         onChange={setTiming}
-                        disabled={pending}
+                        disabled={settingsDisabled}
                         institutions={institutions}
                       />
                     </section>
@@ -695,6 +795,7 @@ export function TeacherForm({
                     (!legacy &&
                       Boolean(
                         layoutError ||
+                        unitsError ||
                         institutionError ||
                         periodsError ||
                         timingError ||

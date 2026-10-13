@@ -54,7 +54,7 @@ test("teacher edits private market conditions, students receive them, and starti
       .getByRole("button", { name: "価値と費用を保存", exact: true })
       .click();
     await expect(settingsPanel.getByRole("alert")).toHaveText(
-      "すべての価値と費用を、1〜999の整数で入力してください。",
+      "すべての価値と費用を、1〜99999の整数で入力してください。",
     );
     const values = [120, 110, 100, 90, 80, 70];
     const costs = [70, 80, 90, 100, 110, 120];
@@ -140,7 +140,7 @@ test("teacher edits private market conditions, students receive them, and starti
       ).status(),
     ).toBe(403);
     const invalid = structuredClone(update);
-    invalid.command.settings.apple.values[0] = 1000;
+    invalid.command.settings.apple.values[0] = 100000;
     expect(
       (await page.request.post(`${path}/commands`, { data: invalid })).status(),
     ).toBe(400);

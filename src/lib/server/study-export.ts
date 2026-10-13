@@ -2,6 +2,7 @@ import { STUDY_RULES } from "../study-rules";
 import { STUDY_START_SECONDS } from "../study-types";
 import {
   studyMarketSize,
+  studyUnits,
   studyInstitutions,
   studyPeriodCount,
   studyPeriodAt,
@@ -38,6 +39,16 @@ export function studyExport(
           phase: room.phase,
           rules: {
             ...STUDY_RULES,
+            unitsPerPeriod:
+              studyUnits(room.config) === 2 ||
+              studyInstitutions(room.config).every((i) => i === "cda")
+                ? studyUnits(room.config)
+                : null,
+            unitsPerInstitution: {
+              cda: studyUnits(room.config),
+              call: 2,
+              posted: 2,
+            },
             commission: studyCommission(room.config),
             ...studyTiming(room.config),
             tradersPerMarket: studyMarketSize(room.config),
@@ -58,8 +69,13 @@ export function studyExport(
               }
             : {}),
           schedules: study.settings,
+          schedulesInstitution: study.otherSettings ? "cda" : "all-selected",
+          ...(study.otherSettings
+            ? { otherInstitutionSchedules: study.otherSettings }
+            : {}),
           ...(study.generation ? { generation: study.generation } : {}),
           equilibrium: teacher.equilibrium,
+          equilibria: teacher.equilibria,
           participants: teacher.participants,
           markets: study.markets.map((m) => ({
             market: m.id,
@@ -137,6 +153,7 @@ export function studyExport(
         "参加者利益合計_commission込み_円",
       ],
       ...teacher.metrics.map((m) => {
+        const eq = teacher.equilibria?.[m.institution] ?? teacher.equilibrium;
         const slope = teacher.slopes.find(
           (s) => s.market === m.market && s.institution === m.institution,
         );
@@ -152,15 +169,15 @@ export function studyExport(
           m.deviation,
           m.alpha,
           m.surplus,
-          teacher.equilibrium.surplus,
+          eq.surplus,
           m.efficiency,
           m.inefficientTrades,
           m.spread,
           m.spreadObservedMs,
-          teacher.equilibrium.low,
-          teacher.equilibrium.high,
-          teacher.equilibrium.quantity,
-          teacher.equilibrium.quantityMax,
+          eq.low,
+          eq.high,
+          eq.quantity,
+          eq.quantityMax,
           slope?.slope,
           slope?.n,
           m.commissionPaid,

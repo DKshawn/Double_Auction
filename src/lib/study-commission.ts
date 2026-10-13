@@ -15,7 +15,19 @@ export const studyCommissionSchema = z
 // Missing settings and old fills retain the original zero-reward accounting.
 export const studyCommission = (config: Pick<RoomConfig, "studyCommission">) =>
   config.studyCommission ?? 0;
-export function studyCommissionLimit(settings: StudySettings) {
+export function studyCommissionLimit(
+  settings: StudySettings,
+  otherSettings?: StudySettings,
+): {
+  maximum: number;
+  firstNegativeUnit: number | null;
+  gap: number | null;
+} {
+  if (otherSettings) {
+    const primary = studyCommissionLimit(settings);
+    const other = studyCommissionLimit(otherSettings);
+    return primary.maximum <= other.maximum ? primary : other;
+  }
   const demand = settings.values.flat().sort((a, b) => b - a);
   const supply = settings.costs.flat().sort((a, b) => a - b);
   const index = demand.findIndex((value, i) => supply[i] > value);
@@ -34,11 +46,17 @@ export function studyCommissionLimit(settings: StudySettings) {
   };
 }
 
-export function studyCommissionError(amount: number, settings?: StudySettings) {
+export function studyCommissionError(
+  amount: number,
+  settings?: StudySettings,
+  otherSettings?: StudySettings,
+) {
   if (!studyCommissionSchema.safeParse(amount).success)
     return STUDY_COMMISSION_ERROR;
-  if (!settings) return "";
-  const limit = studyCommissionLimit(settings);
+  if (!settings && !otherSettings) return "";
+  const limit = settings
+    ? studyCommissionLimit(settings, otherSettings)
+    : studyCommissionLimit(otherSettings!);
   return amount > limit.maximum
     ? `Commissionは現在の供需条件では0〜${limit.maximum}円の整数にしてください。第${limit.firstNegativeUnit}単位の価値と費用の差は${limit.gap}円です。負の余剰を維持するため、双方の報酬合計（2 × Commission）を${limit.gap}円未満にします。`
     : "";

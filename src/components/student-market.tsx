@@ -16,6 +16,7 @@ import {
 import { GOODS, goodName, type GoodId } from "@/lib/catalog";
 import type { Command, Quote, RoomView } from "@/lib/types";
 import { decimal, timeLabel } from "@/lib/client";
+import { isValidPrice, MAX_PRICE } from "@/lib/price";
 import { PriceChart } from "./price-chart";
 import { Spinner } from "./shell";
 
@@ -301,12 +302,7 @@ function OrderForm({
       ? limit - Number(price)
       : Number(price) - limit
     : null;
-  const valid =
-    price !== "" &&
-    Number.isInteger(Number(price)) &&
-    Number(price) >= 1 &&
-    Number(price) <= 999 &&
-    expected! >= 0;
+  const valid = price !== "" && isValidPrice(Number(price)) && expected! >= 0;
   const myTrade = view.trades.find(
     (t) =>
       t.good === good &&
@@ -364,7 +360,7 @@ function OrderForm({
                   inputMode="numeric"
                   placeholder="価格を入力"
                   min={buyer ? 1 : limit}
-                  max={buyer ? limit : 999}
+                  max={buyer ? limit : MAX_PRICE}
                   step={1}
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}

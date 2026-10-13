@@ -1,5 +1,6 @@
 import { randomInt, randomUUID } from "./random";
 import { z } from "zod";
+import { isValidPrice, MAX_PRICE } from "./price";
 import type {
   Institution,
   StudySettings,
@@ -29,6 +30,11 @@ import {
   studyInstitutionOrders,
   studyMarketId,
   studyMarketSize,
+  studyUnits,
+  studyUnitsPerSide,
+  studyUnitsError,
+  studyInstitutions,
+  MAX_STUDY_UNITS,
   studyRoleIndex,
   studyRole,
   MAX_INSTITUTION_PERIODS,
@@ -81,15 +87,17 @@ export type Study = {
   // Absent in existing rooms, which retain their independent admission flow.
   lobby?: StudyLobby;
   settings: StudySettings;
+  // When CDA's unit count changes, Call and Posted keep their two-unit conditions.
+  otherSettings?: StudySettings;
   generation?: StudyGeneration;
   revision: number;
   markets: StudyMarket[];
 };
 
-const pair = z.tuple([
-  z.number().int().min(1).max(999),
-  z.number().int().min(1).max(999),
-]);
+const unitValues = z
+  .array(z.number().int().min(1).max(MAX_PRICE))
+  .min(1)
+  .max(MAX_STUDY_UNITS);
 const stageSeconds = z.number().int().min(1).max(MAX_STAGE_SECONDS);
 export const studyInstitutionsSchema = z
   .array(z.enum(["cda", "call", "posted"]))
@@ -118,11 +126,21 @@ export const studyPeriodsSchema = z
 export const studySettingsSchema = z
   .object({
     values: z
-      .array(pair.refine(([a, b]) => a >= b, "評価値は2単位目で増やせません。"))
+      .array(
+        unitValues.refine(
+          (values) => values.every((v, i) => i === 0 || v <= values[i - 1]),
+          "評価値は2単位目以降で増やせません。",
+        ),
+      )
       .min(1)
       .max(MAX_STUDY_PARTICIPANTS / 2),
     costs: z
-      .array(pair.refine(([a, b]) => a <= b, "費用は2単位目で減らせません。"))
+      .array(
+        unitValues.refine(
+          (values) => values.every((v, i) => i === 0 || v >= values[i - 1]),
+          "費用は2単位目以降で減らせません。",
+        ),
+      )
       .min(1)
       .max(MAX_STUDY_PARTICIPANTS / 2),
   })
@@ -130,6 +148,13 @@ export const studySettingsSchema = z
   .refine(
     (s) => s.values.length === s.costs.length,
     "買い手と売り手の人数をそろえてください。",
+  )
+  .refine(
+    (s) =>
+      [...s.values, ...s.costs].every(
+        (values) => values.length === s.values[0]?.length,
+      ),
+    "全員の単位数をそろえてください。",
   );
 
 export function shuffled<T>(items: T[]): T[] {
@@ -167,8 +192,11 @@ export function recordStudyGeneratedAssignments(room: Room) {
       seat: p.seat,
       alias: p.alias,
       role: p.role,
-      sortedUnits: [index + 1, index + 1 + perSide],
-      limits: [...unitLimits(room, p)],
+      sortedUnits: Array.from(
+        { length: studyUnits(room.config) },
+        (_, unit) => index + 1 + unit * perSide,
+      ),
+      limits: [...unitLimits(room, p, "cda")],
     };
   });
 }
@@ -183,7 +211,11 @@ export function applyStudyGenerator(
     throw new AuctionError("条件は実験開始前のみ変更できます。", 409);
   let settings: StudySettings;
   try {
-    settings = generatedStudySettings(generator, studyMarketSize(room.config));
+    settings = generatedStudySettings(
+      generator,
+      studyUnitsPerSide(room.config),
+      studyUnits(room.config),
+    );
   } catch (error) {
     throw new AuctionError(
       error instanceof Error ? error.message : "生成条件を確認してください。",
@@ -209,6 +241,7 @@ export function createStudy(
   count: number,
   settings: StudySettings,
   institutions: readonly Institution[] = DEFAULT_STUDY_INSTITUTIONS,
+  otherSettings?: StudySettings,
 ): Study {
   if (!studyInstitutionsSchema.safeParse(institutions).success)
     throw new AuctionError("実施する制度を重複せず1つ以上選択してください。");
@@ -226,6 +259,7 @@ export function createStudy(
     protocol: "institutions-v1",
     revision: 0,
     settings: structuredClone(settings),
+    ...(otherSettings ? { otherSettings: structuredClone(otherSettings) } : {}),
     markets: orders.map((order, i) => ({
       id: i + 1,
       round: 0,
@@ -257,10 +291,18 @@ export const marketRound = (room: Room, market: StudyMarket) =>
 export const institutionFor = (room: Room, market: StudyMarket) =>
   studyPeriodAt(room.config, market.order, marketRound(room, market))
     .institution;
-export const unitLimits = (room: Room, p: Participant) =>
-  room.study!.settings[p.role === "buyer" ? "values" : "costs"][
-    studyRoleIndex(room.config, p.seat)
-  ];
+export const settingsForInstitution = (room: Room, institution: Institution) =>
+  institution === "cda"
+    ? room.study!.settings
+    : (room.study!.otherSettings ?? room.study!.settings);
+export const unitLimits = (
+  room: Room,
+  p: Participant,
+  institution = institutionFor(room, marketFor(room, p)),
+) =>
+  settingsForInstitution(room, institution)[
+    p.role === "buyer" ? "values" : "costs"
+  ][studyRoleIndex(room.config, p.seat)];
 export const unitsUsed = (room: Room, p: Participant) =>
   marketFor(room, p).trades.filter(
     (t) =>
@@ -484,8 +526,10 @@ function finishMarket(
     startMarket(room, m, events, at);
 }
 function checkPrice(price: number) {
-  if (!Number.isInteger(price) || price < 1 || price > 999)
-    throw new AuctionError("注文価格は1〜999円の整数で入力してください。");
+  if (!isValidPrice(price))
+    throw new AuctionError(
+      `注文価格は1〜${MAX_PRICE}円の整数で入力してください。`,
+    );
 }
 function trade(
   room: Room,
@@ -499,7 +543,8 @@ function trade(
 ) {
   const buyerUnit = unitsUsed(room, buyer) + 1,
     sellerUnit = unitsUsed(room, seller) + 1;
-  if (buyerUnit > 2 || sellerUnit > 2)
+  const maximumUnits = studyUnits(room.config, institutionFor(room, m));
+  if (buyerUnit > maximumUnits || sellerUnit > maximumUnits)
     throw new AuctionError("今期の取引可能数を超えています。", 409);
   const value = unitLimits(room, buyer)[buyerUnit - 1],
     cost = unitLimits(room, seller)[sellerUnit - 1];
@@ -759,7 +804,13 @@ export function executeStudy(
         409,
       );
     if (cmd.type === "study-commission") {
-      const error = studyCommissionError(cmd.commission, study.settings);
+      const error = studyCommissionError(
+        cmd.commission,
+        study.settings,
+        studyInstitutions(room.config).some((i) => i !== "cda")
+          ? study.otherSettings
+          : undefined,
+      );
       if (error) throw new AuctionError(error);
       room.config.studyCommission = cmd.commission;
       study.revision++;
@@ -782,13 +833,24 @@ export function executeStudy(
         revision: study.revision,
       });
     } else {
+      const units = cmd.unitsPerParticipant ?? studyUnits(room.config);
+      const unitsError = studyUnitsError(units);
+      if (unitsError) throw new AuctionError(unitsError);
+      if (
+        units !== studyUnits(room.config) &&
+        !studyInstitutions(room.config).includes("cda")
+      )
+        throw new AuctionError(
+          "CDAを実施しないルームの単位数は変更できません。",
+        );
       const parsed = studySettingsSchema.safeParse(cmd.settings);
       if (
         !parsed.success ||
-        parsed.data.values.length !== studyMarketSize(room.config) / 2
+        parsed.data.values.length !== studyMarketSize(room.config) / 2 ||
+        parsed.data.values[0].length !== units
       )
         throw new AuctionError(
-          `買い手・売り手それぞれ${studyMarketSize(room.config) / 2}人×2単位の条件を確認してください。評価値は低下、費用は上昇するように設定します。`,
+          `買い手・売り手それぞれ${studyMarketSize(room.config) / 2}人×${units}単位の条件を確認してください。評価値は低下、費用は上昇するように設定します。`,
         );
       // Recompute on the authoritative engine; client metadata cannot mislabel
       // a manually edited schedule as a reproducible generated condition.
@@ -796,7 +858,8 @@ export function executeStudy(
         try {
           const generated = generatedStudySettings(
             cmd.generator,
-            studyMarketSize(room.config),
+            (studyMarketSize(room.config) / 2) * units,
+            units,
           );
           if (JSON.stringify(generated) !== JSON.stringify(parsed.data))
             throw new Error(
@@ -811,19 +874,40 @@ export function executeStudy(
         }
       }
       const commission = cmd.commission ?? studyCommission(room.config);
-      const error = studyCommissionError(commission, parsed.data);
+      const error = studyCommissionError(
+        commission,
+        parsed.data,
+        studyInstitutions(room.config).some((i) => i !== "cda")
+          ? (study.otherSettings ??
+              (units !== studyUnits(room.config) ? study.settings : undefined))
+          : undefined,
+      );
       if (error) throw new AuctionError(error);
+      const unitsChanged = units !== studyUnits(room.config);
+      if (unitsChanged && !study.otherSettings)
+        study.otherSettings = structuredClone(study.settings);
       study.settings = parsed.data;
+      room.config.studyCdaUnits = units;
       room.config.studyCommission = commission;
       if (cmd.generator) {
         applyStudyGenerator(room, cmd.generator, now);
       } else {
         delete study.generation;
+        // A manual edit keeps the existing seats and role order, including old
+        // rooms and demos without a saved seat permutation.
+        for (const participant of room.participants)
+          participant.limits.apple = unitLimits(room, participant)[0];
+        if (unitsChanged && study.lobby) {
+          study.lobby.revision++;
+          study.lobby.randomizedAt = null;
+        }
       }
       study.revision++;
       emit(room, events, now, "study-settings", "teacher", {
         settings: study.settings,
+        ...(study.otherSettings ? { otherSettings: study.otherSettings } : {}),
         commission,
+        unitsPerParticipant: units,
         ...(study.generation
           ? { generation: structuredClone(study.generation) }
           : {}),
@@ -842,6 +926,9 @@ export function executeStudy(
         const error = studyCommissionError(
           studyCommission(room.config),
           study.settings,
+          studyInstitutions(room.config).some((i) => i !== "cda")
+            ? study.otherSettings
+            : undefined,
         );
         if (error) throw new AuctionError(error);
       }
@@ -956,7 +1043,8 @@ export function executeStudy(
         "受付時間または購入順が切り替わりました。最新の画面を確認してください。",
         409,
       );
-    const remaining = 2 - unitsUsed(room, actor);
+    const maximumUnits = studyUnits(room.config, institutionFor(room, m));
+    const remaining = maximumUnits - unitsUsed(room, actor);
     if (
       cmd.type === "study-quote" ||
       cmd.type === "study-accept" ||
@@ -976,7 +1064,10 @@ export function executeStudy(
         });
       } else {
         if (!remaining)
-          throw new AuctionError("今期は2単位の取引が完了しています。", 409);
+          throw new AuctionError(
+            `今期は${maximumUnits}単位の取引が完了しています。`,
+            409,
+          );
         const opposite = m.orders
           .filter((o) => o.side !== actor.role)
           .sort(
@@ -1005,7 +1096,7 @@ export function executeStudy(
           sequence = log(room, m, events, now, "quote", actor.id, {
             id,
             price,
-            unit: 3 - remaining,
+            unit: maximumUnits + 1 - remaining,
             side: actor.role,
           });
         if (
@@ -1036,7 +1127,7 @@ export function executeStudy(
             alias: actor.alias,
             side: actor.role,
             price,
-            unit: 3 - remaining,
+            unit: maximumUnits + 1 - remaining,
             at: now,
           });
       }
@@ -1064,7 +1155,7 @@ export function executeStudy(
         );
       for (const [i, price] of cmd.prices.entries()) {
         const id = randomUUID(),
-          unit = 3 - remaining + i;
+          unit = maximumUnits + 1 - remaining + i;
         const sequence = log(room, m, events, now, "call-order", actor.id, {
           id,
           unit,
@@ -1100,7 +1191,7 @@ export function executeStudy(
         cmd.quantity > remaining
       )
         throw new AuctionError(
-          "数量は1〜2単位で、残りの取引可能数以内にしてください。",
+          `数量は1〜${maximumUnits}単位で、残りの取引可能数以内にしてください。`,
         );
       const offer = {
         id: randomUUID(),
@@ -1138,7 +1229,8 @@ export function executeStudy(
         for (let i = 0; i < cmd.quantity; i++)
           trade(room, m, actor, seller, offer.price, events, now);
         offer.remaining -= cmd.quantity;
-        if (unitsUsed(room, actor) === 2) nextBuyer(room, m, events, now);
+        if (unitsUsed(room, actor) === maximumUnits)
+          nextBuyer(room, m, events, now);
       } else {
         log(room, m, events, now, "buyer-pass", actor.id);
         nextBuyer(room, m, events, now);

@@ -1,11 +1,13 @@
 import { equilibrium } from "./equilibrium";
+import { isValidPrice, MAX_PRICE } from "./price";
 import { z } from "zod";
 import type {
   StaircaseParameters,
   StudyGeneratorConfig,
   StudySettings,
-  UnitPair,
+  UnitValues,
 } from "./study-types";
+import { DEFAULT_STUDY_UNITS, studyUnitsError } from "./study-config";
 
 export const DEFAULT_STAIRCASE_PARAMETERS: Readonly<StaircaseParameters> = {
   p: 80,
@@ -33,11 +35,16 @@ export const studyGeneratorConfigSchema = z
 export function generatedStudySettings(
   generator: StudyGeneratorConfig,
   unitsPerSide: number,
+  unitsPerParticipant = DEFAULT_STUDY_UNITS,
 ) {
   if (generator.kind !== "overlap-staircase")
     throw new Error("供需プリセットを確認してください。");
   validateAssignmentSeed(generator.seed);
-  return generateStaircase(generator.parameters, unitsPerSide).settings;
+  return generateStaircase(
+    generator.parameters,
+    unitsPerSide,
+    unitsPerParticipant,
+  ).settings;
 }
 
 export function validateAssignmentSeed(seed: number) {
@@ -49,10 +56,19 @@ export function validateAssignmentSeed(seed: number) {
 export function generateStaircase(
   parameters: StaircaseParameters,
   unitsPerSide = 16,
+  unitsPerParticipant = DEFAULT_STUDY_UNITS,
 ) {
   const { p, K, L, d } = parameters;
-  if (!Number.isInteger(unitsPerSide) || unitsPerSide < 2 || unitsPerSide % 2)
-    throw new Error("片側の総単位数は2以上の偶数にしてください。");
+  const unitsError = studyUnitsError(unitsPerParticipant);
+  if (unitsError) throw new Error(unitsError);
+  if (
+    !Number.isInteger(unitsPerSide) ||
+    unitsPerSide < unitsPerParticipant ||
+    unitsPerSide % unitsPerParticipant
+  )
+    throw new Error(
+      `片側の総単位数は1人あたり${unitsPerParticipant}単位の人数分にしてください。`,
+    );
   if (!Number.isInteger(K) || K < 1 || !Number.isInteger(L) || L < 1)
     throw new Error("KとLは1以上の整数にしてください。");
   if (K + L > unitsPerSide)
@@ -71,42 +87,74 @@ export function generateStaircase(
     ["demand", demand],
     ["supply", supply],
   ] as const) {
-    const index = numbers.findIndex(
-      (n) => !Number.isInteger(n) || n < 1 || n > 999,
-    );
+    const index = numbers.findIndex((n) => !isValidPrice(n));
     if (index === -1) continue;
     const k = index + 1;
     const value = numbers[index];
-    const offset = k <= K ? K + 1 - k : k <= K + L ? 0 : k - K - L;
-    const sign = (k <= K ? 1 : -1) * (side === "demand" ? 1 : -1);
-    const formula = offset
-      ? `${p} ${sign > 0 ? "+" : "−"} ${d} × ${offset}`
-      : String(p);
+    const head = k <= K;
+    const overlap = !head && k <= K + L;
+    const offset = head ? K + 1 - k : overlap ? 0 : k - K - L;
+    const sign = (head ? 1 : -1) * (side === "demand" ? 1 : -1);
+    const operator = sign > 0 ? "+" : "−";
+    const symbol = side === "demand" ? "D" : "S";
+    const branch = head ? "k ≤ K" : overlap ? "K ＜ k ≤ K + L" : "k ＞ K + L";
+    const formula = overlap
+      ? "p"
+      : `p ${operator} d × (${head ? "K + 1 − k" : "k − K − L"})`;
+    const substitution = overlap
+      ? `${p}`
+      : `${p} ${operator} ${d} × (${head ? `${K} + 1 − ${k}` : `${k} − ${K} − ${L}`})＝${p} ${operator} ${d} × ${offset}`;
     const label = side === "demand" ? "買い手側の価値 D" : "売り手側の費用 S";
-    const detail = `${label}(${k})＝${value}円（${formula}＝${value}）。`;
+    const detail = [
+      `式（${branch}）：${symbol}(k)＝${formula}。`,
+      `代入（k=${k}、p=${p}、K=${K}、L=${L}、d=${d}）：`,
+      overlap
+        ? `${symbol}(${k})＝p＝${value}。`
+        : `${symbol}(${k})＝${substitution}＝${value}。`,
+      `必要条件：1 ≤ ${formula} ≤ ${MAX_PRICE}、かつ生成値は整数。`,
+    ];
     if (!Number.isInteger(value))
       throw new Error(
-        `${detail}整数ではありません。価値・費用は1〜999円の整数で設定してください。p・dを調整してください。丸めは行いません。`,
+        [
+          `${label}(${k})＝${value}円。整数ではありません。`,
+          ...detail,
+          "全単位を整数にするにはp・dを整数にしてください。丸めは行いません。",
+        ].join("\n"),
       );
     const reason =
-      value < 1 ? "下限1円を下回っています。" : "上限999円を超えています。";
-    const range = "現在の価値・費用の許容範囲は1〜999円です。";
+      value < 1
+        ? "下限1円を下回っています。"
+        : `上限${MAX_PRICE}円を超えています。`;
+    const firstUnitCondition =
+      k === 1
+        ? `第1単位では${symbol}(1)＝p ${operator} d × K。Lは${symbol}(1)に影響しません。`
+        : null;
+    const largestOffset = Math.max(K, unitsPerSide - K - L);
+    const lowP = 1 + d * largestOffset;
+    const highP = MAX_PRICE - d * largestOffset;
+    const rangeFormula = `全単位の範囲条件（片側の総単位数 N=${unitsPerSide}）：1 + d × max(K, N − K − L) ≤ p ≤ ${MAX_PRICE} − d × max(K, N − K − L)。`;
     const hint =
-      side === "supply" && k === 1 && value < 1
-        ? "p − d × K ≥ 1となるようにp・d・Kを調整してください。LはS(1)に影響しません。"
-        : side === "demand" && k === 1 && value > 999
-          ? "p ＋ d × K ≤ 999となるようにp・d・Kを調整してください。LはD(1)に影響しません。"
-          : "p・d・K・Lを調整してください。";
+      lowP <= highP
+        ? `現在のK・L・dでは ${lowP} ≤ p ≤ ${highP}。pをこの範囲にするか、d・K・Lを調整してください。`
+        : `現在のK・L・dでは ${lowP} ≤ p ≤ ${highP}となり、条件を満たすpはありません。d・K・Lを調整してください。`;
     throw new Error(
-      `${detail}${reason}${range}${value === 0 ? "0円は設定できません。" : ""}${hint}`,
+      [
+        `${label}(${k})＝${value}円。${reason}${value === 0 ? "0円は設定できません。" : ""}`,
+        ...detail,
+        ...(firstUnitCondition ? [firstUnitCondition] : []),
+        rangeFormula,
+        hint,
+      ].join("\n"),
     );
   }
-  const perSide = unitsPerSide / 2;
-  const pair = (numbers: number[]): UnitPair[] =>
-    Array.from({ length: perSide }, (_, i) => [
-      numbers[i],
-      numbers[i + perSide],
-    ]);
+  const perSide = unitsPerSide / unitsPerParticipant;
+  const pair = (numbers: number[]): UnitValues[] =>
+    Array.from({ length: perSide }, (_, i) =>
+      Array.from(
+        { length: unitsPerParticipant },
+        (_, unit) => numbers[i + unit * perSide],
+      ),
+    );
   const settings: StudySettings = { values: pair(demand), costs: pair(supply) };
   return { demand, supply, settings, equilibrium: equilibrium(demand, supply) };
 }

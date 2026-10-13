@@ -28,9 +28,11 @@ import { StudyTimingEditor } from "./study-timing-settings";
 import { studyCommission, studyUnitProfit } from "@/lib/study-commission";
 import { studyTiming } from "@/lib/study-timing";
 import { decimal, timeLabel } from "@/lib/client";
+import { isValidPrice, MAX_PRICE } from "@/lib/price";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import {
   studyMarketSize,
+  studyUnits,
   studyInstitutions,
   studyPeriodAt,
   studyPeriodCount,
@@ -390,8 +392,17 @@ export function StudyRoom({
                           <th>市場</th>
                           <th>名前</th>
                           <th>役割</th>
-                          <th>第1単位</th>
-                          <th>第2単位</th>
+                          {Array.from(
+                            {
+                              length: studyUnits(
+                                view.config,
+                                market.institution,
+                              ),
+                            },
+                            (_, unit) => (
+                              <th key={unit}>第{unit + 1}単位</th>
+                            ),
+                          )}
                           <th>累積利益</th>
                         </tr>
                       </thead>
@@ -403,8 +414,9 @@ export function StudyRoom({
                               <td>{p.market}</td>
                               <td>{p.nickname}</td>
                               <td>{p.alias}</td>
-                              <td>{money(p.limits[0])}</td>
-                              <td>{money(p.limits[1])}</td>
+                              {p.limits.map((value, unit) => (
+                                <td key={unit}>{money(value)}</td>
+                              ))}
                               <td>{money(p.profit)}</td>
                             </tr>
                           ))}
@@ -681,15 +693,22 @@ function StudentConditions(props: MarketProps) {
           Commission {money(studyCommission(view.config))}／単位
           <span>成立時に加算・表示利益に含む</span>
         </p>
-        <div className="study-values">
-          {study.unitLimits!.map((v, i) => (
-            <div key={i} className={i < study.unitsUsed ? "used-unit" : ""}>
-              <span>
-                {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
-              </span>
-              <b>{money(v)}</b>
-            </div>
-          ))}
+        <div
+          className={`study-values ${market.institution === "cda" ? "study-current-value" : ""}`}
+          aria-live={market.institution === "cda" ? "polite" : undefined}
+        >
+          {study.unitLimits!.map((v, i) =>
+            market.institution !== "cda" || i === study.unitsUsed ? (
+              <div key={i} className={i < study.unitsUsed ? "used-unit" : ""}>
+                <span>
+                  {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
+                  {market.institution === "cda" &&
+                    ` / ${studyUnits(view.config)}単位`}
+                </span>
+                <b>{money(v)}</b>
+              </div>
+            ) : null,
+          )}
         </div>
       </div>
       <div className="study-private-order">
@@ -972,19 +991,21 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
 function StudentOrder({ view, market, command, disabled }: MarketProps) {
   const [price, setPrice] = useState(""),
     [second, setSecond] = useState(""),
-    [quantity, setQuantity] = useState(2 - view.study!.unitsUsed),
+    [quantity, setQuantity] = useState(
+      studyUnits(view.config, market.institution) - view.study!.unitsUsed,
+    ),
     [validation, setValidation] = useState("");
   const study = view.study!,
     buyer = view.me.role === "buyer",
-    remaining = 2 - study.unitsUsed;
+    remaining = studyUnits(view.config, market.institution) - study.unitsUsed;
   const priceInput = useRef<HTMLInputElement>(null);
   const focusNextUnit = useRef(
-    market.institution === "cda" && study.unitsUsed === 1,
+    market.institution === "cda" && study.unitsUsed > 0 && remaining > 0,
   );
   const formDisabled =
     disabled || (market.institution === "posted" && market.stage !== "offer");
   useEffect(() => {
-    // The first fill resets this keyed form. Wait until its input is enabled.
+    // Every CDA fill resets this keyed form. Focus the next available unit.
     if (focusNextUnit.current && !formDisabled && priceInput.current) {
       priceInput.current.focus({ preventScroll: true });
       focusNextUnit.current = false;
@@ -1026,7 +1047,12 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
           }, 0)
       : null;
   if (!remaining)
-    return <p className="success-message">今期の2単位の取引は完了しました。</p>;
+    return (
+      <p className="success-message">
+        今期の{studyUnits(view.config, market.institution)}
+        単位の取引は完了しました。
+      </p>
+    );
   if (market.institution === "posted" && buyer)
     return (
       <p className="callout">
@@ -1059,8 +1085,8 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
       market.institution === "call" && quantity === 2
         ? [Number(price), Number(second)]
         : [Number(price)];
-    if (prices.some((p) => !Number.isInteger(p) || p < 1 || p > 999)) {
-      setValidation("注文価格は1〜999円の整数で入力してください。");
+    if (prices.some((p) => !isValidPrice(p))) {
+      setValidation(`注文価格は1〜${MAX_PRICE}円の整数で入力してください。`);
       return;
     }
     const accepted = await command(
@@ -1110,7 +1136,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             ref={priceInput}
             type="number"
             min={1}
-            max={999}
+            max={MAX_PRICE}
             step={1}
             value={price}
             onChange={(e) => setPrice(e.target.value)}
@@ -1127,7 +1153,7 @@ function StudentOrder({ view, market, command, disabled }: MarketProps) {
             <input
               type="number"
               min={1}
-              max={999}
+              max={MAX_PRICE}
               step={1}
               value={second}
               onChange={(e) => setSecond(e.target.value)}
@@ -1205,7 +1231,12 @@ function ExpectedProfit({
   quantity: number;
 }) {
   const study = view.study!;
-  if (!study.unitLimits || study.unitsUsed + quantity > 2) return null;
+  if (
+    !study.unitLimits ||
+    study.unitsUsed + quantity >
+      studyUnits(view.config, study.market.institution)
+  )
+    return null;
   const profit = study.unitLimits
     .slice(study.unitsUsed, study.unitsUsed + quantity)
     .reduce(
@@ -1234,7 +1265,7 @@ function TeacherMetrics({
   market: StudyMarketView;
 }) {
   const teacher = view.study!.teacher!,
-    eq = teacher.equilibrium;
+    eq = teacher.equilibria?.[market.institution] ?? teacher.equilibrium;
   return (
     <section className="panel study-section">
       <h2>市場{market.id}の価格・数量・効率性</h2>

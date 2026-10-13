@@ -1,13 +1,20 @@
 export type Institution = "cda" | "call" | "posted";
 export type StudyPeriods = Record<Institution, number>;
-export type UnitPair = [number, number];
+export type UnitValues = number[];
+export type StudyEquilibrium = {
+  low: number;
+  high: number;
+  quantity: number;
+  quantityMax: number;
+  surplus: number;
+};
 export type StudyTiming = {
   cdaSeconds: number;
   callSeconds: number;
   offerSeconds: number;
   buyerSeconds: number;
 };
-export type StudySettings = { values: UnitPair[]; costs: UnitPair[] };
+export type StudySettings = { values: UnitValues[]; costs: UnitValues[] };
 export type StaircaseParameters = {
   p: number;
   K: number;
@@ -26,8 +33,8 @@ export type StudyGeneratedAssignment = {
   seat: number;
   alias: string;
   role: "buyer" | "seller";
-  sortedUnits: UnitPair;
-  limits: UnitPair;
+  sortedUnits: UnitValues;
+  limits: UnitValues;
 };
 export type StudyGeneration = StudyGeneratorConfig & {
   appliedAt: number;
@@ -152,7 +159,7 @@ export type StudyView = {
   marketCount: number;
   settingsRevision: number;
   market: StudyMarketView;
-  unitLimits: UnitPair | null;
+  unitLimits: UnitValues | null;
   unitsUsed: number;
   myTrades: {
     id: string;
@@ -167,6 +174,7 @@ export type StudyView = {
   myTradeNotifications?: StudyView["myTrades"];
   teacher?: {
     settings: StudySettings;
+    otherSettings?: StudySettings;
     preset?: { label: string; settings: StudySettings };
     generation?: StudyGeneration;
     markets: StudyMarketView[];
@@ -176,7 +184,7 @@ export type StudyView = {
       nickname: string;
       alias: string;
       role: "buyer" | "seller";
-      limits: UnitPair;
+      limits: UnitValues;
       profit: number;
       joinOrder: number;
       joinedAt?: number;
@@ -188,13 +196,8 @@ export type StudyView = {
       n: number;
       slope: number | null;
     }[];
-    equilibrium: {
-      low: number;
-      high: number;
-      quantity: number;
-      quantityMax: number;
-      surplus: number;
-    };
+    equilibrium: StudyEquilibrium;
+    equilibria?: Record<Institution, StudyEquilibrium>;
   };
 };
 export type StudyCommand =
@@ -210,6 +213,7 @@ export type StudyCommand =
       settings: StudySettings;
       generator?: StudyGeneratorConfig;
       commission?: number;
+      unitsPerParticipant?: number;
       expectedRevision: number;
     }
   | { type: "study-quote"; price: number }

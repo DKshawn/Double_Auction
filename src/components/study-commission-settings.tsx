@@ -12,16 +12,22 @@ export function StudyCommissionField({
   amount,
   onChange,
   settings,
+  otherSettings,
   disabled = false,
 }: {
   amount: number;
   onChange: (amount: number) => void;
   settings?: StudySettings;
+  otherSettings?: StudySettings;
   disabled?: boolean;
 }) {
   const id = useId();
-  const error = studyCommissionError(amount, settings);
-  const limit = settings ? studyCommissionLimit(settings) : null;
+  const error = studyCommissionError(amount, settings, otherSettings);
+  const limit = settings
+    ? studyCommissionLimit(settings, otherSettings)
+    : otherSettings
+      ? studyCommissionLimit(otherSettings)
+      : null;
   const maximum = limit?.maximum ?? MAX_STUDY_COMMISSION;
   return (
     <div className="field study-commission-field">
@@ -52,6 +58,7 @@ export function StudyCommissionField({
       </p>
       <p className="field-help study-commission-bound">
         入力範囲：0〜{maximum}円（整数）。
+        {otherSettings && "CDA・他制度の両方の条件に対応する上限です。"}
         {limit?.gap !== null && limit?.gap !== undefined
           ? `第${limit.firstNegativeUnit}単位以降の負の余剰を維持するため、2 × Commission < ${limit.gap}円。`
           : settings

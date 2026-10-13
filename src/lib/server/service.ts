@@ -10,6 +10,9 @@ import {
   studyLayoutError,
   studyMarketId,
   studyMarketSize,
+  studyUnits,
+  studyUnitsError,
+  studyUnitsPerSide,
   studyRole,
   studyRoleIndex,
   studyInstitutions,
@@ -21,7 +24,7 @@ import { timed, timedSync } from "./performance";
 import { randomInt, randomUUID } from "node:crypto";
 import type { CommandRequest, RoomConfig, RoomView } from "../types";
 import type { RoomSummary } from "../room-management";
-import type { StudyGeneratorConfig } from "../study-types";
+import type { StudyGeneratorConfig, StudySettings } from "../study-types";
 import { generatedStudySettings } from "../study-generator";
 import {
   authenticate,
@@ -80,6 +83,8 @@ export class AuctionService {
       const size = studyMarketSize(config);
       const layoutError = studyLayoutError(config.markets ?? 0, size);
       if (layoutError) throw new AuctionError(layoutError);
+      const unitsError = studyUnitsError(studyUnits(config));
+      if (unitsError) throw new AuctionError(unitsError);
       const selection = studyInstitutionsSchema.safeParse(
         studyInstitutions(config),
       );
@@ -90,6 +95,10 @@ export class AuctionService {
       const institutions = DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
         selection.data.includes(i),
       );
+      if (!institutions.includes("cda") && studyUnits(config) !== 2)
+        throw new AuctionError(
+          "Call Market・Posted Offerの単位数は2で固定です。",
+        );
       const periods = studyPeriodsSchema.safeParse(config.studyPeriods ?? {});
       if (!periods.success)
         throw new AuctionError(
@@ -118,12 +127,26 @@ export class AuctionService {
         duration: timing.data.cdaSeconds,
         studyTiming: timing.data,
         studyCommission: commission.data,
+        studyCdaUnits: studyUnits(config),
       };
     }
+    let otherStudySettings: StudySettings | undefined;
     if (generator) {
       generator = structuredClone(generator);
       try {
-        generatedStudySettings(generator, studyMarketSize(config));
+        generatedStudySettings(
+          generator,
+          studyUnitsPerSide(config),
+          studyUnits(config),
+        );
+        if (
+          studyUnits(config) !== 2 &&
+          studyInstitutions(config).some((i) => i !== "cda")
+        )
+          otherStudySettings = generatedStudySettings(
+            generator,
+            studyMarketSize(config),
+          );
       } catch (error) {
         throw new AuctionError(
           error instanceof Error
@@ -134,9 +157,20 @@ export class AuctionService {
     }
     if (config.protocol === "institutions-v1") {
       const settings = generator
-        ? generatedStudySettings(generator, studyMarketSize(config))
-        : pptStudySettings(studyMarketSize(config));
-      const error = studyCommissionError(studyCommission(config), settings);
+        ? generatedStudySettings(
+            generator,
+            studyUnitsPerSide(config),
+            studyUnits(config),
+          )
+        : pptStudySettings(studyMarketSize(config), studyUnits(config));
+      const error = studyCommissionError(
+        studyCommission(config),
+        settings,
+        studyUnits(config) !== 2 &&
+          studyInstitutions(config).some((i) => i !== "cda")
+          ? (otherStudySettings ?? pptStudySettings(studyMarketSize(config)))
+          : undefined,
+      );
       if (error) throw new AuctionError(error);
     }
     const token = newToken();
@@ -166,6 +200,7 @@ export class AuctionService {
                     config.markets!,
                     studyMarketSize(config),
                     studyInstitutions(config),
+                    studyUnits(config),
                   ),
                   lobby: { revision: 0, randomizedAt: null },
                 },
@@ -193,6 +228,8 @@ export class AuctionService {
           receipts: [],
         };
         const events: AuditEvent[] = [];
+        if (otherStudySettings)
+          room.study!.otherSettings = structuredClone(otherStudySettings);
         if (generator) applyStudyGenerator(room, generator, now);
         emit(room, events, now, "room-created", "teacher", {
           config,
@@ -201,6 +238,9 @@ export class AuctionService {
             ? {
                 protocol: room.study.protocol,
                 settings: room.study.settings,
+                ...(room.study.otherSettings
+                  ? { otherSettings: room.study.otherSettings }
+                  : {}),
                 ...(room.study.generation
                   ? { generation: structuredClone(room.study.generation) }
                   : {}),

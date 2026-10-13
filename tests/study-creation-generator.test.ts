@@ -87,10 +87,13 @@ test("creation request accepts only validated generator parameters and rejects s
       generator: { ...generator, parameters: { p: 100, K: 10, L: 6, d: 10 } },
     }),
   });
-  await assert.rejects(
-    body(zeroCost, createRoomSchema),
-    /売り手側の費用 S\(1\)＝0円.*下限1円/,
-  );
+  await assert.rejects(body(zeroCost, createRoomSchema), (error: unknown) => {
+    assert.ok(error instanceof Error);
+    assert.match(error.message, /売り手側の費用 S\(1\)＝0円.*下限1円/s);
+    assert.ok(error.message.includes("S(k)＝p − d × (K + 1 − k)"));
+    assert.ok(error.message.includes("現在のK・L・dでは 101 ≤ p ≤ 99899"));
+    return true;
+  });
   const invalid = [
     { ...payload, config: { ...config, marketSize: 6, capacity: 6 } },
     {

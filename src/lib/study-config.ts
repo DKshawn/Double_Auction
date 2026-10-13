@@ -83,23 +83,56 @@ export function studyInstitutionOrders(
 }
 
 export const DEFAULT_MARKET_SIZE = 16;
+export const DEFAULT_STUDY_UNITS = 2;
+export const MAX_STUDY_UNITS = 5;
+// Saved rooms without this setting retain the original two units per person.
+export const studyUnits = (
+  config: Pick<RoomConfig, "studyCdaUnits">,
+  institution: Institution = "cda",
+) =>
+  institution === "cda"
+    ? (config.studyCdaUnits ?? DEFAULT_STUDY_UNITS)
+    : DEFAULT_STUDY_UNITS;
+export const studyUnitsPerSide = (
+  config: Pick<RoomConfig, "studyCdaUnits" | "marketSize">,
+) => (studyMarketSize(config) / 2) * studyUnits(config);
+export const studyUnitsError = (units: number) =>
+  !Number.isInteger(units) || units < 1 || units > MAX_STUDY_UNITS
+    ? `CDAの1人あたりの単位数は1〜${MAX_STUDY_UNITS}の整数で設定してください。`
+    : "";
 
 export function resizeStudySettings(
   settings: StudySettings,
   marketSize: number,
+  unitsPerParticipant = DEFAULT_STUDY_UNITS,
 ) {
   const perSide = marketSize / 2;
-  // Sample all profiles at equal quantiles, repeating them for larger groups.
-  const resize = (pairs: StudySettings["values"]) =>
-    Array.from(
-      { length: perSide },
-      (_, i) =>
-        [...pairs[Math.floor(((i + 0.5) * pairs.length) / perSide)]] as [
-          number,
-          number,
-        ],
+  const unitsError = studyUnitsError(unitsPerParticipant);
+  if (unitsError) throw new Error(unitsError);
+  // Preserve the original profile sampling when the unit count is unchanged.
+  // Otherwise sample the sorted marginal schedule and pair units by role index.
+  const resize = (profiles: number[][], buyer: boolean) => {
+    if (profiles.every((p) => p.length === unitsPerParticipant))
+      return Array.from({ length: perSide }, (_, i) => [
+        ...profiles[Math.floor(((i + 0.5) * profiles.length) / perSide)],
+      ]);
+    const sorted = profiles.flat().sort((a, b) => (buyer ? b - a : a - b));
+    const total = perSide * unitsPerParticipant;
+    const sampled = Array.from(
+      { length: total },
+      (_, i) => sorted[Math.floor(((i + 0.5) * sorted.length) / total)],
     );
-  return { values: resize(settings.values), costs: resize(settings.costs) };
+    return Array.from({ length: perSide }, (_, i) =>
+      Array.from(
+        { length: unitsPerParticipant },
+        (_, unit) => sampled[i + unit * perSide],
+      ),
+    );
+  };
+  return {
+    values: resize(settings.values, true),
+    costs: resize(settings.costs, false),
+  };
 }
 export const MAX_STUDY_PARTICIPANTS = 192;
 export const MAX_STUDY_MARKETS = MAX_STUDY_PARTICIPANTS / 2;

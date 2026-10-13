@@ -21,6 +21,7 @@ export type RoomConfig = {
   studyInstitutions?: Institution[];
   studyPeriods?: Partial<StudyPeriods>;
   studyCommission?: number;
+  studyCdaUnits?: number;
   title: string;
   capacity: number;
   rounds: number;

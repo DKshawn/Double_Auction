@@ -8,10 +8,15 @@ import {
   studyMarketSize,
   studyRole,
   studyRoleIndex,
+  studyUnits,
+  studyInstitutions,
+  studyUnitsError,
+  resizeStudySettings,
 } from "@/lib/study-config";
 import type { Command, RoomView } from "@/lib/types";
 import type { StudyGeneratedAssignment } from "@/lib/study-types";
 import { StudyPresetPicker } from "./study-preset-picker";
+import { StudyUnitFields } from "./study-unit-settings";
 
 function AssignmentTable({ rows }: { rows: StudyGeneratedAssignment[] }) {
   return (
@@ -23,8 +28,9 @@ function AssignmentTable({ rows }: { rows: StudyGeneratedAssignment[] }) {
             <th>役割</th>
             <th>学生名</th>
             <th>対応する単位 k</th>
-            <th>1単位目</th>
-            <th>2単位目</th>
+            {Array.from({ length: rows[0]?.limits.length ?? 0 }, (_, unit) => (
+              <th key={unit}>{unit + 1}単位目</th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -36,8 +42,9 @@ function AssignmentTable({ rows }: { rows: StudyGeneratedAssignment[] }) {
                 <td>{row.alias}</td>
                 <td>{row.nickname}</td>
                 <td>{row.sortedUnits.join("・")}</td>
-                <td>{row.limits[0]}</td>
-                <td>{row.limits[1]}</td>
+                {row.limits.map((value, unit) => (
+                  <td key={unit}>{value}</td>
+                ))}
               </tr>
             ))}
         </tbody>
@@ -59,8 +66,18 @@ export function StudyPresetGenerator({
 }) {
   const teacher = view.study!.teacher!;
   const locked = view.phase !== "waiting" || view.round > 0;
-  const units = studyMarketSize(view.config);
-  const perSide = units / 2;
+  const marketSize = studyMarketSize(view.config);
+  const perSide = marketSize / 2;
+  const [unitsDraft, setUnitsDraft] = useState(String(studyUnits(view.config)));
+  const unitsPerParticipant = Number(unitsDraft);
+  const units = perSide * unitsPerParticipant;
+  const unitsError = studyUnitsError(unitsPerParticipant);
+  const otherSettings = studyInstitutions(view.config).some((i) => i !== "cda")
+    ? (teacher.otherSettings ??
+      (unitsPerParticipant !== studyUnits(view.config)
+        ? teacher.settings
+        : undefined))
+    : undefined;
   const [commission, setCommission] = useState(studyCommission(view.config));
   return (
     <details className="study-generator">
@@ -73,67 +90,98 @@ export function StudyPresetGenerator({
           実験開始後の条件は固定です。プレビューはできますが、適用はできません。
         </p>
       )}
-      <StudyPresetPicker
-        existingPreset={teacher.preset}
-        units={units}
-        revision={view.study!.settingsRevision}
-        initialGenerator={teacher.generation}
-        disabled={disabled}
-        locked={locked}
-        commission={commission}
-        onCommissionChange={setCommission}
-        actionLabel="この条件を確認して適用"
-        onConfirm={async (preview, amount) => {
-          const applied = await command({
-            type: "study-settings",
-            settings: preview.settings,
-            commission: amount,
-            ...(preview.generator ? { generator: preview.generator } : {}),
-            expectedRevision: preview.revision,
-          });
-          if (applied) onApplied();
-          return applied;
-        }}
-        renderAssignments={(preview) => {
-          if (!preview.generator) return null;
-          const seats = seededStudySeats(
-            view.config.capacity,
-            preview.generator.seed,
-          );
-          const rows: StudyGeneratedAssignment[] = teacher.participants.map(
-            (p) => {
-              const seat = seats[p.joinOrder - 1];
-              const role = studyRole(view.config, seat);
-              const index = studyRoleIndex(view.config, seat);
-              return {
-                participantId: p.id,
-                nickname: p.nickname,
-                seat,
-                market: studyMarketId(view.config, seat),
-                role,
-                alias: `${role === "buyer" ? "買" : "売"}${String(index + 1).padStart(2, "0")}`,
-                sortedUnits: [index + 1, index + 1 + perSide],
-                limits:
-                  preview.settings[role === "buyer" ? "values" : "costs"][
-                    index
-                  ],
-              };
-            },
-          );
-          return (
-            <details>
-              <summary>
-                シード {preview.generator.seed} の学生割当を確認（{rows.length}
-                人入室済み）
-              </summary>
-              <AssignmentTable rows={rows} />
-              <p className="field-help">
-                未入室の学生は入室順に残りの位置へ入ります。適用後、全員がそろったら「学生の割り当て」で確定してください。
-              </p>
-            </details>
-          );
-        }}
+      <StudyUnitFields
+        cdaUnits={unitsDraft}
+        onChange={setUnitsDraft}
+        disabled={disabled || locked}
+        cdaEnabled={studyInstitutions(view.config).includes("cda")}
       />
+      {unitsError ? (
+        <p className="error-message" role="alert">
+          {unitsError}
+        </p>
+      ) : (
+        <StudyPresetPicker
+          key={unitsPerParticipant}
+          existingPreset={
+            teacher.preset
+              ? {
+                  label: teacher.preset.label,
+                  settings: resizeStudySettings(
+                    teacher.preset.settings,
+                    marketSize,
+                    unitsPerParticipant,
+                  ),
+                }
+              : undefined
+          }
+          units={units}
+          unitsPerParticipant={unitsPerParticipant}
+          otherSettings={otherSettings}
+          revision={view.study!.settingsRevision}
+          initialGenerator={teacher.generation}
+          disabled={disabled}
+          locked={locked}
+          commission={commission}
+          onCommissionChange={setCommission}
+          actionLabel="この条件を確認して適用"
+          onConfirm={async (preview, amount) => {
+            const applied = await command({
+              type: "study-settings",
+              settings: preview.settings,
+              commission: amount,
+              unitsPerParticipant,
+              ...(preview.generator ? { generator: preview.generator } : {}),
+              expectedRevision: preview.revision,
+            });
+            if (applied) onApplied();
+            return applied;
+          }}
+          renderAssignments={(preview) => {
+            if (!preview.generator) return null;
+            const seats = seededStudySeats(
+              view.config.capacity,
+              preview.generator.seed,
+            );
+            const rows: StudyGeneratedAssignment[] = teacher.participants.map(
+              (p) => {
+                const seat = seats[p.joinOrder - 1];
+                const role = studyRole(view.config, seat);
+                const index = studyRoleIndex(view.config, seat);
+                return {
+                  participantId: p.id,
+                  nickname: p.nickname,
+                  seat,
+                  market: studyMarketId(view.config, seat),
+                  role,
+                  alias: `${role === "buyer" ? "買" : "売"}${String(index + 1).padStart(2, "0")}`,
+                  sortedUnits: Array.from(
+                    { length: unitsPerParticipant },
+                    (_, unit) => index + 1 + unit * perSide,
+                  ),
+                  limits:
+                    preview.settings[role === "buyer" ? "values" : "costs"][
+                      index
+                    ],
+                };
+              },
+            );
+            return (
+              <details>
+                <summary>
+                  シード {preview.generator.seed} の学生割当を確認（
+                  {rows.length}
+                  人入室済み）
+                </summary>
+                <AssignmentTable rows={rows} />
+                <p className="field-help">
+                  未入室の学生は入室順に残りの位置へ入ります。適用後、全員がそろったら「学生の割り当て」で確定してください。
+                </p>
+              </details>
+            );
+          }}
+        />
+      )}
       {teacher.generation && (
         <div className="study-saved-generation">
           <p className="callout">

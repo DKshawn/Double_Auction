@@ -15,6 +15,7 @@ import {
   studyMarketSize,
   studyInstitutions,
   studyPeriodCount,
+  studyUnits,
 } from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { studyCommission } from "@/lib/study-commission";
@@ -222,6 +223,9 @@ export function StudyWaitingRoom({
                 <li key={institution}>
                   {INSTITUTIONS[institution].short}{" "}
                   {studyPeriodCount(view.config, institution)}期
+                  {institution === "cda" &&
+                    studyUnits(view.config) !== 2 &&
+                    `・1人${studyUnits(view.config)}単位／期`}
                 </li>
               ))}
             </ul>

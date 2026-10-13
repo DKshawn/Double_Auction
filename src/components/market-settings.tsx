@@ -6,13 +6,11 @@ import { LockKeyhole, Save, SlidersHorizontal } from "lucide-react";
 import { GOODS, type GoodId } from "@/lib/catalog";
 import { equilibrium, equilibriumQuantity } from "@/lib/equilibrium";
 import type { Command, MarketSettings, RoomView } from "@/lib/types";
+import { isValidPrice, MAX_PRICE } from "@/lib/price";
 
 type Draft = Record<GoodId, { values: string[]; costs: string[] }>;
 const validPoint = (value: string) =>
-  value.trim() !== "" &&
-  Number.isInteger(Number(value)) &&
-  Number(value) >= 1 &&
-  Number(value) <= 999;
+  value.trim() !== "" && isValidPrice(Number(value));
 
 function readDraft(draft: Draft): MarketSettings | null {
   if (
@@ -126,7 +124,9 @@ function MarketSettingsEditor({
     event.preventDefault();
     if (disabled || stale) return;
     if (!settings) {
-      setError("すべての価値と費用を、1〜999の整数で入力してください。");
+      setError(
+        `すべての価値と費用を、1〜${MAX_PRICE}の整数で入力してください。`,
+      );
       return;
     }
     setError("");
@@ -165,7 +165,7 @@ function MarketSettingsEditor({
                       key={side}
                       type="number"
                       min={1}
-                      max={999}
+                      max={MAX_PRICE}
                       step={1}
                       inputMode="numeric"
                       aria-label={`${good.name} ${side === "values" ? "買い手の価値" : "売り手の費用"} ${index + 1}`}
@@ -274,7 +274,8 @@ export function MarketSettingsPanel({
           各商品に6組の条件を設定します。{view.config.capacity}
           人の実験では、各条件を買い手・売り手にそれぞれ
           {view.config.capacity / 12}
-          人ずつランダムに割り当てます。値は1〜999円の範囲で、整数で設定します。実験開始後は全ラウンドを通して固定されます。
+          人ずつランダムに割り当てます。値は1〜{MAX_PRICE}
+          円の範囲で、整数で設定します。実験開始後は全ラウンドを通して固定されます。
         </p>
         {editing && editable ? (
           <MarketSettingsEditor

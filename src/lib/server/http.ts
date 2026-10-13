@@ -9,8 +9,14 @@ import {
   studyGeneratorConfigSchema,
 } from "../study-generator";
 import { MAX_NICKNAME_LENGTH } from "../participant-config";
-import { MAX_STUDY_ROUNDS, studyMarketSize } from "../study-config";
+import {
+  MAX_STUDY_ROUNDS,
+  MAX_STUDY_UNITS,
+  studyUnits,
+  studyUnitsPerSide,
+} from "../study-config";
 import { studyCommissionSchema } from "../study-commission";
+import { MAX_PRICE } from "../price";
 
 export const NO_STORE = {
   "Cache-Control": "private, no-store, max-age=0",
@@ -146,7 +152,11 @@ export const createRoomSchema = z
         data.config.protocol !== "institutions-v1"
       )
         throw new Error("この供需プリセットは制度比較実験で選択してください。");
-      generatedStudySettings(data.generator, studyMarketSize(data.config));
+      generatedStudySettings(
+        data.generator,
+        studyUnitsPerSide(data.config),
+        studyUnits(data.config),
+      );
     } catch (error) {
       context.addIssue({
         code: "custom",
@@ -191,13 +201,19 @@ export const commandSchema = z
           settings: studySettingsSchema,
           generator: studyGeneratorConfigSchema.optional(),
           commission: studyCommissionSchema.optional(),
+          unitsPerParticipant: z
+            .number()
+            .int()
+            .min(1)
+            .max(MAX_STUDY_UNITS)
+            .optional(),
           expectedRevision: z.number().int().min(0),
         })
         .strict(),
       z
         .object({
           type: z.literal("study-quote"),
-          price: z.number().int().min(1).max(999),
+          price: z.number().int().min(1).max(MAX_PRICE),
         })
         .strict(),
       z.object({ type: z.literal("study-cancel") }).strict(),
@@ -205,13 +221,13 @@ export const commandSchema = z
       z
         .object({
           type: z.literal("call-submit"),
-          prices: z.array(z.number().int().min(1).max(999)).min(1).max(2),
+          prices: z.array(z.number().int().min(1).max(MAX_PRICE)).min(1).max(2),
         })
         .strict(),
       z
         .object({
           type: z.literal("posted-offer"),
-          price: z.number().int().min(1).max(999),
+          price: z.number().int().min(1).max(MAX_PRICE),
           quantity: z.number().int().min(1).max(2),
         })
         .strict(),
@@ -234,7 +250,7 @@ export const commandSchema = z
         .object({
           type: z.literal("quote"),
           good,
-          price: z.number().int().min(1).max(999),
+          price: z.number().int().min(1).max(MAX_PRICE),
         })
         .strict(),
       z.object({ type: z.literal("cancel"), good }).strict(),

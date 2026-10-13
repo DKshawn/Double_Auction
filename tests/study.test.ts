@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { studyRole, studyRoleIndex } from "../src/lib/study-config";
 import { studyTiming, DEFAULT_STUDY_TIMING } from "../src/lib/study-timing";
-import { STUDY_FEEDBACK_SECONDS } from "../src/lib/study-types";
+import {
+  STUDY_FEEDBACK_SECONDS,
+  type StudySettings,
+} from "../src/lib/study-types";
 import { applyPatch, diffViews } from "../src/lib/room-sync";
 import type { Command } from "../src/lib/types";
 import type { AuditEvent, Participant, Room } from "../src/lib/server/model";
@@ -105,6 +108,75 @@ function classroom(
     sellers: room.participants.filter((p) => p.role === "seller"),
   };
 }
+
+for (const institution of ["cda", "call", "posted"] as const)
+  test(`${institution} saves five-digit conditions and trades at 99999, rejecting oversized orders before mutation`, () => {
+    const { room, study, send, buyers, sellers, events } = classroom(
+      1,
+      institution,
+      2,
+    );
+    const settings: StudySettings = {
+      values: [[99999, 99999]],
+      costs: [[60000, 70000]],
+    };
+    send("teacher", {
+      type: "study-settings",
+      expectedRevision: 0,
+      settings,
+    });
+    assert.deepEqual(unitLimits(room, buyers[0]), [99999, 99999]);
+    assert.deepEqual(unitLimits(room, sellers[0]), [60000, 70000]);
+    send("teacher", { type: "start" });
+    const market = study.markets[0];
+    const quote = (price: number): Command =>
+      institution === "cda"
+        ? { type: "study-quote", price }
+        : institution === "call"
+          ? { type: "call-submit", prices: [price, price] }
+          : { type: "posted-offer", price, quantity: 2 };
+    for (const price of [100000, 0, 99999.5]) {
+      assert.throws(() => send(sellers[0], quote(price), 2000), /1〜99999円/);
+      assert.equal(market.orders.length, 0);
+      assert.equal(market.offers.length, 0);
+      assert.equal(market.trades.length, 0);
+      assert.equal(market.submitted.length, 0);
+    }
+    send(sellers[0], quote(99999), 2000);
+    if (institution === "cda") {
+      send(buyers[0], { type: "study-quote", price: 99999 }, 3000);
+      send(sellers[0], { type: "study-quote", price: 99999 }, 4000);
+      send(buyers[0], { type: "study-quote", price: 99999 }, 5000);
+    } else if (institution === "call") {
+      send(buyers[0], { type: "call-submit", prices: [99999, 99999] }, 3000);
+      settleDeadline(room, market.deadline!, events);
+    } else {
+      const at = market.deadline!;
+      settleDeadline(room, at, events);
+      send(
+        buyers[0],
+        { type: "posted-buy", offerId: market.offers[0].id, quantity: 2 },
+        at,
+      );
+    }
+    assert.equal(market.trades.length, 2);
+    assert.deepEqual(
+      market.trades.map((trade) => trade.price),
+      [99999, 99999],
+    );
+    assert.deepEqual(
+      market.trades.map((trade) => trade.value),
+      [99999, 99999],
+    );
+    assert.deepEqual(
+      market.trades.map((trade) => trade.cost),
+      [60000, 70000],
+    );
+    assert.equal(
+      toView(room, sellers[0], market.trades.at(-1)!.at, "local").me.profit,
+      69998,
+    );
+  });
 
 test("custom CDA timing survives pauses, later market starts and the next period", () => {
   const { room, study, send, events } = classroom(2, "cda", 4);
@@ -884,7 +956,7 @@ test("CDA replaced orders stay in history but cannot match, be accepted, or affe
   assert.equal(oldOrder.price, 100);
   assert.throws(
     () => send(buyers[0], { type: "study-quote", price: 0 }, 3500),
-    /1〜999/,
+    /1〜99999/,
   );
   assert.equal(m.orderHistory!.length, 1);
   assert.equal(m.orders[0].price, 80);

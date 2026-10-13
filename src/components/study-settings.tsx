@@ -8,6 +8,7 @@ import {
   studyMarketSize,
   studyInstitutions,
   studyPeriodCount,
+  studyUnits,
 } from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { studyTiming } from "@/lib/study-timing";
@@ -15,6 +16,7 @@ import { studyCommission, studyCommissionError } from "@/lib/study-commission";
 import { StudyPresetGenerator } from "./study-preset-generator";
 import { StudyCommissionField } from "./study-commission-settings";
 import { StudyConditionPreview } from "./study-condition-preview";
+import { isValidPrice, MAX_PRICE } from "@/lib/price";
 
 export function StudySettingsEditor({
   view,
@@ -36,16 +38,22 @@ export function StudySettingsEditor({
   const commission = commissionDraft ?? studyCommission(view.config);
   const valid =
     [...settings.values, ...settings.costs].every((pair) =>
-      pair.every((n) => Number.isInteger(n) && n >= 1 && n <= 999),
+      pair.every(isValidPrice),
     ) &&
-    settings.values.every((p) => p[0] >= p[1]) &&
-    settings.costs.every((p) => p[0] <= p[1]);
+    settings.values.every((p) => p.every((v, i) => i === 0 || v <= p[i - 1])) &&
+    settings.costs.every((p) => p.every((v, i) => i === 0 || v >= p[i - 1]));
   const eq = valid
     ? equilibrium(settings.values.flat(), settings.costs.flat())
     : null;
   const stale = draft && revision !== view.study!.settingsRevision;
   const commissionError = valid
-    ? studyCommissionError(commission, settings)
+    ? studyCommissionError(
+        commission,
+        settings,
+        institutions.some((i) => i !== "cda")
+          ? teacher.otherSettings
+          : undefined,
+      )
     : "";
   function update(
     side: keyof StudySettings,
@@ -63,8 +71,9 @@ export function StudySettingsEditor({
         <div>
           <h2>供需条件の設定</h2>
           <p className="muted">
-            全市場・選択した制度の全{view.config.rounds}
-            期で同じ条件を使います。開始後は変更できません。
+            全市場・全期で条件を固定します。開始後は変更できません。
+            {teacher.otherSettings &&
+              "現在はCDAの条件を表示しています。Call Market・Posted Offerは従来の2単位の条件を保ちます。"}
           </p>
         </div>
         {!draft && (
@@ -84,6 +93,11 @@ export function StudySettingsEditor({
       <StudyCommissionField
         amount={commission}
         settings={valid ? settings : teacher.settings}
+        otherSettings={
+          institutions.some((i) => i !== "cda")
+            ? teacher.otherSettings
+            : undefined
+        }
         onChange={setCommissionDraft}
         disabled={
           disabled || !draft || view.round > 0 || view.phase !== "waiting"
@@ -112,8 +126,12 @@ export function StudySettingsEditor({
                   <thead>
                     <tr>
                       <th>参加者</th>
-                      <th>1単位目</th>
-                      <th>2単位目</th>
+                      {Array.from(
+                        { length: studyUnits(view.config) },
+                        (_, unit) => (
+                          <th key={unit}>{unit + 1}単位目</th>
+                        ),
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -130,7 +148,7 @@ export function StudySettingsEditor({
                                 aria-label={`${side === "values" ? "買" : "売"}${row + 1}・${unit + 1}単位目`}
                                 type="number"
                                 min={1}
-                                max={999}
+                                max={MAX_PRICE}
                                 step={1}
                                 value={n || ""}
                                 onChange={(e) =>
@@ -159,10 +177,20 @@ export function StudySettingsEditor({
       {eq && (
         <StudyConditionPreview settings={settings} commission={commission} />
       )}
+      {teacher.otherSettings && institutions.some((i) => i !== "cda") && (
+        <details className="study-other-conditions">
+          <summary>Call Market・Posted Offerの条件（各自2単位）</summary>
+          <StudyConditionPreview
+            settings={teacher.otherSettings}
+            commission={commission}
+          />
+        </details>
+      )}
       {draft && (
         <>
           <p className="field-help">
-            1〜999円の整数。買い手の2単位目は1単位目以下、売り手の2単位目は1単位目以上にしてください。
+            1〜{MAX_PRICE}
+            円の整数。次の単位の価値は前の単位以下、費用は前の単位以上にしてください。
           </p>
           {!valid && (
             <p className="error-message">値と単位の順序を確認してください。</p>
@@ -217,7 +245,8 @@ export function StudySettingsEditor({
         <ul>
           <li>
             各市場は買い手{marketSize / 2}人・売り手{marketSize / 2}
-            人。全員が毎期2単位まで取引し、役割・価値・費用は固定です。
+            人。毎期CDAは{studyUnits(view.config)}単位、Call Market・Posted
+            Offerは2単位まで取引し、役割・価値・費用は固定です。
             成立1単位につき、買い手・売り手それぞれに
             {studyCommission(view.config)}
             円のCommissionを加算します。損失が出る取引も認めます。

@@ -11,20 +11,23 @@ import {
   stageKey,
   studyProfit,
   unitLimits,
+  settingsForInstitution,
   unitsUsed,
   type StudyMarket,
 } from "./study-core";
 
-export const studyEquilibrium = (room: Room) =>
-  equilibrium(
-    room.study!.settings.values.flat(),
-    room.study!.settings.costs.flat(),
-  );
+export const studyEquilibrium = (
+  room: Room,
+  institution: Institution = "cda",
+) => {
+  const settings = settingsForInstitution(room, institution);
+  return equilibrium(settings.values.flat(), settings.costs.flat());
+};
 export function studyMetrics(room: Room, now: number): StudyMetric[] {
-  const eq = studyEquilibrium(room),
-    benchmark = (eq.low + eq.high) / 2;
   return room.study!.markets.flatMap((m) =>
     m.periods.map((p) => {
+      const eq = studyEquilibrium(room, p.institution),
+        benchmark = (eq.low + eq.high) / 2;
       const trades = m.trades.filter((t) => t.round === p.round),
         n = trades.length;
       const surplus = trades.reduce((sum, t) => sum + t.value - t.cost, 0);
@@ -322,6 +325,7 @@ export function studyView(
     const metrics = studyMetrics(room, now);
     view.study!.teacher = {
       settings: study.settings,
+      ...(study.otherSettings ? { otherSettings: study.otherSettings } : {}),
       ...(study.generation ? { generation: study.generation } : {}),
       markets: study.markets.map((m) =>
         publicMarket(room, m, actor, now, cache),
@@ -340,6 +344,11 @@ export function studyView(
       metrics,
       slopes: convergenceSlopes(metrics),
       equilibrium: studyEquilibrium(room),
+      equilibria: {
+        cda: studyEquilibrium(room, "cda"),
+        call: studyEquilibrium(room, "call"),
+        posted: studyEquilibrium(room, "posted"),
+      },
     };
   }
   return view;

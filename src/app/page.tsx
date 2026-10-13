@@ -39,7 +39,7 @@ export default async function Home({
                 priority
               />
               <div>
-                <p>りんご · 各自2単位／期</p>
+                <p>りんご · 各期の取引量は教員が設定</p>
                 {Object.entries(INSTITUTIONS).map(([id, institution]) => (
                   <div className="study-home-protocol" key={id}>
                     <b>{institution.short}</b>
@@ -77,7 +77,7 @@ export default async function Home({
             [
               "02",
               "価格を提示する",
-              "画面に表示される制度のルールに沿って注文・購入します。同じ商品を毎期2単位まで取引できます。",
+              "画面に表示される制度のルールに沿って注文・購入します。毎期の取引可能数は実験の設定によって決まります。",
             ],
             [
               "03",

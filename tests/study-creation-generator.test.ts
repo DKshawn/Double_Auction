@@ -62,12 +62,10 @@ test("teacher creation keeps details in a dialog and restores an editable custom
       units: 16,
       initialGenerator: generator,
       disabled: false,
-      confirmed: true,
       commission: 0,
       onCommissionChange: () => {},
       onConfirm: () => true,
-      onEdit: () => {},
-      actionLabel: "この条件を確認して採用",
+      actionLabel: "設定を保存して閉じる",
     }),
   );
   assert.match(markup, /カスタム/);
@@ -81,7 +79,12 @@ test("teacher creation keeps details in a dialog and restores an editable custom
     assert.ok(markup.includes(label));
   assert.match(markup, /value="87654321"/);
   assert.match(markup, /カスタムのプレビュー/);
-  assert.match(markup, /<button(?![^>]*disabled)[^>]*>条件を変更<\/button>/);
+  assert.match(
+    markup,
+    /<button(?![^>]*disabled)[^>]*>設定を保存して閉じる<\/button>/,
+  );
+  assert.doesNotMatch(markup, /この条件を確認して採用|条件を変更/);
+  assert.doesNotMatch(markup, /<(?:input|select)[^>]*disabled/);
 });
 
 test("creation request accepts only validated generator parameters and rejects stale size and forged schedules", async () => {

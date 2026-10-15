@@ -37,16 +37,16 @@ export function StudyPresetPicker({
   initialGenerator,
   disabled,
   locked = false,
-  confirmed = false,
-  onEdit,
   actionLabel,
   onConfirm,
   onDraftChange,
   renderAssignments,
   commission,
   onCommissionChange,
-  keepPreview = false,
   settingsPanel,
+  renderUnitFields,
+  validationError = "",
+  confirmDisabled = false,
 }: {
   existingPreset?: { label: string; settings: StudySettings };
   units: number;
@@ -59,8 +59,6 @@ export function StudyPresetPicker({
   initialGenerator?: StudyGeneratorConfig;
   disabled: boolean;
   locked?: boolean;
-  confirmed?: boolean;
-  onEdit?: () => void;
   actionLabel: string;
   onConfirm: (
     preview: StudyPresetPreview,
@@ -70,10 +68,11 @@ export function StudyPresetPicker({
   renderAssignments?: (preview: StudyPresetPreview) => ReactNode;
   commission: number;
   onCommissionChange: (amount: number) => void;
-  keepPreview?: boolean;
+  renderUnitFields?: (disabled: boolean) => ReactNode;
+  validationError?: string;
+  confirmDisabled?: boolean;
   settingsPanel?: {
     heading: ReactNode;
-    footer: ReactNode;
     labelledBy: string;
   };
 }) {
@@ -86,32 +85,12 @@ export function StudyPresetPicker({
   const [seed, setSeed] = useState(
     initialGenerator?.seed ?? DEFAULT_ASSIGNMENT_SEED,
   );
-  const [preview, setPreview] = useState<StudyPresetPreview | null>(() => {
-    if (initialGenerator) {
-      try {
-        return {
-          settings: generatedStudySettings(
-            initialGenerator,
-            units,
-            unitsPerParticipant,
-          ),
-          generator: structuredClone(initialGenerator),
-          revision,
-        };
-      } catch {
-        return null;
-      }
-    }
-    return existingPreset
-      ? { settings: structuredClone(existingPreset.settings), revision }
-      : null;
-  });
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
-  const stale = preview && preview.revision !== revision;
+  const custom = preset === "overlap";
   const perSide = units / unitsPerParticipant;
   const blocked = disabled || confirming;
-  const fieldsBlocked = blocked || confirmed;
+  const fieldsBlocked = blocked;
   const cdaOnly = unitsPerParticipant !== 2 || Boolean(otherSettings);
   function otherConditions(generator?: StudyGeneratorConfig) {
     if (!otherUnits || !generator) return otherSettings;
@@ -125,25 +104,26 @@ export function StudyPresetPicker({
   }
   let candidate: StudySettings | undefined;
   let candidateOther: StudySettings | undefined = otherSettings;
+  let generationError = "";
   let otherError = "";
+  const generator: StudyGeneratorConfig | undefined = custom
+    ? { kind: "overlap-staircase", parameters: { ...parameters }, seed }
+    : undefined;
   try {
-    candidate =
-      preset === "overlap"
-        ? generatedStudySettings(
-            { kind: "overlap-staircase", parameters, seed },
-            units,
-            unitsPerParticipant,
-          )
-        : existingPreset?.settings;
-  } catch {
-    // Invalid parameters are diagnosed by the explicit generation action.
+    if (validationError) throw new Error(validationError);
+    if (!generator && !existingPreset)
+      throw new Error(
+        "Defaultの供需条件を取得できません。画面を再読込してください。",
+      );
+    candidate = generator
+      ? generatedStudySettings(generator, units, unitsPerParticipant)
+      : existingPreset!.settings;
+  } catch (e) {
+    generationError =
+      e instanceof Error ? e.message : "パラメータを確認してください。";
   }
   try {
-    candidateOther = otherConditions(
-      preset === "overlap"
-        ? { kind: "overlap-staircase", parameters, seed }
-        : undefined,
-    );
+    candidateOther = otherConditions(generator);
   } catch (e) {
     otherError =
       e instanceof Error ? e.message : "他制度の供需条件を確認してください。";
@@ -153,39 +133,16 @@ export function StudyPresetPicker({
     candidate,
     candidateOther,
   );
+  // A preview is derived from the current inputs; saving still requires confirmation.
+  const preview: StudyPresetPreview | null =
+    candidate && !generationError && !otherError
+      ? { settings: candidate, generator, revision }
+      : null;
+  const previewError = generationError || otherError || error;
 
   function changed() {
-    setPreview(null);
     setError("");
     onDraftChange?.();
-  }
-
-  function generate() {
-    onDraftChange?.();
-    try {
-      const generator: StudyGeneratorConfig | undefined =
-        preset === "overlap"
-          ? { kind: "overlap-staircase", parameters: { ...parameters }, seed }
-          : undefined;
-      if (!generator && !existingPreset)
-        throw new Error(
-          "Defaultの供需条件を取得できません。画面を再読込してください。",
-        );
-      otherConditions(generator);
-      setPreview({
-        settings: generator
-          ? generatedStudySettings(generator, units, unitsPerParticipant)
-          : structuredClone(existingPreset!.settings),
-        ...(generator ? { generator } : {}),
-        revision,
-      });
-      setError("");
-    } catch (e) {
-      setPreview(null);
-      setError(
-        e instanceof Error ? e.message : "パラメータを確認してください。",
-      );
-    }
   }
 
   const content = (
@@ -196,6 +153,10 @@ export function StudyPresetPicker({
           value={preset}
           disabled={fieldsBlocked}
           onChange={(e) => {
+            if (preset === "existing" && e.target.value === "overlap") {
+              setParameters({ ...DEFAULT_STAIRCASE_PARAMETERS });
+              setSeed(DEFAULT_ASSIGNMENT_SEED);
+            }
             setPreset(e.target.value);
             changed();
           }}
@@ -204,7 +165,18 @@ export function StudyPresetPicker({
           <option value="overlap">カスタム</option>
         </select>
       </label>
-      {preset === "overlap" && (
+      {renderUnitFields?.(fieldsBlocked)}
+      <StudyCommissionField
+        amount={commission}
+        settings={candidate}
+        otherSettings={candidateOther}
+        disabled={fieldsBlocked || locked}
+        onChange={(amount) => {
+          onCommissionChange(amount);
+          changed();
+        }}
+      />
+      {custom && !validationError && (
         <>
           <p className="field-help">
             {cdaOnly && "CDA："}買い手{perSide}人・売り手{perSide}人、各
@@ -263,30 +235,12 @@ export function StudyPresetPicker({
           </p>
         </>
       )}
-      <StudyCommissionField
-        amount={commission}
-        settings={candidate}
-        otherSettings={candidateOther}
-        disabled={fieldsBlocked || locked}
-        onChange={(amount) => {
-          onCommissionChange(amount);
-          onDraftChange?.();
-        }}
-      />
-      <button
-        type="button"
-        className="button secondary"
-        onClick={generate}
-        disabled={fieldsBlocked}
-      >
-        生成してプレビュー
-      </button>
-      {error && (
+      {previewError && (
         <p className="error-message study-generator-error" role="alert">
-          {error}
+          {previewError}
         </p>
       )}
-      {preview && (
+      {custom && preview && (
         <div className="study-generated-preview">
           <h3>
             {cdaOnly && "CDA："}
@@ -319,77 +273,71 @@ export function StudyPresetPicker({
               />
             </details>
           )}
-          {stale && (
-            <p className="error-message" role="alert">
-              条件が更新されました。生成してプレビューし直してください。
-            </p>
-          )}
-          <button
-            type="button"
-            className={`button ${confirmed ? "study-condition-edit" : "primary"}`}
-            disabled={
-              blocked ||
-              locked ||
-              (!confirmed &&
-                (Boolean(stale) ||
-                  Boolean(commissionError) ||
-                  Boolean(otherError)))
-            }
-            onClick={async () => {
-              if (confirmed) {
-                onEdit?.();
-                return;
-              }
-              setConfirming(true);
-              try {
-                if (
-                  await onConfirm(
-                    { ...preview, otherSettings: candidateOther },
-                    commission,
-                  )
-                ) {
-                  if (!keepPreview) setPreview(null);
-                  setError("");
-                }
-              } catch (e) {
-                setError(
-                  e instanceof Error
-                    ? e.message
-                    : "条件を保存できませんでした。",
-                );
-              } finally {
-                setConfirming(false);
-              }
-            }}
-          >
-            {confirmed ? "条件を変更" : actionLabel}
-          </button>
         </div>
       )}
+      <div className="study-actions">
+        <button
+          type="button"
+          className="button primary"
+          disabled={
+            blocked ||
+            locked ||
+            confirmDisabled ||
+            !preview ||
+            Boolean(commissionError)
+          }
+          onClick={async () => {
+            if (!preview) return;
+            setConfirming(true);
+            try {
+              if (
+                await onConfirm(
+                  { ...preview, otherSettings: candidateOther },
+                  commission,
+                )
+              ) {
+                setError("");
+              }
+            } catch (e) {
+              setError(
+                e instanceof Error ? e.message : "条件を保存できませんでした。",
+              );
+            } finally {
+              setConfirming(false);
+            }
+          }}
+        >
+          {actionLabel}
+        </button>
+      </div>
     </>
   );
   return settingsPanel ? (
-    <div className="study-preset-picker study-preset-with-units">
+    <div
+      className={`study-preset-picker${custom ? " study-preset-with-units" : ""}`}
+    >
       <section
         className="panel teacher-condition-settings study-preset-settings"
         aria-labelledby={settingsPanel.labelledBy}
       >
         {settingsPanel.heading}
         {content}
-        {settingsPanel.footer}
       </section>
-      <section className="panel teacher-units-panel" aria-label="全単位の数値">
-        {preview ? (
-          <StudyUnitValues settings={preview.settings} fixedHeading />
-        ) : (
-          <>
-            <h2>全単位の数値</h2>
-            <p className="field-help">
-              「生成してプレビュー」を押すと、全単位の価値・費用を表示します。
-            </p>
-          </>
-        )}
-      </section>
+      {custom && (
+        <section
+          className="panel teacher-units-panel"
+          aria-label="全単位の数値"
+        >
+          {preview ? (
+            <StudyUnitValues settings={preview.settings} fixedHeading />
+          ) : (
+            <>
+              <h2>全単位の数値</h2>
+              <p className="field-help">有効な供需条件を設定してください。</p>
+            </>
+          )}
+        </section>
+      )}
     </div>
   ) : (
     <div className="study-preset-picker">{content}</div>

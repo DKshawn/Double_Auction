@@ -15,7 +15,7 @@ import {
 import { pptStudySettings } from "../src/lib/server/study";
 import { DemoSession } from "../src/lib/demo";
 import { StudyConditionPreview } from "../src/components/study-condition-preview";
-import { TeacherForm } from "../src/components/teacher-form";
+import { StudyPresetPicker } from "../src/components/study-preset-picker";
 import { localDatabase, migrate } from "../src/lib/server/database";
 import { AuctionService } from "../src/lib/server/service";
 import { commandSchema } from "../src/lib/server/http";
@@ -155,12 +155,20 @@ test("the rewarded equilibrium updates independently of the original theoretical
   assert.match(markup, /288 円/);
 });
 
-test("creation renders the safe default, current upper bound and both equilibria in the supply settings", () => {
+test("the default picker keeps one bounded commission input and hides custom details", () => {
   const markup = renderToStaticMarkup(
-    createElement(TeacherForm, {
-      status: { mode: "local", ready: true, keyRequired: false },
-      initialConfig: { ...config, studyCommission: 1 },
-      conditionPreset: { label: "Default", settings: pptStudySettings() },
+    createElement(StudyPresetPicker, {
+      units: 16,
+      disabled: false,
+      commission: 1,
+      onCommissionChange: () => {},
+      onConfirm: () => true,
+      actionLabel: "設定を保存して閉じる",
+      existingPreset: { label: "Default", settings: pptStudySettings() },
+      settingsPanel: {
+        heading: "供需プリセット",
+        labelledBy: "condition-heading",
+      },
     }),
   );
   const input =
@@ -169,8 +177,13 @@ test("creation renders the safe default, current upper bound and both equilibria
   assert.match(input, /value="1"/);
   assert.match(markup, /Default/);
   assert.doesNotMatch(markup, /既存 PPT プリセット/);
-  assert.match(markup, /10〜11 単位/);
-  assert.match(markup, /Commission込み（各1円／単位）/);
+  assert.equal((markup.match(/name="studyCommission"/g) ?? []).length, 1);
+  assert.doesNotMatch(markup, /study-generated-preview|teacher-units-panel/);
+  assert.doesNotMatch(markup, /均衡価格 p|割当シード/);
+  assert.match(
+    markup,
+    /<button(?![^>]*disabled)[^>]*>設定を保存して閉じる<\/button>/,
+  );
 });
 
 test("the demo rejects an unsafe initial reward and saves new conditions with commission atomically", async () => {

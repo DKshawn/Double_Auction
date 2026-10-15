@@ -36,7 +36,7 @@ function config(institutions: Institution[]): RoomConfig {
 test("demo starts at the shared teacher settings form and restores the last experiment settings", () => {
   const entry = renderToStaticMarkup(createElement(DemoEntry));
   assert.match(entry, /教員の実験設定/);
-  assert.match(entry, /デモルームを作成/);
+  assert.match(entry, /ルーム作成/);
   assert.doesNotMatch(entry, /人数を決めずに入室/);
   assert.match(entry, /作成前に詳細を設定/);
   assert.doesNotMatch(entry, /ランダムに割り当て<\/button>/);
@@ -225,7 +225,8 @@ test("configured multi-market demo fills the chosen seats, balances selected ord
       demo: true,
     }),
   );
-  assert.match(markup, /供需条件・Commissionを変更/);
+  assert.doesNotMatch(markup, /供需条件・Commissionを変更/);
+  assert.equal((markup.match(/name="studyCommission"/g) ?? []).length, 1);
   assert.equal(
     await demo.command({ type: "study-randomize", expectedRevision: 0 }),
     true,

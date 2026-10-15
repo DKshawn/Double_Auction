@@ -125,7 +125,7 @@ export function StudyAdmission({
       <div className="study-admission-controls">
         {section !== "deadline" && (
           <label className="field">
-            希望する市場数
+            市場数
             <input
               type="number"
               min={1}

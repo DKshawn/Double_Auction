@@ -31,12 +31,32 @@ test("pre-creation settings use a separate dialog with save and close", async ({
   await expect(dialog.getByLabel("CDAの期数", { exact: true })).toBeHidden();
   await expect(
     dialog.locator('.study-setup-step-toggle[aria-expanded="true"]'),
-  ).toContainText("市場・単位数");
+  ).toContainText("市場・人数");
+  await expect(
+    dialog.getByLabel("CDAの1人あたりの単位数", { exact: true }),
+  ).toBeHidden();
   await next.click();
+  const preset = dialog.getByRole("region", {
+    name: "供需プリセット",
+    exact: true,
+  });
+  const units = preset.getByLabel("CDAの1人あたりの単位数", { exact: true });
+  await expect(units).toBeVisible();
   const save = dialog.getByRole("button", {
     name: "設定を保存して閉じる",
     exact: true,
   });
+  await expect(save).toHaveCount(1);
+  await expect(
+    dialog.getByRole("button", { name: "この条件を確認して採用", exact: true }),
+  ).toHaveCount(0);
+  await units.fill("");
+  await expect(units).toBeVisible();
+  await expect(save).toBeDisabled();
+  await units.fill("2");
+  await dialog
+    .getByLabel("Commission（円／1単位・1人）", { exact: true })
+    .fill("2");
   await save.click();
   await expect(dialog).toBeHidden();
   await expect(
@@ -54,32 +74,145 @@ test("pre-creation settings use a separate dialog with save and close", async ({
   );
   await next.click();
   await next.click();
+  await expect(
+    dialog.getByLabel("Commission（円／1単位・1人）", { exact: true }),
+  ).toHaveValue("2");
+  await expect(dialog.locator(".study-generated-preview")).toHaveCount(0);
+  await expect(dialog.locator(".teacher-units-panel")).toHaveCount(0);
   await dialog
     .getByRole("combobox", { name: "供需プリセット", exact: true })
     .selectOption("overlap");
+  const preview = dialog.locator(".study-condition-summary");
+  await expect(preview).toContainText("80 円");
+  await dialog.getByLabel("均衡価格 p（円）", { exact: true }).fill("90");
+  await expect(preview).toContainText("90 円");
+  await dialog.getByLabel("正の余剰の単位数 K", { exact: true }).fill("7");
+  await dialog.getByLabel("横向き重なりの長さ L", { exact: true }).fill("3");
+  await dialog.getByLabel("階段の価格差 d（円）", { exact: true }).fill("6");
+  await dialog.getByLabel("割当シード", { exact: true }).fill("42");
   await dialog
-    .getByRole("button", { name: "生成してプレビュー", exact: true })
-    .click();
+    .getByRole("combobox", { name: "供需プリセット", exact: true })
+    .selectOption("existing");
+  await expect(preview).toHaveCount(0);
+  await expect(dialog.locator(".teacher-units-panel")).toHaveCount(0);
   await dialog
-    .getByRole("button", { name: "この条件を確認して採用", exact: true })
-    .click();
+    .getByRole("combobox", { name: "供需プリセット", exact: true })
+    .selectOption("overlap");
   await expect(
-    dialog.getByRole("button", { name: /供需条件.*変更/ }),
-  ).toHaveAttribute("aria-expanded", "false");
+    dialog.getByLabel("均衡価格 p（円）", { exact: true }),
+  ).toHaveValue("80");
   await expect(
-    dialog.getByRole("heading", { name: "カスタムのプレビュー", exact: true }),
-  ).toBeHidden();
-  await expect(save).toBeVisible();
+    dialog.getByLabel("正の余剰の単位数 K", { exact: true }),
+  ).toHaveValue("8");
+  await expect(
+    dialog.getByLabel("横向き重なりの長さ L", { exact: true }),
+  ).toHaveValue("4");
+  await expect(
+    dialog.getByLabel("階段の価格差 d（円）", { exact: true }),
+  ).toHaveValue("4");
+  await expect(dialog.getByLabel("割当シード", { exact: true })).toHaveValue(
+    "123456",
+  );
+  await expect(preview).toContainText("80 円");
+  await dialog.getByLabel("均衡価格 p（円）", { exact: true }).fill("95");
+  await dialog.getByLabel("正の余剰の単位数 K", { exact: true }).fill("20");
+  await expect(dialog.getByRole("alert")).toContainText("K＋L");
+  await expect(preview).toHaveCount(0);
+  await expect(save).toBeDisabled();
+  await dialog.getByLabel("正の余剰の単位数 K", { exact: true }).fill("8");
+  await expect(preview).toContainText("95 円");
+  await dialog
+    .getByLabel("Commission（円／1単位・1人）", { exact: true })
+    .fill("3");
   await expect(save).toBeEnabled();
   await save.click();
+  await expect(dialog).toBeHidden();
   await open.click();
   await dialog.getByRole("button", { name: /供需条件.*変更/ }).click();
   await expect(
     dialog.getByRole("heading", { name: "カスタムのプレビュー", exact: true }),
   ).toBeVisible();
   await expect(
-    dialog.getByRole("button", { name: "条件を変更", exact: true }),
+    dialog.getByLabel("均衡価格 p（円）", { exact: true }),
+  ).toHaveValue("95");
+  await expect(
+    dialog.getByLabel("均衡価格 p（円）", { exact: true }),
   ).toBeEnabled();
+  await expect(
+    dialog.getByLabel("Commission（円／1単位・1人）", { exact: true }),
+  ).toHaveValue("3");
+  await expect(save).toHaveCount(1);
+  await dialog.getByLabel("均衡価格 p（円）", { exact: true }).fill("99");
+  await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
+  await open.click();
+  await dialog.getByRole("button", { name: /供需条件.*変更/ }).click();
+  await expect(
+    dialog.getByLabel("均衡価格 p（円）", { exact: true }),
+  ).toHaveValue("95");
+});
+
+test("Custom keeps its candidate and manual parameters without automatically changing prices", async ({
+  page,
+}) => {
+  await page.goto("/teacher");
+  const open = page.getByRole("button", {
+    name: "作成前に詳細を設定",
+    exact: true,
+  });
+  await open.click();
+  const dialog = page.getByRole("dialog", {
+    name: "実験の詳細設定",
+    exact: true,
+  });
+  const next = dialog.getByRole("button", {
+    name: "確定して次へ",
+    exact: true,
+  });
+  await next.click();
+  await dialog
+    .getByRole("combobox", { name: "市場数・人数", exact: true })
+    .selectOption("custom");
+  await dialog
+    .getByRole("spinbutton", { name: "人数", exact: true })
+    .fill("100");
+  await next.click();
+  const preset = dialog.getByRole("combobox", {
+    name: "供需プリセット",
+    exact: true,
+  });
+  const price = dialog.getByLabel("均衡価格 p（円）", { exact: true });
+  const units = dialog.getByLabel("CDAの1人あたりの単位数", { exact: true });
+  const save = dialog.getByRole("button", {
+    name: "設定を保存して閉じる",
+    exact: true,
+  });
+  await expect(save).toBeEnabled();
+  await preset.selectOption("overlap");
+  await expect(price).toHaveValue("80");
+  await expect(dialog.getByRole("alert")).toContainText("D(32)＝0円");
+  await expect(save).toBeDisabled();
+  await units.fill("3");
+  await expect(price).toHaveValue("80");
+  await expect(save).toBeDisabled();
+  await price.fill("600");
+  await units.fill("4");
+  await expect(price).toHaveValue("600");
+  await expect(dialog.getByRole("alert")).toContainText(
+    "下限1円を下回っています",
+  );
+  await expect(save).toBeDisabled();
+  await price.fill("800");
+  await save.click();
+  await expect(dialog).toBeHidden();
+  await open.click();
+  await dialog.getByRole("button", { name: /供需条件.*変更/ }).click();
+  await expect(price).toHaveValue("800");
+  await expect(units).toHaveValue("4");
+  await preset.selectOption("existing");
+  await expect(dialog.locator(".study-generated-preview")).toHaveCount(0);
+  await preset.selectOption("overlap");
+  await expect(price).toHaveValue("80");
+  await expect(save).toBeDisabled();
 });
 
 test("demo carries saved dialog settings into the same compact room controls", async ({
@@ -123,13 +256,49 @@ test("demo carries saved dialog settings into the same compact room controls", a
   await dialog
     .getByRole("button", { name: "設定を保存して閉じる", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "デモルームを作成", exact: true })
-    .click();
+  await page.getByRole("button", { name: "ルーム作成", exact: true }).click();
   const setup = page.getByRole("region", { name: "実験の準備", exact: true });
   await expect(
     setup.locator('.study-setup-step-toggle[aria-expanded="true"]'),
   ).toContainText("入室締切");
+  await setup.getByRole("button", { name: /市場・取引条件.*変更/ }).click();
+  const preset = setup.getByRole("region", {
+    name: "供需プリセット",
+    exact: true,
+  });
+  await expect(
+    preset.getByRole("combobox", { name: "供需プリセット", exact: true }),
+  ).toHaveValue("existing");
+  await expect(
+    preset.getByRole("button", { name: "この条件を確認して適用", exact: true }),
+  ).toHaveCount(0);
+  const saveConditions = preset.getByRole("button", {
+    name: "確定して次へ",
+    exact: true,
+  });
+  await expect(saveConditions).toHaveCount(1);
+  await preset.getByLabel("CDAの1人あたりの単位数", { exact: true }).fill("");
+  await expect(saveConditions).toBeDisabled();
+  await preset.getByLabel("CDAの1人あたりの単位数", { exact: true }).fill("3");
+  await preset
+    .getByLabel("Commission（円／1単位・1人）", { exact: true })
+    .fill("999");
+  await expect(saveConditions).toBeDisabled();
+  await preset
+    .getByLabel("Commission（円／1単位・1人）", { exact: true })
+    .fill("2");
+  await saveConditions.click();
+  await expect(
+    setup.locator('.study-setup-step-toggle[aria-expanded="true"]'),
+  ).toContainText("入室締切");
+  await setup.getByRole("button", { name: /市場・取引条件.*変更/ }).click();
+  await expect(
+    preset.getByLabel("CDAの1人あたりの単位数", { exact: true }),
+  ).toHaveValue("3");
+  await expect(
+    preset.getByLabel("Commission（円／1単位・1人）", { exact: true }),
+  ).toHaveValue("2");
+  await saveConditions.click();
   await expect(
     page.getByRole("region", { name: /^学生の割り当て/ }),
   ).toBeVisible();
@@ -169,9 +338,7 @@ test("shared preparation flow validates, advances, closes admission and preserve
   page,
 }) => {
   await page.goto("/demo");
-  await page
-    .getByRole("button", { name: "デモルームを作成", exact: true })
-    .click();
+  await page.getByRole("button", { name: "ルーム作成", exact: true }).click();
   const expanded = page.locator(
     '.study-setup-step-toggle[aria-expanded="true"]',
   );
@@ -187,10 +354,59 @@ test("shared preparation flow validates, advances, closes admission and preserve
   await next.click();
   await expect(expanded).toHaveCount(1);
   await expect(expanded).toContainText("市場・取引条件");
-  await page.getByLabel("希望する市場数", { exact: true }).fill("3");
+  await page.getByLabel("市場数", { exact: true }).fill("3");
   await expect(page.locator(".study-roster-room")).toHaveCount(3);
+  await expect(page.locator(".study-generated-preview")).toHaveCount(0);
+  await expect(
+    page.getByLabel("Commission（円／1単位・1人）", { exact: true }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("button", {
+      name: "供需条件・Commissionを変更",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("combobox", { name: "供需プリセット", exact: true })
+    .selectOption("overlap");
+  await page.getByLabel("均衡価格 p（円）", { exact: true }).fill("95");
+  const cdaUnits = page.getByLabel("CDAの1人あたりの単位数", { exact: true });
+  await cdaUnits.fill("");
+  await expect(page.locator(".study-condition-summary")).toBeHidden();
+  await expect(next).toBeDisabled();
+  await cdaUnits.fill("3");
+  await expect(
+    page.getByLabel("均衡価格 p（円）", { exact: true }),
+  ).toHaveValue("95");
+  await expect(page.locator(".study-condition-summary").first()).toContainText(
+    "95 円",
+  );
+  await expect(
+    page.getByRole("table", {
+      name: "全単位の数値（片側24単位）",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Commission（円／1単位・1人）", { exact: true })
+    .fill("2");
+  await page.getByLabel("正の余剰の単位数 K", { exact: true }).fill("99");
+  await expect(next).toBeDisabled();
+  await page.getByLabel("正の余剰の単位数 K", { exact: true }).fill("8");
+  await expect(
+    page.getByRole("button", { name: "この条件を確認して適用", exact: true }),
+  ).toHaveCount(0);
   await next.click();
   await expect(expanded).toContainText("入室締切");
+  await page.getByRole("button", { name: /市場・取引条件.*変更/ }).click();
+  await expect(
+    page.getByLabel("均衡価格 p（円）", { exact: true }),
+  ).toHaveValue("95");
+  await expect(cdaUnits).toHaveValue("3");
+  await expect(
+    page.getByLabel("Commission（円／1単位・1人）", { exact: true }),
+  ).toHaveValue("2");
+  await next.click();
   await page.getByLabel("入室受付時間（秒）", { exact: true }).fill("5");
   await page
     .getByRole("button", { name: "締切タイマーを開始", exact: true })

@@ -42,7 +42,10 @@ import type {
 import { TeacherRooms } from "./teacher-rooms";
 import type { RoomConfig } from "@/lib/types";
 import { studyRoomConfigSchema } from "@/lib/study-room-config";
-import { StudyPresetPicker } from "./study-preset-picker";
+import {
+  StudyPresetPicker,
+  type StudyPresetPreview,
+} from "./study-preset-picker";
 import { generatedStudySettings } from "@/lib/study-generator";
 import { StudyUnitFields } from "./study-unit-settings";
 import { teacherRoomHref } from "@/lib/room-navigation";
@@ -80,14 +83,12 @@ export function TeacherForm({
           ? "ダブルオークション実験"
           : "実験1：市場制度の比較"),
   );
-  const [conditionsConfirmed, setConditionsConfirmed] = useState(false);
   const [configureFirst, setConfigureFirst] = useState(false);
   const [detailsSaved, setDetailsSaved] = useState(
     initialConfig?.studySetupConfirmed === true,
   );
   const [configurationStep, setConfigurationStep] = useState(0);
   const [configurationProgress, setConfigurationProgress] = useState(0);
-  const [conditionsCollapsed, setConditionsCollapsed] = useState(false);
   const configurationId = useId();
   useEffect(() => {
     if (configureFirst) {
@@ -95,7 +96,7 @@ export function TeacherForm({
         .getElementById(`${configurationId}-heading-${configurationStep}`)
         ?.focus({ preventScroll: true });
     }
-  }, [configureFirst, configurationId, configurationStep, conditionsCollapsed]);
+  }, [configureFirst, configurationId, configurationStep]);
   const settingsDisabled = pending;
   const [preset, setPreset] = useState(() =>
     !initialConfig
@@ -182,7 +183,6 @@ export function TeacherForm({
       institutions,
       periods,
       adoptedConditions,
-      conditionsConfirmed,
     };
   }
   const savedConfiguration = useRef<ReturnType<
@@ -192,7 +192,6 @@ export function TeacherForm({
     savedConfiguration.current = structuredClone(configurationSnapshot());
     setError("");
     setConfigurationStep(0);
-    setConditionsCollapsed(false);
     setConfigurationProgress(detailsSaved ? 2 : 0);
     setConfigureFirst(true);
   }
@@ -208,7 +207,6 @@ export function TeacherForm({
       setInstitutions(saved.institutions);
       setPeriods(saved.periods);
       setAdoptedConditions(saved.adoptedConditions);
-      setConditionsConfirmed(saved.conditionsConfirmed);
     }
     savedConfiguration.current = null;
     setError("");
@@ -255,23 +253,42 @@ export function TeacherForm({
     commissionError;
   const stepError = [
     institutionError || periodsError || timingError,
-    layoutError || unitsError,
+    layoutError,
     configurationError,
   ][configurationStep];
   function nextConfigurationStep() {
     if (stepError) return;
     const next = Math.min(2, configurationStep + 1);
-    if (next === 2) setConditionsCollapsed(false);
     setConfigurationProgress((previous) => Math.max(previous, next));
     setConfigurationStep(next);
     setError("");
   }
-  function saveConfiguration() {
-    if (configurationError || conditionsPending) return;
+  function saveConfiguration(preview: StudyPresetPreview, amount: number) {
+    const invalid =
+      (!title.trim() ? "実験名を入力してください。" : "") ||
+      layoutError ||
+      unitsError ||
+      institutionError ||
+      periodsError ||
+      timingError ||
+      studyCommissionError(amount, preview.settings, preview.otherSettings);
+    if (invalid) {
+      setError(invalid);
+      return false;
+    }
+    setAdoptedConditions({
+      marketSize: size,
+      units,
+      generator: preview.generator,
+      settings: preview.settings,
+      otherSettings: preview.otherSettings,
+    });
+    setCommission(amount);
     savedConfiguration.current = null;
     setDetailsSaved(true);
     setError("");
     setConfigureFirst(false);
+    return true;
   }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -361,97 +378,63 @@ export function TeacherForm({
   const conditionHeading = (
     <h2 id="teacher-condition-heading">供需プリセット</h2>
   );
-  const conditionFooter = conditionsPending ? null : (
-    <p className="callout teacher-adopted-conditions" role="status">
-      作成時の条件：
-      {adoptedConditions?.generator
-        ? `カスタム ／ p=${adoptedConditions.generator.parameters.p}・K=${adoptedConditions.generator.parameters.K}・L=${adoptedConditions.generator.parameters.L}・d=${adoptedConditions.generator.parameters.d} ／ シード ${adoptedConditions.generator.seed}`
-        : `${conditionPreset?.label ?? "Default"}（既定）`}
-      ／ Commission 各{commission}円・1単位
-    </p>
-  );
   const conditionSection = (
     <div className="teacher-condition-layout">
-      {!layoutError && !unitsError ? (
-        <StudyPresetPicker
-          key={`${size}-${units}`}
-          existingPreset={
-            conditionPreset
-              ? {
-                  label: conditionPreset.label,
-                  settings: resizeStudySettings(
-                    conditionPreset.settings,
-                    size,
-                    units,
-                  ),
-                }
-              : undefined
-          }
-          units={(size / 2) * units}
-          unitsPerParticipant={units}
-          otherSettings={otherSettings}
-          otherUnits={
-            units !== 2 && institutions.some((i) => i !== "cda")
-              ? size
-              : undefined
-          }
-          initialGenerator={adoptedConditions?.generator}
-          disabled={pending}
-          confirmed={conditionsConfirmed}
-          onEdit={() => {
-            setConditionsConfirmed(false);
-            setAdoptedConditions(null);
-            setError("");
-          }}
-          commission={commission}
-          onCommissionChange={setCommission}
-          keepPreview
-          settingsPanel={{
-            heading: conditionHeading,
-            footer: conditionFooter,
-            labelledBy: "teacher-condition-heading",
-          }}
-          actionLabel="この条件を確認して採用"
-          onDraftChange={() => setAdoptedConditions(null)}
-          onConfirm={(preview) => {
-            const invalid =
-              (!title.trim() ? "実験名を入力してください。" : "") ||
-              layoutError ||
-              unitsError ||
-              institutionError ||
-              periodsError ||
-              timingError;
-            if (invalid) {
-              setError(invalid);
-              return false;
-            }
-            setAdoptedConditions({
-              marketSize: size,
-              units,
-              generator: preview.generator,
-              settings: preview.settings,
-              otherSettings: preview.otherSettings,
-            });
-            setConditionsConfirmed(true);
-            setConditionsCollapsed(true);
-            setError("");
-            return true;
-          }}
-        />
-      ) : (
-        <section
-          className="panel teacher-condition-settings"
-          aria-labelledby="teacher-condition-heading"
-        >
-          {conditionHeading}
-          {unitsError && (
-            <p className="error-message" role="alert">
-              {unitsError}
-            </p>
-          )}
-          {conditionFooter}
-        </section>
-      )}
+      <StudyPresetPicker
+        existingPreset={
+          conditionPreset && !layoutError && !unitsError
+            ? {
+                label: conditionPreset.label,
+                settings: resizeStudySettings(
+                  conditionPreset.settings,
+                  size,
+                  units,
+                ),
+              }
+            : undefined
+        }
+        units={(size / 2) * units}
+        unitsPerParticipant={units}
+        otherSettings={otherSettings}
+        otherUnits={
+          units !== 2 && institutions.some((i) => i !== "cda")
+            ? size
+            : undefined
+        }
+        initialGenerator={adoptedConditions?.generator}
+        disabled={pending}
+        validationError={
+          layoutError ||
+          unitsError ||
+          institutionError ||
+          periodsError ||
+          timingError
+        }
+        renderUnitFields={(fieldsDisabled) => (
+          <StudyUnitFields
+            cdaUnits={cdaUnits}
+            onChange={(value) => {
+              setCdaUnits(value);
+              setAdoptedConditions(null);
+              setError("");
+            }}
+            disabled={fieldsDisabled}
+            institutions={institutions}
+          />
+        )}
+        commission={commission}
+        onCommissionChange={setCommission}
+        settingsPanel={{
+          heading: conditionHeading,
+          labelledBy: "teacher-condition-heading",
+        }}
+        actionLabel="設定を保存して閉じる"
+        onDraftChange={() => {
+          setAdoptedConditions(null);
+          setError("");
+        }}
+        onConfirm={saveConfiguration}
+      />
     </div>
   );
   const configurationActions = (
@@ -470,16 +453,10 @@ export function TeacherForm({
         <button
           type="button"
           className="button primary"
-          disabled={
-            pending ||
-            Boolean(stepError) ||
-            (configurationStep === 2 && conditionsPending)
-          }
-          onClick={
-            configurationStep < 2 ? nextConfigurationStep : saveConfiguration
-          }
+          disabled={pending || Boolean(stepError)}
+          onClick={nextConfigurationStep}
         >
-          {configurationStep < 2 ? "確定して次へ" : "設定を保存して閉じる"}
+          確定して次へ
         </button>
       </div>
     </div>
@@ -696,11 +673,7 @@ export function TeacherForm({
                 <Spinner />
               ) : (
                 <>
-                  {onCreateDemo
-                    ? "デモルームを作成"
-                    : tab === "create"
-                      ? "ルーム作成"
-                      : "管理画面に入る"}
+                  {tab === "create" ? "ルーム作成" : "管理画面に入る"}
                   {tab !== "create" && <ArrowRight size={17} />}
                 </>
               )}
@@ -763,15 +736,15 @@ export function TeacherForm({
             <StudySetupStep
               id={configurationId}
               index={1}
-              label="市場・単位数"
-              summary={`${count}市場 · ${institutions.map((i) => `${INSTITUTIONS[i].short} ${i === "cda" ? units : 2}単位`).join(" · ")}`}
+              label="市場・人数"
+              summary={`${count}市場 · ${size}人／市場`}
               expanded={configurationStep === 1}
               complete={configurationProgress > 1}
               disabled={pending || configurationProgress < 1}
               onOpen={() => setConfigurationStep(1)}
             >
               <label className="field">
-                市場数・条件テンプレートの人数
+                市場数・人数
                 <select
                   name="marketPreset"
                   value={preset}
@@ -793,7 +766,7 @@ export function TeacherForm({
               {preset === "custom" && (
                 <div className="form-grid">
                   <label className="field">
-                    条件テンプレートの人数
+                    人数
                     <input
                       type="number"
                       name="marketSize"
@@ -837,17 +810,6 @@ export function TeacherForm({
                   {layoutError}
                 </p>
               )}
-              <StudyUnitFields
-                cdaUnits={cdaUnits}
-                onChange={setCdaUnits}
-                disabled={settingsDisabled}
-                institutions={institutions}
-              />
-              {unitsError && (
-                <p className="error-message" role="alert">
-                  {unitsError}
-                </p>
-              )}
               {preset === "custom" && (
                 <p className="field-help">
                   条件テンプレートは偶数人数で設定します。実際の参加者は最大
@@ -867,28 +829,20 @@ export function TeacherForm({
               id={configurationId}
               index={2}
               label="供需条件"
-              summary={`${adoptedConditions?.generator ? "カスタム" : (conditionPreset?.label ?? "Default")} · Commission ${commission}円`}
-              expanded={configurationStep === 2 && !conditionsCollapsed}
+              summary={`${adoptedConditions?.generator ? "カスタム" : (conditionPreset?.label ?? "Default")} · ${institutions.map((i) => `${INSTITUTIONS[i].short} ${i === "cda" ? units : 2}単位`).join(" · ")} · Commission ${commission}円`}
+              expanded={configurationStep === 2}
               complete={
-                (detailsSaved || conditionsConfirmed) &&
-                !configurationError &&
-                !conditionsPending
+                detailsSaved && !configurationError && !conditionsPending
               }
               disabled={pending || configurationProgress < 2}
-              onOpen={() => {
-                setConfigurationStep(2);
-                setConditionsCollapsed(false);
-              }}
-              footer={
-                configurationStep === 2 && conditionsCollapsed
-                  ? configurationActions
-                  : undefined
-              }
+              onOpen={() => setConfigurationStep(2)}
             >
               {conditionSection}
-              {configurationStep === 2 &&
-                !conditionsCollapsed &&
-                configurationActions}
+              {configurationStep === 2 && error && (
+                <p className="error-message" role="alert">
+                  {error}
+                </p>
+              )}
             </StudySetupStep>
           </div>
         </StudyDetailDialog>

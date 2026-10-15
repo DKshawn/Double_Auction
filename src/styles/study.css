@@ -183,11 +183,16 @@
   margin-bottom: 14px;
   width: 100%;
   max-width: 640px;
-  height: 560px;
-  max-height: 70dvh;
+  /* Reserve room for eight collapsed market-card rows and the heading. */
+  height: 860px;
   min-height: 300px;
   display: flex;
   flex-direction: column;
+}
+@media (max-width: 1200px) {
+  .study-roster {
+    max-height: 70dvh;
+  }
 }
 .study-roster-heading {
   display: flex;
@@ -1064,10 +1069,6 @@
   border-radius: 12px;
   background: #faf9ff;
 }
-.study-generator > summary {
-  font-weight: 700;
-  font-size: 14px;
-}
 .study-preset-picker > .field,
 .study-preset-settings > .field {
   margin: 16px 0;
@@ -1094,9 +1095,6 @@
 }
 .teacher-form-card .teacher-create-layout > .teacher-form-actions {
   width: 100%;
-}
-.study-setup-condition-preview {
-  margin-block: 16px;
 }
 .teacher-form-card .teacher-settings-section,
 .teacher-form-card .teacher-condition-settings {
@@ -1299,9 +1297,6 @@
 .teacher-units-panel {
   min-width: 0;
 }
-.study-preset-settings {
-  container: preview-settings / inline-size;
-}
 .study-condition-edit {
   background: var(--red);
   color: #fff;
@@ -1315,14 +1310,6 @@
   background: #f7f7fb;
   color: var(--muted);
   cursor: not-allowed;
-}
-.study-preset-settings .study-condition-summary {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-@container preview-settings (min-width: 480px) {
-  .study-preset-settings .study-condition-summary {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 .teacher-units-panel {
   padding: 22px;
@@ -1419,16 +1406,24 @@
   grid-template-columns: minmax(0, 1fr);
 }
 .study-generated-preview {
-  margin-top: 24px;
+  margin-top: 16px;
+}
+.study-condition-preview {
+  container: condition-preview / inline-size;
+}
+.study-condition-plot {
+  min-width: 0;
+  container: condition-plot / inline-size;
 }
 .study-condition-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  margin: 16px 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 12px;
 }
 .study-condition-summary > div {
-  padding: 12px;
+  min-width: 0;
+  padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
@@ -1436,21 +1431,30 @@
 .study-condition-summary dt {
   color: var(--muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 .study-condition-summary dd {
-  margin: 6px 0 0;
+  margin: 2px 0 0;
   color: var(--accent);
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
 }
 .study-condition-preview-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
-  align-items: start;
-  gap: 20px;
-}
-.study-condition-preview-grid.study-chart-only {
   grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  margin-top: 12px;
+}
+@container condition-preview (min-width: 620px) {
+  .study-condition-preview-grid:not(.study-chart-only) {
+    grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  }
+}
+@container condition-plot (min-width: 400px) {
+  .study-condition-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .study-condition-preview table,
 .study-unit-preview table {
@@ -1593,11 +1597,6 @@
 }
 .study-saved-generation {
   margin-top: 16px;
-}
-@media (max-width: 900px) {
-  .study-condition-preview-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 .study-home-product {
   display: flex;

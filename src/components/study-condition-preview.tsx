@@ -73,22 +73,24 @@ export function StudyConditionPreview({
       <p className="field-help">
         Commission込みは価値＋Commission、費用−Commissionで計算します。実際の注文価格や取引結果を保証するものではありません。最大総余剰・以下の図と単位表はCommissionを除く原始供需です。
       </p>
-      <dl className="study-condition-summary">
-        {stats.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
       <div
         className={`study-condition-preview-grid${showUnitValues ? "" : " study-chart-only"}`}
       >
-        <StudyConditionChart
-          key={`${demand.join(",")}:${supply.join(",")}`}
-          demand={demand}
-          supply={supply}
-        />
+        <div className="study-condition-plot">
+          <dl className="study-condition-summary">
+            {stats.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <StudyConditionChart
+            key={`${demand.join(",")}:${supply.join(",")}`}
+            demand={demand}
+            supply={supply}
+          />
+        </div>
         {showUnitValues && <StudyUnitValues settings={settings} />}
       </div>
     </div>

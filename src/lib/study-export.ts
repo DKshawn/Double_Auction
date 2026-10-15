@@ -2,6 +2,7 @@ import { STUDY_RULES } from "./study-rules";
 import { STUDY_START_SECONDS } from "./study-types";
 import {
   studyMarketSize,
+  studyMarketCounts,
   studyUnits,
   studyInstitutions,
   studyPeriodCount,
@@ -10,7 +11,7 @@ import {
 import { postedPurchaseSeconds, studyTiming } from "./study-timing";
 import { studyCommission, studyTradeProfit } from "./study-commission";
 import { studyView } from "./study-view";
-import { marketRound } from "./study-core";
+import { marketRound, settingsForInstitution } from "./study-core";
 import type { AuditEvent, Room } from "./auction-model";
 import type { ExportFile } from "./exports";
 
@@ -66,7 +67,13 @@ export function studyExport(
                   postedBidCancellation: "not-allowed",
                 }
               : {}),
-            tradersPerMarket: studyMarketSize(room.config),
+            tradersPerMarket: room.config.studyLayout
+              ? null
+              : studyMarketSize(room.config),
+            marketLayout: teacher.markets.map((m) => ({
+              market: m.id,
+              ...studyMarketCounts(room.config, m.id),
+            })),
             institutions: studyInstitutions(room.config),
             periodsPerInstitution: Object.fromEntries(
               studyInstitutions(room.config).map((i) => [
@@ -91,9 +98,16 @@ export function studyExport(
           ...(study.generation ? { generation: study.generation } : {}),
           equilibrium: teacher.equilibrium,
           equilibria: teacher.equilibria,
+          marketEquilibria: teacher.marketEquilibria,
           participants: teacher.participants,
           markets: study.markets.map((m) => ({
             market: m.id,
+            schedules: Object.fromEntries(
+              studyInstitutions(room.config).map((i) => [
+                i,
+                settingsForInstitution(room, i, m.id),
+              ]),
+            ),
             currentPeriod: marketRound(room, m),
             order: m.order,
             stage: m.stage,
@@ -169,7 +183,10 @@ export function studyExport(
         "参加者利益合計_commission込み_円",
       ],
       ...teacher.metrics.map((m) => {
-        const eq = teacher.equilibria?.[m.institution] ?? teacher.equilibrium;
+        const eq =
+          teacher.marketEquilibria?.[m.market]?.[m.institution] ??
+          teacher.equilibria?.[m.institution] ??
+          teacher.equilibrium;
         const slope = teacher.slopes.find(
           (s) => s.market === m.market && s.institution === m.institution,
         );

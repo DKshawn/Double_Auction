@@ -129,9 +129,6 @@ export function TeacherRooms({
           更新
         </button>
       </div>
-      <p className="muted small">
-        保存済みの実験ルームを確認できます。再入室後の「データをダウンロード」から、全市場・全期のCSVと実験条件JSONを保存できます。
-      </p>
       {status.keyRequired && (
         <form
           className="teacher-rooms-unlock"
@@ -250,8 +247,8 @@ export function TeacherRooms({
                     <span className="teacher-room-code">{room.code}</span>
                     <span>作成 {dateFormat.format(room.createdAt)}</span>
                     <span>
-                      {room.marketCount}市場 · 入室 {room.participantCount}/
-                      {room.capacity}人
+                      {room.marketCount}市場 · 参加者 {room.participantCount}
+                      {!room.flexibleAdmission && `/${room.capacity}`}人
                     </span>
                     <span>
                       第{room.round}/{room.totalRounds}期

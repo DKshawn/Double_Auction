@@ -94,7 +94,7 @@ export function StudyPresetGenerator({
         cdaUnits={unitsDraft}
         onChange={setUnitsDraft}
         disabled={disabled || locked}
-        cdaEnabled={studyInstitutions(view.config).includes("cda")}
+        institutions={studyInstitutions(view.config)}
       />
       {unitsError ? (
         <p className="error-message" role="alert">
@@ -139,6 +139,12 @@ export function StudyPresetGenerator({
           }}
           renderAssignments={(preview) => {
             if (!preview.generator) return null;
+            if (view.study!.lobby?.admission)
+              return (
+                <p className="field-help">
+                  学生への割り当ては入室締切時の人数で確定します。条件を適用し、締切後の名簿と条件JSONで確認してください。
+                </p>
+              );
             const seats = seededStudySeats(
               view.config.capacity,
               preview.generator.seed,
@@ -175,7 +181,9 @@ export function StudyPresetGenerator({
                 </summary>
                 <AssignmentTable rows={rows} />
                 <p className="field-help">
-                  未入室の学生は入室順に残りの位置へ入ります。適用後、全員がそろったら「学生の割り当て」で確定してください。
+                  {view.study!.lobby?.admission
+                    ? "入室締切後、実際の人数に合わせて割り当てます。条件を変更した場合は「学生の割り当て」で再度確定してください。"
+                    : "未入室の学生は入室順に残りの位置へ入ります。適用後、全員がそろったら「学生の割り当て」で確定してください。"}
                 </p>
               </details>
             );

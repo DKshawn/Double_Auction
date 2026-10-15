@@ -33,7 +33,9 @@ export function assemble(
         }
       : root,
   );
-  room.participantCount = root.participants.length;
+  room.participantCount = root.participants.filter(
+    (p) => !p.withdrawnAt,
+  ).length;
   room.study = {
     ...room.study!,
     markets: markets.map((m) => (mutable ? structuredClone(m.state) : m.state)),
@@ -274,15 +276,57 @@ export async function saveBundle(
   scope?: number,
 ) {
   if (room.storageVersion) {
-    let version = before.root.version + (scope ? 0 : 1);
+    const removed = scope
+      ? []
+      : before.markets.filter(
+          (m) => !room.study!.markets.some((next) => next.id === m.market_id),
+        );
+    const added = room.study!.markets.filter(
+      (m) => !before.markets.some((old) => old.market_id === m.id),
+    );
+    if (
+      (removed.length || added.length) &&
+      (scope ||
+        before.root.phase !== "waiting" ||
+        before.markets.some(
+          (m) =>
+            m.state.periods.length || m.state.trades.length || m.history_cursor,
+        ))
+    )
+      throw new Error(
+        "Market layout can only change before any experiment starts",
+      );
+    const rootVersion =
+      before.root.version +
+      (scope ? 0 : 1) +
+      removed.reduce((sum, m) => sum + m.version, 0);
+    let version = rootVersion;
+    for (const old of removed)
+      await tx.query(
+        "DELETE FROM auction_markets WHERE room_code = $1 AND market_id = $2",
+        [room.code, old.market_id],
+      );
     for (const market of room.study!.markets) {
-      const old = before.markets.find((m) => m.market_id === market.id)!;
+      const old = before.markets.find((m) => m.market_id === market.id);
       const ids = new Set(
         room.participants
           .filter((p) => studyMarketId(room.config, p.seat) === market.id)
           .map((p) => p.id),
       );
       const receipts = room.receipts.filter((r) => ids.has(r.actor));
+      if (!old) {
+        await tx.query(
+          "INSERT INTO auction_markets (room_code, market_id, state, sequence, receipts, history_separated) VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, true)",
+          [
+            room.code,
+            market.id,
+            JSON.stringify(hotState(market)),
+            room.sequence,
+            JSON.stringify(receipts),
+          ],
+        );
+        continue;
+      }
       const oldCount = old.state.orderHistory?.length ?? 0;
       const entries = (market.orderHistory ?? []).slice(oldCount);
       const hot = hotState(market);
@@ -317,7 +361,7 @@ export async function saveBundle(
     if (!scope)
       await tx.query(
         "UPDATE auction_rooms SET state = $2::jsonb, updated_at = clock_timestamp() WHERE code = $1",
-        [room.code, JSON.stringify(rootState(room, before.root.version + 1))],
+        [room.code, JSON.stringify(rootState(room, rootVersion))],
       );
     room.version = version;
   } else {

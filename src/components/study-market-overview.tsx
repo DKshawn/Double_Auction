@@ -5,7 +5,7 @@ import { decimal } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { StudyView } from "@/lib/study-types";
 import type { RoomConfig, RoomView } from "@/lib/types";
-import { studyMarketSize, studyPeriodAt } from "@/lib/study-config";
+import { studyMarketCounts, studyPeriodAt } from "@/lib/study-config";
 
 export function StudyMarketOverview({
   teacher,
@@ -28,6 +28,14 @@ export function StudyMarketOverview({
 }) {
   const [chosenRound, setChosenRound] = useState<number | null>(null);
   const currentRound = Math.max(...teacher.markets.map((m) => m.round));
+  const demoHuman = demo
+    ? teacher.participants.find((p) => p.nickname === "あなた")
+    : undefined;
+  const demoBotCount = demoHuman
+    ? teacher.participants.filter(
+        (p) => p.market === demoHuman.market && p.id !== demoHuman.id,
+      ).length
+    : 0;
   // Metrics are already calculated per market and period on the server.
   // In particular, Call quantity includes all clearings in the selected period.
   const metrics = new Map(
@@ -178,8 +186,8 @@ export function StudyMarketOverview({
                   </td>
                   <td>
                     {market.participantCount}/
-                    {teacher.settings.values.length +
-                      teacher.settings.costs.length}
+                    {studyMarketCounts(config, market.id).buyers +
+                      studyMarketCounts(config, market.id).sellers}
                   </td>
                   <td>
                     <span className={`study-overview-status ${state}`}>
@@ -200,7 +208,8 @@ export function StudyMarketOverview({
       </div>
       {demo && (
         <p className="study-overview-note">
-          あなたの市場はあなた1人＋仮想参加者{studyMarketSize(config) - 1}
+          あなたの市場はあなた1人＋仮想参加者
+          {demoBotCount}
           人です。
           {config.markets! > 1 && "他市場は全員が仮想参加者です。"}
         </p>

@@ -140,16 +140,87 @@ export const MAX_STUDY_MARKETS = MAX_STUDY_PARTICIPANTS / 2;
 // Missing size belongs to an existing room with the original 8 + 8 design.
 export const studyMarketSize = (config: Pick<RoomConfig, "marketSize">) =>
   config.marketSize ?? DEFAULT_MARKET_SIZE;
-export const studyMarketId = (config: RoomConfig, seat: number) =>
-  Math.floor(seat / studyMarketSize(config)) + 1;
-export const studyRoleIndex = (config: RoomConfig, seat: number) =>
-  seat % (studyMarketSize(config) / 2);
-export const studyRole = (config: RoomConfig, seat: number): Role =>
-  seat % studyMarketSize(config) < studyMarketSize(config) / 2
+export function studyMarketCounts(config: RoomConfig, market: number) {
+  return (
+    config.studyLayout?.[market - 1] ?? {
+      buyers: studyMarketSize(config) / 2,
+      sellers: studyMarketSize(config) / 2,
+    }
+  );
+}
+export function studyMarketId(config: RoomConfig, seat: number) {
+  if (seat < 0) return 0;
+  if (!config.studyLayout)
+    return Math.floor(seat / studyMarketSize(config)) + 1;
+  let end = 0;
+  return (
+    config.studyLayout.findIndex((m) => {
+      end += m.buyers + m.sellers;
+      return seat < end;
+    }) + 1
+  );
+}
+function studyLocalSeat(config: RoomConfig, seat: number) {
+  if (!config.studyLayout) return seat % studyMarketSize(config);
+  return (
+    seat -
+    config.studyLayout
+      .slice(0, studyMarketId(config, seat) - 1)
+      .reduce((sum, m) => sum + m.buyers + m.sellers, 0)
+  );
+}
+export function studyRole(config: RoomConfig, seat: number): Role {
+  return studyLocalSeat(config, seat) <
+    studyMarketCounts(config, studyMarketId(config, seat)).buyers
     ? "buyer"
     : "seller";
+}
+export function studyRoleIndex(config: RoomConfig, seat: number) {
+  const local = studyLocalSeat(config, seat);
+  return (
+    local -
+    (studyRole(config, seat) === "buyer"
+      ? 0
+      : studyMarketCounts(config, studyMarketId(config, seat)).buyers)
+  );
+}
 
-export function studyLayoutError(markets: number, marketSize: number) {
+// The existing condition template is sampled evenly per side, as in resizeStudySettings.
+// This keeps prices/parameters intact and permits a different number of traders per market.
+export function studyProfileIndex(
+  config: RoomConfig,
+  seat: number,
+  profiles: number,
+) {
+  if (!config.studyLayout) return studyRoleIndex(config, seat);
+  const counts = studyMarketCounts(config, studyMarketId(config, seat));
+  const count =
+    studyRole(config, seat) === "buyer" ? counts.buyers : counts.sellers;
+  return Math.floor(((studyRoleIndex(config, seat) + 0.5) * profiles) / count);
+}
+
+export function studyMarketSettings(
+  config: RoomConfig,
+  settings: StudySettings,
+  market: number,
+): StudySettings {
+  if (!config.studyLayout) return settings;
+  const counts = studyMarketCounts(config, market);
+  const sample = (profiles: number[][], count: number) =>
+    Array.from({ length: count }, (_, i) => [
+      ...profiles[Math.floor(((i + 0.5) * profiles.length) / count)],
+    ]);
+  return {
+    values: sample(settings.values, counts.buyers),
+    costs: sample(settings.costs, counts.sellers),
+  };
+}
+
+export function studyLayoutError(
+  markets: number,
+  marketSize: number,
+  flexible = false,
+) {
   if (
     !Number.isInteger(marketSize) ||
     marketSize < 2 ||
@@ -159,7 +230,7 @@ export function studyLayoutError(markets: number, marketSize: number) {
     return `1市場の人数は2〜${MAX_STUDY_PARTICIPANTS}人の偶数で設定してください。`;
   if (!Number.isInteger(markets) || markets < 1 || markets > MAX_STUDY_MARKETS)
     return `市場数は1〜${MAX_STUDY_MARKETS}の整数で設定してください。`;
-  if (markets * marketSize > MAX_STUDY_PARTICIPANTS)
+  if (!flexible && markets * marketSize > MAX_STUDY_PARTICIPANTS)
     return `合計人数は${MAX_STUDY_PARTICIPANTS}人以内にしてください。`;
   return "";
 }

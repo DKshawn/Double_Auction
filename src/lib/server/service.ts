@@ -10,6 +10,7 @@ import {
   studyLayoutError,
   studyMarketId,
   studyMarketSize,
+  MAX_STUDY_PARTICIPANTS,
   studyUnits,
   studyUnitsError,
   studyUnitsPerSide,
@@ -81,7 +82,11 @@ export class AuctionService {
       );
     if (config.protocol === "institutions-v1") {
       const size = studyMarketSize(config);
-      const layoutError = studyLayoutError(config.markets ?? 0, size);
+      const layoutError = studyLayoutError(
+        config.markets ?? 0,
+        size,
+        config.studyAdmission === "flexible",
+      );
       if (layoutError) throw new AuctionError(layoutError);
       const unitsError = studyUnitsError(studyUnits(config));
       if (unitsError) throw new AuctionError(unitsError);
@@ -117,7 +122,10 @@ export class AuctionService {
       config = {
         ...config,
         marketSize: size,
-        capacity: config.markets! * size,
+        capacity:
+          config.studyAdmission === "flexible"
+            ? Math.min(MAX_STUDY_PARTICIPANTS, config.markets! * size)
+            : config.markets! * size,
         studyInstitutions: institutions,
         studyPeriods: selectedPeriods,
         rounds: studyTotalRounds({
@@ -205,7 +213,20 @@ export class AuctionService {
                     studyInstitutions(config),
                     studyUnits(config),
                   ),
-                  lobby: { revision: 0, randomizedAt: null },
+                  lobby: {
+                    revision: 0,
+                    randomizedAt: null,
+                    ...(config.studyAdmission === "flexible"
+                      ? {
+                          admission: {
+                            status: "open" as const,
+                            closesAt: null,
+                            closedAt: null,
+                            targetMarkets: config.markets!,
+                          },
+                        }
+                      : {}),
+                  },
                 },
               }
             : {}),
@@ -361,9 +382,18 @@ export class AuctionService {
               : "実験開始後は新しく参加できません。以前の名前と暗証番号で再入室してください。",
             409,
           );
-        if (room.participants.length >= room.config.capacity)
+        const flexible = !!room.study?.lobby?.admission;
+        if (flexible && room.study!.lobby!.admission!.status !== "open")
+          throw new AuctionError(
+            "入室受付は終了しました。教員に確認してください。",
+            409,
+          );
+        if (
+          room.participants.length >=
+          (flexible ? MAX_STUDY_PARTICIPANTS : room.config.capacity)
+        )
           throw new AuctionError("このルームは満員です。", 409);
-        const seat = room.seats[room.participants.length];
+        const seat = flexible ? -1 : room.seats[room.participants.length];
         const role = room.study
           ? studyRole(room.config, seat)
           : seat < room.config.capacity / 2
@@ -378,7 +408,9 @@ export class AuctionService {
         participant = {
           id: randomUUID(),
           joinedAt: now,
-          alias: `${role === "buyer" ? "買" : "売"}${String(number).padStart(2, "0")}`,
+          alias: flexible
+            ? "未割当"
+            : `${role === "buyer" ? "買" : "売"}${String(number).padStart(2, "0")}`,
           nickname,
           role,
           seat,
@@ -395,7 +427,7 @@ export class AuctionService {
         room.participants.push(participant);
         if (room.study)
           participant.limits = {
-            apple: unitLimits(room, participant)[0],
+            apple: unitLimits(room, participant)[0] ?? 0,
             banana: 0,
             orange: 0,
           };
@@ -422,6 +454,7 @@ export class AuctionService {
             : room.round,
         );
         if (room.study) settleStudy(room, now, events);
+        if (room.study?.lobby?.admission) room.study.lobby.revision++;
         recordStudyGeneratedAssignments(room);
       }
       return { code, token };
@@ -453,7 +486,7 @@ export class AuctionService {
     }>(`SELECT r.code, r.state->'config' AS config,
         r.state->>'createdAt' AS created_at, r.state->>'phase' AS phase,
         COALESCE(m.round, (r.state->>'round')::int, 0) AS round,
-        jsonb_array_length(r.state->'participants') AS participant_count,
+        (SELECT count(*)::int FROM jsonb_array_elements(r.state->'participants') p WHERE p->>'withdrawnAt' IS NULL) AS participant_count,
         COALESCE(m.finished, false) AS markets_finished
       FROM auction_rooms r
       LEFT JOIN LATERAL (
@@ -475,6 +508,9 @@ export class AuctionService {
       totalRounds: row.config.rounds,
       participantCount: row.participant_count,
       capacity: row.config.capacity,
+      ...(row.config.studyAdmission === "flexible"
+        ? { flexibleAdmission: true }
+        : {}),
       marketCount: row.config.markets ?? 1,
       institutions:
         row.config.protocol === "institutions-v1"
@@ -524,9 +560,13 @@ export class AuctionService {
     const actor = authenticate(room, token);
     const now = bundle.now;
     if (
-      room.phase === "running" &&
-      room.deadline !== null &&
-      room.deadline <= now
+      (room.phase === "running" &&
+        room.deadline !== null &&
+        room.deadline <= now) ||
+      (room.phase === "waiting" &&
+        room.study?.lobby?.admission?.status === "open" &&
+        room.study.lobby.admission.closesAt !== null &&
+        room.study.lobby.admission.closesAt <= now)
     ) {
       await this.advance(code, scope);
       return this.view(code, token);
@@ -556,6 +596,7 @@ export class AuctionService {
     // old market scope while a teacher is moving participants between markets.
     return root.storageVersion &&
       actor !== "teacher" &&
+      actor.seat >= 0 &&
       !(root.study?.lobby && root.phase === "waiting")
       ? studyMarketId(root.config, actor.seat)
       : undefined;
@@ -566,6 +607,13 @@ export class AuctionService {
     if (!scope) {
       const bundle = await readBundle(this.db, code);
       if (bundle.root.storageVersion) {
+        if (
+          bundle.root.phase === "waiting" &&
+          bundle.root.study?.lobby?.admission
+        ) {
+          await this.locked(code, () => undefined);
+          return;
+        }
         if (bundle.root.phase !== "running") return;
         await Promise.all(
           bundle.markets

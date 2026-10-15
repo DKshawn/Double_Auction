@@ -12,6 +12,7 @@ import type {
 export type Participant = {
   id: string;
   joinedAt?: number;
+  withdrawnAt?: number;
   alias: string;
   nickname: string;
   role: Role;

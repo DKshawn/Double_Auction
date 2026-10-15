@@ -7,7 +7,11 @@ import { PGlite } from "@electric-sql/pglite";
 import { TeacherForm } from "../src/components/teacher-form";
 import { StudyRoom } from "../src/components/study-room";
 import { StudyTradeFeedback } from "../src/components/study-personal-trades";
-import { studyCommission, studyUnitProfit } from "../src/lib/study-commission";
+import {
+  DEFAULT_STUDY_COMMISSION,
+  studyCommission,
+  studyUnitProfit,
+} from "../src/lib/study-commission";
 import { execute, settleDeadline, toView } from "../src/lib/server/engine";
 import {
   newStudy,
@@ -121,6 +125,10 @@ test("commission accepts zero and integers only, with default 1 on the creation 
   const markup = renderToStaticMarkup(
     createElement(TeacherForm, {
       status: { mode: "local", ready: true, keyRequired: false },
+      initialConfig: {
+        ...room.config,
+        studyCommission: DEFAULT_STUDY_COMMISSION,
+      },
     }),
   );
   assert.match(markup, /name="studyCommission"[^>]*value="1"/);

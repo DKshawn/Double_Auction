@@ -6,6 +6,7 @@ import { NextRequest } from "next/server";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TeacherForm } from "../src/components/teacher-form";
+import { StudyPresetPicker } from "../src/components/study-preset-picker";
 import { DemoSession } from "../src/lib/demo";
 import {
   DEFAULT_STAIRCASE_PARAMETERS,
@@ -41,8 +42,8 @@ const generated = generateStaircase(generator.parameters);
 const password = "Local-Creation-Only-2026";
 const payload = { config, generator, password };
 
-test("teacher creation renders presets and editable p/K/L/d with a restored adopted condition", () => {
-  const markup = renderToStaticMarkup(
+test("teacher creation keeps details in a dialog and restores an editable custom preview", () => {
+  const form = renderToStaticMarkup(
     createElement(TeacherForm, {
       status: { mode: "local", ready: true, keyRequired: false },
       initialConfig: config,
@@ -53,7 +54,22 @@ test("teacher creation renders presets and editable p/K/L/d with a restored adop
       },
     }),
   );
-  assert.match(markup, /供需条件の設定/);
+  assert.match(form, /aria-haspopup="dialog">作成前に詳細を設定/);
+  assert.doesNotMatch(form, /study-preset-picker/);
+  assert.doesNotMatch(form, /<button[^>]*disabled=""/);
+  const markup = renderToStaticMarkup(
+    createElement(StudyPresetPicker, {
+      units: 16,
+      initialGenerator: generator,
+      disabled: false,
+      confirmed: true,
+      commission: 0,
+      onCommissionChange: () => {},
+      onConfirm: () => true,
+      onEdit: () => {},
+      actionLabel: "この条件を確認して採用",
+    }),
+  );
   assert.match(markup, /カスタム/);
   for (const label of [
     "均衡価格 p",
@@ -63,10 +79,9 @@ test("teacher creation renders presets and editable p/K/L/d with a restored adop
     "割当シード",
   ])
     assert.ok(markup.includes(label));
-  assert.match(markup, /作成時の条件：.*p=80・K=8・L=4・d=4/);
-  assert.match(markup, /シード 87654321/);
-  assert.doesNotMatch(markup, /<button[^>]*disabled=""/);
-  assert.doesNotMatch(markup, /カスタムのプレビュー/);
+  assert.match(markup, /value="87654321"/);
+  assert.match(markup, /カスタムのプレビュー/);
+  assert.match(markup, /<button(?![^>]*disabled)[^>]*>条件を変更<\/button>/);
 });
 
 test("creation request accepts only validated generator parameters and rejects stale size and forged schedules", async () => {

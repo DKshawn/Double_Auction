@@ -1,17 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, FlaskConical, Info } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
 import {
   MAX_STUDY_MARKETS,
   MAX_STUDY_PARTICIPANTS,
   studyLayoutError,
-  DEFAULT_STUDY_INSTITUTIONS,
   studyInstitutionOrders,
   DEFAULT_STUDY_PERIODS,
-  MAX_INSTITUTION_PERIODS,
-  studyPeriodCount,
   studyTotalRounds,
   studyPeriodsError,
   studyInstitutions,
@@ -22,7 +19,9 @@ import {
 } from "@/lib/study-config";
 import type { ServerStatus } from "@/lib/server/config";
 import { Spinner } from "./shell";
-import { StudyTimingFields } from "./study-timing-settings";
+import { StudyProgramFields } from "./study-program-fields";
+import { StudyDetailDialog } from "./study-detail-dialog";
+import { StudySetupStep } from "./study-setup-step";
 import {
   DEFAULT_STUDY_COMMISSION,
   studyCommission,
@@ -82,7 +81,22 @@ export function TeacherForm({
           : "実験1：市場制度の比較"),
   );
   const [conditionsConfirmed, setConditionsConfirmed] = useState(false);
-  const settingsDisabled = pending || conditionsConfirmed;
+  const [configureFirst, setConfigureFirst] = useState(false);
+  const [detailsSaved, setDetailsSaved] = useState(
+    initialConfig?.studySetupConfirmed === true,
+  );
+  const [configurationStep, setConfigurationStep] = useState(0);
+  const [configurationProgress, setConfigurationProgress] = useState(0);
+  const [conditionsCollapsed, setConditionsCollapsed] = useState(false);
+  const configurationId = useId();
+  useEffect(() => {
+    if (configureFirst) {
+      document
+        .getElementById(`${configurationId}-heading-${configurationStep}`)
+        ?.focus({ preventScroll: true });
+    }
+  }, [configureFirst, configurationId, configurationStep, conditionsCollapsed]);
+  const settingsDisabled = pending;
   const [preset, setPreset] = useState(() =>
     !initialConfig
       ? "1"
@@ -157,6 +171,49 @@ export function TeacherForm({
         }
       : {}),
   }));
+  function configurationSnapshot() {
+    return {
+      preset,
+      marketCount,
+      marketSize,
+      cdaUnits,
+      timing,
+      commission,
+      institutions,
+      periods,
+      adoptedConditions,
+      conditionsConfirmed,
+    };
+  }
+  const savedConfiguration = useRef<ReturnType<
+    typeof configurationSnapshot
+  > | null>(null);
+  function openConfiguration() {
+    savedConfiguration.current = structuredClone(configurationSnapshot());
+    setError("");
+    setConfigurationStep(0);
+    setConditionsCollapsed(false);
+    setConfigurationProgress(detailsSaved ? 2 : 0);
+    setConfigureFirst(true);
+  }
+  function cancelConfiguration() {
+    const saved = savedConfiguration.current;
+    if (saved) {
+      setPreset(saved.preset);
+      setMarketCount(saved.marketCount);
+      setMarketSize(saved.marketSize);
+      setCdaUnits(saved.cdaUnits);
+      setTiming(saved.timing);
+      setCommission(saved.commission);
+      setInstitutions(saved.institutions);
+      setPeriods(saved.periods);
+      setAdoptedConditions(saved.adoptedConditions);
+      setConditionsConfirmed(saved.conditionsConfirmed);
+    }
+    savedConfiguration.current = null;
+    setError("");
+    setConfigureFirst(false);
+  }
   const institutionError = institutions.length
     ? ""
     : "実施する制度を1つ以上選択してください。";
@@ -176,7 +233,7 @@ export function TeacherForm({
     units !== 2 && institutions.some((i) => i !== "cda") && conditionPreset
       ? resizeStudySettings(conditionPreset.settings, size)
       : undefined;
-  const layoutError = studyLayoutError(count, size);
+  const layoutError = studyLayoutError(count, size, true);
   const timingError = studyTimingError(timing, institutions);
   const commissionError = studyCommissionError(
     commission,
@@ -185,12 +242,37 @@ export function TeacherForm({
       ? adoptedConditions?.otherSettings
       : undefined,
   );
-  const conditionError =
+  const conditionsPending =
     !adoptedConditions ||
     adoptedConditions.marketSize !== size ||
-    adoptedConditions.units !== units
-      ? "供需条件を生成・プレビューし、確認して採用してください。"
-      : "";
+    adoptedConditions.units !== units;
+  const configurationError =
+    layoutError ||
+    unitsError ||
+    institutionError ||
+    periodsError ||
+    timingError ||
+    commissionError;
+  const stepError = [
+    institutionError || periodsError || timingError,
+    layoutError || unitsError,
+    configurationError,
+  ][configurationStep];
+  function nextConfigurationStep() {
+    if (stepError) return;
+    const next = Math.min(2, configurationStep + 1);
+    if (next === 2) setConditionsCollapsed(false);
+    setConfigurationProgress((previous) => Math.max(previous, next));
+    setConfigurationStep(next);
+    setError("");
+  }
+  function saveConfiguration() {
+    if (configurationError || conditionsPending) return;
+    savedConfiguration.current = null;
+    setDetailsSaved(true);
+    setError("");
+    setConfigureFirst(false);
+  }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (
@@ -202,7 +284,7 @@ export function TeacherForm({
         periodsError ||
         timingError ||
         commissionError ||
-        conditionError)
+        conditionsPending)
     ) {
       setError(
         layoutError ||
@@ -210,8 +292,7 @@ export function TeacherForm({
           institutionError ||
           periodsError ||
           timingError ||
-          commissionError ||
-          conditionError,
+          commissionError,
       );
       return;
     }
@@ -229,10 +310,12 @@ export function TeacherForm({
           }
         : {
             protocol: "institutions-v1",
+            studyAdmission: "flexible",
+            ...(detailsSaved ? { studySetupConfirmed: true } : {}),
             title,
             markets: count,
             marketSize: size,
-            capacity: count * size,
+            capacity: Math.min(MAX_STUDY_PARTICIPANTS, count * size),
             rounds,
             duration: selectedTiming.cdaSeconds,
             studyTiming: selectedTiming,
@@ -276,13 +359,9 @@ export function TeacherForm({
   }
   const studyCreation = tab === "create" && !legacy;
   const conditionHeading = (
-    <h2 id="teacher-condition-heading">供需条件の設定</h2>
+    <h2 id="teacher-condition-heading">供需プリセット</h2>
   );
-  const conditionFooter = conditionError ? (
-    <p className="field-help" role="status">
-      {conditionError}
-    </p>
-  ) : (
+  const conditionFooter = conditionsPending ? null : (
     <p className="callout teacher-adopted-conditions" role="status">
       作成時の条件：
       {adoptedConditions?.generator
@@ -316,7 +395,7 @@ export function TeacherForm({
               ? size
               : undefined
           }
-          initialGenerator={initialGenerator}
+          initialGenerator={adoptedConditions?.generator}
           disabled={pending}
           confirmed={conditionsConfirmed}
           onEdit={() => {
@@ -354,6 +433,7 @@ export function TeacherForm({
               otherSettings: preview.otherSettings,
             });
             setConditionsConfirmed(true);
+            setConditionsCollapsed(true);
             setError("");
             return true;
           }}
@@ -374,10 +454,38 @@ export function TeacherForm({
       )}
     </div>
   );
+  const configurationActions = (
+    <div className="teacher-configuration-step-actions">
+      {stepError && (
+        <p className="error-message" role="alert">
+          {stepError}
+        </p>
+      )}
+      {error && error !== stepError && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="study-actions">
+        <button
+          type="button"
+          className="button primary"
+          disabled={
+            pending ||
+            Boolean(stepError) ||
+            (configurationStep === 2 && conditionsPending)
+          }
+          onClick={
+            configurationStep < 2 ? nextConfigurationStep : saveConfiguration
+          }
+        >
+          {configurationStep < 2 ? "確定して次へ" : "設定を保存して閉じる"}
+        </button>
+      </div>
+    </div>
+  );
   return (
-    <div
-      className={`teacher-form-card ${studyCreation ? "teacher-create-card" : "panel"}`}
-    >
+    <div className="panel teacher-form-card">
       {!onCreateDemo && (
         <div className="segmented">
           <button
@@ -422,7 +530,11 @@ export function TeacherForm({
         <form
           onSubmit={submit}
           key={tab}
-          className={studyCreation ? "teacher-create-layout" : undefined}
+          className={
+            studyCreation
+              ? "teacher-create-layout teacher-create-quick"
+              : undefined
+          }
         >
           <div className="teacher-primary-settings">
             {tab === "create" ? (
@@ -432,20 +544,28 @@ export function TeacherForm({
                     studyCreation ? "teacher-settings-section panel" : undefined
                   }
                 >
-                  {studyCreation && <h2>ルームの基本設定</h2>}
+                  {studyCreation && <h2>ルームの設定</h2>}
                   <label className="field">
                     実験名
                     <input
                       name="title"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      disabled={
-                        pending || (studyCreation && conditionsConfirmed)
-                      }
+                      disabled={pending}
                       maxLength={60}
                       required
                     />
                   </label>
+                  {studyCreation && (
+                    <button
+                      type="button"
+                      className="button secondary"
+                      aria-haspopup="dialog"
+                      onClick={openConfiguration}
+                    >
+                      作成前に詳細を設定
+                    </button>
+                  )}
                 </section>
                 {legacy ? (
                   <>
@@ -481,241 +601,7 @@ export function TeacherForm({
                       </select>
                     </label>
                   </>
-                ) : (
-                  <>
-                    <fieldset
-                      className="study-institution-picker teacher-settings-section panel"
-                      aria-describedby={
-                        institutionError || periodsError
-                          ? "study-institution-help"
-                          : undefined
-                      }
-                    >
-                      <legend>実施する制度</legend>
-                      <div className="study-institution-options">
-                        {DEFAULT_STUDY_INSTITUTIONS.map((institution) => (
-                          <label
-                            className="study-institution-option"
-                            key={institution}
-                          >
-                            <input
-                              type="checkbox"
-                              name="studyInstitutions"
-                              value={institution}
-                              checked={institutions.includes(institution)}
-                              disabled={settingsDisabled}
-                              onChange={(event) => {
-                                const checked = event.target.checked;
-                                setInstitutions((previous) =>
-                                  DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
-                                    i === institution
-                                      ? checked
-                                      : previous.includes(i),
-                                  ),
-                                );
-                              }}
-                            />
-                            {INSTITUTIONS[institution].short}
-                          </label>
-                        ))}
-                      </div>
-                      <h3
-                        className="study-period-heading"
-                        id="study-period-heading"
-                      >
-                        期数
-                      </h3>
-                      <div
-                        className="study-period-fields"
-                        role="group"
-                        aria-labelledby="study-period-heading"
-                      >
-                        {institutions.map((institution) => (
-                          <label className="field" key={institution}>
-                            {INSTITUTIONS[institution].short}
-                            <input
-                              type="number"
-                              name={`studyPeriods.${institution}`}
-                              min={1}
-                              max={MAX_INSTITUTION_PERIODS}
-                              step={1}
-                              required
-                              disabled={settingsDisabled}
-                              value={periods[institution] || ""}
-                              aria-label={`${INSTITUTIONS[institution].short}の期数`}
-                              aria-describedby={
-                                institutionError || periodsError
-                                  ? "study-institution-help"
-                                  : undefined
-                              }
-                              onChange={(event) =>
-                                setPeriods((previous) => ({
-                                  ...previous,
-                                  [institution]: Number(event.target.value),
-                                }))
-                              }
-                            />
-                          </label>
-                        ))}
-                      </div>
-                      {(institutionError || periodsError) && (
-                        <p
-                          id="study-institution-help"
-                          className="error-message"
-                          aria-live="polite"
-                        >
-                          {institutionError || periodsError}
-                        </p>
-                      )}
-                    </fieldset>
-                    <section
-                      className="teacher-settings-section panel"
-                      aria-labelledby="teacher-market-heading"
-                    >
-                      <h2 id="teacher-market-heading">市場・参加人数</h2>
-                      <label className="field">
-                        市場数・参加人数
-                        <select
-                          name="marketPreset"
-                          value={preset}
-                          disabled={settingsDisabled}
-                          onChange={(event) => {
-                            setPreset(event.target.value);
-                            if (event.target.value !== "custom") {
-                              setMarketCount(event.target.value);
-                              setMarketSize("16");
-                            }
-                          }}
-                        >
-                          <option value="1">
-                            1市場・16人（授業・動作確認）
-                          </option>
-                          <option value="6">
-                            6市場・96人
-                            {orderCount > 0
-                              ? `（${orderCount}通りの順序を${6 / orderCount}市場ずつ）`
-                              : ""}
-                          </option>
-                          <option value="12">
-                            12市場・192人
-                            {orderCount > 0
-                              ? `（${orderCount}通りの順序を${12 / orderCount}市場ずつ）`
-                              : ""}
-                          </option>
-                          <option value="custom">
-                            カスタム（人数・市場数を指定）
-                          </option>
-                        </select>
-                      </label>
-                      {preset === "custom" && (
-                        <div className="form-grid">
-                          <label className="field">
-                            1市場の人数
-                            <input
-                              type="number"
-                              name="marketSize"
-                              min={2}
-                              max={MAX_STUDY_PARTICIPANTS}
-                              step={2}
-                              required
-                              value={marketSize}
-                              disabled={settingsDisabled}
-                              onChange={(e) => setMarketSize(e.target.value)}
-                              aria-describedby="study-layout-help"
-                            />
-                          </label>
-                          <label className="field">
-                            市場数
-                            <input
-                              type="number"
-                              name="markets"
-                              min={1}
-                              max={MAX_STUDY_MARKETS}
-                              step={1}
-                              required
-                              value={marketCount}
-                              disabled={settingsDisabled}
-                              onChange={(e) => setMarketCount(e.target.value)}
-                              aria-describedby="study-layout-help"
-                            />
-                          </label>
-                        </div>
-                      )}
-                      <p
-                        id="study-layout-help"
-                        className={layoutError ? "error-message" : "field-help"}
-                        aria-live="polite"
-                      >
-                        {layoutError ||
-                          `${size}人 × ${count}市場 ＝ 合計${size * count}人。各市場は買い手${size / 2}人・売り手${size / 2}人です。`}
-                      </p>
-                      <StudyUnitFields
-                        cdaUnits={cdaUnits}
-                        onChange={setCdaUnits}
-                        disabled={settingsDisabled}
-                        cdaEnabled={institutions.includes("cda")}
-                      />
-                      {unitsError && (
-                        <p className="error-message" role="alert">
-                          {unitsError}
-                        </p>
-                      )}
-                      <div className="callout">
-                        <Info size={18} />
-                        {institutionError || periodsError || layoutError ? (
-                          <p>
-                            制度・期数・人数を設定すると、実験の概要を表示します。
-                          </p>
-                        ) : (
-                          <p>
-                            1商品をCDAは各自{units}単位、Call Market・Posted
-                            Offerは各自2単位、選択した{institutions.length}
-                            制度を設定した期数で、計{rounds}期実施します。
-                            {institutions
-                              .map(
-                                (i) =>
-                                  `${INSTITUTIONS[i].short} ${studyPeriodCount({ studyPeriods: periods }, i)}期`,
-                              )
-                              .join("・")}
-                            。
-                            {count === 1
-                              ? `制度の順序は${institutions.map((i) => INSTITUTIONS[i].short).join(" → ")}です。`
-                              : `${orderCount}通りの制度順序を市場ごとに均等に割り当てます。`}
-                            市場・役割は学生がそろってからランダムに割り当てます。
-                          </p>
-                        )}
-                      </div>
-                      {preset === "custom" && (
-                        <p className="field-help">
-                          1市場の人数は偶数、合計は{MAX_STUDY_PARTICIPANTS}
-                          人以内。人数・市場数は作成後に変更できません。
-                          {size !== 16 &&
-                            "16人以外では、既定の価値・費用を全範囲から均等に抽出・複製します。"}
-                          {count > 1 &&
-                            orderCount > 1 &&
-                            count % orderCount !== 0 &&
-                            `市場数が${orderCount}の倍数以外では、制度順序の割当数に差が出ます。`}
-                        </p>
-                      )}
-                    </section>
-                    <section
-                      className="teacher-settings-section panel"
-                      aria-labelledby="teacher-timing-heading"
-                    >
-                      <h2 id="teacher-timing-heading">実験時間の設定</h2>
-                      <p className="field-help">
-                        時間・価値・費用の条件は全市場で共通です。作成後も実験開始前なら教員画面で変更できます。
-                      </p>
-                      <StudyTimingFields
-                        marketSize={size}
-                        timing={timing}
-                        onChange={setTiming}
-                        disabled={settingsDisabled}
-                        institutions={institutions}
-                      />
-                    </section>
-                  </>
-                )}
+                ) : null}
               </>
             ) : (
               <label className="field">
@@ -738,7 +624,7 @@ export function TeacherForm({
                   studyCreation ? "teacher-settings-section panel" : undefined
                 }
               >
-                {studyCreation && <h2>教員のアクセス</h2>}
+                {studyCreation && <h2>教員アクセス</h2>}
                 <label className="field">
                   この実験の教員パスワード
                   <input
@@ -777,7 +663,6 @@ export function TeacherForm({
               </section>
             )}
           </div>
-          {studyCreation && conditionSection}
           <div className="teacher-form-actions">
             {!onCreateDemo && tab === "create" && !status.ready && (
               <p className="error-message" role="alert">
@@ -803,7 +688,7 @@ export function TeacherForm({
                         periodsError ||
                         timingError ||
                         commissionError ||
-                        conditionError,
+                        conditionsPending,
                       ))))
               }
             >
@@ -814,7 +699,7 @@ export function TeacherForm({
                   {onCreateDemo
                     ? "デモルームを作成"
                     : tab === "create"
-                      ? "実験ルームを作成"
+                      ? "ルーム作成"
                       : "管理画面に入る"}
                   {tab !== "create" && <ArrowRight size={17} />}
                 </>
@@ -838,6 +723,175 @@ export function TeacherForm({
             )}
           </div>
         </form>
+      )}
+      {studyCreation && configureFirst && (
+        <StudyDetailDialog
+          label="実験の詳細設定"
+          className="teacher-configuration-dialog study-compact-settings"
+          open
+          onClose={cancelConfiguration}
+        >
+          <div className="panel study-setup">
+            <header className="study-setup-heading">
+              <h2>実験の準備</h2>
+              <span>ステップ {configurationStep + 1} / 3</span>
+            </header>
+            <StudySetupStep
+              id={configurationId}
+              index={0}
+              label="制度と進行"
+              summary={institutions
+                .map((i) => `${INSTITUTIONS[i].short} ${periods[i]}期`)
+                .join(" · ")}
+              expanded={configurationStep === 0}
+              complete={configurationProgress > 0}
+              disabled={pending}
+              onOpen={() => setConfigurationStep(0)}
+            >
+              <StudyProgramFields
+                institutions={institutions}
+                periods={periods}
+                timing={timing}
+                onInstitutionsChange={setInstitutions}
+                onPeriodsChange={setPeriods}
+                onTimingChange={setTiming}
+                disabled={settingsDisabled}
+                marketSize={size}
+              />
+              {configurationStep === 0 && configurationActions}
+            </StudySetupStep>
+            <StudySetupStep
+              id={configurationId}
+              index={1}
+              label="市場・単位数"
+              summary={`${count}市場 · ${institutions.map((i) => `${INSTITUTIONS[i].short} ${i === "cda" ? units : 2}単位`).join(" · ")}`}
+              expanded={configurationStep === 1}
+              complete={configurationProgress > 1}
+              disabled={pending || configurationProgress < 1}
+              onOpen={() => setConfigurationStep(1)}
+            >
+              <label className="field">
+                市場数・条件テンプレートの人数
+                <select
+                  name="marketPreset"
+                  value={preset}
+                  disabled={settingsDisabled}
+                  onChange={(event) => {
+                    setPreset(event.target.value);
+                    if (event.target.value !== "custom") {
+                      setMarketCount(event.target.value);
+                      setMarketSize("16");
+                    }
+                  }}
+                >
+                  <option value="1">1市場・16人</option>
+                  <option value="6">6市場・96人</option>
+                  <option value="12">12市場・192人</option>
+                  <option value="custom">カスタム</option>
+                </select>
+              </label>
+              {preset === "custom" && (
+                <div className="form-grid">
+                  <label className="field">
+                    条件テンプレートの人数
+                    <input
+                      type="number"
+                      name="marketSize"
+                      min={2}
+                      max={MAX_STUDY_PARTICIPANTS}
+                      step={2}
+                      required
+                      value={marketSize}
+                      disabled={settingsDisabled}
+                      onChange={(e) => setMarketSize(e.target.value)}
+                      aria-describedby={
+                        layoutError ? "study-layout-help" : undefined
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    市場数
+                    <input
+                      type="number"
+                      name="markets"
+                      min={1}
+                      max={MAX_STUDY_MARKETS}
+                      step={1}
+                      required
+                      value={marketCount}
+                      disabled={settingsDisabled}
+                      onChange={(e) => setMarketCount(e.target.value)}
+                      aria-describedby={
+                        layoutError ? "study-layout-help" : undefined
+                      }
+                    />
+                  </label>
+                </div>
+              )}
+              {layoutError && (
+                <p
+                  id="study-layout-help"
+                  className="error-message"
+                  role="alert"
+                >
+                  {layoutError}
+                </p>
+              )}
+              <StudyUnitFields
+                cdaUnits={cdaUnits}
+                onChange={setCdaUnits}
+                disabled={settingsDisabled}
+                institutions={institutions}
+              />
+              {unitsError && (
+                <p className="error-message" role="alert">
+                  {unitsError}
+                </p>
+              )}
+              {preset === "custom" && (
+                <p className="field-help">
+                  条件テンプレートは偶数人数で設定します。実際の参加者は最大
+                  {MAX_STUDY_PARTICIPANTS}
+                  人まで受け付け、奇数でも全員を割り当てます。市場数は入室受付中も変更できます。
+                  {size !== 16 &&
+                    "16人以外では、既定の価値・費用を全範囲から均等に抽出・複製します。"}
+                  {count > 1 &&
+                    orderCount > 1 &&
+                    count % orderCount !== 0 &&
+                    `市場数が${orderCount}の倍数以外では、制度順序の割当数に差が出ます。`}
+                </p>
+              )}
+              {configurationStep === 1 && configurationActions}
+            </StudySetupStep>
+            <StudySetupStep
+              id={configurationId}
+              index={2}
+              label="供需条件"
+              summary={`${adoptedConditions?.generator ? "カスタム" : (conditionPreset?.label ?? "Default")} · Commission ${commission}円`}
+              expanded={configurationStep === 2 && !conditionsCollapsed}
+              complete={
+                (detailsSaved || conditionsConfirmed) &&
+                !configurationError &&
+                !conditionsPending
+              }
+              disabled={pending || configurationProgress < 2}
+              onOpen={() => {
+                setConfigurationStep(2);
+                setConditionsCollapsed(false);
+              }}
+              footer={
+                configurationStep === 2 && conditionsCollapsed
+                  ? configurationActions
+                  : undefined
+              }
+            >
+              {conditionSection}
+              {configurationStep === 2 &&
+                !conditionsCollapsed &&
+                configurationActions}
+            </StudySetupStep>
+          </div>
+        </StudyDetailDialog>
       )}
     </div>
   );

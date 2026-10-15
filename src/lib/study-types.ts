@@ -54,6 +54,15 @@ export type StudyStage =
 export type StudyLobby = {
   revision: number;
   randomizedAt: number | null;
+  admission?: {
+    status: "open" | "closed";
+    closesAt: number | null;
+    timerSeconds?: number;
+    pausedRemainingMs?: number;
+    closedAt: number | null;
+    targetMarkets: number;
+    error?: string;
+  };
 };
 export const STUDY_START_SECONDS = 5;
 export const STUDY_FEEDBACK_SECONDS = 8;
@@ -208,6 +217,7 @@ export type StudyView = {
       profit: number;
       joinOrder: number;
       joinedAt?: number;
+      withdrawnAt?: number;
     }[];
     metrics: StudyMetric[];
     slopes: {
@@ -218,9 +228,32 @@ export type StudyView = {
     }[];
     equilibrium: StudyEquilibrium;
     equilibria?: Record<Institution, StudyEquilibrium>;
+    marketEquilibria?: Record<number, Record<Institution, StudyEquilibrium>>;
   };
 };
 export type StudyCommand =
+  | {
+      type: "study-admission";
+      action:
+        | "open"
+        | "close"
+        | "schedule"
+        | "pause-timer"
+        | "resume-timer"
+        | "cancel-timer"
+        | "configure";
+      markets?: number;
+      seconds?: number;
+      expectedRevision: number;
+    }
+  | { type: "study-withdraw"; participantId: string; expectedRevision: number }
+  | {
+      type: "study-program";
+      institutions: Institution[];
+      periods: Partial<StudyPeriods>;
+      timing?: StudyTiming;
+      expectedRevision: number;
+    }
   | { type: "study-randomize"; expectedRevision: number }
   | { type: "study-commission"; commission: number; expectedRevision: number }
   | {

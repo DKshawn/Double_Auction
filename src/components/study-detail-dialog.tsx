@@ -12,6 +12,7 @@ export function StudyDetailDialog({
   disabled = false,
   open,
   onClose,
+  className = "",
 }: {
   label: string;
   title?: string;
@@ -20,6 +21,7 @@ export function StudyDetailDialog({
   disabled?: boolean;
   open?: boolean;
   onClose?: () => void;
+  className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -43,7 +45,7 @@ export function StudyDetailDialog({
       )}
       <dialog
         ref={dialog}
-        className="study-detail-dialog"
+        className={`study-detail-dialog ${className}`}
         aria-labelledby={titleId}
         onClose={onClose}
       >

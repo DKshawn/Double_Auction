@@ -17,6 +17,11 @@ export type RoomConfig = {
   protocol?: "institutions-v1";
   markets?: number;
   marketSize?: number;
+  studyAdmission?: "flexible";
+  // Creation-dialog review state only; admission and start still require server validation.
+  studySetupConfirmed?: boolean;
+  // Final seats, recorded at admission close. marketSize remains the condition template size.
+  studyLayout?: { buyers: number; sellers: number }[];
   studyTiming?: StudyTiming;
   // Absent on old rooms, whose saved sequential protocol remains readable.
   studyPostedMechanism?: "batch-bids-v1";
@@ -81,6 +86,7 @@ export type RoomView = {
   trades: Trade[];
   mode: "local" | "online";
   me: {
+    withdrawnAt?: number;
     id: string;
     alias: string;
     nickname: string;

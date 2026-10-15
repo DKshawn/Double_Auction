@@ -18,6 +18,7 @@ import { StudyMarketOverview } from "./study-market-overview";
 import { StudyMarketHistory } from "./study-market-history";
 import { StudyOrderBook } from "./study-order-book";
 import { StudyRoster, StudyWaitingRoom } from "./study-lobby";
+import { StudySetup } from "./study-setup";
 import {
   StudyPersonalHistory,
   StudyTradeFeedback,
@@ -26,6 +27,7 @@ import { PriceChart } from "./price-chart";
 import { ConfirmDialog } from "./confirm-dialog";
 import { StudySettingsEditor } from "./study-settings";
 import { StudyTimingEditor } from "./study-timing-settings";
+import { StudyProgramEditor } from "./study-program-settings";
 import { studyCommission, studyUnitProfit } from "@/lib/study-commission";
 import {
   studyTiming,
@@ -203,15 +205,20 @@ export function StudyRoom({
     remaining <= 0 ||
     ["done", "waiting", "countdown", "feedback"].includes(market.stage);
   const settingsLocked = view.phase !== "waiting" || view.round > 0;
+  const preparing = Boolean(
+    teacher && study.lobby?.admission && !settingsLocked,
+  );
   const roomStatus = !demo ? (
     <>
       <span className={`connection ${connected ? "" : "disconnected"}`}>
         {connected ? <Wifi size={14} /> : <WifiOff size={14} />}{" "}
         {connected ? "接続中" : "再接続中"}
       </span>
-      <span className="header-room-code">
-        ルーム <b>{view.code}</b>
-      </span>
+      {!teacher && (
+        <span className="header-room-code">
+          ルーム <b>{view.code}</b>
+        </span>
+      )}
       <span className={`role-tag ${teacher ? "teacher" : view.me.role}`}>
         {teacher ? "教員" : view.me.role === "buyer" ? "買い手" : "売り手"}
       </span>
@@ -248,25 +255,39 @@ export function StudyRoom({
       ariaLabel={`${teacher ? `市場${market.id}・` : ""}${priceScopeLabel}の取引価格（円）を${priceScope === "all" ? `全体の第1〜${view.config.rounds}期` : `制度内の第1〜${pricePeriods}期`}で表示したグラフ${teacher ? "。色付きの帯は理論上の均衡価格区間です。" : ""}`}
       periodAxis
       fill
-      equilibrium={teacher?.equilibrium}
+      equilibrium={
+        teacher?.marketEquilibria?.[market.id]?.[market.institution] ??
+        teacher?.equilibrium
+      }
     />
   );
   const teacherNavigation = teacher ? (
     <>
-      <StudyDetailDialog
-        label="実験設定を変更"
-        title="実験設定"
-        triggerClassName="button secondary"
-        disabled={disabled || settingsLocked}
-      >
-        <StudyTimingEditor view={view} command={command} disabled={disabled} />
-        <StudySettingsEditor
-          view={view}
-          command={command}
-          disabled={disabled}
-        />
-        <TeacherParticipants view={view} market={market} />
-      </StudyDetailDialog>
+      {!study.lobby?.admission && (
+        <StudyDetailDialog
+          label="実験設定を変更"
+          title="実験設定"
+          triggerClassName="button secondary"
+          disabled={disabled || settingsLocked}
+        >
+          <StudyProgramEditor
+            view={view}
+            command={command}
+            disabled={disabled}
+          />
+          <StudyTimingEditor
+            view={view}
+            command={command}
+            disabled={disabled}
+          />
+          <StudySettingsEditor
+            view={view}
+            command={command}
+            disabled={disabled}
+          />
+          <TeacherParticipants view={view} market={market} />
+        </StudyDetailDialog>
+      )}
       <StudyDetailDialog
         label="Dashboard"
         title="Dashboard"
@@ -317,7 +338,11 @@ export function StudyRoom({
       </StudyDetailDialog>
     </>
   ) : null;
-  if (!teacher && study.lobby && view.phase === "waiting")
+  if (
+    !teacher &&
+    study.lobby &&
+    (view.phase === "waiting" || view.me.withdrawnAt)
+  )
     return (
       <StudyWaitingRoom
         view={view}
@@ -370,7 +395,6 @@ export function StudyRoom({
         >
           {teacher && (
             <div className="study-room-title">
-              <div className="eyebrow">教員用ダッシュボード</div>
               <h1>{view.config.title}</h1>
             </div>
           )}
@@ -452,18 +476,33 @@ export function StudyRoom({
             command={command}
             disabled={disabled}
             demo={demo}
+            preparing={preparing}
           >
             {teacherNavigation}
           </TeacherControls>
         )}
-        {teacher && study.lobby && (
-          <StudyRoster
+        {preparing ? (
+          <StudySetup
+            key={view.code}
             view={view}
+            now={now}
             command={command}
             disabled={disabled}
             onSelectMarket={setSelected}
             onOpenMarket={openMarketActivity}
           />
+        ) : (
+          teacher &&
+          study.lobby && (
+            <StudyRoster
+              now={now}
+              view={view}
+              command={command}
+              disabled={disabled}
+              onSelectMarket={setSelected}
+              onOpenMarket={openMarketActivity}
+            />
+          )
         )}
         {teacher && (
           <StudyDetailDialog
@@ -806,12 +845,14 @@ function TeacherControls({
   command,
   disabled,
   demo,
+  preparing,
   children,
 }: {
   view: RoomView;
   command: Props["command"];
   disabled: boolean;
   demo: boolean;
+  preparing: boolean;
   children: ReactNode;
 }) {
   const [confirm, setConfirm] = useState<"finish" | "end-round" | null>(null),
@@ -820,12 +861,12 @@ function TeacherControls({
     <section className="panel study-section study-teacher-controls">
       <div className="study-section-heading">
         <div>
-          <span className="eyebrow">学生用ルームコード</span>
+          <span className="eyebrow">ルームコード</span>
           <b className="study-code">{view.code}</b>
         </div>
         <span>
-          <UsersRound size={16} /> {view.participantCount} /{" "}
-          {view.config.capacity} 人
+          <UsersRound size={16} /> {view.participantCount}
+          {!view.study?.lobby?.admission && ` / ${view.config.capacity}`} 人
         </span>
       </div>
       <div className="study-actions">
@@ -849,14 +890,17 @@ function TeacherControls({
           <Copy size={15} />
           {copied ? "コピーしました" : "参加リンクをコピー"}
         </button>
-        {["waiting", "review"].includes(view.phase) && (
+        {!preparing && ["waiting", "review"].includes(view.phase) && (
           <button
             className="button success"
             disabled={
               disabled ||
               Boolean(
                 view.study?.lobby &&
-                (view.participantCount !== view.config.capacity ||
+                ((view.study.lobby.admission
+                  ? view.study.lobby.admission.status !== "closed" ||
+                    view.participantCount < 2
+                  : view.participantCount !== view.config.capacity) ||
                   view.study.lobby.randomizedAt === null),
               )
             }
@@ -900,24 +944,17 @@ function TeacherControls({
             各市場の今期を終了
           </button>
         )}
+        {children}
         {view.phase !== "finished" && (
           <button
-            className="button danger"
+            className="button danger study-teacher-finish"
             disabled={disabled}
             onClick={() => setConfirm("finish")}
           >
             実験を終了
           </button>
         )}
-        {children}
       </div>
-      <p className="field-help">
-        {view.study?.lobby
-          ? "全員の入室とランダム割り当てを確認して開始します。全市場で5秒後に取引が始まります。"
-          : `実験を開始すると、各市場は${studyMarketSize(view.config)}人そろい次第、取引を開始します。`}
-        各期の終了後は自動で次の期へ進みます。CDAの各期と他制度の最終期は8秒間の結果確認後に進み、
-        {view.config.rounds}期で終了します。
-      </p>
       {confirm && (
         <ConfirmDialog
           title={
@@ -1449,6 +1486,11 @@ function TeacherMetrics({
 }: TeacherMetricsProps) {
   const teacher = view.study!.teacher!,
     eq =
+      (market
+        ? teacher.marketEquilibria?.[market.id]?.[
+            institution ?? market.institution
+          ]
+        : undefined) ??
       teacher.equilibria?.[institution ?? market!.institution] ??
       teacher.equilibrium;
   const selectedMarkets = market ? [market] : markets;
@@ -1463,12 +1505,43 @@ function TeacherMetrics({
   return (
     <section className="panel study-section">
       <h2>{market ? `市場${market.id}の` : ""}価格・数量・効率性</h2>
-      <p className="muted">
-        均衡価格{" "}
-        {eq.low === eq.high ? money(eq.low) : `${eq.low}〜${eq.high}円`} ／
-        正余剰の数量 {eq.quantity}、ゼロ余剰を含む上限 {eq.quantityMax} ／
-        最大総余剰 {money(eq.surplus)}
-      </p>
+      {(!markets || !view.config.studyLayout) && (
+        <p className="muted">
+          均衡価格{" "}
+          {eq.low === eq.high ? money(eq.low) : `${eq.low}〜${eq.high}円`} ／
+          正余剰の数量 {eq.quantity}、ゼロ余剰を含む上限 {eq.quantityMax} ／
+          最大総余剰 {money(eq.surplus)}
+        </p>
+      )}
+      {markets && view.config.studyLayout && (
+        <div className="study-table-wrap">
+          <table aria-label="市場別の均衡基準">
+            <thead>
+              <tr>
+                <th>市場</th>
+                <th>均衡価格</th>
+                <th>正余剰の数量</th>
+                <th>最大総余剰</th>
+              </tr>
+            </thead>
+            <tbody>
+              {markets.map((m) => {
+                const benchmark = teacher.marketEquilibria![m.id][institution!];
+                return (
+                  <tr key={m.id}>
+                    <td>市場{m.id}</td>
+                    <td>
+                      {benchmark.low}〜{benchmark.high}円
+                    </td>
+                    <td>{benchmark.quantity}</td>
+                    <td>{money(benchmark.surplus)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       <p className="field-help">
         個人利益はCommission込みです。総余剰・効率性・均衡の計算にはCommissionを含めません。
       </p>
@@ -1609,7 +1682,9 @@ export function StudyAllMarketResults({ view }: { view: RoomView }) {
             periodAxis
             fill
             equilibrium={
-              teacher.equilibria?.[institution] ?? teacher.equilibrium
+              view.config.studyLayout
+                ? undefined
+                : (teacher.equilibria?.[institution] ?? teacher.equilibrium)
             }
           />
         </section>

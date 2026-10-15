@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, GraduationCap } from "lucide-react";
-import { Header, Footer } from "@/components/shell";
+import { Header } from "@/components/shell";
 import { TeacherForm } from "@/components/teacher-form";
 import { getServerStatus } from "@/lib/server/config";
 import { pptStudySettings } from "@/lib/server/study";
@@ -15,7 +15,11 @@ export default async function Teacher({
   const returnRoom = room && /^[A-Z2-9]{6}$/.test(room) ? room : undefined;
   return (
     <>
-      <Header homeHref="/teacher" />
+      <Header homeHref="/teacher">
+        <Link className="button demo-entry-button" href="/demo">
+          Demo Model
+        </Link>
+      </Header>
       <main
         className={
           legacy === "1" ? "narrow-main" : "narrow-main teacher-setup-main"
@@ -30,14 +34,10 @@ export default async function Teacher({
             ルーム {returnRoom} に戻る
           </Link>
         )}
-        <div className="page-intro">
-          <span className="eyebrow">
-            <GraduationCap size={18} />
-            教員用ページ
-          </span>
-          <h1>授業に、小さな市場を。</h1>
-          <p>同じ需要と供給のもとで、選択した取引制度を実施します。</p>
-        </div>
+        <h1 className="eyebrow teacher-entry-heading">
+          <GraduationCap size={18} />
+          教員用ページ
+        </h1>
         <TeacherForm
           initialCode={code}
           initialTab={returnRoom ? "manage" : undefined}
@@ -48,13 +48,7 @@ export default async function Teacher({
             settings: pptStudySettings(),
           }}
         />
-        <div className="demo-entry-link">
-          <span>授業の前に、ひとりで操作を確認</span>
-          <Link href="/demo">ひとりデモを試す</Link>
-          <small>実験の設定から開始。仮想参加者が自動で入室します。</small>
-        </div>
       </main>
-      <Footer />
     </>
   );
 }

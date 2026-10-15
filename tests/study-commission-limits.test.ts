@@ -159,6 +159,7 @@ test("creation renders the safe default, current upper bound and both equilibria
   const markup = renderToStaticMarkup(
     createElement(TeacherForm, {
       status: { mode: "local", ready: true, keyRequired: false },
+      initialConfig: { ...config, studyCommission: 1 },
       conditionPreset: { label: "Default", settings: pptStudySettings() },
     }),
   );

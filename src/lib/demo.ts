@@ -146,7 +146,9 @@ export class DemoSession {
     return this.room.participants.find((p) => p.id === this.humanId)!;
   }
   private get bots() {
-    return this.room.participants.filter((p) => p.id !== this.humanId);
+    return this.room.participants.filter(
+      (p) => !p.withdrawnAt && p.id !== this.humanId,
+    );
   }
 
   private publish() {
@@ -224,7 +226,21 @@ export class DemoSession {
           ? generatedStudySettings(this.options.generator, size)
           : resizeStudySettings(DEMO_SETTINGS, size),
     );
-    if (this.options.lobby) study.lobby = { revision: 0, randomizedAt: null };
+    if (this.options.lobby)
+      study.lobby = {
+        revision: 0,
+        randomizedAt: null,
+        ...(config.studyAdmission === "flexible"
+          ? {
+              admission: {
+                status: "open",
+                closesAt: null,
+                closedAt: null,
+                targetMarkets: config.markets!,
+              },
+            }
+          : {}),
+      };
     if (!this.options.config) {
       const firstOrder = [
         institution,
@@ -298,6 +314,12 @@ export class DemoSession {
       this.role = this.human.role;
       this.institution = this.market.order[0];
     }
+    if (study.lobby?.admission)
+      for (const person of this.room.participants) {
+        person.seat = -1;
+        person.alias = "未割当";
+        person.limits = { apple: 0, banana: 0, orange: 0 };
+      }
     const commissionError = studyCommissionError(
       studyCommission(config),
       this.room.study!.settings,
@@ -369,6 +391,8 @@ export class DemoSession {
       this.send(asTeacher ? "teacher" : this.human, command);
       if (
         command.type === "study-randomize" ||
+        command.type === "study-admission" ||
+        command.type === "study-withdraw" ||
         command.type === "study-settings"
       ) {
         this.role = this.human.role;
@@ -386,9 +410,10 @@ export class DemoSession {
   };
 
   tick = (elapsedMs: number) => {
-    if (this.room.phase !== "running") return;
+    if (this.room.phase !== "running" && this.room.phase !== "waiting") return;
     this.now += Math.max(0, Math.min(1000, elapsedMs));
     settleStudy(this.room, this.now, this.events);
+    if (this.human.seat >= 0) this.role = this.human.role;
     this.runBots();
     this.publish();
   };
@@ -552,9 +577,15 @@ export class DemoSession {
   private runBots() {
     if (this.room.phase !== "running") return;
     this.submitSealedBots();
-    for (const id of this.botClocks.keys()) {
+    for (const market of this.room.study!.markets) {
+      const id = market.id;
+      if (!this.botClocks.has(id))
+        this.botClocks.set(id, {
+          nextAt: this.now,
+          round: 0,
+          indices: { buyer: 0, seller: 0 },
+        });
       const clock = this.botClocks.get(id)!;
-      const market = this.room.study!.markets.find((m) => m.id === id)!;
       const round = marketRound(this.room, market);
       if (clock.round !== round) {
         clock.round = round;

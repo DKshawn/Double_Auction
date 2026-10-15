@@ -163,7 +163,9 @@ export default function DemoRoom({
         </span>
         <p className="demo-hint">
           {needsAssignment
-            ? "教員画面で「ランダムに割り当て」を押してから、実験を開始してください。"
+            ? view.study?.lobby?.admission?.status === "open"
+              ? "教員画面で入室を締め切って割り当てを確認し、実験を開始してください。"
+              : "教員画面で「ランダムに割り当て」を押してから、実験を開始してください。"
             : market.stage === "countdown"
               ? "全市場の開始まで5秒間カウントダウンします。"
               : market.stage === "feedback"
@@ -198,7 +200,9 @@ export default function DemoRoom({
             人が入室済みです。教員画面で市場と役割をランダムに割り当て、開始すると5秒後に取引が始まります。あなた以外の参加者は自動で取引します。
           </p>
           <p className="demo-note">
-            各市場は買い手{perSide}人・売り手{perSide}人です。
+            {view.study?.lobby?.admission
+              ? "各市場は買い手・売り手各1人以上、両側の人数差は最大1人です。"
+              : `各市場は買い手${perSide}人・売り手${perSide}人です。`}
             {institutions
               .map(
                 (i) =>

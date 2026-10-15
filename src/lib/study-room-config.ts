@@ -22,6 +22,8 @@ import { studyCommissionSchema } from "./study-commission";
 export const studyRoomConfigSchema = z
   .object({
     protocol: z.literal("institutions-v1"),
+    studyAdmission: z.literal("flexible").optional(),
+    studySetupConfirmed: z.boolean().optional(),
     title: z.string().trim().min(1).max(60),
     markets: z.number().int().min(1).max(MAX_STUDY_MARKETS),
     marketSize: z
@@ -48,8 +50,15 @@ export const studyRoomConfigSchema = z
   )
   .refine(
     (c) =>
-      !studyLayoutError(c.markets, studyMarketSize(c)) &&
-      c.capacity === c.markets * studyMarketSize(c),
+      !studyLayoutError(
+        c.markets,
+        studyMarketSize(c),
+        c.studyAdmission === "flexible",
+      ) &&
+      c.capacity ===
+        (c.studyAdmission === "flexible"
+          ? Math.min(MAX_STUDY_PARTICIPANTS, c.markets * studyMarketSize(c))
+          : c.markets * studyMarketSize(c)),
     "市場数・1市場の人数・合計人数を確認してください。",
   )
   .refine(

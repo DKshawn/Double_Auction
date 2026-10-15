@@ -55,7 +55,7 @@ export default async function Home({
               </span>
               <span>
                 <UsersRound size={17} />
-                標準：1市場16人
+                入室人数で市場を編成
               </span>
               <span>
                 <RefreshCcw size={16} />
@@ -72,7 +72,7 @@ export default async function Home({
             [
               "01",
               "入室して待つ",
-              "全員がそろったら教員が市場と役割をランダムに割り当てます。開始後、自分の価値・費用を確認しましょう。",
+              "入室締切後、教員が市場と役割をランダムに割り当てます。開始後、自分の価値・費用を確認しましょう。",
             ],
             [
               "02",

@@ -45,14 +45,10 @@ export function DemoEntry() {
           <ArrowLeft size={15} />
           教員用ページへ
         </Link>
-        <div className="page-intro">
-          <span className="eyebrow">
-            <GraduationCap size={18} />
-            ひとりデモ · 教員の実験設定
-          </span>
-          <h1>実験の設定から、ひとりで確認。</h1>
-          <p>制度・期数・人数・時間を設定して、教員画面から実験を進めます。</p>
-        </div>
+        <h1 className="eyebrow teacher-entry-heading">
+          <GraduationCap size={18} />
+          ひとりデモ · 教員の実験設定
+        </h1>
         <TeacherForm
           status={{ mode: "local", ready: true, keyRequired: false }}
           initialConfig={config}

@@ -124,7 +124,10 @@ class RoomFeed {
       try {
         const actor = authenticate(bundle.root, sub.token);
         const scope =
-          actor === "teacher" || !bundle.root.storageVersion
+          actor === "teacher" ||
+          !bundle.root.storageVersion ||
+          bundle.root.phase === "waiting" ||
+          actor.seat < 0
             ? undefined
             : studyMarketId(bundle.root.config, actor.seat);
         if (
@@ -183,10 +186,15 @@ class RoomFeed {
   }
   private scheduleDeadline() {
     clearTimeout(this.deadline);
-    if (this.closed || !this.bundle || this.bundle.root.phase !== "running")
-      return;
+    if (this.closed || !this.bundle) return;
     const room = assemble(this.bundle, undefined, false);
-    if (room.deadline === null) return;
+    const deadline =
+      room.phase === "waiting"
+        ? room.study?.lobby?.admission?.closesAt
+        : room.phase === "running"
+          ? room.deadline
+          : null;
+    if (deadline == null) return;
     this.deadline = setTimeout(
       () => {
         void new AuctionService(this.db)
@@ -198,7 +206,7 @@ class RoomFeed {
       },
       Math.max(
         10,
-        Math.min(2_147_483_647, room.deadline - (Date.now() + this.offset) + 5),
+        Math.min(2_147_483_647, deadline - (Date.now() + this.offset) + 5),
       ),
     );
   }

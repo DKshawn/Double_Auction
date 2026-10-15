@@ -2,7 +2,7 @@ import { equilibrium } from "./equilibrium";
 import type { Institution, StudyMarketView, StudyMetric } from "./study-types";
 import type { RoomView } from "./types";
 import type { Participant, Room } from "./auction-model";
-import { studyPeriodAt } from "./study-config";
+import { studyPeriodAt, studyMarketId } from "./study-config";
 import { studyTradeProfit } from "./study-commission";
 import { postedBookOrders } from "./posted-auction";
 import {
@@ -20,14 +20,15 @@ import {
 export const studyEquilibrium = (
   room: Room,
   institution: Institution = "cda",
+  market?: number,
 ) => {
-  const settings = settingsForInstitution(room, institution);
+  const settings = settingsForInstitution(room, institution, market);
   return equilibrium(settings.values.flat(), settings.costs.flat());
 };
 export function studyMetrics(room: Room, now: number): StudyMetric[] {
   return room.study!.markets.flatMap((m) =>
     m.periods.map((p) => {
-      const eq = studyEquilibrium(room, p.institution),
+      const eq = studyEquilibrium(room, p.institution, m.id),
         benchmark = (eq.low + eq.high) / 2;
       const trades = m.trades.filter((t) => t.round === p.round),
         n = trades.length;
@@ -152,7 +153,7 @@ function publicMarket(
           : m.remainingMs,
     call: m.call,
     participantCount: room.participants.filter(
-      (p) => marketFor(room, p).id === m.id,
+      (p) => !p.withdrawnAt && studyMarketId(room.config, p.seat) === m.id,
     ).length,
     activeBuyer:
       m.stage === "purchase" && !m.posted
@@ -343,7 +344,9 @@ export function studyView(
     deadline: teacher ? room.deadline : publicState.deadline,
     remainingMs: teacher ? room.remainingMs : publicState.remainingMs,
     serverTime: now,
-    participantCount: room.participantCount ?? room.participants.length,
+    participantCount:
+      room.participantCount ??
+      room.participants.filter((p) => !p.withdrawnAt).length,
     quotes: [],
     trades: legacyTrades,
     mode,
@@ -362,6 +365,7 @@ export function studyView(
           id: actor.id,
           alias: actor.alias,
           nickname: actor.nickname,
+          ...(actor.withdrawnAt ? { withdrawnAt: actor.withdrawnAt } : {}),
           role: actor.role,
           limits: null,
           used: [],
@@ -396,7 +400,7 @@ export function studyView(
       ),
       participants: room.participants.map((p, i) => ({
         id: p.id,
-        market: marketFor(room, p).id,
+        market: studyMarketId(room.config, p.seat),
         nickname: p.nickname,
         alias: p.alias,
         role: p.role,
@@ -404,10 +408,21 @@ export function studyView(
         profit: studyProfit(room, p),
         joinOrder: i + 1,
         joinedAt: p.joinedAt,
+        ...(p.withdrawnAt ? { withdrawnAt: p.withdrawnAt } : {}),
       })),
       metrics,
       slopes: convergenceSlopes(metrics),
       equilibrium: studyEquilibrium(room),
+      marketEquilibria: Object.fromEntries(
+        study.markets.map((m) => [
+          m.id,
+          {
+            cda: studyEquilibrium(room, "cda", m.id),
+            call: studyEquilibrium(room, "call", m.id),
+            posted: studyEquilibrium(room, "posted", m.id),
+          },
+        ]),
+      ),
       equilibria: {
         cda: studyEquilibrium(room, "cda"),
         call: studyEquilibrium(room, "call"),

@@ -37,7 +37,8 @@ test("demo starts at the shared teacher settings form and restores the last expe
   const entry = renderToStaticMarkup(createElement(DemoEntry));
   assert.match(entry, /教員の実験設定/);
   assert.match(entry, /デモルームを作成/);
-  assert.match(entry, /実施する制度/);
+  assert.doesNotMatch(entry, /人数を決めずに入室/);
+  assert.match(entry, /作成前に詳細を設定/);
   assert.doesNotMatch(entry, /ランダムに割り当て<\/button>/);
   const settings = config(["call", "posted"]);
   const markup = renderToStaticMarkup(
@@ -48,15 +49,12 @@ test("demo starts at the shared teacher settings form and restores the last expe
     }),
   );
   assert.match(markup, /value="教師設定からのデモ"/);
-  assert.match(markup, /value="custom" selected=""/);
-  assert.match(markup, /name="studyPeriods.call"[^>]*value="1"/);
-  assert.match(markup, /name="studyPeriods.posted"[^>]*value="2"/);
-  assert.match(markup, /name="studyTiming.purchaseSeconds"[^>]*value="9"/);
-  assert.doesNotMatch(markup, /name="studyTiming.buyerSeconds"/);
+  // Restored settings remain behind the dialog, not expanded between the title
+  // and the create action. Their save/reopen behavior is covered in the browser.
+  assert.match(markup, /aria-haspopup="dialog">作成前に詳細を設定/);
+  assert.doesNotMatch(markup, /study-program-columns|study-preset-picker/);
   assert.doesNotMatch(markup, /name="password"|name="accessKey"/);
   assert.doesNotMatch(markup, /接続設定が完了していません/);
-  assert.doesNotMatch(markup, /name="studyPeriods.cda"/);
-  assert.doesNotMatch(markup, /name="studyTiming.cdaSeconds"/);
   assert.doesNotMatch(markup, /<button[^>]*disabled=""/);
   const formal = renderToStaticMarkup(
     createElement(TeacherForm, {
@@ -65,7 +63,7 @@ test("demo starts at the shared teacher settings form and restores the last expe
   );
   assert.match(formal, /name="password"/);
   assert.match(formal, /ルーム管理/);
-  assert.match(formal, /実験ルームを作成/);
+  assert.match(formal, /ルーム作成/);
 });
 
 const selections: Institution[][] = [

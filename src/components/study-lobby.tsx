@@ -8,31 +8,47 @@ import {
   Clock3,
   Wifi,
   WifiOff,
+  ChevronDown,
+  X,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import type { Command, RoomView } from "@/lib/types";
 import {
-  studyMarketSize,
+  studyMarketCounts,
   studyInstitutions,
   studyPeriodCount,
   studyUnits,
+  MAX_STUDY_MARKETS,
 } from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { studyCommission } from "@/lib/study-commission";
 import { Header } from "./shell";
+import { StudyAdmission } from "./study-admission";
+import { ConfirmDialog } from "./confirm-dialog";
+
+type RosterPerson = NonNullable<
+  NonNullable<RoomView["study"]>["teacher"]
+>["participants"][number];
+type RosterSlot = { alias: string; person?: RosterPerson };
 
 export function StudyRoster({
   view,
   command,
   disabled,
+  now,
   onSelectMarket,
   onOpenMarket,
+  hideControls = false,
+  setupMarketDraft,
 }: {
   view: RoomView;
   command: (command: Command) => Promise<boolean>;
   disabled: boolean;
+  now: number;
   onSelectMarket: (market: number) => void;
   onOpenMarket: (market: number) => void;
+  hideControls?: boolean;
+  setupMarketDraft?: string | null;
 }) {
   const study = view.study!,
     teacher = study.teacher!,
@@ -40,146 +56,307 @@ export function StudyRoster({
   const waiting = view.phase === "waiting";
   const assigned = lobby.randomizedAt !== null;
   const full = view.participantCount === view.config.capacity;
-  const size = studyMarketSize(view.config);
+  const [withdraw, setWithdraw] = useState<{
+    id: string;
+    nickname: string;
+  } | null>(null);
+  const [localMarketDraft, setMarketDraft] = useState<string | null>(null);
+  const [expandedMarkets, setExpandedMarkets] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const rosterId = useId();
+  const marketDraft = hideControls
+    ? (setupMarketDraft ?? null)
+    : localMarketDraft;
+  const flexible = !!lobby.admission;
+  const pending = flexible && !assigned;
+  const draftCount = Number(marketDraft);
+  const previewCount =
+    Number.isInteger(draftCount) &&
+    draftCount >= 1 &&
+    draftCount <= MAX_STUDY_MARKETS
+      ? draftCount
+      : (lobby.admission?.targetMarkets ?? 1);
+  const arrivals = pending
+    ? teacher.participants
+        .filter((person) => !person.withdrawnAt)
+        .sort((a, b) => a.joinOrder - b.joinOrder)
+    : [];
+  const markets = pending
+    ? Array.from({ length: previewCount }, (_, index) => {
+        const size = Math.floor(arrivals.length / previewCount);
+        const extra = arrivals.length % previewCount;
+        const start = index * size + Math.min(index, extra);
+        const people = arrivals.slice(
+          start,
+          start + size + (index < extra ? 1 : 0),
+        );
+        const buyers = Math.ceil(people.length / 2);
+        const slots = (side: RosterPerson[], role: "buyer" | "seller") =>
+          side.map((person, seat) => ({
+            alias: `${role === "buyer" ? "買" : "売"}${String(seat + 1).padStart(2, "0")}`,
+            person,
+          }));
+        return {
+          id: index + 1,
+          order: "",
+          buyers: slots(people.slice(0, buyers), "buyer"),
+          sellers: slots(people.slice(buyers), "seller"),
+        };
+      })
+    : teacher.markets.map((market) => {
+        const counts = studyMarketCounts(view.config, market.id);
+        const byAlias = new Map(
+          teacher.participants
+            .filter((person) => person.market === market.id)
+            .map((person) => [person.alias, person]),
+        );
+        const slots = (role: "buyer" | "seller", count: number): RosterSlot[] =>
+          Array.from({ length: count }, (_, index) => {
+            const alias = `${role === "buyer" ? "買" : "売"}${String(index + 1).padStart(2, "0")}`;
+            return { alias, person: byAlias.get(alias) };
+          });
+        return {
+          id: market.id,
+          order: market.order.map((i) => INSTITUTIONS[i].short).join(" → "),
+          buyers: slots("buyer", counts.buyers),
+          sellers: slots("seller", counts.sellers),
+        };
+      });
+  const participantAction = (person: (typeof teacher.participants)[number]) =>
+    person.withdrawnAt ? (
+      <span
+        className="study-roster-withdrawn"
+        title="参加終了"
+        aria-label="参加終了"
+      >
+        <X size={16} aria-hidden="true" />
+      </span>
+    ) : view.phase !== "finished" ? (
+      <button
+        type="button"
+        className="study-roster-withdraw"
+        title="参加終了"
+        aria-label={`${person.nickname}さんの参加を終了`}
+        disabled={disabled}
+        onDoubleClick={(e) => e.stopPropagation()}
+        onClick={() => setWithdraw(person)}
+      >
+        <X size={16} aria-hidden="true" />
+      </button>
+    ) : null;
   return (
-    <details
-      key={waiting ? "admission" : "experiment"}
+    <section
       className="panel study-roster"
-      open={waiting}
+      aria-labelledby={`${rosterId}-heading`}
     >
-      <summary>
+      <header className="study-roster-heading">
         <div>
           <UsersRound size={22} />
-          <h2>
+          <h2 id={`${rosterId}-heading`}>
             学生の割り当て{" "}
             <small>
-              {view.participantCount} / {view.config.capacity}人
+              {view.participantCount}
+              {!flexible && ` / ${view.config.capacity}`}人
             </small>
           </h2>
         </div>
         <span className={`study-lobby-label ${assigned ? "assigned" : ""}`}>
-          {assigned ? "割り当て済み" : "入室順の仮配置"}
+          {assigned
+            ? "割り当て済み"
+            : flexible
+              ? lobby.admission!.status === "open"
+                ? "入室受付中"
+                : "入室受付終了"
+              : "入室順の仮配置"}
         </span>
-      </summary>
+      </header>
       <div className="study-roster-content">
-        <div className="study-roster-actions">
-          {(!waiting || assigned) && (
-            <p>
-              {waiting
-                ? "市場と買い手・売り手の割り当てが完了しました。「実験を開始」で全市場の5秒カウントダウンが始まります。"
-                : "実験開始時の割り当てです。各市場の買い手・売り手は実験終了まで固定されます。"}
-            </p>
-          )}
-          {waiting && (
-            <button
-              className="button primary"
-              disabled={disabled || !full}
-              onClick={() =>
-                void command({
-                  type: "study-randomize",
-                  expectedRevision: lobby.revision,
-                })
-              }
-            >
-              <Shuffle size={17} />
-              {assigned ? "もう一度ランダムに割り当て" : "ランダムに割り当て"}
-            </button>
-          )}
-        </div>
-        {waiting && !full && (
+        {waiting && !hideControls && (
+          <StudyAdmission
+            view={view}
+            now={now}
+            command={command}
+            disabled={disabled}
+            marketDraft={marketDraft}
+            onMarketDraftChange={setMarketDraft}
+          />
+        )}
+        {!hideControls && (
+          <div className="study-roster-actions">
+            {(!waiting || assigned) && (
+              <p>
+                {waiting
+                  ? "市場と買い手・売り手の割り当てが完了しました。「実験を開始」で全市場の5秒カウントダウンが始まります。"
+                  : "実験開始時の割り当てです。各市場の買い手・売り手は実験終了まで固定されます。"}
+              </p>
+            )}
+            {waiting && (!flexible || lobby.admission!.status === "closed") && (
+              <button
+                className="button primary"
+                disabled={
+                  disabled || (flexible ? view.participantCount < 2 : !full)
+                }
+                onClick={() =>
+                  void command({
+                    type: "study-randomize",
+                    expectedRevision: lobby.revision,
+                  })
+                }
+              >
+                <Shuffle size={17} />
+                {assigned ? "もう一度ランダムに割り当て" : "ランダムに割り当て"}
+              </button>
+            )}
+          </div>
+        )}
+        {waiting && !flexible && !full && (
           <p className="field-help">
             あと{view.config.capacity - view.participantCount}
             人の入室を待っています。
           </p>
         )}
         <div className="study-roster-grid">
-          {teacher.markets.map((market) => {
-            const people = teacher.participants.filter(
-              (p) => p.market === market.id,
-            );
-            const byAlias = new Map(people.map((p) => [p.alias, p]));
-            const slots = Array.from({ length: size / 2 }, (_, index) =>
-              (["buyer", "seller"] as const).map((role) => ({
-                role,
-                alias: `${role === "buyer" ? "買" : "売"}${String(index + 1).padStart(2, "0")}`,
-              })),
-            ).flat();
+          {markets.map((market) => {
+            const expanded = expandedMarkets.has(market.id);
+            const activeCount = (slots: RosterSlot[]) =>
+              slots.filter(({ person }) => person && !person.withdrawnAt)
+                .length;
+            const buyers = activeCount(market.buyers);
+            const sellers = activeCount(market.sellers);
             return (
               <section
-                className={`study-roster-room ${people.length === size ? "full" : ""}`}
+                className="study-roster-room"
                 key={market.id}
-                aria-label={`市場${market.id}の学生`}
-                onDoubleClick={() => onOpenMarket(market.id)}
+                aria-label={`市場${market.id}の${pending ? "仮配置" : "学生"}`}
+                onDoubleClick={
+                  pending ? undefined : () => onOpenMarket(market.id)
+                }
               >
-                <header>
-                  <div>
-                    <DoorOpen size={20} />
-                    <h3>
-                      <button
-                        type="button"
-                        className="text-button study-market-open"
-                        aria-label={`市場${market.id}の注文・清算を表示`}
-                        aria-haspopup="dialog"
-                        title="ダブルクリックで注文・清算を表示"
-                        onClick={() => onSelectMarket(market.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            onOpenMarket(market.id);
-                          }
-                        }}
-                      >
-                        市場 {market.id}
-                      </button>
-                    </h3>
-                  </div>
-                  <span>
-                    {people.length} / {size}人
-                  </span>
-                </header>
-                <p className="study-roster-sequence">
-                  {market.order.map((i) => INSTITUTIONS[i].short).join(" → ")}
-                </p>
-                <ul>
-                  {slots.map(({ role, alias }) => {
-                    const person = byAlias.get(alias);
-                    return (
-                      <li
-                        key={alias}
-                        className={person ? undefined : "study-roster-empty"}
-                      >
-                        <span className={`role-tag ${role}`}>{alias}</span>
-                        {person ? (
-                          <>
-                            <b title={person.nickname}>{person.nickname}</b>
-                            <span
-                              className="study-roster-number"
-                              title="入室順"
-                            >
-                              {person.joinOrder}
-                            </span>
-                          </>
-                        ) : (
-                          <span>入室待ち</span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {assigned && (
-                  <footer>
-                    <Check size={14} />
-                    買い手{people.filter((p) => p.role === "buyer").length}
-                    人・売り手
-                    {people.filter((p) => p.role === "seller").length}人
-                  </footer>
-                )}
+                <h3>
+                  <button
+                    type="button"
+                    className="study-roster-market-toggle"
+                    aria-expanded={expanded}
+                    aria-controls={`${rosterId}-market-${market.id}`}
+                    onClick={() => {
+                      if (!pending) onSelectMarket(market.id);
+                      setExpandedMarkets((previous) => {
+                        const next = new Set(previous);
+                        if (next.has(market.id)) next.delete(market.id);
+                        else next.add(market.id);
+                        return next;
+                      });
+                    }}
+                  >
+                    <span className="study-roster-market-name">
+                      <DoorOpen size={18} /> 市場 {market.id}
+                      <ChevronDown size={16} />
+                    </span>
+                    <span className="study-roster-counts">
+                      <span className="buy-text">
+                        買 <b>{buyers}</b>人
+                      </span>
+                      <span className="sell-text">
+                        売 <b>{sellers}</b>人
+                      </span>
+                      <span>
+                        合計 <b>{buyers + sellers}</b>人
+                      </span>
+                    </span>
+                  </button>
+                </h3>
+                <div id={`${rosterId}-market-${market.id}`} hidden={!expanded}>
+                  {market.order && (
+                    <p className="study-roster-sequence">{market.order}</p>
+                  )}
+                  <table
+                    className="study-roster-table"
+                    aria-label={`市場${market.id}の買い手・売り手`}
+                  >
+                    <thead className="study-roster-accessible-head">
+                      <tr>
+                        <th scope="col" className="buy-text">
+                          買
+                        </th>
+                        <th scope="col" className="sell-text">
+                          売
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from(
+                        {
+                          length: Math.max(
+                            1,
+                            market.buyers.length,
+                            market.sellers.length,
+                          ),
+                        },
+                        (_, index) => (
+                          <tr key={index}>
+                            {(["buyers", "sellers"] as const).map((side) => {
+                              const slot = market[side][index];
+                              const person = slot?.person;
+                              return (
+                                <td key={side}>
+                                  <div
+                                    className={`study-roster-person ${person?.withdrawnAt ? "withdrawn" : ""}`}
+                                  >
+                                    {slot && (
+                                      <span
+                                        className={`role-tag ${side === "buyers" ? "buyer" : "seller"}`}
+                                      >
+                                        {slot.alias.slice(1)}
+                                      </span>
+                                    )}
+                                    {person ? (
+                                      <>
+                                        <b title={person.nickname}>
+                                          {person.nickname}
+                                        </b>
+                                        {participantAction(person)}
+                                      </>
+                                    ) : (
+                                      <span className="study-roster-empty">
+                                        {slot || pending ? "入室待ち" : "—"}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </section>
             );
           })}
         </div>
+        {withdraw && (
+          <ConfirmDialog
+            title={`${withdraw.nickname} さんの参加を終了`}
+            message={
+              waiting
+                ? "この学生を割り当て対象から外します。同じルームで入室を受け付け直し、再度割り当てできます。"
+                : "未約定の注文を取り消します。成立済みの取引・利益・役割は保存し、他の学生は実験を続けます。"
+            }
+            onCancel={() => setWithdraw(null)}
+            onConfirm={async () => {
+              await command({
+                type: "study-withdraw",
+                participantId: withdraw.id,
+                expectedRevision: lobby.revision,
+              });
+              setWithdraw(null);
+            }}
+          />
+        )}
       </div>
-    </details>
+    </section>
   );
 }
 
@@ -221,15 +398,21 @@ export function StudyWaitingRoom({
           <div className="study-waiting-icon">
             {assigned ? <Check size={32} /> : <Clock3 size={32} />}
           </div>
-          <p className="eyebrow study-waiting-admission">入室が完了しました</p>
-          {assigned && <h1>割り当てが完了しました</h1>}
+          <p className="eyebrow study-waiting-admission">
+            {view.me.withdrawnAt ? "参加を終了しました" : "入室が完了しました"}
+          </p>
+          {assigned && !view.me.withdrawnAt && <h1>割り当てが完了しました</h1>}
           <p className="study-waiting-message">
-            {view.me.nickname} さん、この画面を開いたままお待ちください。
+            {view.me.withdrawnAt
+              ? "これまでの取引記録は保存されています。"
+              : `${view.me.nickname} さん、この画面を開いたままお待ちください。`}
           </p>
           <p>
-            {assigned
-              ? "教員が開始すると実験画面に切り替わり、5秒後に取引が始まります。"
-              : "全員の入室後、教員が市場と買い手・売り手をランダムに割り当てます。"}
+            {view.me.withdrawnAt
+              ? "他の参加者は実験を続けます。"
+              : assigned
+                ? "教員が開始すると実験画面に切り替わり、5秒後に取引が始まります。"
+                : "入室締切後、教員が市場と買い手・売り手を割り当てます。"}
           </p>
           <div
             className="study-waiting-institutions"
@@ -260,7 +443,8 @@ export function StudyWaitingRoom({
             </li>
           </ol>
           <div className="study-waiting-count">
-            入室済み <b>{view.participantCount}</b> / {view.config.capacity}人
+            参加者 <b>{view.participantCount}</b>
+            {!view.study!.lobby!.admission && ` / ${view.config.capacity}`}人
           </div>
           {!connected && (
             <p className="error-message" role="status">

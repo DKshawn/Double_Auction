@@ -10,6 +10,7 @@ export type RoomSummary = {
   totalRounds: number;
   participantCount: number;
   capacity: number;
+  flexibleAdmission?: boolean;
   marketCount: number;
   institutions: { institution: Institution; periods: number }[];
 };

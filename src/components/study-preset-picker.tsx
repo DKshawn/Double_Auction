@@ -86,11 +86,26 @@ export function StudyPresetPicker({
   const [seed, setSeed] = useState(
     initialGenerator?.seed ?? DEFAULT_ASSIGNMENT_SEED,
   );
-  const [preview, setPreview] = useState<StudyPresetPreview | null>(() =>
-    !initialGenerator && existingPreset
+  const [preview, setPreview] = useState<StudyPresetPreview | null>(() => {
+    if (initialGenerator) {
+      try {
+        return {
+          settings: generatedStudySettings(
+            initialGenerator,
+            units,
+            unitsPerParticipant,
+          ),
+          generator: structuredClone(initialGenerator),
+          revision,
+        };
+      } catch {
+        return null;
+      }
+    }
+    return existingPreset
       ? { settings: structuredClone(existingPreset.settings), revision }
-      : null,
-  );
+      : null;
+  });
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
   const stale = preview && preview.revision !== revision;

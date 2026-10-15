@@ -36,6 +36,10 @@ import {
   studyInstitutionOrders,
   studyMarketId,
   studyMarketSize,
+  studyMarketCounts,
+  studyProfileIndex,
+  studyMarketSettings,
+  MAX_STUDY_MARKETS,
   studyUnits,
   studyUnitsPerSide,
   studyUnitsError,
@@ -45,6 +49,9 @@ import {
   studyRole,
   MAX_INSTITUTION_PERIODS,
   studyPeriodAt,
+  studyTotalRounds,
+  studyPeriodCount,
+  resizeStudySettings,
 } from "./study-config";
 import {
   AuctionError,
@@ -175,12 +182,15 @@ export function shuffled<T>(items: T[]): T[] {
 }
 
 function assignStudySeats(room: Room) {
-  for (const [i, person] of room.participants.entries()) {
+  if (room.study?.lobby?.admission?.status === "open") return;
+  for (const [i, person] of room.participants
+    .filter((p) => !p.withdrawnAt)
+    .entries()) {
     person.seat = room.seats[i];
     person.role = studyRole(room.config, person.seat);
     person.alias = `${person.role === "buyer" ? "買" : "売"}${String(studyRoleIndex(room.config, person.seat) + 1).padStart(2, "0")}`;
     person.limits = {
-      apple: unitLimits(room, person)[0],
+      apple: unitLimits(room, person)[0] ?? 0,
       banana: 0,
       orange: 0,
     };
@@ -191,22 +201,24 @@ export function recordStudyGeneratedAssignments(room: Room) {
   const generation = room.study?.generation;
   if (!generation) return;
   const perSide = studyMarketSize(room.config) / 2;
-  generation.assignments = room.participants.map((p) => {
-    const index = studyRoleIndex(room.config, p.seat);
-    return {
-      participantId: p.id,
-      nickname: p.nickname,
-      market: studyMarketId(room.config, p.seat),
-      seat: p.seat,
-      alias: p.alias,
-      role: p.role,
-      sortedUnits: Array.from(
-        { length: studyUnits(room.config) },
-        (_, unit) => index + 1 + unit * perSide,
-      ),
-      limits: [...unitLimits(room, p, "cda")],
-    };
-  });
+  generation.assignments = room.participants
+    .filter((p) => p.seat >= 0)
+    .map((p) => {
+      const index = studyProfileIndex(room.config, p.seat, perSide);
+      return {
+        participantId: p.id,
+        nickname: p.nickname,
+        market: studyMarketId(room.config, p.seat),
+        seat: p.seat,
+        alias: p.alias,
+        role: p.role,
+        sortedUnits: Array.from(
+          { length: studyUnits(room.config) },
+          (_, unit) => index + 1 + unit * perSide,
+        ),
+        limits: [...unitLimits(room, p, "cda")],
+      };
+    });
 }
 
 // Creation and later teacher edits save the same canonical conditions and seed.
@@ -293,24 +305,38 @@ export function createStudy(
   };
 }
 export const marketFor = (room: Room, p: Participant) =>
-  room.study!.markets.find((m) => m.id === studyMarketId(room.config, p.seat))!;
+  p.seat < 0
+    ? room.study!.markets[0]
+    : room.study!.markets.find(
+        (m) => m.id === studyMarketId(room.config, p.seat),
+      )!;
 export const marketRound = (room: Room, market: StudyMarket) =>
   market.round ?? market.periods.at(-1)?.round ?? room.round;
 export const institutionFor = (room: Room, market: StudyMarket) =>
   studyPeriodAt(room.config, market.order, marketRound(room, market))
     .institution;
-export const settingsForInstitution = (room: Room, institution: Institution) =>
-  institution === "cda"
-    ? room.study!.settings
-    : (room.study!.otherSettings ?? room.study!.settings);
+export const settingsForInstitution = (
+  room: Room,
+  institution: Institution,
+  market?: number,
+) => {
+  const settings =
+    institution === "cda"
+      ? room.study!.settings
+      : (room.study!.otherSettings ?? room.study!.settings);
+  return market ? studyMarketSettings(room.config, settings, market) : settings;
+};
 export const unitLimits = (
   room: Room,
   p: Participant,
   institution = institutionFor(room, marketFor(room, p)),
-) =>
-  settingsForInstitution(room, institution)[
+) => {
+  if (p.seat < 0) return [];
+  const profiles = settingsForInstitution(room, institution)[
     p.role === "buyer" ? "values" : "costs"
-  ][studyRoleIndex(room.config, p.seat)];
+  ];
+  return profiles[studyProfileIndex(room.config, p.seat, profiles.length)];
+};
 export const unitsUsed = (room: Room, p: Participant) =>
   marketFor(room, p).trades.filter(
     (t) =>
@@ -658,6 +684,12 @@ function nextBuyer(
   at: number,
 ) {
   m.buyerIndex++;
+  while (
+    m.buyerIndex < m.buyerOrder.length &&
+    room.participants.find((p) => p.id === m.buyerOrder[m.buyerIndex])
+      ?.withdrawnAt
+  )
+    m.buyerIndex++;
   if (m.buyerIndex >= m.buyerOrder.length)
     finishMarket(room, m, events, at, "complete");
   else {
@@ -710,7 +742,122 @@ function clearPosted(
     // A batch boundary does not change the submission stage or invalidate forms.
   }
 }
+// Admission is a room-wide transaction. No seats or private conditions are
+// assigned until the teacher closes admission or the persisted deadline passes.
+function reopenAdmission(room: Room) {
+  const study = room.study!,
+    lobby = study.lobby!;
+  room.config.studyAdmission = "flexible";
+  const targetMarkets =
+    lobby.admission?.targetMarkets ?? room.config.markets ?? 1;
+  lobby.admission = {
+    status: "open",
+    closesAt: null,
+    closedAt: null,
+    targetMarkets,
+    timerSeconds: lobby.admission?.timerSeconds ?? 60,
+  };
+  lobby.randomizedAt = null;
+  delete room.config.studyLayout;
+  for (const p of room.participants) {
+    p.seat = -1;
+    p.alias = "未割当";
+    p.limits = { apple: 0, banana: 0, orange: 0 };
+  }
+  recordStudyGeneratedAssignments(room);
+}
+
+function closeAdmission(
+  room: Room,
+  at: number,
+  events: AuditEvent[],
+  automatic = false,
+) {
+  const study = room.study!,
+    lobby = study.lobby!,
+    admission = lobby.admission!;
+  const active = room.participants.filter((p) => !p.withdrawnAt);
+  admission.status = "closed";
+  admission.closesAt = null;
+  admission.closedAt = at;
+  delete admission.pausedRemainingMs;
+  delete admission.error;
+  lobby.randomizedAt = null;
+  lobby.revision++;
+  if (active.length < 2) {
+    admission.error = "参加者が2人以上必要です。入室を再開してください。";
+    emit(
+      room,
+      events,
+      at,
+      "admission-closed",
+      automatic ? "system" : "teacher",
+      {
+        trigger: automatic ? "deadline" : "manual",
+        count: active.length,
+        error: admission.error,
+      },
+    );
+    return;
+  }
+  const count = Math.min(
+    admission.targetMarkets,
+    Math.floor(active.length / 2),
+  );
+  let extraBuyer = study.generation
+    ? study.generation.seed % 2 === 0
+    : randomInt(2) === 0;
+  room.config.studyLayout = Array.from({ length: count }, (_, i) => {
+    const size =
+      Math.floor(active.length / count) + (i < active.length % count ? 1 : 0);
+    const buyers = Math.floor(size / 2) + (size % 2 && extraBuyer ? 1 : 0);
+    if (size % 2) extraBuyer = !extraBuyer;
+    return { buyers, sellers: size - buyers };
+  });
+  room.config.markets = count;
+  room.config.capacity = active.length;
+  if (study.markets.length !== count)
+    study.markets = createStudy(
+      count,
+      study.settings,
+      studyInstitutions(room.config),
+    ).markets;
+  room.seats = study.generation
+    ? seededStudySeats(active.length, study.generation.seed)
+    : shuffled(Array.from({ length: active.length }, (_, i) => i));
+  assignStudySeats(room);
+  lobby.randomizedAt = at;
+  if (study.generation) study.generation.assignmentConfirmedAt = at;
+  recordStudyGeneratedAssignments(room);
+  study.revision++;
+  emit(room, events, at, "admission-closed", automatic ? "system" : "teacher", {
+    trigger: automatic ? "deadline" : "manual",
+    requestedMarkets: admission.targetMarkets,
+    layout: room.config.studyLayout,
+    orders: study.markets.map((m) => ({ market: m.id, order: m.order })),
+    revision: lobby.revision,
+    assignments: active.map((p) => ({
+      id: p.id,
+      market: studyMarketId(room.config, p.seat),
+      seat: p.seat,
+      role: p.role,
+      alias: p.alias,
+      unitLimits: unitLimits(room, p),
+    })),
+  });
+}
+
 export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
+  const admission = room.study!.lobby?.admission;
+  if (
+    room.phase === "waiting" &&
+    admission?.status === "open" &&
+    admission.closesAt !== null &&
+    now >= admission.closesAt
+  ) {
+    closeAdmission(room, admission.closesAt, events, true);
+    return true;
+  }
   if (room.phase !== "running") return false;
   let changed = false;
   for (const m of room.study!.markets) {
@@ -718,7 +865,8 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
       ["waiting", "done"].includes(m.stage) &&
       marketRound(room, m) < room.config.rounds &&
       room.participants.filter((p) => marketFor(room, p).id === m.id).length ===
-        studyMarketSize(room.config)
+        studyMarketCounts(room.config, m.id).buyers +
+          studyMarketCounts(room.config, m.id).sellers
     ) {
       startMarket(room, m, events, now);
       changed = true;
@@ -753,7 +901,10 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
           : shuffled(
               room.participants
                 .filter(
-                  (p) => marketFor(room, p).id === m.id && p.role === "buyer",
+                  (p) =>
+                    !p.withdrawnAt &&
+                    marketFor(room, p).id === m.id &&
+                    p.role === "buyer",
                 )
                 .map((p) => p.id),
             );
@@ -801,6 +952,8 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
             sequence,
           })),
         );
+        if (!m.posted && m.buyerOrder.length === 0)
+          finishMarket(room, m, events, at, "complete");
       } else if (m.stage === "purchase") {
         if (m.posted) clearPosted(room, m, events, at);
         else {
@@ -838,7 +991,154 @@ export function executeStudy(
     );
   const cmd = request.command,
     study = room.study!;
-  if (cmd.type === "study-randomize") {
+  if (cmd.type === "study-admission") {
+    if (actor !== "teacher")
+      throw new AuctionError("この操作は教員のみ利用できます。", 403);
+    if (!study.lobby || room.phase !== "waiting" || room.round !== 0)
+      throw new AuctionError("入室設定は実験開始前のみ変更できます。", 409);
+    if (cmd.expectedRevision !== study.lobby.revision)
+      throw new AuctionError(
+        "入室状況が更新されています。最新の画面を確認してください。",
+        409,
+      );
+    if (!study.lobby.admission || cmd.action === "open") reopenAdmission(room);
+    const admission = study.lobby.admission!;
+    const updateMarkets =
+      cmd.action === "configure" ||
+      ((cmd.action === "schedule" || cmd.action === "close") &&
+        cmd.markets !== undefined);
+    if (updateMarkets) {
+      if (
+        !Number.isInteger(cmd.markets) ||
+        cmd.markets! < 1 ||
+        cmd.markets! > MAX_STUDY_MARKETS
+      )
+        throw new AuctionError(
+          `市場数は1〜${MAX_STUDY_MARKETS}で設定してください。`,
+        );
+      if (admission.status !== "open")
+        throw new AuctionError(
+          "市場数を変更する前に入室を再開してください。",
+          409,
+        );
+    }
+    if (cmd.action === "schedule") {
+      if (admission.status !== "open")
+        throw new AuctionError("先に入室を再開してください。", 409);
+      if (
+        admission.closesAt !== null ||
+        admission.pausedRemainingMs !== undefined
+      )
+        throw new AuctionError(
+          "タイマーをリセットしてから開始してください。",
+          409,
+        );
+      if (
+        !Number.isInteger(cmd.seconds) ||
+        cmd.seconds! < 5 ||
+        cmd.seconds! > 3600
+      )
+        throw new AuctionError("入室受付時間は5〜3600秒で設定してください。");
+    }
+    if (
+      (cmd.action === "pause-timer" ||
+        cmd.action === "resume-timer" ||
+        cmd.action === "cancel-timer") &&
+      admission.status !== "open"
+    )
+      throw new AuctionError("入室受付は終了しています。", 409);
+    if (
+      cmd.action === "pause-timer" &&
+      (admission.closesAt === null || admission.closesAt <= now)
+    )
+      throw new AuctionError("動作中のタイマーがありません。", 409);
+    if (
+      cmd.action === "resume-timer" &&
+      (admission.closesAt !== null || !(admission.pausedRemainingMs! > 0))
+    )
+      throw new AuctionError("一時停止中のタイマーがありません。", 409);
+    // Apply the entered count and cutoff together, even before autosave completes.
+    if (updateMarkets) admission.targetMarkets = cmd.markets!;
+    if (cmd.action === "schedule") {
+      admission.timerSeconds = cmd.seconds!;
+      admission.closesAt = now + cmd.seconds! * 1000;
+    } else if (cmd.action === "pause-timer") {
+      admission.pausedRemainingMs = admission.closesAt! - now;
+      admission.closesAt = null;
+    } else if (cmd.action === "resume-timer") {
+      admission.closesAt = now + admission.pausedRemainingMs!;
+      delete admission.pausedRemainingMs;
+    } else if (cmd.action === "cancel-timer") {
+      admission.closesAt = null;
+      delete admission.pausedRemainingMs;
+    }
+    if (cmd.action === "close") closeAdmission(room, now, events);
+    else {
+      study.lobby.revision++;
+      emit(room, events, now, "admission-updated", actorId, {
+        ...admission,
+        action: cmd.action,
+      });
+    }
+  } else if (cmd.type === "study-withdraw") {
+    if (actor !== "teacher")
+      throw new AuctionError("この操作は教員のみ利用できます。", 403);
+    if (!study.lobby || room.phase === "finished")
+      throw new AuctionError("現在は参加終了にできません。", 409);
+    if (cmd.expectedRevision !== study.lobby.revision)
+      throw new AuctionError("参加状況が更新されています。", 409);
+    const p = room.participants.find((p) => p.id === cmd.participantId);
+    if (!p) throw new AuctionError("参加者が見つかりません。", 404);
+    if (!p.withdrawnAt) {
+      p.withdrawnAt = now;
+      const m = marketFor(room, p);
+      const orders = m.orders.filter((o) => o.participantId === p.id);
+      if (m.stage === "cda")
+        archiveOrders(room, m, orders, "cancelled", events, now);
+      m.orders = m.orders.filter((o) => o.participantId !== p.id);
+      const bids = m.posted?.bids.filter((b) => b.participantId === p.id) ?? [];
+      if (m.posted)
+        m.posted.bids = m.posted.bids.filter((b) => b.participantId !== p.id);
+      const offers = m.offers.filter(
+        (o) => o.participantId === p.id && o.remaining > 0,
+      );
+      const cancelledOffers = offers.map((o) => ({
+        id: o.id,
+        remaining: o.remaining,
+      }));
+      for (const offer of offers) offer.remaining = 0;
+      emit(room, events, now, "participant-withdrawn", actorId, {
+        participantId: p.id,
+        market: p.seat < 0 ? null : m.id,
+        cancelledOrders: orders.map((o) => o.id),
+        cancelledBids: bids.map((b) => b.id),
+        cancelledOffers,
+      });
+      if (m.stage === "cda") {
+        if (room.phase === "paused") m.spreadAt = now;
+        spreadUpdate(room, m, events, now);
+      }
+      if (room.phase === "waiting") {
+        if (study.lobby.admission?.status !== "open") reopenAdmission(room);
+      } else if (
+        m.stage === "purchase" &&
+        !m.posted &&
+        m.buyerOrder[m.buyerIndex] === p.id
+      ) {
+        nextBuyer(room, m, events, now);
+        if (room.phase === "paused") m.deadline = null;
+      }
+      study.lobby.revision++;
+    }
+  } else if (cmd.type === "study-randomize" && study.lobby?.admission) {
+    if (actor !== "teacher")
+      throw new AuctionError("この操作は教員のみ利用できます。", 403);
+    if (room.phase !== "waiting" || room.round !== 0)
+      throw new AuctionError("割り当ては実験開始前のみ変更できます。", 409);
+    if (cmd.expectedRevision !== study.lobby.revision)
+      throw new AuctionError("割り当てが更新されています。", 409);
+    closeAdmission(room, now, events);
+  } else if (cmd.type === "study-randomize") {
     if (actor !== "teacher")
       throw new AuctionError("この操作は教員のみ利用できます。", 403);
     if (!study.lobby || room.phase !== "waiting" || room.round !== 0)
@@ -882,6 +1182,7 @@ export function executeStudy(
       })),
     });
   } else if (
+    cmd.type === "study-program" ||
     cmd.type === "study-settings" ||
     cmd.type === "study-timing" ||
     cmd.type === "study-commission"
@@ -895,7 +1196,80 @@ export function executeStudy(
         "条件が更新されています。再読込してください。",
         409,
       );
-    if (cmd.type === "study-commission") {
+    if (cmd.type === "study-program") {
+      const selection = studyInstitutionsSchema.safeParse(cmd.institutions);
+      const periods = studyPeriodsSchema.safeParse(cmd.periods);
+      const timing =
+        cmd.timing === undefined
+          ? null
+          : studyTimingSchema.safeParse(cmd.timing);
+      if (!selection.success || !periods.success)
+        throw new AuctionError(
+          "実施する制度と各制度の期数を確認してください。",
+        );
+      if (timing && !timing.success)
+        throw new AuctionError(
+          `各時間は1〜${MAX_STAGE_SECONDS}秒の整数で設定してください。`,
+        );
+      if (!selection.data.includes("cda") && studyUnits(room.config) !== 2)
+        throw new AuctionError(
+          "CDAを外す前に、1人あたりの単位数を2に変更してください。",
+        );
+      const institutions = DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
+        selection.data.includes(i),
+      );
+      const otherSettings =
+        study.otherSettings ??
+        (studyUnits(room.config) !== 2 && institutions.some((i) => i !== "cda")
+          ? resizeStudySettings(study.settings, studyMarketSize(room.config), 2)
+          : undefined);
+      const error = studyCommissionError(
+        studyCommission(room.config),
+        study.settings,
+        institutions.some((i) => i !== "cda") ? otherSettings : undefined,
+      );
+      if (error) throw new AuctionError(error);
+      const changed =
+        institutions.join() !== studyInstitutions(room.config).join();
+      const addedPosted =
+        institutions.includes("posted") &&
+        !studyInstitutions(room.config).includes("posted");
+      const selectedPeriods = Object.fromEntries(
+        institutions.map((i) => [
+          i,
+          periods.data[i] ?? studyPeriodCount(room.config, i),
+        ]),
+      );
+      room.config.studyInstitutions = institutions;
+      room.config.studyPeriods = selectedPeriods;
+      if (timing?.success) {
+        room.config.studyTiming = timing.data;
+        room.config.duration = timing.data.cdaSeconds;
+      }
+      room.config.rounds = studyTotalRounds(room.config);
+      if (otherSettings) study.otherSettings = otherSettings;
+      if (addedPosted) room.config.studyPostedMechanism = "batch-bids-v1";
+      if (changed) {
+        const next = createStudy(
+          study.markets.length,
+          study.settings,
+          institutions,
+        );
+        for (const [index, market] of study.markets.entries()) {
+          market.order = next.markets[index].order;
+          market.epoch++;
+        }
+      }
+      study.revision++;
+      emit(room, events, now, "study-program", "teacher", {
+        institutions,
+        periods: room.config.studyPeriods,
+        rounds: room.config.rounds,
+        ...(timing?.success ? { timing: timing.data } : {}),
+        orders: study.markets.map((m) => ({ market: m.id, order: m.order })),
+        revision: study.revision,
+      });
+    } else if (cmd.type === "study-commission") {
       const error = studyCommissionError(
         cmd.commission,
         study.settings,
@@ -988,7 +1362,7 @@ export function executeStudy(
         // A manual edit keeps the existing seats and role order, including old
         // rooms and demos without a saved seat permutation.
         for (const participant of room.participants)
-          participant.limits.apple = unitLimits(room, participant)[0];
+          participant.limits.apple = unitLimits(room, participant)[0] ?? 0;
         if (unitsChanged && study.lobby) {
           study.lobby.revision++;
           study.lobby.randomizedAt = null;
@@ -1025,9 +1399,26 @@ export function executeStudy(
         if (error) throw new AuctionError(error);
       }
       if (study.lobby) {
-        if (room.participants.length !== room.config.capacity)
+        for (const market of study.markets) {
+          const error = studyCommissionError(
+            studyCommission(room.config),
+            settingsForInstitution(room, "cda", market.id),
+            studyInstitutions(room.config).some((i) => i !== "cda")
+              ? settingsForInstitution(room, "call", market.id)
+              : undefined,
+          );
+          if (error) throw new AuctionError(`市場${market.id}：${error}`);
+        }
+        if (
+          study.lobby.admission
+            ? study.lobby.admission.status !== "closed" ||
+              room.participants.filter((p) => !p.withdrawnAt).length < 2
+            : room.participants.length !== room.config.capacity
+        )
           throw new AuctionError(
-            "全員の入室を待ってから開始してください。",
+            study.lobby.admission
+              ? "入室を締め切り、参加者を割り当ててから開始してください。"
+              : "全員の入室を待ってから開始してください。",
             409,
           );
         if (study.lobby.randomizedAt === null)
@@ -1130,6 +1521,8 @@ export function executeStudy(
   } else {
     if (actor === "teacher")
       throw new AuctionError("教員は取引できません。", 403);
+    if (actor.withdrawnAt || actor.seat < 0)
+      throw new AuctionError("現在は取引に参加できません。", 409);
     const m = marketFor(room, actor);
     if (
       room.phase !== "running" ||

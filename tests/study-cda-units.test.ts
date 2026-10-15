@@ -30,6 +30,7 @@ import { localDatabase, migrate } from "../src/lib/server/database";
 import { AuctionService } from "../src/lib/server/service";
 import { DemoSession } from "../src/lib/demo";
 import { TeacherForm } from "../src/components/teacher-form";
+import { StudyUnitFields } from "../src/components/study-unit-settings";
 import { StudyRoom } from "../src/components/study-room";
 import { StudySettingsEditor } from "../src/components/study-settings";
 import type { Command, RoomConfig, RoomView } from "../src/lib/types";
@@ -347,7 +348,7 @@ test("Call and Posted still show and trade two units after a five-unit CDA perio
 });
 
 test("teacher settings show an editable CDA count and disabled matching two-unit inputs for other modes", () => {
-  const markup = renderToStaticMarkup(
+  const entry = renderToStaticMarkup(
     createElement(TeacherForm, {
       status: { mode: "local", ready: true, keyRequired: false },
       initialConfig: {
@@ -358,6 +359,14 @@ test("teacher settings show an editable CDA count and disabled matching two-unit
         studyCommission: 0,
       },
       conditionPreset: { label: "Default", settings: pptStudySettings() },
+    }),
+  );
+  assert.match(entry, /aria-haspopup="dialog">作成前に詳細を設定/);
+  const markup = renderToStaticMarkup(
+    createElement(StudyUnitFields, {
+      cdaUnits: "5",
+      onChange: () => {},
+      disabled: false,
     }),
   );
   assert.match(
@@ -380,7 +389,8 @@ test("teacher settings show an editable CDA count and disabled matching two-unit
       disabled: false,
     }),
   );
-  assert.match(editor, /5単位目/);
+  assert.equal(view.study!.teacher!.settings.values[0].length, 5);
+  assert.doesNotMatch(editor, /条件テンプレート|採用した実験ルール/);
   assert.match(editor, /Call Market・Posted Offerの条件（各自2単位）/);
 });
 

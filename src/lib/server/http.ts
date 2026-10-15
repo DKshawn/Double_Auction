@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuctionError } from "./model";
 import { marketSettingsSchema } from "./market-settings";
-import { studySettingsSchema, studyTimingSchema } from "./study";
+import {
+  studySettingsSchema,
+  studyTimingSchema,
+  studyInstitutionsSchema,
+  studyPeriodsSchema,
+} from "./study";
 import { studyRoomConfigSchema } from "../study-room-config";
 import {
   generatedStudySettings,
@@ -181,6 +186,39 @@ export const commandSchema = z
     expectedRound: z.number().int().min(0).max(MAX_STUDY_ROUNDS),
     expectedStage: z.string().max(50).optional(),
     command: z.discriminatedUnion("type", [
+      z
+        .object({
+          type: z.literal("study-admission"),
+          action: z.enum([
+            "open",
+            "close",
+            "schedule",
+            "pause-timer",
+            "resume-timer",
+            "cancel-timer",
+            "configure",
+          ]),
+          markets: z.number().int().min(1).max(96).optional(),
+          seconds: z.number().int().min(5).max(3600).optional(),
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal("study-withdraw"),
+          participantId: z.string().min(1).max(100),
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal("study-program"),
+          institutions: studyInstitutionsSchema,
+          periods: studyPeriodsSchema,
+          timing: studyTimingSchema.optional(),
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
       z
         .object({
           type: z.literal("study-commission"),

@@ -21,7 +21,8 @@ export async function POST(
       request,
       await (
         await service()
-      ).join(code, nickname, pin, tokenFor(request, code)),
+      ).join(code, nickname, pin, tokenFor(request, code, "student")),
+      "student",
     );
   } catch (error) {
     return failure(error);

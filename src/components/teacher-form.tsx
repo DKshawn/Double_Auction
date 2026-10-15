@@ -366,7 +366,7 @@ export function TeacherForm({
               `/api/rooms/${String(form.get("code")).toUpperCase()}/teacher`,
               { password: form.get("password") },
             );
-      // Re-entry may switch back from a student's session in the same browser.
+      // Open the teacher credential slot without changing the student session.
       window.location.assign(teacherRoomHref(result.code));
     } catch (e) {
       setError(errorMessage(e));

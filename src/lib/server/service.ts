@@ -24,6 +24,7 @@ import {
 import { timed, timedSync } from "./performance";
 import { randomInt, randomUUID } from "node:crypto";
 import type { CommandRequest, RoomConfig, RoomView } from "../types";
+import type { RoomSession } from "../room-session";
 import type { RoomSummary } from "../room-management";
 import type { StudyGeneratorConfig, StudySettings } from "../study-types";
 import { generatedStudySettings } from "../study-generator";
@@ -551,9 +552,13 @@ export class AuctionService {
     });
   }
 
-  async view(code: string, token?: string): Promise<RoomView> {
+  async view(
+    code: string,
+    token?: string,
+    session?: RoomSession,
+  ): Promise<RoomView> {
     const scope = await timed("command.auth_scope", () =>
-      this.scope(code, token),
+      this.scope(code, token, session),
     );
     const bundle = await readBundle(this.db, code, scope);
     const room = timedSync("state.assemble", () => assemble(bundle, scope));
@@ -569,7 +574,7 @@ export class AuctionService {
         room.study.lobby.admission.closesAt <= now)
     ) {
       await this.advance(code, scope);
-      return this.view(code, token);
+      return this.view(code, token, session);
     }
     return timedSync("view.project", () =>
       toView(room, actor, now, this.db.mode),
@@ -579,6 +584,7 @@ export class AuctionService {
   private async scope(
     code: string,
     token?: string,
+    session?: RoomSession,
   ): Promise<number | undefined> {
     const result = await this.db.query<{ state: Room }>(
       "SELECT state FROM auction_rooms WHERE code = $1",
@@ -588,9 +594,16 @@ export class AuctionService {
       throw new AuctionError("ルームが見つかりません。", 404);
     const root = result.rows[0].state;
     const actor = authenticate(root, token);
+    if (session && (actor === "teacher") !== (session === "teacher"))
+      throw new AuctionError(
+        session === "teacher"
+          ? "教員として再認証してください。"
+          : "学生として入室してください。",
+        401,
+      );
     if (root.study && !root.storageVersion) {
       await this.locked(code, () => undefined);
-      return this.scope(code, token);
+      return this.scope(code, token, session);
     }
     // Admission and reallocation are room-wide transactions. Avoid capturing an
     // old market scope while a teacher is moving participants between markets.
@@ -633,9 +646,10 @@ export class AuctionService {
     code: string,
     token: string | undefined,
     request: CommandRequest,
+    session?: RoomSession,
   ) {
     const scope = await timed("command.auth_scope", () =>
-      this.scope(code, token),
+      this.scope(code, token, session),
     );
     await this.locked(
       code,
@@ -670,7 +684,7 @@ export class AuctionService {
       },
       scope,
     );
-    return this.view(code, token);
+    return this.view(code, token, session);
   }
 
   async export(code: string, token?: string) {

@@ -17,6 +17,7 @@ export async function POST(
     return loginResponse(
       request,
       await (await service()).recoverTeacher(code, password),
+      "teacher",
     );
   } catch (error) {
     return failure(error);

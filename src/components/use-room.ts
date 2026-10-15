@@ -5,8 +5,9 @@ import type { Command, CommandRequest, RoomView } from "@/lib/types";
 import { RoomEventStream } from "@/lib/room-event-stream";
 import { goodName } from "@/lib/catalog";
 import { api, ApiError, errorMessage } from "@/lib/client";
+import { roomApiHref, type RoomSession } from "@/lib/room-session";
 
-export function useRoom(code: string) {
+export function useRoom(code: string, session: RoomSession) {
   const [view, setView] = useState<RoomView | null>(null);
   const [connected, setConnected] = useState(false);
   const [connectionError, setConnectionError] = useState("");
@@ -68,7 +69,7 @@ export function useRoom(code: string) {
       lastFetch = Date.now();
       try {
         const next = await api<RoomView>(
-          `/api/rooms/${code}`,
+          roomApiHref(code, session),
           undefined,
           AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]),
         );
@@ -104,7 +105,7 @@ export function useRoom(code: string) {
     }
     function connect() {
       if (disposed || !navigator.onLine) return;
-      stream ??= new RoomEventStream(`/api/rooms/${code}/events`, {
+      stream ??= new RoomEventStream(roomApiHref(code, session, "/events"), {
         view(next) {
           if (disposed || !acceptView(next)) return false;
           clearTimeout(fallback);
@@ -185,7 +186,7 @@ export function useRoom(code: string) {
       window.removeEventListener("online", wake);
       document.removeEventListener("visibilitychange", wake);
     };
-  }, [code, acceptView]);
+  }, [code, session, acceptView]);
 
   async function command(command: Command) {
     if (!view || busy.current || !connected || !navigator.onLine) return false;
@@ -205,7 +206,7 @@ export function useRoom(code: string) {
       for (let i = 0; i < 2; i++) {
         try {
           next = await api<RoomView>(
-            `/api/rooms/${code}/commands`,
+            roomApiHref(code, session, "/commands"),
             request,
             AbortSignal.timeout(15_000),
           );

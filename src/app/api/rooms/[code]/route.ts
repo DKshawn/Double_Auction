@@ -5,6 +5,8 @@ import {
   deleteRoomSchema,
   failure,
   json,
+  roomViewResponse,
+  sessionFor,
   tokenFor,
 } from "@/lib/server/http";
 import { service } from "@/lib/server/service";
@@ -17,7 +19,12 @@ export async function GET(
 ) {
   try {
     const code = codeFor((await ctx.params).code);
-    return json(await (await service()).view(code, tokenFor(request, code)));
+    return roomViewResponse(
+      request,
+      await (
+        await service()
+      ).view(code, tokenFor(request, code), sessionFor(request)),
+    );
   } catch (error) {
     return failure(error);
   }

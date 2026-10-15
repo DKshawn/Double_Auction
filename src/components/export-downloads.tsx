@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { errorMessage } from "@/lib/client";
 import { EXPORTS, type ExportKind, type ExportProvider } from "@/lib/exports";
+import { roomApiHref } from "@/lib/room-session";
 
 export function ExportDownloads({
   code,
@@ -23,9 +24,10 @@ export function ExportDownloads({
         const result = await loadExport(kind);
         blob = new Blob([result.content], { type: result.contentType });
       } else {
-        const response = await fetch(`/api/rooms/${code}/export?kind=${kind}`, {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `${roomApiHref(code, "teacher", "/export")}&kind=${kind}`,
+          { cache: "no-store" },
+        );
         if (!response.ok) {
           const result = await response.json();
           throw new Error(result.error || "ダウンロードできませんでした。");

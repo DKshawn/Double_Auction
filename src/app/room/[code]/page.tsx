@@ -12,6 +12,10 @@ export default async function RoomPage({
   if (!/^[A-Za-z2-9]{6}$/.test(code)) notFound();
   const { entry } = await searchParams;
   return (
-    <Room key={code.toUpperCase()} code={code.toUpperCase()} entry={entry} />
+    <Room
+      key={`${code.toUpperCase()}-${entry === "teacher" ? "teacher" : "student"}`}
+      code={code.toUpperCase()}
+      entry={entry}
+    />
   );
 }

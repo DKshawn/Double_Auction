@@ -8,7 +8,7 @@ export const teacherSetupHref = (code?: string) =>
 export const teacherReentryHref = (code: string) =>
   validCode(code) ? `/teacher?code=${code}` : "/teacher";
 
-// `entry` is only a navigation hint for expired sessions, never a credential.
+// `entry` selects a session and its recovery route; it is never a credential.
 export const teacherRoomHref = (code: string) => `/room/${code}?entry=teacher`;
 
 export function roomNavigation(

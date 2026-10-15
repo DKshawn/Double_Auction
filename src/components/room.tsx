@@ -40,13 +40,13 @@ export function Room({ code, entry }: { code: string; entry?: string }) {
     now,
     command,
     retry,
-  } = useRoom(code);
+  } = useRoom(code, entry === "teacher" ? "teacher" : "student");
   const navigation = roomNavigation(code, view?.me.role, entry);
   const authenticatedRole = view?.me.role;
   useEffect(() => {
     if (!authenticatedRole) return;
-    // Remember only the entry route on refresh. The room API still authenticates
-    // its HttpOnly cookie and determines all data and permissions.
+    // Keep the selected credential slot on refresh; the server authenticates
+    // the corresponding HttpOnly cookie and checks the requested role.
     const url = new URL(window.location.href);
     if (authenticatedRole === "teacher")
       url.searchParams.set("entry", "teacher");

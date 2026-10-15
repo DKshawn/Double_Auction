@@ -22,14 +22,40 @@ import {
 } from "../study-config";
 import { studyCommissionSchema } from "../study-commission";
 import { MAX_PRICE } from "../price";
+import type { RoomSession } from "../room-session";
+import type { RoomView } from "../types";
 
 export const NO_STORE = {
   "Cache-Control": "private, no-store, max-age=0",
   Vary: "Cookie",
 };
-export const cookieName = (code: string) => `auction_${code}`;
-export const tokenFor = (request: NextRequest, code: string) =>
-  request.cookies.get(cookieName(code))?.value;
+export const cookieName = (code: string, session?: RoomSession) =>
+  `auction_${code}${session ? `_${session}` : ""}`;
+
+export function sessionFor(request: NextRequest): RoomSession | undefined {
+  const session = request.nextUrl.searchParams.get("session");
+  if (session === null) return undefined;
+  if (session === "teacher" || session === "student") return session;
+  throw new AuctionError("入室する役割が正しくありません。");
+}
+
+export function tokenFor(
+  request: NextRequest,
+  code: string,
+  session = sessionFor(request),
+) {
+  const teacher = request.cookies.get(cookieName(code, "teacher"))?.value;
+  const student = request.cookies.get(cookieName(code, "student"))?.value;
+  if (session) {
+    const token = session === "teacher" ? teacher : student;
+    // Once separate sessions exist, never fall back to the other role or to
+    // the old shared cookie. A missing role must sign in using that role.
+    if (teacher !== undefined || student !== undefined) return token;
+  } else if (student !== undefined || teacher !== undefined) {
+    return student ?? teacher;
+  }
+  return request.cookies.get(cookieName(code))?.value;
+}
 
 export function codeFor(code: string) {
   const cleaned = code.toUpperCase();
@@ -94,15 +120,36 @@ export function json(data: unknown, status = 200) {
 export function loginResponse(
   request: NextRequest,
   result: { code: string; token: string },
+  session: RoomSession,
 ) {
   const response = json({ code: result.code });
-  response.cookies.set(cookieName(result.code), result.token, {
+  setSessionCookie(response, request, result.code, session, result.token);
+  return response;
+}
+
+function setSessionCookie(
+  response: NextResponse,
+  request: NextRequest,
+  code: string,
+  session: RoomSession,
+  token: string,
+) {
+  response.cookies.set(cookieName(code, session), token, {
     httpOnly: true,
     secure: request.nextUrl.protocol === "https:",
     sameSite: "lax",
-    path: `/api/rooms/${result.code}`,
+    path: `/api/rooms/${code}`,
     maxAge: 60 * 60 * 24 * 14,
   });
+}
+
+export function roomViewResponse(request: NextRequest, view: RoomView) {
+  const response = json(view);
+  const session = sessionFor(request);
+  const token = tokenFor(request, view.code);
+  // An authenticated legacy session is promoted on its first scoped read.
+  if (session && token && !request.cookies.has(cookieName(view.code, session)))
+    setSessionCookie(response, request, view.code, session, token);
   return response;
 }
 

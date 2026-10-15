@@ -1,5 +1,5 @@
 import { after, type NextRequest } from "next/server";
-import { codeFor, failure, tokenFor } from "@/lib/server/http";
+import { codeFor, failure, sessionFor, tokenFor } from "@/lib/server/http";
 import { database } from "@/lib/server/database";
 import { AuctionService } from "@/lib/server/service";
 import { broker } from "@/lib/server/realtime";
@@ -23,7 +23,7 @@ export async function GET(
     const code = codeFor((await ctx.params).code),
       token = tokenFor(request, code);
     const db = await database();
-    await new AuctionService(db).view(code, token);
+    await new AuctionService(db).view(code, token, sessionFor(request));
     let subscription: Promise<() => Promise<void>> | undefined;
     let cleanup: Promise<void> | undefined;
     let closed = false;

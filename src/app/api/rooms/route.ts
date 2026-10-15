@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       await (
         await service()
       ).create(data.config, data.password, data.accessKey, data.generator),
+      "teacher",
     );
   } catch (error) {
     return failure(error);

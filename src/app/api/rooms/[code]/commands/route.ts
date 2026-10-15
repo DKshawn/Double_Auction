@@ -6,6 +6,7 @@ import {
   commandSchema,
   failure,
   json,
+  sessionFor,
   tokenFor,
 } from "@/lib/server/http";
 import { service } from "@/lib/server/service";
@@ -21,7 +22,12 @@ export async function POST(
     const data = await body(request, commandSchema);
     return json(
       await timed("command.total", async () =>
-        (await service()).command(code, tokenFor(request, code), data),
+        (await service()).command(
+          code,
+          tokenFor(request, code),
+          data,
+          sessionFor(request),
+        ),
       ),
     );
   } catch (error) {

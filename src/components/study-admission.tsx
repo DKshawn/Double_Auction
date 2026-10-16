@@ -159,9 +159,6 @@ export function StudyAdmission({
                 }}
               />
             </label>
-            {view.config.studyMarketMode === "auto" && (
-              <span className="field-help">自動（1市場16人）</span>
-            )}
             {view.config.studyMarketMode !== "auto" && (
               <button
                 type="button"

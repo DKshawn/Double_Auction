@@ -246,6 +246,7 @@ export const commandSchema = z
             "configure",
           ]),
           markets: z.number().int().min(1).max(96).optional(),
+          marketMode: z.enum(["auto", "manual"]).optional(),
           seconds: z.number().int().min(5).max(3600).optional(),
           expectedRevision: z.number().int().min(0),
         })

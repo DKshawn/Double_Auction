@@ -13,22 +13,32 @@ export function StudyCommissionField({
   onChange,
   settings,
   otherSettings,
+  additionalSettings = [],
   disabled = false,
 }: {
   amount: number;
   onChange: (amount: number) => void;
   settings?: StudySettings;
   otherSettings?: StudySettings;
+  additionalSettings?: StudySettings[];
   disabled?: boolean;
 }) {
   const id = useId();
-  const error = studyCommissionError(amount, settings, otherSettings);
+  const error =
+    studyCommissionError(amount, settings, otherSettings) ||
+    additionalSettings
+      .map((s) => studyCommissionError(amount, s))
+      .find(Boolean) ||
+    "";
   const limit = settings
     ? studyCommissionLimit(settings, otherSettings)
     : otherSettings
       ? studyCommissionLimit(otherSettings)
       : null;
-  const maximum = limit?.maximum ?? MAX_STUDY_COMMISSION;
+  const maximum = Math.min(
+    limit?.maximum ?? MAX_STUDY_COMMISSION,
+    ...additionalSettings.map((s) => studyCommissionLimit(s).maximum),
+  );
   return (
     <div className="field study-commission-field">
       <label htmlFor={id}>Commission（円／1単位・1人）</label>
@@ -41,29 +51,20 @@ export function StudyCommissionField({
         step={1}
         required
         disabled={disabled}
-        aria-describedby={`${id}-help`}
+        aria-describedby={error ? `${id}-help ${id}-bound` : `${id}-bound`}
         aria-invalid={Boolean(error)}
         value={Number.isFinite(amount) ? amount : ""}
         onChange={(e) =>
           onChange(e.target.value === "" ? NaN : Number(e.target.value))
         }
       />
-      <p
-        id={`${id}-help`}
-        className={error ? "error-message" : "field-help"}
-        aria-live="polite"
-      >
-        {error ||
-          `成立1単位につき買い手・売り手に各${Number.isFinite(amount) ? amount : "—"}円。未約定は0円、0円で無効。`}
-      </p>
-      <p className="field-help study-commission-bound">
-        入力範囲：0〜{maximum}円（整数）。
-        {otherSettings && "CDA・他制度の両方の条件に対応する上限です。"}
-        {limit?.gap !== null && limit?.gap !== undefined
-          ? `第${limit.firstNegativeUnit}単位以降の負の余剰を維持するため、2 × Commission < ${limit.gap}円。`
-          : settings
-            ? "現在の供需条件には負の余剰の単位がありません。"
-            : "供需条件を生成すると、その条件に対応する上限を表示します。"}
+      {error && (
+        <p id={`${id}-help`} className="error-message" role="alert">
+          {error}
+        </p>
+      )}
+      <p id={`${id}-bound`} className="field-help study-commission-bound">
+        入力範囲：0〜{maximum}円（整数）
       </p>
     </div>
   );

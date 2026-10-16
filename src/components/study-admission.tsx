@@ -12,6 +12,10 @@ import {
 import { Pause, Play, RotateCcw } from "lucide-react";
 import type { Command, RoomView } from "@/lib/types";
 import { MAX_STUDY_MARKETS } from "@/lib/study-config";
+import {
+  studyAllocationPlan,
+  studyAllocationWaitingMessage,
+} from "@/lib/study-allocation";
 
 export function StudyAdmission({
   view,
@@ -39,6 +43,15 @@ export function StudyAdmission({
     Number.isInteger(marketCount) &&
     marketCount >= 1 &&
     marketCount <= MAX_STUDY_MARKETS;
+  const waitingMessage = validMarkets
+    ? studyAllocationWaitingMessage(
+        studyAllocationPlan(
+          view.participantCount,
+          marketCount,
+          marketDraft === null ? view.config.studyMarketMode : "manual",
+        ),
+      )
+    : "";
   const [savingMarkets, setSavingMarkets] = useState(false);
   const lastAttempt = useRef<{ markets: number; revision: number } | null>(
     null,
@@ -81,7 +94,8 @@ export function StudyAdmission({
       section === "deadline" ||
       admission?.status !== "open" ||
       !validMarkets ||
-      marketCount === admission.targetMarkets ||
+      (marketCount === admission.targetMarkets &&
+        !(view.config.studyMarketMode === "auto" && marketDraft !== null)) ||
       (lastAttempt.current?.markets === marketCount &&
         lastAttempt.current.revision === lobby.revision)
     )
@@ -96,6 +110,8 @@ export function StudyAdmission({
     disabled,
     admission?.status,
     admission?.targetMarkets,
+    view.config.studyMarketMode,
+    marketDraft,
     lobby.revision,
   ]);
   const send = (
@@ -105,7 +121,8 @@ export function StudyAdmission({
       type: "study-admission",
       action,
       expectedRevision: lobby.revision,
-      ...(action === "schedule" || action === "close"
+      ...((action === "schedule" || action === "close") &&
+      (marketDraft !== null || view.config.studyMarketMode !== "auto")
         ? { markets: marketCount }
         : {}),
       ...(action === "schedule" ? { seconds: Number(seconds) } : {}),
@@ -124,23 +141,48 @@ export function StudyAdmission({
     <section className="study-admission" aria-label="入室受付の設定">
       <div className="study-admission-controls">
         {section !== "deadline" && (
-          <label className="field">
-            市場数
-            <input
-              type="number"
-              min={1}
-              max={MAX_STUDY_MARKETS}
-              step={1}
-              value={markets}
-              disabled={
-                (disabled && !savingMarkets) || admission.status !== "open"
-              }
-              onChange={(e) => {
-                lastAttempt.current = null;
-                onMarketDraftChange(e.target.value);
-              }}
-            />
-          </label>
+          <>
+            <label className="field">
+              市場数
+              <input
+                type="number"
+                min={1}
+                max={MAX_STUDY_MARKETS}
+                step={1}
+                value={markets}
+                disabled={
+                  (disabled && !savingMarkets) || admission.status !== "open"
+                }
+                onChange={(e) => {
+                  lastAttempt.current = null;
+                  onMarketDraftChange(e.target.value);
+                }}
+              />
+            </label>
+            {view.config.studyMarketMode === "auto" && (
+              <span className="field-help">自動（1市場16人）</span>
+            )}
+            {view.config.studyMarketMode !== "auto" && (
+              <button
+                type="button"
+                className="button secondary"
+                disabled={disabled || admission.status !== "open"}
+                onClick={async () => {
+                  if (
+                    await command({
+                      type: "study-admission",
+                      action: "configure",
+                      marketMode: "auto",
+                      expectedRevision: lobby.revision,
+                    })
+                  )
+                    onMarketDraftChange(null);
+                }}
+              >
+                自動（1市場16人）に戻す
+              </button>
+            )}
+          </>
         )}
         {section !== "markets" &&
           (admission.status === "open" ? (
@@ -224,7 +266,10 @@ export function StudyAdmission({
               <button
                 className="button primary"
                 disabled={
-                  disabled || !validMarkets || view.participantCount < 2
+                  disabled ||
+                  !validMarkets ||
+                  view.participantCount < 2 ||
+                  !!waitingMessage
                 }
                 onClick={() => void send("close")}
               >
@@ -241,7 +286,12 @@ export function StudyAdmission({
             </button>
           ))}
       </div>
-      {admission.error && (
+      {admission.status === "open" && waitingMessage && (
+        <p className="field-help study-admission-waiting" role="status">
+          {waitingMessage}
+        </p>
+      )}
+      {section !== "markets" && admission.error && (
         <p className="error-message" role="alert">
           {admission.error}
         </p>

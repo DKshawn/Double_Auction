@@ -3,7 +3,7 @@ import type { Institution, StudyTiming, StudyMarketView } from "./study-types";
 import { STUDY_START_SECONDS } from "./study-types";
 import {
   DEFAULT_STUDY_INSTITUTIONS,
-  studyMarketSize,
+  studyTemplateSideCount,
   studyPeriodAt,
 } from "./study-config";
 import type { RoomConfig, Phase } from "./types";
@@ -72,7 +72,7 @@ export const postedPurchaseSeconds = (
   config: Pick<RoomConfig, "studyTiming" | "marketSize">,
 ) =>
   studyTiming(config).purchaseSeconds ??
-  (studyTiming(config).buyerSeconds * studyMarketSize(config)) / 2;
+  studyTiming(config).buyerSeconds * studyTemplateSideCount(config);
 
 export const MAX_STAGE_SECONDS = 3600;
 export const DEFAULT_STUDY_TIMING: StudyTiming = {

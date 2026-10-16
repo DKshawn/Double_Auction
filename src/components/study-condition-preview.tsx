@@ -108,7 +108,10 @@ export function StudyUnitValues({
   const demand = settings.values.flat().sort((a, b) => b - a);
   const supply = settings.costs.flat().sort((a, b) => a - b);
   const eq = equilibrium(demand, supply);
-  const title = `全単位の数値（片側${demand.length}単位）`;
+  const title =
+    demand.length === supply.length
+      ? `全単位の数値（片側${demand.length}単位）`
+      : `全単位の数値（買${demand.length}・売${supply.length}単位）`;
   return (
     <>
       {fixedHeading && <h2 id={titleId}>{title}</h2>}
@@ -128,20 +131,23 @@ export function StudyUnitValues({
             </tr>
           </thead>
           <tbody>
-            {demand.map((value, i) => (
-              <tr
-                key={i}
-                className={
-                  i >= eq.quantity && i < eq.quantityMax
-                    ? "study-zero-surplus-row"
-                    : undefined
-                }
-              >
-                <th scope="row">{i + 1}</th>
-                <td>{value}</td>
-                <td>{supply[i]}</td>
-              </tr>
-            ))}
+            {Array.from(
+              { length: Math.max(demand.length, supply.length) },
+              (_, i) => (
+                <tr
+                  key={i}
+                  className={
+                    i >= eq.quantity && i < eq.quantityMax
+                      ? "study-zero-surplus-row"
+                      : undefined
+                  }
+                >
+                  <th scope="row">{i + 1}</th>
+                  <td>{demand[i] ?? "—"}</td>
+                  <td>{supply[i] ?? "—"}</td>
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>

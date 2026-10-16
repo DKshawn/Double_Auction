@@ -478,10 +478,7 @@ test("local persistence stores CDA five-unit and other two-unit schedules, assig
       view.study!.teacher!.otherSettings,
       generatedStudySettings(generator, 8),
     );
-    assert.deepEqual(
-      view.study!.teacher!.preset!.settings,
-      pptStudySettings(8),
-    );
+    assert.deepEqual(view.study!.teacher!.preset!.settings, pptStudySettings());
     const assigned = view.study!.teacher!.generation!.assignments;
     assert.ok(
       assigned.every(

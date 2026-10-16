@@ -71,7 +71,8 @@ export function StudySetup({
     Number.isInteger(markets) &&
     markets >= 1 &&
     markets <= MAX_STUDY_MARKETS &&
-    markets === admission.targetMarkets;
+    markets === admission.targetMarkets &&
+    !(view.config.studyMarketMode === "auto" && marketDraft !== null);
   function dirty(index: 0 | 1) {
     setConfirmed((previous) =>
       previous[index]
@@ -201,18 +202,32 @@ export function StudySetup({
                   section="deadline"
                 />
                 {admission.status === "closed" && !ready && (
-                  <button
-                    className="button primary"
-                    disabled={disabled || view.participantCount < 2}
-                    onClick={() =>
-                      void command({
-                        type: "study-randomize",
-                        expectedRevision: lobby.revision,
-                      })
-                    }
-                  >
-                    割り当てを確定
-                  </button>
+                  <>
+                    {admission.error && (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => {
+                          dirty(1);
+                          setRequestedStep(1);
+                        }}
+                      >
+                        供需条件を再設定
+                      </button>
+                    )}
+                    <button
+                      className="button primary"
+                      disabled={disabled || view.participantCount < 2}
+                      onClick={() =>
+                        void command({
+                          type: "study-randomize",
+                          expectedRevision: lobby.revision,
+                        })
+                      }
+                    >
+                      割り当てを確定
+                    </button>
+                  </>
                 )}
                 {ready && (
                   <button

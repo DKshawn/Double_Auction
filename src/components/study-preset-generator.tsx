@@ -6,6 +6,8 @@ import { studyCommission } from "@/lib/study-commission";
 import {
   studyMarketId,
   studyMarketSize,
+  studyTemplateSideCount,
+  studyProfileIndex,
   studyRole,
   studyRoleIndex,
   studyUnits,
@@ -17,6 +19,7 @@ import type { Command, RoomView } from "@/lib/types";
 import type { StudyGeneratedAssignment } from "@/lib/study-types";
 import { StudyPresetPicker } from "./study-preset-picker";
 import { StudyUnitFields } from "./study-unit-settings";
+import { StudyAllocationPreview } from "./study-allocation-preview";
 
 function AssignmentTable({ rows }: { rows: StudyGeneratedAssignment[] }) {
   return (
@@ -72,19 +75,24 @@ export function StudyPresetGenerator({
 }) {
   const teacher = view.study!.teacher!;
   const locked = view.phase !== "waiting" || view.round > 0;
-  const marketSize = studyMarketSize(view.config);
-  const perSide = marketSize / 2;
+  const allocation = teacher.allocation;
+  const marketSize = allocation?.templateSize ?? studyMarketSize(view.config);
+  const perSide = studyTemplateSideCount({ marketSize });
   const [unitsDraft, setUnitsDraft] = useState(String(studyUnits(view.config)));
   const [commission, setCommission] = useState(studyCommission(view.config));
   const unitsPerParticipant = Number(unitsDraft);
   const units = perSide * unitsPerParticipant;
   const unitsError = studyUnitsError(unitsPerParticipant);
-  const otherSettings = studyInstitutions(view.config).some((i) => i !== "cda")
+  const savedOther = studyInstitutions(view.config).some((i) => i !== "cda")
     ? (teacher.otherSettings ??
       (unitsPerParticipant !== studyUnits(view.config)
         ? teacher.settings
         : undefined))
     : undefined;
+  const otherSettings =
+    savedOther && allocation
+      ? resizeStudySettings(savedOther, marketSize, 2)
+      : savedOther;
   const savedGeneration = teacher.generation && (
     <div className="study-saved-generation">
       <p className="callout">
@@ -128,7 +136,15 @@ export function StudyPresetGenerator({
         }
         units={units}
         unitsPerParticipant={unitsPerParticipant}
+        marketLayout={allocation?.layout}
         otherSettings={otherSettings}
+        otherUnits={
+          (unitsPerParticipant !== 2 || Boolean(otherSettings)) &&
+          studyInstitutions(view.config).some((i) => i !== "cda") &&
+          marketSize !== studyMarketSize(view.config)
+            ? perSide * 2
+            : undefined
+        }
         revision={view.study!.settingsRevision}
         initialGenerator={teacher.generation}
         disabled={disabled}
@@ -150,6 +166,19 @@ export function StudyPresetGenerator({
         onCommissionChange={setCommission}
         onDraftChange={onDraftChange}
         actionLabel={actionLabel}
+        renderAllocation={
+          allocation
+            ? (preview, other) => (
+                <StudyAllocationPreview
+                  plan={allocation}
+                  config={view.config}
+                  settings={preview.settings}
+                  otherSettings={other}
+                  commission={commission}
+                />
+              )
+            : undefined
+        }
         onConfirm={async (preview, amount) => {
           const applied = await command({
             type: "study-settings",
@@ -182,6 +211,7 @@ export function StudyPresetGenerator({
               const seat = seats[p.joinOrder - 1];
               const role = studyRole(view.config, seat);
               const index = studyRoleIndex(view.config, seat);
+              const profile = studyProfileIndex(view.config, seat, perSide);
               return {
                 participantId: p.id,
                 nickname: p.nickname,
@@ -191,11 +221,11 @@ export function StudyPresetGenerator({
                 alias: `${role === "buyer" ? "買" : "売"}${String(index + 1).padStart(2, "0")}`,
                 sortedUnits: Array.from(
                   { length: unitsPerParticipant },
-                  (_, unit) => index + 1 + unit * perSide,
+                  (_, unit) => profile + 1 + unit * perSide,
                 ),
                 limits:
                   preview.settings[role === "buyer" ? "values" : "costs"][
-                    index
+                    profile
                   ],
               };
             },

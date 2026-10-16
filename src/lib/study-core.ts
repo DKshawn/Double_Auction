@@ -17,6 +17,13 @@ import type {
   StudyGeneratorConfig,
 } from "./study-types";
 import { generatedStudySettings, seededStudySeats } from "./study-generator";
+import {
+  studyAllocationPlan,
+  studyRoomAllocation,
+  studyAllocationConditions,
+  studyAllocationConditionError,
+  studyAllocationWaitingMessage,
+} from "./study-allocation";
 import { STUDY_FEEDBACK_SECONDS, STUDY_START_SECONDS } from "./study-types";
 import { STUDY_RULES } from "./study-rules";
 import {
@@ -36,6 +43,7 @@ import {
   studyInstitutionOrders,
   studyMarketId,
   studyMarketSize,
+  studyTemplateSideCount,
   studyMarketCounts,
   studyProfileIndex,
   studyMarketSettings,
@@ -103,6 +111,10 @@ export type Study = {
   settings: StudySettings;
   // When CDA's unit count changes, Call and Posted keep their two-unit conditions.
   otherSettings?: StudySettings;
+  // Preserve the source schedule so changing market counts never resamples an
+  // already reduced template and loses the original marginal schedule.
+  conditionBasis?: { settings: StudySettings; otherSettings?: StudySettings };
+  otherGeneration?: StudyGeneratorConfig;
   generation?: StudyGeneration;
   revision: number;
   markets: StudyMarket[];
@@ -200,7 +212,7 @@ function assignStudySeats(room: Room) {
 export function recordStudyGeneratedAssignments(room: Room) {
   const generation = room.study?.generation;
   if (!generation) return;
-  const perSide = studyMarketSize(room.config) / 2;
+  const perSide = studyTemplateSideCount(room.config);
   generation.assignments = room.participants
     .filter((p) => p.seat >= 0)
     .map((p) => {
@@ -242,6 +254,8 @@ export function applyStudyGenerator(
     );
   }
   room.study.settings = settings;
+  if (room.study.otherSettings && !room.study.otherGeneration)
+    room.study.otherGeneration = structuredClone(generator);
   room.study.generation = {
     ...structuredClone(generator),
     appliedAt: now,
@@ -279,6 +293,12 @@ export function createStudy(
     protocol: "institutions-v1",
     revision: 0,
     settings: structuredClone(settings),
+    conditionBasis: {
+      settings: structuredClone(settings),
+      ...(otherSettings
+        ? { otherSettings: structuredClone(otherSettings) }
+        : {}),
+    },
     ...(otherSettings ? { otherSettings: structuredClone(otherSettings) } : {}),
     markets: orders.map((order, i) => ({
       id: i + 1,
@@ -784,6 +804,39 @@ function closeAdmission(
   delete admission.error;
   lobby.randomizedAt = null;
   lobby.revision++;
+  const plan = studyAllocationPlan(
+    active.length,
+    admission.targetMarkets,
+    room.config.studyMarketMode,
+    study.generation ? study.generation.seed % 2 === 0 : randomInt(2) === 0,
+  );
+  const waitingMessage = studyAllocationWaitingMessage(plan);
+  if (waitingMessage) {
+    admission.status = "open";
+    admission.closedAt = null;
+    delete room.config.studyLayout;
+    for (const person of active) {
+      person.seat = -1;
+      person.alias = "未割当";
+      person.limits = { apple: 0, banana: 0, orange: 0 };
+    }
+    if (study.generation) study.generation.assignmentConfirmedAt = null;
+    recordStudyGeneratedAssignments(room);
+    emit(
+      room,
+      events,
+      at,
+      "admission-waiting",
+      automatic ? "system" : "teacher",
+      {
+        trigger: automatic ? "deadline" : "manual",
+        count: active.length,
+        templateSize: plan.templateSize,
+        error: waitingMessage,
+      },
+    );
+    return;
+  }
   if (active.length < 2) {
     admission.error = "参加者が2人以上必要です。入室を再開してください。";
     emit(
@@ -800,20 +853,50 @@ function closeAdmission(
     );
     return;
   }
-  const count = Math.min(
-    admission.targetMarkets,
-    Math.floor(active.length / 2),
-  );
-  let extraBuyer = study.generation
-    ? study.generation.seed % 2 === 0
-    : randomInt(2) === 0;
-  room.config.studyLayout = Array.from({ length: count }, (_, i) => {
-    const size =
-      Math.floor(active.length / count) + (i < active.length % count ? 1 : 0);
-    const buyers = Math.floor(size / 2) + (size % 2 && extraBuyer ? 1 : 0);
-    if (size % 2) extraBuyer = !extraBuyer;
-    return { buyers, sellers: size - buyers };
-  });
+  let conditions: ReturnType<typeof studyAllocationConditions>;
+  try {
+    conditions = studyAllocationConditions(
+      room.config,
+      study,
+      plan.templateSize,
+    );
+    const error = studyAllocationConditionError(room.config, conditions, plan);
+    if (error) throw new Error(error);
+  } catch (error) {
+    admission.error = `${active.length}人・${plan.layout.length}市場、最大市場${Math.max(...plan.layout.map((m) => m.buyers + m.sellers))}人 → ${plan.templateSize}人の供需テンプレート：${error instanceof Error ? error.message : "条件を確認してください。"}「市場・取引条件」でパラメータを再設定してください。`;
+    delete room.config.studyLayout;
+    for (const person of active) {
+      person.seat = -1;
+      person.alias = "未割当";
+      person.limits = { apple: 0, banana: 0, orange: 0 };
+    }
+    recordStudyGeneratedAssignments(room);
+    emit(
+      room,
+      events,
+      at,
+      "admission-closed",
+      automatic ? "system" : "teacher",
+      {
+        trigger: automatic ? "deadline" : "manual",
+        count: active.length,
+        error: admission.error,
+        templateSize: plan.templateSize,
+      },
+    );
+    return;
+  }
+  const count = plan.layout.length;
+  study.conditionBasis ??= {
+    settings: structuredClone(study.settings),
+    ...(study.otherSettings
+      ? { otherSettings: structuredClone(study.otherSettings) }
+      : {}),
+  };
+  study.settings = conditions.settings;
+  if (conditions.otherSettings) study.otherSettings = conditions.otherSettings;
+  room.config.marketSize = plan.templateSize;
+  room.config.studyLayout = plan.layout;
   room.config.markets = count;
   room.config.capacity = active.length;
   if (study.markets.length !== count)
@@ -1009,9 +1092,10 @@ export function executeStudy(
         cmd.markets !== undefined);
     if (updateMarkets) {
       if (
-        !Number.isInteger(cmd.markets) ||
-        cmd.markets! < 1 ||
-        cmd.markets! > MAX_STUDY_MARKETS
+        cmd.marketMode !== "auto" &&
+        (!Number.isInteger(cmd.markets) ||
+          cmd.markets! < 1 ||
+          cmd.markets! > MAX_STUDY_MARKETS)
       )
         throw new AuctionError(
           `市場数は1〜${MAX_STUDY_MARKETS}で設定してください。`,
@@ -1058,7 +1142,10 @@ export function executeStudy(
     )
       throw new AuctionError("一時停止中のタイマーがありません。", 409);
     // Apply the entered count and cutoff together, even before autosave completes.
-    if (updateMarkets) admission.targetMarkets = cmd.markets!;
+    if (updateMarkets) {
+      if (cmd.markets !== undefined) admission.targetMarkets = cmd.markets;
+      room.config.studyMarketMode = cmd.marketMode ?? "manual";
+    }
     if (cmd.action === "schedule") {
       admission.timerSeconds = cmd.seconds!;
       admission.closesAt = now + cmd.seconds! * 1000;
@@ -1300,6 +1387,12 @@ export function executeStudy(
       });
     } else {
       const units = cmd.unitsPerParticipant ?? studyUnits(room.config);
+      const allocation = studyRoomAllocation(room);
+      const templateSize =
+        allocation?.templateSize ?? studyMarketSize(room.config);
+      const templatePeople = studyTemplateSideCount({
+        marketSize: templateSize,
+      });
       const unitsError = studyUnitsError(units);
       if (unitsError) throw new AuctionError(unitsError);
       if (
@@ -1312,11 +1405,11 @@ export function executeStudy(
       const parsed = studySettingsSchema.safeParse(cmd.settings);
       if (
         !parsed.success ||
-        parsed.data.values.length !== studyMarketSize(room.config) / 2 ||
+        parsed.data.values.length !== templatePeople ||
         parsed.data.values[0].length !== units
       )
         throw new AuctionError(
-          `買い手・売り手それぞれ${studyMarketSize(room.config) / 2}人×${units}単位の条件を確認してください。評価値は低下、費用は上昇するように設定します。`,
+          `現在の人数と市場数に合わせ、買い手・売り手それぞれ${templatePeople}人×${units}単位の条件を再度プレビューしてください。評価値は低下、費用は上昇するように設定します。`,
         );
       // Recompute on the authoritative engine; client metadata cannot mislabel
       // a manually edited schedule as a reproducible generated condition.
@@ -1324,7 +1417,7 @@ export function executeStudy(
         try {
           const generated = generatedStudySettings(
             cmd.generator,
-            (studyMarketSize(room.config) / 2) * units,
+            templatePeople * units,
             units,
           );
           if (JSON.stringify(generated) !== JSON.stringify(parsed.data))
@@ -1340,19 +1433,107 @@ export function executeStudy(
         }
       }
       const commission = cmd.commission ?? studyCommission(room.config);
-      const error = studyCommissionError(
-        commission,
-        parsed.data,
-        studyInstitutions(room.config).some((i) => i !== "cda")
-          ? (study.otherSettings ??
-              (units !== studyUnits(room.config) ? study.settings : undefined))
+      const nextConfig = {
+        ...room.config,
+        marketSize: templateSize,
+        studyCdaUnits: units,
+        studyCommission: commission,
+      };
+      const otherGeneration =
+        allocation && templateSize !== studyMarketSize(room.config)
+          ? cmd.generator
+          : (study.otherGeneration ??
+            (units !== studyUnits(room.config) && studyUnits(room.config) === 2
+              ? study.generation
+              : undefined));
+      const nextStudy: Study = {
+        ...study,
+        settings: parsed.data,
+        conditionBasis: {
+          settings: parsed.data,
+          otherSettings:
+            study.conditionBasis?.otherSettings ??
+            study.otherSettings ??
+            study.conditionBasis?.settings ??
+            study.settings,
+        },
+        generation: cmd.generator
+          ? {
+              ...cmd.generator,
+              appliedAt: now,
+              assignmentConfirmedAt: null,
+              assignments: [],
+            }
           : undefined,
-      );
+        otherGeneration,
+      };
+      let otherSettings = study.otherSettings;
+      let error: string;
+      try {
+        if (allocation)
+          otherSettings = studyAllocationConditions(
+            nextConfig,
+            nextStudy,
+            templateSize,
+          ).otherSettings;
+        error = allocation
+          ? studyAllocationConditionError(
+              nextConfig,
+              { settings: parsed.data, otherSettings },
+              allocation,
+            )
+          : studyCommissionError(
+              commission,
+              parsed.data,
+              studyInstitutions(room.config).some((i) => i !== "cda")
+                ? (otherSettings ??
+                    (units !== studyUnits(room.config)
+                      ? study.settings
+                      : undefined))
+                : undefined,
+            );
+      } catch (error) {
+        throw new AuctionError(
+          `供需条件を再設定してください。${error instanceof Error ? error.message : "パラメータを確認してください。"}`,
+        );
+      }
       if (error) throw new AuctionError(error);
       const unitsChanged = units !== studyUnits(room.config);
+      const basis = study.conditionBasis ?? {
+        settings: structuredClone(study.settings),
+        otherSettings: study.otherSettings
+          ? structuredClone(study.otherSettings)
+          : undefined,
+      };
+      if (
+        !cmd.generator &&
+        JSON.stringify(
+          resizeStudySettings(basis.settings, templateSize, units),
+        ) !== JSON.stringify(parsed.data)
+      )
+        basis.settings = structuredClone(parsed.data);
+      study.conditionBasis = basis;
+      if (otherGeneration) study.otherGeneration = otherGeneration;
+      else if (allocation && templateSize !== studyMarketSize(room.config))
+        delete study.otherGeneration;
       if (unitsChanged && !study.otherSettings)
         study.otherSettings = structuredClone(study.settings);
+      if (otherSettings) study.otherSettings = otherSettings;
       study.settings = parsed.data;
+      if (allocation) room.config.marketSize = templateSize;
+      if (
+        allocation?.layout.length &&
+        study.lobby?.admission?.status === "closed"
+      ) {
+        room.config.studyLayout = allocation.layout;
+        room.config.markets = allocation.layout.length;
+        if (study.markets.length !== allocation.layout.length)
+          study.markets = createStudy(
+            allocation.layout.length,
+            study.settings,
+            studyInstitutions(room.config),
+          ).markets;
+      }
       room.config.studyCdaUnits = units;
       room.config.studyCommission = commission;
       if (cmd.generator) {
@@ -1369,6 +1550,7 @@ export function executeStudy(
         }
       }
       study.revision++;
+      if (study.lobby?.admission) delete study.lobby.admission.error;
       emit(room, events, now, "study-settings", "teacher", {
         settings: study.settings,
         ...(study.otherSettings ? { otherSettings: study.otherSettings } : {}),
@@ -1389,6 +1571,12 @@ export function executeStudy(
       if (!["waiting", "review"].includes(room.phase))
         throw new AuctionError("今は実験を開始できません。", 409);
       if (room.round === 0) {
+        const allocation = studyRoomAllocation(room);
+        const waitingMessage =
+          allocation && studyAllocationWaitingMessage(allocation);
+        if (waitingMessage) throw new AuctionError(waitingMessage, 409);
+        if (study.lobby?.admission?.error)
+          throw new AuctionError(study.lobby.admission.error, 409);
         const error = studyCommissionError(
           studyCommission(room.config),
           study.settings,

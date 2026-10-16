@@ -10,6 +10,7 @@ import type {
   StaircaseParameters,
   StudyGeneratorConfig,
   StudySettings,
+  StudyAllocationPlan,
 } from "@/lib/study-types";
 import {
   StudyConditionPreview,
@@ -18,6 +19,7 @@ import {
 import { StudyCommissionField } from "./study-commission-settings";
 import { studyCommissionError } from "@/lib/study-commission";
 import { MAX_PRICE } from "@/lib/price";
+import { studyMarketSettings } from "@/lib/study-config";
 
 export type StudyPresetPreview = {
   settings: StudySettings;
@@ -41,6 +43,8 @@ export function StudyPresetPicker({
   onConfirm,
   onDraftChange,
   renderAssignments,
+  renderAllocation,
+  marketLayout,
   commission,
   onCommissionChange,
   settingsPanel,
@@ -66,6 +70,11 @@ export function StudyPresetPicker({
   ) => boolean | Promise<boolean>;
   onDraftChange?: () => void;
   renderAssignments?: (preview: StudyPresetPreview) => ReactNode;
+  renderAllocation?: (
+    preview: StudyPresetPreview,
+    otherSettings: StudySettings | undefined,
+  ) => ReactNode;
+  marketLayout?: StudyAllocationPlan["layout"];
   commission: number;
   onCommissionChange: (amount: number) => void;
   renderUnitFields?: (disabled: boolean) => ReactNode;
@@ -128,11 +137,47 @@ export function StudyPresetPicker({
     otherError =
       e instanceof Error ? e.message : "他制度の供需条件を確認してください。";
   }
-  const commissionError = studyCommissionError(
-    commission,
-    candidate,
-    candidateOther,
-  );
+  const actualSettings =
+    candidate && marketLayout
+      ? marketLayout.flatMap((counts, i) =>
+          !counts.buyers || !counts.sellers
+            ? []
+            : [
+                studyMarketSettings(
+                  {
+                    title: "",
+                    capacity: 0,
+                    rounds: 0,
+                    duration: 0,
+                    studyLayout: marketLayout,
+                  },
+                  candidate!,
+                  i + 1,
+                ),
+                ...(candidateOther
+                  ? [
+                      studyMarketSettings(
+                        {
+                          title: "",
+                          capacity: 0,
+                          rounds: 0,
+                          duration: 0,
+                          studyLayout: marketLayout,
+                        },
+                        candidateOther,
+                        i + 1,
+                      ),
+                    ]
+                  : []),
+              ],
+        )
+      : [];
+  const commissionError =
+    studyCommissionError(commission, candidate, candidateOther) ||
+    actualSettings
+      .map((s) => studyCommissionError(commission, s))
+      .find(Boolean) ||
+    "";
   // A preview is derived from the current inputs; saving still requires confirmation.
   const preview: StudyPresetPreview | null =
     candidate && !generationError && !otherError
@@ -170,6 +215,7 @@ export function StudyPresetPicker({
         amount={commission}
         settings={candidate}
         otherSettings={candidateOther}
+        additionalSettings={actualSettings}
         disabled={fieldsBlocked || locked}
         onChange={(amount) => {
           onCommissionChange(amount);
@@ -179,7 +225,8 @@ export function StudyPresetPicker({
       {custom && !validationError && (
         <>
           <p className="field-help">
-            {cdaOnly && "CDA："}買い手{perSide}人・売り手{perSide}人、各
+            {cdaOnly && "CDA："}条件テンプレート：買い手{perSide}人・売り手
+            {perSide}人、各
             {unitsPerParticipant}単位、片側{units}単位。
             {cdaOnly && "Call Market・Posted Offerは各自2単位です。"}
             既定のp=80・K=8・L=4・d=4は検討用の候補です。
@@ -240,7 +287,7 @@ export function StudyPresetPicker({
           {previewError}
         </p>
       )}
-      {custom && preview && (
+      {(custom || renderAllocation) && preview && (
         <div className="study-generated-preview">
           <h3>
             {cdaOnly && "CDA："}
@@ -260,7 +307,7 @@ export function StudyPresetPicker({
               {cdaOnly
                 ? "CDAの全期で固定します。"
                 : "全期・全制度で固定します。"}
-              各市場は同じ役割別の条件を使います。
+              各市場は共通テンプレートから実人数に合わせた条件を使います。
             </p>
           )}
           {renderAssignments?.(preview)}
@@ -275,6 +322,7 @@ export function StudyPresetPicker({
           )}
         </div>
       )}
+      {preview && renderAllocation?.(preview, candidateOther)}
       <div className="study-actions">
         <button
           type="button"

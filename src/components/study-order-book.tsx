@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { ChartBar, List } from "lucide-react";
-import { studyMarketSize } from "@/lib/study-config";
+import { studyMarketCounts } from "@/lib/study-config";
 import {
   MIN_STUDY_BOOK_ROWS,
   STUDY_BOOK_ROW_HEIGHT,
@@ -52,7 +52,8 @@ export function StudyOrderBook({
       rows: studyPriceLevels(market.orders, "seller", view.me.id),
     },
   ];
-  const slots = Math.min(8, studyMarketSize(view.config) / 2);
+  const counts = studyMarketCounts(view.config, market.id);
+  const slots = Math.min(8, Math.max(counts.buyers, counts.sellers));
   // A shared scale keeps equal quantities equally long on both sides.
   const maximum = Math.max(
     4,

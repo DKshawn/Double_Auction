@@ -95,7 +95,8 @@ export const studyUnits = (
     : DEFAULT_STUDY_UNITS;
 export const studyUnitsPerSide = (
   config: Pick<RoomConfig, "studyCdaUnits" | "marketSize">,
-) => (studyMarketSize(config) / 2) * studyUnits(config);
+  institution: Institution = "cda",
+) => studyTemplateSideCount(config) * studyUnits(config, institution);
 export const studyUnitsError = (units: number) =>
   !Number.isInteger(units) || units < 1 || units > MAX_STUDY_UNITS
     ? `CDAの1人あたりの単位数は1〜${MAX_STUDY_UNITS}の整数で設定してください。`
@@ -106,7 +107,7 @@ export function resizeStudySettings(
   marketSize: number,
   unitsPerParticipant = DEFAULT_STUDY_UNITS,
 ) {
-  const perSide = marketSize / 2;
+  const perSide = studyTemplateSideCount({ marketSize });
   const unitsError = studyUnitsError(unitsPerParticipant);
   if (unitsError) throw new Error(unitsError);
   // Preserve the original profile sampling when the unit count is unchanged.
@@ -140,11 +141,16 @@ export const MAX_STUDY_MARKETS = MAX_STUDY_PARTICIPANTS / 2;
 // Missing size belongs to an existing room with the original 8 + 8 design.
 export const studyMarketSize = (config: Pick<RoomConfig, "marketSize">) =>
   config.marketSize ?? DEFAULT_MARKET_SIZE;
+// Keep a balanced condition template large enough for either side of an odd
+// market. Actual roles and schedules use the integer counts below or the cutoff layout.
+export const studyTemplateSideCount = (
+  config: Pick<RoomConfig, "marketSize">,
+) => Math.ceil(studyMarketSize(config) / 2);
 export function studyMarketCounts(config: RoomConfig, market: number) {
   return (
     config.studyLayout?.[market - 1] ?? {
-      buyers: studyMarketSize(config) / 2,
-      sellers: studyMarketSize(config) / 2,
+      buyers: studyTemplateSideCount(config),
+      sellers: Math.floor(studyMarketSize(config) / 2),
     }
   );
 }
@@ -192,7 +198,9 @@ export function studyProfileIndex(
   seat: number,
   profiles: number,
 ) {
-  if (!config.studyLayout) return studyRoleIndex(config, seat);
+  // Preserve direct profile indexing in saved balanced rooms.
+  if (!config.studyLayout && studyMarketSize(config) % 2 === 0)
+    return studyRoleIndex(config, seat);
   const counts = studyMarketCounts(config, studyMarketId(config, seat));
   const count =
     studyRole(config, seat) === "buyer" ? counts.buyers : counts.sellers;
@@ -204,8 +212,13 @@ export function studyMarketSettings(
   settings: StudySettings,
   market: number,
 ): StudySettings {
-  if (!config.studyLayout) return settings;
+  if (!config.studyLayout && studyMarketSize(config) % 2 === 0) return settings;
   const counts = studyMarketCounts(config, market);
+  if (
+    counts.buyers === settings.values.length &&
+    counts.sellers === settings.costs.length
+  )
+    return settings;
   const sample = (profiles: number[][], count: number) =>
     Array.from({ length: count }, (_, i) => [
       ...profiles[Math.floor(((i + 0.5) * profiles.length) / count)],
@@ -224,10 +237,9 @@ export function studyLayoutError(
   if (
     !Number.isInteger(marketSize) ||
     marketSize < 2 ||
-    marketSize > MAX_STUDY_PARTICIPANTS ||
-    marketSize % 2 !== 0
+    marketSize > MAX_STUDY_PARTICIPANTS
   )
-    return `1市場の人数は2〜${MAX_STUDY_PARTICIPANTS}人の偶数で設定してください。`;
+    return `1市場の人数は2〜${MAX_STUDY_PARTICIPANTS}人の整数で設定してください。`;
   if (!Number.isInteger(markets) || markets < 1 || markets > MAX_STUDY_MARKETS)
     return `市場数は1〜${MAX_STUDY_MARKETS}の整数で設定してください。`;
   if (!flexible && markets * marketSize > MAX_STUDY_PARTICIPANTS)

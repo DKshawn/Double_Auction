@@ -72,7 +72,9 @@ export function generateStaircase(
   if (!Number.isInteger(K) || K < 1 || !Number.isInteger(L) || L < 1)
     throw new Error("KとLは1以上の整数にしてください。");
   if (K + L > unitsPerSide)
-    throw new Error(`K＋Lは片側の総単位数${unitsPerSide}以下にしてください。`);
+    throw new Error(
+      `K＋Lは片側の総単位数${unitsPerSide}以下にしてください（現在：K=${K}、L=${L}、K＋L=${K + L}）。K・Lを再設定してください。`,
+    );
   if (!Number.isFinite(p) || !Number.isFinite(d) || d <= 0)
     throw new Error("pは有限の数値、dは0より大きい数値にしてください。");
   const demand = Array.from({ length: unitsPerSide }, (_, i) => {

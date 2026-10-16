@@ -1,4 +1,5 @@
 import { equilibrium } from "./equilibrium";
+import { studyAllocationPreview } from "./study-allocation";
 import type { Institution, StudyMarketView, StudyMetric } from "./study-types";
 import type { RoomView } from "./types";
 import type { Participant, Room } from "./auction-model";
@@ -374,7 +375,23 @@ export function studyView(
         },
     study: {
       protocol: study.protocol,
-      ...(study.lobby ? { lobby: { ...study.lobby } } : {}),
+      ...(study.lobby
+        ? {
+            lobby: {
+              ...study.lobby,
+              ...(study.lobby.admission
+                ? {
+                    admission: {
+                      ...study.lobby.admission,
+                      ...(!teacher && study.lobby.admission.error
+                        ? { error: "教員による条件の確認をお待ちください。" }
+                        : {}),
+                    },
+                  }
+                : {}),
+            },
+          }
+        : {}),
       marketCount: room.config.markets ?? study.markets.length,
       settingsRevision: study.revision,
       market: publicState,
@@ -390,8 +407,15 @@ export function studyView(
     },
   };
   if (teacher) {
+    const allocation =
+      room.phase === "waiting" && room.round === 0
+        ? studyAllocationPreview(room)
+        : null;
+    if (allocation && view.study!.lobby?.admission)
+      view.study!.lobby.admission.targetMarkets = allocation.requestedMarkets;
     const metrics = studyMetrics(room, now);
     view.study!.teacher = {
+      ...(allocation ? { allocation } : {}),
       settings: study.settings,
       ...(study.otherSettings ? { otherSettings: study.otherSettings } : {}),
       ...(study.generation ? { generation: study.generation } : {}),

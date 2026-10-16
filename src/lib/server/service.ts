@@ -28,6 +28,7 @@ import type { RoomSession } from "../room-session";
 import type { RoomSummary } from "../room-management";
 import type { StudyGeneratorConfig, StudySettings } from "../study-types";
 import { generatedStudySettings } from "../study-generator";
+import { studyAllocationPlan } from "../study-allocation";
 import {
   authenticate,
   assertTeacherAccess,
@@ -82,7 +83,18 @@ export class AuctionService {
         "この供需プリセットは制度比較実験で選択してください。",
       );
     if (config.protocol === "institutions-v1") {
-      const size = studyMarketSize(config);
+      if (config.studyMarketMode) {
+        const error = studyLayoutError(1, config.capacity, true);
+        if (error) throw new AuctionError(error);
+      }
+      const initialPlan = config.studyMarketMode
+        ? studyAllocationPlan(
+            config.capacity,
+            config.markets ?? 1,
+            config.studyMarketMode,
+          )
+        : null;
+      const size = initialPlan?.templateSize ?? studyMarketSize(config);
       const layoutError = studyLayoutError(
         config.markets ?? 0,
         size,
@@ -123,9 +135,12 @@ export class AuctionService {
       config = {
         ...config,
         marketSize: size,
+        ...(initialPlan ? { markets: initialPlan.requestedMarkets } : {}),
         capacity:
           config.studyAdmission === "flexible"
-            ? Math.min(MAX_STUDY_PARTICIPANTS, config.markets! * size)
+            ? config.studyMarketMode
+              ? config.capacity
+              : Math.min(MAX_STUDY_PARTICIPANTS, config.markets! * size)
             : config.markets! * size,
         studyInstitutions: institutions,
         studyPeriods: selectedPeriods,
@@ -157,7 +172,7 @@ export class AuctionService {
         )
           otherStudySettings = generatedStudySettings(
             generator,
-            studyMarketSize(config),
+            studyUnitsPerSide(config, "call"),
           );
       } catch (error) {
         throw new AuctionError(

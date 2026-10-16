@@ -28,6 +28,8 @@ import {
   studyInstitutions,
   studyMarketId,
   studyMarketSize,
+  studyMarketCounts,
+  studyUnitsPerSide,
   studyUnits,
   studyRole,
   studyRoleIndex,
@@ -189,10 +191,7 @@ export class DemoSession {
     if (view.study?.teacher)
       view.study.teacher.preset = {
         label: "Default",
-        settings: resizeStudySettings(
-          DEMO_SETTINGS,
-          studyMarketSize(this.config),
-        ),
+        settings: structuredClone(DEMO_SETTINGS),
       };
     this.snapshot = {
       view,
@@ -223,9 +222,16 @@ export class DemoSession {
       studyUnits(config) === 2
         ? undefined
         : this.options.generator && institutions.some((i) => i !== "cda")
-          ? generatedStudySettings(this.options.generator, size)
+          ? generatedStudySettings(
+              this.options.generator,
+              studyUnitsPerSide(config, "call"),
+            )
           : resizeStudySettings(DEMO_SETTINGS, size),
     );
+    study.conditionBasis = {
+      settings: structuredClone(DEMO_SETTINGS),
+      otherSettings: structuredClone(DEMO_SETTINGS),
+    };
     if (this.options.lobby)
       study.lobby = {
         revision: 0,
@@ -288,7 +294,8 @@ export class DemoSession {
       const side = studyRole(config, seat);
       const market = studyMarketId(config, seat);
       const alias = `${side === "buyer" ? "買" : "売"}${String(studyRoleIndex(config, seat) + 1).padStart(2, "0")}`;
-      const human = seat === (role === "buyer" ? 0 : size / 2);
+      const human =
+        seat === (role === "buyer" ? 0 : studyMarketCounts(config, 1).buyers);
       const id = randomUUID();
       if (human) this.humanId = id;
       this.room.participants.push({
@@ -497,7 +504,7 @@ export class DemoSession {
     if (this.market.stage === "offer") this.skipStage();
     if (this.market.posted) return;
     // Each preceding buyer needs at most two purchases and a pass.
-    const attempts = (studyMarketSize(this.room.config) / 2) * 3;
+    const attempts = this.market.buyerOrder.length * 3;
     for (let i = 0; i < attempts && this.market.stage === "purchase"; i++) {
       const id = this.market.buyerOrder[this.market.buyerIndex];
       if (id === this.humanId) break;

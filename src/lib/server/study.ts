@@ -44,7 +44,7 @@ export function newStudy(
   institutions: readonly Institution[] = DEFAULT_STUDY_INSTITUTIONS,
   unitsPerParticipant = DEFAULT_STUDY_UNITS,
 ) {
-  return createStudy(
+  const study = createStudy(
     count,
     pptStudySettings(marketSize, unitsPerParticipant),
     institutions,
@@ -52,4 +52,9 @@ export function newStudy(
       ? undefined
       : pptStudySettings(marketSize),
   );
+  study.conditionBasis = {
+    settings: pptStudySettings(),
+    otherSettings: pptStudySettings(),
+  };
+  return study;
 }

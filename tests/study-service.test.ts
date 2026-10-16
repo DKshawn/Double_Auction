@@ -499,7 +499,7 @@ test("96 students receive six isolated balanced markets and six distinct institu
   );
 });
 
-test("custom layout rejects odd groups, invalid market counts and totals above 192", async () => {
+test("custom layout accepts odd groups and rejects invalid sizes, market counts and totals above 192", async () => {
   const config = {
     title: "人数の検証",
     protocol: "institutions-v1" as const,
@@ -510,6 +510,13 @@ test("custom layout rejects odd groups, invalid market counts and totals above 1
     duration: 180,
   };
   assert.equal(configSchema.safeParse(config).success, true);
+  const odd = { ...config, marketSize: 5, capacity: 15 };
+  assert.equal(configSchema.safeParse(odd).success, true);
+  const created = await service.create(odd, "Test-Teacher-2026", "");
+  assert.equal(
+    (await service.view(created.code, created.token)).config.capacity,
+    15,
+  );
   assert.equal(
     configSchema.safeParse({
       ...config,
@@ -529,7 +536,8 @@ test("custom layout rejects odd groups, invalid market counts and totals above 1
     true,
   );
   for (const change of [
-    { marketSize: 5 },
+    { marketSize: 1 },
+    { marketSize: 193 },
     { marketSize: 0 },
     { marketSize: 6.5 },
     { markets: 0 },

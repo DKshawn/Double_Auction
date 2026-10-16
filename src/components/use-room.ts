@@ -221,20 +221,21 @@ export function useRoom(code: string, session: RoomSession) {
           !view.trades.some((old) => old.id === t.id) &&
           (t.buyerId === view.me.id || t.sellerId === view.me.id),
       );
-      setNotice({
-        round: next!.round,
-        message: newTrade
-          ? `${goodName(newTrade.good)}を ${newTrade.price} 円で取引しました。`
-          : command.type === "study-randomize"
-            ? "学生の市場と買い手・売り手をランダムに割り当てました。"
-            : command.type === "quote"
-              ? "注文を受け付けました。"
-              : command.type === "cancel"
-                ? "注文を取り消しました。"
-                : command.type === "update-markets"
-                  ? "価値と費用を保存しました。入室済みの学生にも反映されます。"
-                  : "実験の状態を更新しました。",
-      });
+      if (session !== "teacher")
+        setNotice({
+          round: next!.round,
+          message: newTrade
+            ? `${goodName(newTrade.good)}を ${newTrade.price} 円で取引しました。`
+            : command.type === "study-randomize"
+              ? "学生の市場と買い手・売り手をランダムに割り当てました。"
+              : command.type === "quote"
+                ? "注文を受け付けました。"
+                : command.type === "cancel"
+                  ? "注文を取り消しました。"
+                  : command.type === "update-markets"
+                    ? "価値と費用を保存しました。入室済みの学生にも反映されます。"
+                    : "実験の状態を更新しました。",
+        });
       return true;
     } catch (e) {
       setError(errorMessage(e));

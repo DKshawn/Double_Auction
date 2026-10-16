@@ -22,6 +22,7 @@ import {
 } from "@/lib/study-config";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import { studyCommission } from "@/lib/study-commission";
+import { studyAllocationPlan } from "@/lib/study-allocation";
 import { Header } from "./shell";
 import { StudyAdmission } from "./study-admission";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -82,16 +83,22 @@ export function StudyRoster({
         .filter((person) => !person.withdrawnAt)
         .sort((a, b) => a.joinOrder - b.joinOrder)
     : [];
+  const preview = studyAllocationPlan(
+    arrivals.length,
+    previewCount,
+    marketDraft !== null ? "manual" : view.config.studyMarketMode,
+    !teacher.generation || teacher.generation.seed % 2 === 0,
+  );
   const markets = pending
-    ? Array.from({ length: previewCount }, (_, index) => {
-        const size = Math.floor(arrivals.length / previewCount);
-        const extra = arrivals.length % previewCount;
-        const start = index * size + Math.min(index, extra);
+    ? preview.layout.map((counts, index) => {
+        const start = preview.layout
+          .slice(0, index)
+          .reduce((sum, m) => sum + m.buyers + m.sellers, 0);
         const people = arrivals.slice(
           start,
-          start + size + (index < extra ? 1 : 0),
+          start + counts.buyers + counts.sellers,
         );
-        const buyers = Math.ceil(people.length / 2);
+        const buyers = counts.buyers;
         const slots = (side: RosterPerson[], role: "buyer" | "seller") =>
           side.map((person, seat) => ({
             alias: `${role === "buyer" ? "買" : "売"}${String(seat + 1).padStart(2, "0")}`,
@@ -251,6 +258,9 @@ export function StudyRoster({
                   >
                     <span className="study-roster-market-name">
                       <DoorOpen size={18} /> 市場 {market.id}
+                      {pending && buyers + sellers === 1 && (
+                        <span className="study-roster-waiting">補充待ち</span>
+                      )}
                       <ChevronDown size={16} />
                     </span>
                     <span className="study-roster-counts">

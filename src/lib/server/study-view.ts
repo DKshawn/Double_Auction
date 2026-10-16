@@ -1,5 +1,4 @@
 import { studyView as sharedStudyView } from "../study-view";
-import { studyMarketSize } from "../study-config";
 import { pptStudySettings } from "./study";
 export * from "../study-view";
 
@@ -8,7 +7,7 @@ export function studyView(...args: Parameters<typeof sharedStudyView>) {
   if (view.study?.teacher)
     view.study.teacher.preset = {
       label: "Default",
-      settings: pptStudySettings(studyMarketSize(args[0].config)),
+      settings: pptStudySettings(),
     };
   return view;
 }

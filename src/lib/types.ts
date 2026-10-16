@@ -18,6 +18,8 @@ export type RoomConfig = {
   markets?: number;
   marketSize?: number;
   studyAdmission?: "flexible";
+  // Missing on saved rooms, whose explicitly requested market count is retained.
+  studyMarketMode?: "auto" | "manual";
   // Creation-dialog review state only; admission and start still require server validation.
   studySetupConfirmed?: boolean;
   // Final seats, recorded at admission close. marketSize remains the condition template size.

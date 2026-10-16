@@ -13,7 +13,7 @@ import { StudyDetailDialog } from "./study-detail-dialog";
 import { studyTiming } from "@/lib/study-timing";
 import {
   studyInstitutions,
-  studyMarketSize,
+  studyMarketCounts,
   studyPeriodCount,
   studyUnits,
 } from "@/lib/study-config";
@@ -51,7 +51,7 @@ export default function DemoRoom({
   const { view, now, teacher, role, institution } = state;
   const market = view.study!.market;
   const institutions = studyInstitutions(view.config);
-  const perSide = studyMarketSize(view.config) / 2;
+  const counts = studyMarketCounts(view.config, market.id);
   const needsAssignment =
     view.phase === "waiting" && view.study!.lobby?.randomizedAt === null;
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function DemoRoom({
           <p className="demo-note">
             {view.study?.lobby?.admission
               ? "各市場は買い手・売り手各1人以上、両側の人数差は最大1人です。"
-              : `各市場は買い手${perSide}人・売り手${perSide}人です。`}
+              : `各市場は買い手${counts.buyers}人・売り手${counts.sellers}人です。`}
             {institutions
               .map(
                 (i) =>

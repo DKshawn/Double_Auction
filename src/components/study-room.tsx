@@ -466,7 +466,7 @@ export function StudyRoom({
             <p className="error-message" role="alert">
               {error}
             </p>
-          ) : notice ? (
+          ) : !teacher && notice ? (
             <p className="success-message">{notice}</p>
           ) : null}
         </div>

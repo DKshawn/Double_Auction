@@ -333,7 +333,10 @@ test("server deadline closes once, never starts experiment, insufficient attenda
       1,
     );
     if (n < 2) {
-      assert.throws(() => f.send("teacher", { type: "start" }), /締め切り/);
+      assert.throws(
+        () => f.send("teacher", { type: "start" }),
+        /参加者が2人以上/,
+      );
       assert.ok(f.study.lobby!.admission!.error);
     } else {
       const saved = JSON.stringify(f.room.participants);
@@ -539,7 +542,7 @@ test("odd-market allocation retains reproducible generator assignments and expor
     f.room,
     {
       kind: "overlap-staircase",
-      parameters: DEFAULT_STAIRCASE_PARAMETERS,
+      parameters: { ...DEFAULT_STAIRCASE_PARAMETERS, K: 2, L: 2 },
       seed: 123456,
     },
     500,

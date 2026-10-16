@@ -8,7 +8,7 @@ export function studyChartViewport(
   requestedZoom = 1,
 ) {
   const eq = equilibrium(demand, supply);
-  const count = Math.min(demand.length, supply.length);
+  const count = Math.max(demand.length, supply.length);
   const quantityCenter = (eq.quantity + eq.quantityMax) / 2;
   const priceCenter = (eq.low + eq.high) / 2;
   const quantityRadius = Math.max(

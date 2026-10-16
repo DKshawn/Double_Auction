@@ -16,6 +16,12 @@ export type StudyTiming = {
   purchaseSeconds?: number;
 };
 export type StudySettings = { values: UnitValues[]; costs: UnitValues[] };
+export type StudyAllocationPlan = {
+  attendance: number;
+  requestedMarkets: number;
+  templateSize: number;
+  layout: { buyers: number; sellers: number }[];
+};
 export type StaircaseParameters = {
   p: number;
   K: number;
@@ -219,6 +225,7 @@ export type StudyView = {
       joinedAt?: number;
       withdrawnAt?: number;
     }[];
+    allocation?: StudyAllocationPlan & { error?: string };
     metrics: StudyMetric[];
     slopes: {
       market: number;
@@ -243,6 +250,7 @@ export type StudyCommand =
         | "cancel-timer"
         | "configure";
       markets?: number;
+      marketMode?: "auto" | "manual";
       seconds?: number;
       expectedRevision: number;
     }

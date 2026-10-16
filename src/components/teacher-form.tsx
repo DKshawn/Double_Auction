@@ -13,6 +13,8 @@ import {
   studyPeriodsError,
   studyInstitutions,
   studyMarketSize,
+  studyTemplateSideCount,
+  studyUnitsPerSide,
   resizeStudySettings,
   studyUnits,
   studyUnitsError,
@@ -47,7 +49,9 @@ import {
   type StudyPresetPreview,
 } from "./study-preset-picker";
 import { generatedStudySettings } from "@/lib/study-generator";
+import { studyAllocationPlan } from "@/lib/study-allocation";
 import { StudyUnitFields } from "./study-unit-settings";
+import { StudyAllocationPreview } from "./study-allocation-preview";
 import { teacherRoomHref } from "@/lib/room-navigation";
 
 export function TeacherForm({
@@ -110,7 +114,10 @@ export function TeacherForm({
     String(initialConfig?.markets ?? 1),
   );
   const [marketSize, setMarketSize] = useState(
-    String(studyMarketSize(initialConfig ?? {})),
+    String(initialConfig?.capacity ?? 16),
+  );
+  const [marketMode, setMarketMode] = useState<"auto" | "manual">(
+    initialConfig?.studyMarketMode ?? (initialConfig ? "manual" : "auto"),
   );
   const [cdaUnits, setCdaUnits] = useState(
     String(studyUnits(initialConfig ?? {})),
@@ -141,8 +148,7 @@ export function TeacherForm({
     settings: initialGenerator
       ? generatedStudySettings(
           initialGenerator,
-          (studyMarketSize(initialConfig ?? {}) / 2) *
-            studyUnits(initialConfig ?? {}),
+          studyUnitsPerSide(initialConfig ?? {}),
           studyUnits(initialConfig ?? {}),
         )
       : conditionPreset
@@ -161,7 +167,7 @@ export function TeacherForm({
           otherSettings: initialGenerator
             ? generatedStudySettings(
                 initialGenerator,
-                studyMarketSize(initialConfig ?? {}),
+                studyUnitsPerSide(initialConfig ?? {}, "call"),
               )
             : conditionPreset
               ? resizeStudySettings(
@@ -177,6 +183,7 @@ export function TeacherForm({
       preset,
       marketCount,
       marketSize,
+      marketMode,
       cdaUnits,
       timing,
       commission,
@@ -201,6 +208,7 @@ export function TeacherForm({
       setPreset(saved.preset);
       setMarketCount(saved.marketCount);
       setMarketSize(saved.marketSize);
+      setMarketMode(saved.marketMode);
       setCdaUnits(saved.cdaUnits);
       setTiming(saved.timing);
       setCommission(saved.commission);
@@ -223,15 +231,33 @@ export function TeacherForm({
   const orderCount = institutions.length
     ? studyInstitutionOrders(institutions).length
     : 0;
-  const count = Number(marketCount),
-    size = Number(marketSize);
+  const attendance = Number(marketSize);
+  const allocation = studyAllocationPlan(
+    Number.isInteger(attendance) &&
+      attendance >= 2 &&
+      attendance <= MAX_STUDY_PARTICIPANTS
+      ? attendance
+      : 0,
+    Number.isInteger(Number(marketCount)) &&
+      Number(marketCount) >= 1 &&
+      Number(marketCount) <= MAX_STUDY_MARKETS
+      ? Number(marketCount)
+      : 1,
+    marketMode,
+  );
+  const count = allocation.requestedMarkets;
+  const size = allocation.templateSize;
   const units = institutions.includes("cda") ? Number(cdaUnits) : 2;
   const unitsError = studyUnitsError(units);
   const otherSettings =
     units !== 2 && institutions.some((i) => i !== "cda") && conditionPreset
       ? resizeStudySettings(conditionPreset.settings, size)
       : undefined;
-  const layoutError = studyLayoutError(count, size, true);
+  const layoutError = studyLayoutError(
+    marketMode === "auto" ? count : Number(marketCount),
+    attendance,
+    true,
+  );
   const timingError = studyTimingError(timing, institutions);
   const commissionError = studyCommissionError(
     commission,
@@ -328,11 +354,12 @@ export function TeacherForm({
         : {
             protocol: "institutions-v1",
             studyAdmission: "flexible",
+            studyMarketMode: marketMode,
             ...(detailsSaved ? { studySetupConfirmed: true } : {}),
             title,
             markets: count,
             marketSize: size,
-            capacity: Math.min(MAX_STUDY_PARTICIPANTS, count * size),
+            capacity: attendance,
             rounds,
             duration: selectedTiming.cdaSeconds,
             studyTiming: selectedTiming,
@@ -393,12 +420,13 @@ export function TeacherForm({
               }
             : undefined
         }
-        units={(size / 2) * units}
+        units={studyTemplateSideCount({ marketSize: size }) * units}
         unitsPerParticipant={units}
+        marketLayout={allocation.layout}
         otherSettings={otherSettings}
         otherUnits={
           units !== 2 && institutions.some((i) => i !== "cda")
-            ? size
+            ? studyUnitsPerSide({ marketSize: size }, "call")
             : undefined
         }
         initialGenerator={adoptedConditions?.generator}
@@ -429,6 +457,21 @@ export function TeacherForm({
           labelledBy: "teacher-condition-heading",
         }}
         actionLabel="設定を保存して閉じる"
+        renderAllocation={(preview, other) => (
+          <StudyAllocationPreview
+            plan={allocation}
+            config={{
+              title,
+              capacity: attendance,
+              rounds,
+              duration: timing.cdaSeconds,
+              studyInstitutions: institutions,
+            }}
+            settings={preview.settings}
+            otherSettings={other}
+            commission={commission}
+          />
+        )}
         onDraftChange={() => {
           setAdoptedConditions(null);
           setError("");
@@ -440,7 +483,11 @@ export function TeacherForm({
   const configurationActions = (
     <div className="teacher-configuration-step-actions">
       {stepError && (
-        <p className="error-message" role="alert">
+        <p
+          id={configurationStep === 1 ? "study-layout-help" : undefined}
+          className="error-message"
+          role="alert"
+        >
           {stepError}
         </p>
       )}
@@ -737,7 +784,7 @@ export function TeacherForm({
               id={configurationId}
               index={1}
               label="市場・人数"
-              summary={`${count}市場 · ${size}人／市場`}
+              summary={`${attendance}人 · ${count}市場 · 供需テンプレート${size}人`}
               expanded={configurationStep === 1}
               complete={configurationProgress > 1}
               disabled={pending || configurationProgress < 1}
@@ -753,7 +800,10 @@ export function TeacherForm({
                     setPreset(event.target.value);
                     if (event.target.value !== "custom") {
                       setMarketCount(event.target.value);
-                      setMarketSize("16");
+                      setMarketSize(String(Number(event.target.value) * 16));
+                      setMarketMode(
+                        event.target.value === "1" ? "auto" : "manual",
+                      );
                     }
                   }}
                 >
@@ -766,13 +816,13 @@ export function TeacherForm({
               {preset === "custom" && (
                 <div className="form-grid">
                   <label className="field">
-                    人数
+                    予定人数
                     <input
                       type="number"
                       name="marketSize"
                       min={2}
                       max={MAX_STUDY_PARTICIPANTS}
-                      step={2}
+                      step={1}
                       required
                       value={marketSize}
                       disabled={settingsDisabled}
@@ -791,9 +841,12 @@ export function TeacherForm({
                       max={MAX_STUDY_MARKETS}
                       step={1}
                       required
-                      value={marketCount}
+                      value={marketMode === "auto" ? count : marketCount}
                       disabled={settingsDisabled}
-                      onChange={(e) => setMarketCount(e.target.value)}
+                      onChange={(e) => {
+                        setMarketMode("manual");
+                        setMarketCount(e.target.value);
+                      }}
                       aria-describedby={
                         layoutError ? "study-layout-help" : undefined
                       }
@@ -801,20 +854,16 @@ export function TeacherForm({
                   </label>
                 </div>
               )}
-              {layoutError && (
-                <p
-                  id="study-layout-help"
-                  className="error-message"
-                  role="alert"
-                >
-                  {layoutError}
-                </p>
-              )}
               {preset === "custom" && (
                 <p className="field-help">
-                  条件テンプレートは偶数人数で設定します。実際の参加者は最大
+                  {marketMode === "auto"
+                    ? "自動：1市場16人ずつ順に割り当てます。"
+                    : "手動で指定した市場数を優先します。"}
+                  実際の参加者は最大
                   {MAX_STUDY_PARTICIPANTS}
                   人まで受け付け、奇数でも全員を割り当てます。市場数は入室受付中も変更できます。
+                  {!layoutError &&
+                    `最大市場${Math.max(0, ...allocation.layout.map((m) => m.buyers + m.sellers))}人 → 供需テンプレート${size}人（買い手・売り手各${size / 2}人）。`}
                   {size !== 16 &&
                     "16人以外では、既定の価値・費用を全範囲から均等に抽出・複製します。"}
                   {count > 1 &&
@@ -822,6 +871,16 @@ export function TeacherForm({
                     count % orderCount !== 0 &&
                     `市場数が${orderCount}の倍数以外では、制度順序の割当数に差が出ます。`}
                 </p>
+              )}
+              {preset === "custom" && marketMode === "manual" && (
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => setMarketMode("auto")}
+                  disabled={settingsDisabled}
+                >
+                  自動（1市場16人）に戻す
+                </button>
               )}
               {configurationStep === 1 && configurationActions}
             </StudySetupStep>

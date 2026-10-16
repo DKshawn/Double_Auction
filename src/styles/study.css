@@ -375,6 +375,18 @@
 .study-roster-market-name > svg:last-child {
   margin-left: auto;
 }
+.study-roster-waiting {
+  border-radius: 5px;
+  padding: 2px 6px;
+  background: #fff4df;
+  color: #885b13;
+  font-size: 11px;
+  font-weight: 500;
+}
+.study-admission-waiting {
+  margin-top: 12px;
+  color: #885b13;
+}
 .study-roster-market-toggle[aria-expanded="true"]
   .study-roster-market-name
   > svg:last-child {
@@ -1170,16 +1182,6 @@
 .study-compact-settings .study-unit-fields {
   max-width: 400px;
 }
-.study-compact-settings .study-commission-field {
-  display: grid;
-  grid-template-columns: auto 100px;
-  align-items: center;
-  justify-content: start;
-  column-gap: 12px;
-}
-.study-compact-settings .study-commission-field > p {
-  grid-column: 1 / -1;
-}
 .study-detail-dialog.teacher-configuration-dialog {
   width: min(1060px, calc(100vw - 40px));
 }
@@ -1216,13 +1218,11 @@
 }
 .teacher-configuration-step-actions .error-message {
   margin-top: 0;
+  margin-bottom: 16px;
 }
 @media (max-width: 600px) {
   .study-program-columns {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .study-compact-settings .study-commission-field {
-    grid-template-columns: minmax(0, 1fr) 84px;
   }
 }
 .teacher-create-layout {
@@ -1370,6 +1370,9 @@
 .study-generator-error {
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+.study-preset-picker .study-actions {
+  margin-top: 16px;
 }
 .study-unit-settings {
   min-width: 0;
@@ -3230,4 +3233,15 @@
   .study-main .round-display {
     flex-wrap: wrap;
   }
+}
+.study-allocation-preview {
+  margin-top: 1rem;
+  min-width: 0;
+}
+.study-allocation-table {
+  max-height: 24rem;
+  overflow: auto;
+}
+.study-allocation-table table {
+  min-width: 680px;
 }

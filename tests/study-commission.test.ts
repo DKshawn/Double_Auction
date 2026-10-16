@@ -119,19 +119,22 @@ function fixture(institution: Institution = "cda", commission?: number) {
   };
 }
 
-test("commission accepts zero and integers only, with default 1 on the creation form and 0 on old configs", () => {
-  const { room } = fixture();
-  assert.equal(studyCommission(room.config), 0);
+test("room creation exposes detailed settings before mounting the default commission field", () => {
+  assert.equal(DEFAULT_STUDY_COMMISSION, 1);
   const markup = renderToStaticMarkup(
     createElement(TeacherForm, {
       status: { mode: "local", ready: true, keyRequired: false },
-      initialConfig: {
-        ...room.config,
-        studyCommission: DEFAULT_STUDY_COMMISSION,
-      },
     }),
   );
-  assert.match(markup, /name="studyCommission"[^>]*value="1"/);
+  assert.match(markup, /aria-haspopup="dialog">作成前に詳細を設定/);
+  assert.doesNotMatch(markup, /name="studyCommission"/);
+  // Opening the three-step dialog and saving/reopening its default value are
+  // checked interactively in tests/e2e/study-setup.spec.ts.
+});
+
+test("commission accepts zero and integers only, with zero on old configs", () => {
+  const { room } = fixture();
+  assert.equal(studyCommission(room.config), 0);
   for (const amount of [0, 5, 999]) {
     assert.ok(
       createRoomSchema.safeParse({

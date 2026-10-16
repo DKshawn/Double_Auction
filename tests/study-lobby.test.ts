@@ -249,28 +249,53 @@ test("classroom lobby persists arrival order, authenticates allocation, pushes r
   }
 });
 
-test("demo and student screens use the lobby; countdown survives pause and trading cannot start early", async () => {
+function demoMarkup(demo: DemoSession) {
+  const { view, now } = demo.getSnapshot();
+  return renderToStaticMarkup(
+    createElement(StudyRoom, {
+      view,
+      now,
+      command: demo.command,
+      disabled: false,
+      connected: true,
+      error: "",
+      notice: "",
+      retry: () => {},
+      demo: true,
+    }),
+  );
+}
+
+test("student waiting screen hides private conditions and teacher market rosters start collapsed", () => {
   const demo = new DemoSession("cda", "buyer", 1000, { lobby: true });
-  const markup = () =>
-    renderToStaticMarkup(
-      createElement(StudyRoom, {
-        view: demo.getSnapshot().view,
-        now: demo.getSnapshot().now,
-        command: demo.command,
-        disabled: false,
-        connected: true,
-        error: "",
-        notice: "",
-        retry: () => {},
-        demo: true,
-      }),
-    );
-  assert.match(markup(), /入室が完了しました/);
-  assert.doesNotMatch(markup(), /購入する単位ごとの価値|買いたい価格/);
+  const waiting = demoMarkup(demo);
+  assert.match(waiting, /入室が完了しました/);
+  assert.doesNotMatch(waiting, /購入する単位ごとの価値|買いたい価格/);
   demo.toggleTeacher();
-  assert.match(markup(), /学生の割り当て/);
-  assert.match(markup(), /市場12の学生/);
-  assert.match(markup(), /<details[^>]*open=""/);
+  const teacher = demoMarkup(demo);
+  assert.match(teacher, /学生の割り当て/);
+  const toggles = [
+    ...teacher.matchAll(
+      /class="study-roster-market-toggle" aria-expanded="false" aria-controls="([^"]+)"/g,
+    ),
+  ];
+  assert.equal(toggles.length, 12);
+  assert.equal(new Set(toggles.map((toggle) => toggle[1])).size, 12);
+  for (const [index, toggle] of toggles.entries()) {
+    assert.ok(teacher.includes(`aria-label="市場${index + 1}の学生"`));
+    assert.ok(teacher.includes(`id="${toggle[1]}" hidden=""`));
+    assert.ok(
+      teacher.includes(`aria-label="市場${index + 1}の買い手・売り手"`),
+    );
+  }
+  // Independent market expansion/collapse is checked through button clicks in
+  // tests/e2e/study-setup.spec.ts rather than depending on a particular HTML tag.
+});
+
+test("demo countdown survives pause and trading cannot start before assignment and the five-second delay", async () => {
+  const demo = new DemoSession("cda", "buyer", 1000, { lobby: true });
+  const markup = () => demoMarkup(demo);
+  demo.toggleTeacher();
   assert.equal(await demo.command({ type: "start" }), false);
   assert.equal(
     await demo.command({ type: "study-randomize", expectedRevision: 0 }),
@@ -299,7 +324,8 @@ test("demo and student screens use the lobby; countdown survives pause and tradi
   assert.equal(demo.getSnapshot().view.round, 1);
   assert.doesNotMatch(markup(), /study-start-countdown/);
   demo.toggleTeacher();
-  assert.doesNotMatch(markup(), /<details[^>]*open=""/);
+  assert.doesNotMatch(markup(), /aria-label="実験の準備"/);
+  assert.match(markup(), /学生の割り当て/);
   assert.equal(
     commandSchema.safeParse({
       requestId: randomUUID(),

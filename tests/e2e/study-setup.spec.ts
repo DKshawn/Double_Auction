@@ -8,12 +8,17 @@ test("pre-creation settings use a separate dialog with save and close", async ({
     name: "作成前に詳細を設定",
     exact: true,
   });
+  const commission = page.getByLabel("Commission（円／1単位・1人）", {
+    exact: true,
+  });
+  await expect(commission).toHaveCount(0);
   await open.click();
   const dialog = page.getByRole("dialog", {
     name: "実験の詳細設定",
     exact: true,
   });
   await expect(dialog).toBeVisible();
+  await expect(commission).toBeHidden();
   await expect(dialog.locator('input[type="password"]')).toHaveCount(0);
   await expect(
     dialog
@@ -42,6 +47,8 @@ test("pre-creation settings use a separate dialog with save and close", async ({
   });
   const units = preset.getByLabel("CDAの1人あたりの単位数", { exact: true });
   await expect(units).toBeVisible();
+  await expect(commission).toBeVisible();
+  await expect(commission).toHaveValue("1");
   const save = dialog.getByRole("button", {
     name: "設定を保存して閉じる",
     exact: true,
@@ -59,6 +66,7 @@ test("pre-creation settings use a separate dialog with save and close", async ({
     .fill("2");
   await save.click();
   await expect(dialog).toBeHidden();
+  await expect(commission).toHaveCount(0);
   await expect(
     page.getByLabel("この実験の教員パスワード", { exact: false }),
   ).toBeVisible();
@@ -149,6 +157,45 @@ test("pre-creation settings use a separate dialog with save and close", async ({
   await expect(
     dialog.getByLabel("均衡価格 p（円）", { exact: true }),
   ).toHaveValue("95");
+});
+
+test("market roster buttons expand and collapse each market independently", async ({
+  page,
+}) => {
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "ルーム作成", exact: true }).click();
+  await page.getByRole("button", { name: "確定して次へ", exact: true }).click();
+  await page.getByLabel("市場数", { exact: true }).fill("2");
+  const markets = page.locator(".study-roster-room");
+  await expect(markets).toHaveCount(2);
+  const first = markets.nth(0);
+  const second = markets.nth(1);
+  const firstToggle = first.locator(".study-roster-market-toggle");
+  const secondToggle = second.locator(".study-roster-market-toggle");
+  const firstTable = first.locator("table");
+  const secondTable = second.locator("table");
+  for (const market of [first, second]) {
+    await expect(market.locator(".study-roster-market-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(market.locator("table")).toBeHidden();
+  }
+  await firstToggle.click();
+  await expect(firstToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(firstTable).toBeVisible();
+  await expect(firstTable.getByRole("row")).toHaveCount(5);
+  await expect(secondToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(secondTable).toBeHidden();
+  await secondToggle.click();
+  await expect(firstTable).toBeVisible();
+  await expect(secondToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(secondTable).toBeVisible();
+  await firstToggle.click();
+  await expect(firstToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(firstTable).toBeHidden();
+  await expect(secondToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(secondTable).toBeVisible();
 });
 
 test("Custom keeps its candidate and manual parameters without automatically changing prices", async ({

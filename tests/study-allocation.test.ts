@@ -92,8 +92,8 @@ async function admission(
 }
 
 test("manual markets stay balanced while automatic markets fill 16 people in sequence and use the largest even template", () => {
-  for (let attendance = 2; attendance <= 192; attendance++)
-    for (const requested of [1, 2, 4, 12, 96]) {
+  for (let attendance = 2; attendance <= 999; attendance++)
+    for (const requested of [1, 2, 4, 12, 96, 499]) {
       const plan = studyAllocationPlan(attendance, requested);
       assert.equal(
         plan.layout.length,
@@ -122,7 +122,7 @@ test("manual markets stay balanced while automatic markets fill 16 people in seq
     { buyers: 2, sellers: 2 },
   ]);
   assert.equal(studyAllocationPlan(17, 4).templateSize, 6);
-  for (let count = 1; count <= 192; count++) {
+  for (let count = 1; count <= 999; count++) {
     const plan = studyAllocationPlan(count, 96, "auto");
     assert.equal(plan.layout.length, Math.ceil(count / 16));
     const sizes = plan.layout.map((m) => m.buyers + m.sellers);

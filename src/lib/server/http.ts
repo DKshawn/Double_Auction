@@ -17,6 +17,7 @@ import {
 import { MAX_NICKNAME_LENGTH } from "../participant-config";
 import {
   MAX_STUDY_ROUNDS,
+  MAX_STUDY_MARKETS,
   MAX_STUDY_UNITS,
   studyUnits,
   studyUnitsPerSide,
@@ -31,6 +32,9 @@ export const NO_STORE = {
   "Cache-Control": "private, no-store, max-age=0",
   Vary: "Cookie",
 };
+// Five-unit schedules for 500 profiles on each side, including all three
+// institutions and the shared settings, must fit in one validated command.
+export const MAX_JSON_BODY_BYTES = 128 * 1024;
 export const cookieName = (code: string, session?: RoomSession) =>
   `auction_${code}${session ? `_${session}` : ""}`;
 
@@ -88,10 +92,10 @@ export async function body<T>(
   }
   if (!request.headers.get("content-type")?.startsWith("application/json"))
     throw new AuctionError("送信形式が正しくありません。", 415);
-  if (Number(request.headers.get("content-length")) > 8192)
+  if (Number(request.headers.get("content-length")) > MAX_JSON_BODY_BYTES)
     throw new AuctionError("送信内容が大きすぎます。", 413);
   const text = await request.text();
-  if (text.length > 8192)
+  if (Buffer.byteLength(text, "utf8") > MAX_JSON_BODY_BYTES)
     throw new AuctionError("送信内容が大きすぎます。", 413);
   let data: unknown;
   try {
@@ -248,7 +252,7 @@ export const commandSchema = z
             "cancel-timer",
             "configure",
           ]),
-          markets: z.number().int().min(1).max(96).optional(),
+          markets: z.number().int().min(1).max(MAX_STUDY_MARKETS).optional(),
           marketMode: z.enum(["auto", "manual"]).optional(),
           seconds: z.number().int().min(5).max(3600).optional(),
           expectedRevision: z.number().int().min(0),

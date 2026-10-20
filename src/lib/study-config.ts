@@ -155,8 +155,11 @@ export function resizeStudySettings(
     costs: resize(settings.costs, false),
   };
 }
-export const MAX_STUDY_PARTICIPANTS = 192;
-export const MAX_STUDY_MARKETS = MAX_STUDY_PARTICIPANTS / 2;
+export const MAX_STUDY_PARTICIPANTS = 999;
+export const MAX_STUDY_MARKETS = Math.floor(MAX_STUDY_PARTICIPANTS / 2);
+// An odd largest market needs one unused profile on its smaller side.
+export const MAX_STUDY_PROFILES = Math.ceil(MAX_STUDY_PARTICIPANTS / 2);
+export const MAX_STUDY_TEMPLATE_SIZE = MAX_STUDY_PROFILES * 2;
 
 // Missing size belongs to an existing room with the original 8 + 8 design.
 export const studyMarketSize = (config: Pick<RoomConfig, "marketSize">) =>
@@ -253,13 +256,11 @@ export function studyLayoutError(
   markets: number,
   marketSize: number,
   flexible = false,
+  template = false,
 ) {
-  if (
-    !Number.isInteger(marketSize) ||
-    marketSize < 2 ||
-    marketSize > MAX_STUDY_PARTICIPANTS
-  )
-    return `1市場の人数は2〜${MAX_STUDY_PARTICIPANTS}人の整数で設定してください。`;
+  const maxSize = template ? MAX_STUDY_TEMPLATE_SIZE : MAX_STUDY_PARTICIPANTS;
+  if (!Number.isInteger(marketSize) || marketSize < 2 || marketSize > maxSize)
+    return `${template ? "供需テンプレート" : "1市場"}の人数は2〜${maxSize}人の整数で設定してください。`;
   if (!Number.isInteger(markets) || markets < 1 || markets > MAX_STUDY_MARKETS)
     return `市場数は1〜${MAX_STUDY_MARKETS}の整数で設定してください。`;
   if (!flexible && markets * marketSize > MAX_STUDY_PARTICIPANTS)

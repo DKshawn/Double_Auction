@@ -40,7 +40,7 @@ import {
   studyTradeProfit,
 } from "./study-commission";
 import {
-  MAX_STUDY_PARTICIPANTS,
+  MAX_STUDY_PROFILES,
   DEFAULT_STUDY_INSTITUTIONS,
   studyInstitutionOrders,
   studyMarketId,
@@ -174,7 +174,7 @@ export const studySettingsSchema = z
         ),
       )
       .min(1)
-      .max(MAX_STUDY_PARTICIPANTS / 2),
+      .max(MAX_STUDY_PROFILES),
     costs: z
       .array(
         unitValues.refine(
@@ -183,7 +183,7 @@ export const studySettingsSchema = z
         ),
       )
       .min(1)
-      .max(MAX_STUDY_PARTICIPANTS / 2),
+      .max(MAX_STUDY_PROFILES),
   })
   .strict()
   .refine(

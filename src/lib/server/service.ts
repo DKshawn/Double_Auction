@@ -89,10 +89,8 @@ export class AuctionService {
         "この供需プリセットは制度比較実験で選択してください。",
       );
     if (config.protocol === "institutions-v1") {
-      if (config.studyMarketMode) {
-        const error = studyLayoutError(1, config.capacity, true);
-        if (error) throw new AuctionError(error);
-      }
+      const capacityError = studyLayoutError(1, config.capacity, true);
+      if (capacityError) throw new AuctionError(capacityError);
       const initialPlan = config.studyMarketMode
         ? studyAllocationPlan(
             config.capacity,
@@ -104,6 +102,7 @@ export class AuctionService {
       const layoutError = studyLayoutError(
         config.markets ?? 0,
         size,
+        config.studyAdmission === "flexible",
         config.studyAdmission === "flexible",
       );
       if (layoutError) throw new AuctionError(layoutError);

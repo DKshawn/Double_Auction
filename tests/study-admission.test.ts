@@ -525,7 +525,7 @@ test("legacy Posted skips departed buyers and never opens an empty buyer turn", 
 });
 
 test("flexible creation separates requested markets from condition-template capacity", () => {
-  const draft = { ...config, markets: 96, capacity: 192 };
+  const draft = { ...config, markets: 96, capacity: 999 };
   assert.equal(studyRoomConfigSchema.safeParse(draft).success, true);
   const fixed = { ...draft };
   delete fixed.studyAdmission;
@@ -630,7 +630,7 @@ test("admission HTTP schema rejects invalid timer, target count and extra fields
     { seconds: 3601 },
     { seconds: 5.5 },
     { markets: 0 },
-    { markets: 97 },
+    { markets: 500 },
     { markets: 2.5 },
     { studyLayout: [] },
   ]) {

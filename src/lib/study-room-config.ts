@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   MAX_STUDY_MARKETS,
   MAX_STUDY_PARTICIPANTS,
+  MAX_STUDY_TEMPLATE_SIZE,
   MAX_STUDY_ROUNDS,
   MAX_STUDY_UNITS,
   studyLayoutError,
@@ -26,7 +27,7 @@ export const studyRoomConfigSchema = z
     studySetupConfirmed: z.boolean().optional(),
     title: z.string().trim().min(1).max(60),
     markets: z.number().int().min(1).max(MAX_STUDY_MARKETS),
-    marketSize: z.number().int().min(2).max(MAX_STUDY_PARTICIPANTS).optional(),
+    marketSize: z.number().int().min(2).max(MAX_STUDY_TEMPLATE_SIZE).optional(),
     capacity: z.number().int().min(2).max(MAX_STUDY_PARTICIPANTS),
     rounds: z.number().int().min(1).max(MAX_STUDY_ROUNDS),
     duration: z.number().int().min(1).max(MAX_STAGE_SECONDS),
@@ -51,6 +52,7 @@ export const studyRoomConfigSchema = z
       !studyLayoutError(
         c.markets,
         studyMarketSize(c),
+        c.studyAdmission === "flexible",
         c.studyAdmission === "flexible",
       ) &&
       (c.studyAdmission === "flexible" && c.studyMarketMode

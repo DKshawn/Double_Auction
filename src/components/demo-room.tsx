@@ -3,7 +3,14 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { RotateCcw, SkipForward, UserRound, GraduationCap } from "lucide-react";
+import {
+  RotateCcw,
+  SkipForward,
+  UserRound,
+  GraduationCap,
+  Pause,
+  Play,
+} from "lucide-react";
 import { DemoSession } from "@/lib/demo";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { Role, RoomConfig } from "@/lib/types";
@@ -110,6 +117,19 @@ export default function DemoRoom({
         </div>
         <div className="demo-actions">
           <button
+            className="button primary"
+            disabled={!["running", "paused"].includes(view.phase)}
+            onClick={() =>
+              void session.command(
+                { type: view.phase === "paused" ? "resume" : "pause" },
+                true,
+              )
+            }
+          >
+            {view.phase === "paused" ? <Play size={16} /> : <Pause size={16} />}
+            {view.phase === "paused" ? "再開" : "一時停止"}
+          </button>
+          <button
             className="button secondary"
             disabled={
               view.phase !== "running" ||
@@ -166,16 +186,16 @@ export default function DemoRoom({
             ? view.study?.lobby?.admission?.status === "open"
               ? "教員画面で入室を締め切って割り当てを確認し、実験を開始してください。"
               : "教員画面で「ランダムに割り当て」を押してから、実験を開始してください。"
-            : market.stage === "countdown"
-              ? "全市場の開始まで5秒間カウントダウンします。"
-              : market.stage === "feedback"
-                ? "市場全員で8秒間、最終期の結果を確認します。時間が来ると自動で進みます。"
-                : teacher
-                  ? "各市場は独立して次の期へ進みます。一時停止・再開は全市場に適用されます。"
-                  : view.phase === "waiting"
-                    ? "割り当てが完了しました。教員画面の「実験を開始」で5秒後に取引が始まります。"
-                    : view.phase === "paused"
-                      ? "時計と仮想参加者を停止中です。教員画面の「全市場を再開」で再開できます。"
+            : view.phase === "paused"
+              ? "時計と仮想参加者を停止中です。「再開」を押すと続けられます。"
+              : market.stage === "countdown"
+                ? "全市場の開始まで5秒間カウントダウンします。"
+                : market.stage === "feedback"
+                  ? "市場全員で8秒間、最終期の結果を確認します。時間が来ると自動で進みます。"
+                  : teacher
+                    ? "各市場は独立して次の期へ進みます。一時停止・再開は全市場に適用されます。"
+                    : view.phase === "waiting"
+                      ? "割り当てが完了しました。教員画面の「実験を開始」で5秒後に取引が始まります。"
                       : market.stage === "done"
                         ? "あなたの市場の実験は終了しました。教員画面で全市場の進行状況と結果を確認できます。"
                         : market.stage === "cda"
@@ -183,14 +203,14 @@ export default function DemoRoom({
                           : market.stage === "call"
                             ? "希望価格を送信し、「今の注文を清算」を押すと待たずに結果を確認できます。"
                             : market.posted
-                              ? "提示の締切後は、すべての買い手が買値と数量を送信できます。1秒ごとに約定します。"
+                              ? "提示の締切後は1秒ごとに約定します。現在の1単位を注文し、約定後に次の単位の価格を入力してください。"
                               : market.stage === "offer"
                                 ? role === "seller"
                                   ? "販売価格と数量を送信し、「提示を締め切って公開」を押してください。"
                                   : "「自分の購入順へ進む」を押すと、売り手の価格を見て購入できます。"
                                 : role === "seller"
-                                  ? "仮想の買い手が順番に購入します。教員画面の「全市場を一時停止」で時計を止められます。"
-                                  : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。教員画面で時計を止められます。`}
+                                  ? "仮想の買い手が順番に購入します。「一時停止」で時計を止められます。"
+                                  : `自分の順番では${studyTiming(view.config).buyerSeconds}秒以内に購入してください。「一時停止」で時計を止められます。`}
         </p>
         <StudyDetailDialog label="デモについて">
           <p>
@@ -229,7 +249,9 @@ export default function DemoRoom({
     </section>
   );
   return (
-    <div className="demo-workspace">
+    <div
+      className={`demo-workspace${!teacher && view.phase !== "waiting" && !view.me.withdrawnAt ? " demo-trading" : ""}`}
+    >
       {controlsTarget ? createPortal(toolbar, controlsTarget) : toolbar}
       <StudyRoom
         key={`${state.generation}-${teacher}`}

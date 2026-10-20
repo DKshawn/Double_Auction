@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  ArrowBigLeft,
   Clock3,
   LockKeyhole,
   UsersRound,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { Header } from "./shell";
 import { StudyDetailDialog } from "./study-detail-dialog";
+import { StudyViewport } from "./study-viewport";
 import { ExportDownloads } from "./export-downloads";
 import { StudyMarketOverview } from "./study-market-overview";
 import { StudyMarketHistory } from "./study-market-history";
@@ -42,6 +44,8 @@ import {
   studyInstitutions,
   studyMarketSize,
   studyUnits,
+  studySingleUnitOrders,
+  studyCallsPerPeriod,
   studyPeriodAt,
   studyPeriodCount,
   studyPeriodRanges,
@@ -353,19 +357,35 @@ export function StudyRoom({
         error={error}
       />
     );
-  return (
+  const reviewingConditions =
+    !teacher && (market.stage === "countdown" || transition?.kind === "Start");
+  const countdown =
+    !teacher && (market.stage === "countdown" || transition) ? (
+      <div className="panel study-countdown-card">
+        <span className="eyebrow">
+          市場{market.id} · {view.me.role === "buyer" ? "買い手" : "売り手"}
+        </span>
+        <h2>
+          {transition
+            ? `第${transition.period}期 ${transition.kind}`
+            : view.phase === "paused"
+              ? "開始前に一時停止しています"
+              : "まもなく実験が始まります"}
+        </h2>
+        <strong>{(transition?.seconds ?? seconds) || "開始中"}</strong>
+        <p>
+          {view.phase === "paused"
+            ? "教員が再開するまでお待ちください。"
+            : transition?.kind === "End"
+              ? "今期の取引は終了しました。"
+              : "あなたの条件を確認してください。カウントダウン後に注文できます。"}
+        </p>
+      </div>
+    ) : null;
+  const screen = (
     <div
       className={`study-shell ${demo ? "study-demo" : ""} ${teacher && study.lobby && view.phase === "waiting" ? "study-lobby-shell" : ""}`}
     >
-      {!teacher && (
-        <StudyTradeFeedback
-          key={`${view.code}-${view.me.id}`}
-          trades={study.myTradeNotifications ?? study.myTrades}
-          buyer={view.me.role === "buyer"}
-          feedbackRound={market.stage === "feedback" ? market.round : null}
-          feedbackPeriod={market.institutionPeriod}
-        />
-      )}
       {teacher && (
         <Header
           homeHref={demo ? "/demo" : teacherSetupHref(view.code)}
@@ -549,6 +569,15 @@ export function StudyRoom({
           <div
             className={`study-trading-grid ${teacher ? "teacher-layout" : ""} ${cdaLayout ? "cda-layout" : ""} ${callLayout ? "call-layout" : ""} ${postedLayout ? "posted-layout" : ""}`}
           >
+            {!teacher && (
+              <StudentConditions
+                view={view}
+                market={market}
+                command={command}
+                disabled={blocked}
+                reviewing={reviewingConditions}
+              />
+            )}
             <div className="study-market-column">
               {teacher ? (
                 <StudyMarketOverview
@@ -593,14 +622,6 @@ export function StudyRoom({
                   (trade) => trade.institution === market.institution,
                 )}
                 firstPeriod={institutionStart}
-              />
-            )}
-            {!teacher && (
-              <StudentConditions
-                view={view}
-                market={market}
-                command={command}
-                disabled={blocked}
               />
             )}
             <section className="panel study-section study-price-panel">
@@ -671,49 +692,65 @@ export function StudyRoom({
             </section>
           </div>
         )}
-        {!teacher && (market.stage === "countdown" || transition) && (
-          <div
-            className="study-start-countdown"
-            role="status"
-            aria-live="polite"
-          >
-            <div className="panel">
-              <span className="eyebrow">
-                市場{market.id} ·{" "}
-                {view.me.role === "buyer" ? "買い手" : "売り手"}
-              </span>
-              <h2>
-                {transition
-                  ? `第${transition.period}期 ${transition.kind}`
-                  : view.phase === "paused"
-                    ? "開始前に一時停止しています"
-                    : "まもなく実験が始まります"}
-              </h2>
-              <strong>{(transition?.seconds ?? seconds) || "開始中"}</strong>
-              <p>
-                {view.phase === "paused"
-                  ? "教員が再開するまでお待ちください。"
-                  : transition?.kind === "End"
-                    ? "今期の取引は終了しました。"
-                    : "あなたの条件を確認してください。カウントダウン後に注文できます。"}
-              </p>
-            </div>
-          </div>
+        {countdown && (
+          <div className="study-start-countdown" aria-hidden="true" />
         )}
       </main>
     </div>
   );
+  return teacher ? (
+    screen
+  ) : (
+    <>
+      <StudyTradeFeedback
+        key={`${view.code}-${view.me.id}`}
+        trades={study.myTradeNotifications ?? study.myTrades}
+        buyer={view.me.role === "buyer"}
+        feedbackRound={market.stage === "feedback" ? market.round : null}
+        feedbackPeriod={market.institutionPeriod}
+        countdown={countdown}
+      />
+      <StudyViewport>{screen}</StudyViewport>
+    </>
+  );
 }
 
-function StudentConditions(props: MarketProps) {
-  const { view, market } = props;
+function StudentConditions(props: MarketProps & { reviewing: boolean }) {
+  const { reviewing } = props;
+  const next = reviewing ? props.view.study!.nextConditions : undefined;
+  const market = next
+    ? {
+        ...props.market,
+        institution: next.institution,
+        submitted: false,
+        myOffer: null,
+        myOrders: [],
+      }
+    : props.market;
+  // A Start prompt previews the upcoming first unit without resetting any fills.
+  const view =
+    reviewing && market.stage === "feedback"
+      ? {
+          ...props.view,
+          study: {
+            ...props.view.study!,
+            unitLimits: next?.unitLimits ?? props.view.study!.unitLimits,
+            unitsUsed: 0,
+          },
+        }
+      : props.view;
   const study = view.study!;
   const totalUnits = studyUnits(view.config, market.institution);
   const completed = study.unitsUsed >= totalUnits;
   return (
     <aside
-      className={`panel study-section private-panel ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}`}
+      className={`panel study-section private-panel ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}${reviewing ? " study-conditions-review" : ""}`}
     >
+      {reviewing && (
+        <span className="study-conditions-arrow" aria-hidden="true">
+          <ArrowBigLeft size={80} fill="currentColor" strokeWidth={1.5} />
+        </span>
+      )}
       <h2>
         <LockKeyhole size={16} /> {view.me.nickname}の条件
         <span className={`role-tag ${view.me.role} study-conditions-role`}>
@@ -721,26 +758,15 @@ function StudentConditions(props: MarketProps) {
         </span>
       </h2>
       <div className="study-private-values">
-        <p>
-          {view.me.role === "buyer"
-            ? "購入する単位ごとの価値"
-            : "販売する単位ごとの費用"}
-        </p>
         <p className="study-commission-note">
           Commission {money(studyCommission(view.config))}／単位
-          <span>成立時に加算・表示利益に含む</span>
         </p>
-        <div
-          className={`study-values ${market.institution === "cda" ? "study-current-value" : ""}`}
-          aria-live={market.institution === "cda" ? "polite" : undefined}
-        >
+        <div className="study-values study-current-value" aria-live="polite">
           {study.unitLimits!.map((v, i) =>
-            market.institution !== "cda" || i === study.unitsUsed ? (
-              <div key={i} className={i < study.unitsUsed ? "used-unit" : ""}>
+            i === study.unitsUsed ? (
+              <div key={i}>
                 <span>
-                  {i + 1}単位目{i < study.unitsUsed ? "・取引済み" : ""}
-                  {market.institution === "cda" &&
-                    ` / ${studyUnits(view.config)}単位`}
+                  {i + 1}単位目 / {totalUnits}単位
                 </span>
                 <b>{money(v)}</b>
               </div>
@@ -760,6 +786,9 @@ function StudentConditions(props: MarketProps) {
           <StudentOrder
             key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
             {...props}
+            view={view}
+            market={market}
+            disabled={props.disabled || reviewing}
           />
         )}
       </div>
@@ -775,21 +804,8 @@ function MarketActivity(props: MarketProps) {
     <StudyOrderBook
       view={view}
       market={market}
-      title={`一括約定・第${market.call || 1}回 / 4回`}
-    >
-      <p className="muted">
-        注文板に価格と残数量を公開します。取引は清算時刻にまとめて成立します。未約定注文は各回で失効し、残り数量を次の回で再注文できます。未送信の場合は注文なしとして進みます。
-      </p>
-      <p className="field-help study-call-guidance">
-        送信は各回1回です。
-        {view.study!.teacher
-          ? "2単位目の買値は1単位目以下、売値は1単位目以上にしてください。"
-          : view.me.role === "buyer"
-            ? "2単位目の買値は1単位目以下にしてください。"
-            : "2単位目の売値は1単位目以上にしてください。"}
-        実際の利益は清算価格で決まります。
-      </p>
-    </StudyOrderBook>
+      title={`一括約定・第${market.call || 1}回 / ${studyCallsPerPeriod(view.config)}回`}
+    />
   );
 }
 
@@ -1036,25 +1052,38 @@ function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
                     <b>{money(o.price)}</b>
                   </div>
                   <div className="study-offer-actions">
-                    {[1, 2]
+                    {Array.from(
+                      {
+                        length: studySingleUnitOrders(view.config)
+                          ? 1
+                          : studyUnits(view.config, "posted"),
+                      },
+                      (_, i) => i + 1,
+                    )
                       .filter(
                         (q) =>
-                          q <= Math.min(o.remaining, 2 - view.study!.unitsUsed),
+                          q <=
+                          Math.min(
+                            o.remaining,
+                            studyUnits(view.config, "posted") -
+                              view.study!.unitsUsed,
+                          ),
                       )
                       .map((q) => (
-                        <button
-                          key={q}
-                          className="button secondary study-buy-button"
-                          disabled={disabled || !mine}
-                          onClick={() =>
-                            void command({
-                              type: "posted-buy",
-                              offerId: o.id,
-                              quantity: q,
-                            })
-                          }
-                        >
-                          {q}単位購入
+                        <div className="study-market-order" key={q}>
+                          <button
+                            className="button secondary full study-buy-button"
+                            disabled={disabled || !mine}
+                            onClick={() =>
+                              void command({
+                                type: "posted-buy",
+                                offerId: o.id,
+                                quantity: q,
+                              })
+                            }
+                          >
+                            {q}単位購入
+                          </button>
                           {view.me.role === "buyer" && (
                             <ExpectedProfit
                               view={view}
@@ -1062,7 +1091,7 @@ function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
                               quantity={q}
                             />
                           )}
-                        </button>
+                        </div>
                       ))}
                     {o.remaining === 0 && (
                       <span className="muted">売り切れ</span>
@@ -1118,7 +1147,11 @@ function PostedBidForm({ view, market, command, disabled }: MarketProps) {
   const mine =
     market.posted?.bids.filter((bid) => bid.participantId === view.me.id) ?? [];
   const reserved = mine.reduce((sum, bid) => sum + bid.remaining, 0);
-  const available = 2 - view.study!.unitsUsed - reserved;
+  const sequential = studySingleUnitOrders(view.config);
+  const available =
+    sequential && reserved > 0
+      ? 0
+      : studyUnits(view.config, "posted") - view.study!.unitsUsed - reserved;
   return (
     <div className="study-order-form">
       {mine.length > 0 && (
@@ -1145,14 +1178,14 @@ function PostedBidForm({ view, market, command, disabled }: MarketProps) {
               await command({
                 type: "posted-bid",
                 price: Number(price),
-                quantity: Math.min(quantity, available),
+                quantity: sequential ? 1 : Math.min(quantity, available),
               })
             )
               setPrice("");
           }}
         >
           <label className="field">
-            買いたい価格（円）
+            {view.study!.unitsUsed + 1}単位目の買いたい価格（円）
             <input
               type="number"
               min="1"
@@ -1164,35 +1197,49 @@ function PostedBidForm({ view, market, command, disabled }: MarketProps) {
               disabled={disabled || market.stage !== "purchase"}
             />
           </label>
-          <label className="field">
-            今回注文する数量
-            <select
-              value={Math.min(quantity, available)}
-              onChange={(event) => setQuantity(Number(event.target.value))}
-              disabled={disabled || market.stage !== "purchase"}
-            >
-              {Array.from({ length: available }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {i + 1}単位
-                </option>
-              ))}
-            </select>
-          </label>
+          {!sequential && (
+            <label className="field">
+              今回注文する数量
+              <select
+                value={Math.min(quantity, available)}
+                onChange={(event) => setQuantity(Number(event.target.value))}
+                disabled={disabled || market.stage !== "purchase"}
+              >
+                {Array.from({ length: available }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}単位
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {error && (
             <p className="error-message" role="alert">
               {error}
             </p>
           )}
-          <button
-            className="button primary full"
-            disabled={disabled || market.stage !== "purchase"}
-          >
-            買い注文を出す
-          </button>
+          <div className="study-market-order">
+            <button
+              className="button primary full"
+              disabled={disabled || market.stage !== "purchase"}
+            >
+              買い注文を出す
+            </button>
+            {isValidPrice(Number(price)) && (
+              <ExpectedProfit
+                view={view}
+                price={Number(price)}
+                quantity={sequential ? 1 : Math.min(quantity, available)}
+                offset={reserved}
+              />
+            )}
+          </div>
         </form>
       ) : (
         !reserved && (
-          <p className="success-message">今期の2単位の取引は完了しました。</p>
+          <p className="success-message">
+            今期の{studyUnits(view.config, "posted")}単位の取引は完了しました。
+          </p>
         )
       )}
     </div>
@@ -1205,10 +1252,13 @@ function ExistingStudentOrder({
   command,
   disabled,
 }: MarketProps) {
+  const sequential = studySingleUnitOrders(view.config);
   const [price, setPrice] = useState(""),
-    [second, setSecond] = useState(""),
+    [additionalPrices, setAdditionalPrices] = useState<string[]>([]),
     [quantity, setQuantity] = useState(
-      studyUnits(view.config, market.institution) - view.study!.unitsUsed,
+      sequential
+        ? 1
+        : studyUnits(view.config, market.institution) - view.study!.unitsUsed,
     ),
     [validation, setValidation] = useState("");
   const study = view.study!,
@@ -1216,12 +1266,17 @@ function ExistingStudentOrder({
     remaining = studyUnits(view.config, market.institution) - study.unitsUsed;
   const priceInput = useRef<HTMLInputElement>(null);
   const focusNextUnit = useRef(
-    market.institution === "cda" && study.unitsUsed > 0 && remaining > 0,
+    (market.institution === "cda" || sequential) &&
+      study.unitsUsed > 0 &&
+      remaining > 0,
   );
   const formDisabled =
-    disabled || (market.institution === "posted" && market.stage !== "offer");
+    disabled ||
+    (market.institution === "posted" &&
+      market.stage !== "offer" &&
+      !(sequential && market.stage === "purchase" && study.unitsUsed > 0));
   useEffect(() => {
-    // Every CDA fill resets this keyed form. Focus the next available unit.
+    // Every fill resets this keyed form. Focus the next available unit.
     if (focusNextUnit.current && !formDisabled && priceInput.current) {
       priceInput.current.focus({ preventScroll: true });
       focusNextUnit.current = false;
@@ -1237,10 +1292,13 @@ function ExistingStudentOrder({
               a.sequence - b.sequence,
           )[0]
       : undefined;
+  const callPrices = Array.from({ length: quantity }, (_, i) =>
+    i === 0 ? price : (additionalPrices[i - 1] ?? ""),
+  );
   const expected =
     quantity > 0 &&
     price &&
-    !(market.institution === "call" && quantity === 2 && !second)
+    !(market.institution === "call" && callPrices.some((value) => !value))
       ? study
           .unitLimits!.slice(
             study.unitsUsed,
@@ -1248,8 +1306,8 @@ function ExistingStudentOrder({
           )
           .reduce((sum, v, i) => {
             const p =
-              market.institution === "call" && i === 1
-                ? Number(second)
+              market.institution === "call"
+                ? Number(callPrices[i])
                 : Number(price);
             return (
               sum +
@@ -1290,7 +1348,9 @@ function ExistingStudentOrder({
             : "今回は注文していません。"}
         {market.institution === "call"
           ? "この回の選択は変更できません。"
-          : "この提示は変更できません。"}
+          : sequential
+            ? "約定すると次の単位の価格を提示できます。"
+            : "この提示は変更できません。"}
       </p>
     );
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -1298,9 +1358,7 @@ function ExistingStudentOrder({
     setValidation("");
     if (formDisabled) return;
     const prices =
-      market.institution === "call" && quantity === 2
-        ? [Number(price), Number(second)]
-        : [Number(price)];
+      market.institution === "call" ? callPrices.map(Number) : [Number(price)];
     if (prices.some((p) => !isValidPrice(p))) {
       setValidation(`注文価格は1〜${MAX_PRICE}円の整数で入力してください。`);
       return;
@@ -1314,16 +1372,16 @@ function ExistingStudentOrder({
     );
     if (accepted) {
       setPrice("");
-      setSecond("");
+      setAdditionalPrices([]);
     }
   }
   return (
     <form
       onSubmit={submit}
       noValidate
-      className={`study-order-form ${market.institution === "call" ? "study-call-form" : ""}`}
+      className={`study-order-form ${market.institution === "call" && !sequential ? "study-call-form" : ""}`}
     >
-      {market.institution !== "cda" && (
+      {market.institution !== "cda" && !sequential && (
         <label className="field">
           {market.institution === "call" ? "今回注文する数量" : "提示する数量"}
           <select
@@ -1342,7 +1400,7 @@ function ExistingStudentOrder({
       <label
         className={`field ${market.institution === "call" ? "study-call-price" : ""}`}
       >
-        {market.institution === "posted"
+        {market.institution === "posted" && !sequential
           ? "1単位あたりの販売価格"
           : market.institution === "call"
             ? `${study.unitsUsed + 1}単位目の${buyer ? "買値" : "売値"}`
@@ -1362,35 +1420,33 @@ function ExistingStudentOrder({
           <span>円</span>
         </div>
       </label>
-      {market.institution === "call" && quantity === 2 && (
-        <label className="field study-call-price">
-          2単位目の{buyer ? "買値" : "売値"}
-          <div className="study-price-input">
-            <input
-              type="number"
-              min={1}
-              max={MAX_PRICE}
-              step={1}
-              value={second}
-              onChange={(e) => setSecond(e.target.value)}
-              required
-              disabled={formDisabled}
-            />
-            <span>円</span>
-          </div>
-        </label>
-      )}
-      <p
-        className={
-          expected !== null && expected < 0 ? "study-loss" : "field-help"
-        }
-      >
-        {market.institution === "call"
-          ? "入力価格で成立した場合の利益"
-          : "この提示価格での利益"}
-        ：{money(expected)}（Commission込み）
-      </p>
-      {market.institution === "posted" && (
+      {market.institution === "call" &&
+        Array.from({ length: quantity - 1 }, (_, index) => (
+          <label className="field study-call-price" key={index}>
+            {study.unitsUsed + index + 2}単位目の{buyer ? "買値" : "売値"}
+            <div className="study-price-input">
+              <input
+                type="number"
+                min={1}
+                max={MAX_PRICE}
+                step={1}
+                value={additionalPrices[index] ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setAdditionalPrices((previous) => {
+                    const next = [...previous];
+                    next[index] = value;
+                    return next;
+                  });
+                }}
+                required
+                disabled={formDisabled}
+              />
+              <span>円</span>
+            </div>
+          </label>
+        ))}
+      {market.institution === "posted" && market.stage === "offer" && (
         <p className="field-help">
           締切までに確定しなければ、今期は出品しません。
         </p>
@@ -1402,13 +1458,16 @@ function ExistingStudentOrder({
       )}
       {market.institution === "cda" ? (
         <div className="study-cda-order-actions">
-          <button
-            type="submit"
-            className="button primary full"
-            disabled={formDisabled}
-          >
-            指値注文
-          </button>
+          <div className="study-market-order">
+            <button
+              type="submit"
+              className="button primary full"
+              disabled={formDisabled}
+            >
+              指値注文
+            </button>
+            <ProfitBadge profit={expected} />
+          </div>
           <div className="study-market-order">
             <button
               type="button"
@@ -1427,11 +1486,16 @@ function ExistingStudentOrder({
           </div>
         </div>
       ) : (
-        <button className="button primary full" disabled={formDisabled}>
-          {market.institution === "call"
-            ? "今回の注文を確定"
-            : "価格と数量を確定"}
-        </button>
+        <div className="study-market-order">
+          <button className="button primary full" disabled={formDisabled}>
+            {market.institution === "call"
+              ? "今回の注文を確定"
+              : sequential
+                ? "この単位の価格を確定"
+                : "価格と数量を確定"}
+          </button>
+          <ProfitBadge profit={expected} />
+        </div>
       )}
     </form>
   );
@@ -1441,20 +1505,22 @@ function ExpectedProfit({
   view,
   price,
   quantity,
+  offset = 0,
 }: {
   view: RoomView;
   price: number;
   quantity: number;
+  offset?: number;
 }) {
   const study = view.study!;
+  const firstUnit = study.unitsUsed + offset;
   if (
     !study.unitLimits ||
-    study.unitsUsed + quantity >
-      studyUnits(view.config, study.market.institution)
+    firstUnit + quantity > studyUnits(view.config, study.market.institution)
   )
     return null;
   const profit = study.unitLimits
-    .slice(study.unitsUsed, study.unitsUsed + quantity)
+    .slice(firstUnit, firstUnit + quantity)
     .reduce(
       (sum, value) =>
         sum +
@@ -1466,6 +1532,11 @@ function ExpectedProfit({
         ),
       0,
     );
+  return <ProfitBadge profit={profit} />;
+}
+
+function ProfitBadge({ profit }: { profit: number | null }) {
+  if (profit === null) return null;
   return (
     <small className={profit < 0 ? "loss" : "field-help"}>
       利益 {money(profit)}
@@ -1614,7 +1685,7 @@ function TeacherMetrics({
         </table>
       </div>
       <p className="field-help">
-        αは均衡価格からの二乗平均平方根偏差を均衡価格で割った値です（単純な価格分散ではありません）。Callは4回すべての約定を用います。数量比の分母は正余剰の数量で、ゼロ余剰の取引により1を超える場合があります。気配差は両側に注文がある時間の加重平均です。
+        αは均衡価格からの二乗平均平方根偏差を均衡価格で割った値です（単純な価格分散ではありません）。Callは全清算回の約定を用います。数量比の分母は正余剰の数量で、ゼロ余剰の取引により1を超える場合があります。気配差は両側に注文がある時間の加重平均です。
       </p>
       <div className="study-actions">
         {teacher.slopes

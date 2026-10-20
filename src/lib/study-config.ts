@@ -1,5 +1,6 @@
 import type { RoomConfig, Role } from "./types";
 import type { Institution, StudyPeriods, StudySettings } from "./study-types";
+import { STUDY_RULES } from "./study-rules";
 
 export const DEFAULT_STUDY_INSTITUTIONS: readonly Institution[] = [
   "cda",
@@ -85,21 +86,40 @@ export function studyInstitutionOrders(
 export const DEFAULT_MARKET_SIZE = 16;
 export const DEFAULT_STUDY_UNITS = 2;
 export const MAX_STUDY_UNITS = 5;
+// Per-institution unit settings mark the current, single-unit protocol. Saved
+// rooms without them retain the simultaneous orders they were created with.
+export const studySingleUnitOrders = (
+  config: Pick<RoomConfig, "studyUnitCounts">,
+) => config.studyUnitCounts !== undefined;
+export const studyCallsPerPeriod = (
+  config: Pick<RoomConfig, "studyUnitCounts" | "studyCdaUnits">,
+) =>
+  studySingleUnitOrders(config)
+    ? Math.max(STUDY_RULES.callsPerPeriod, studyUnits(config, "call"))
+    : STUDY_RULES.callsPerPeriod;
 // Saved rooms without this setting retain the original two units per person.
 export const studyUnits = (
-  config: Pick<RoomConfig, "studyCdaUnits">,
+  config: Pick<RoomConfig, "studyCdaUnits" | "studyUnitCounts">,
   institution: Institution = "cda",
 ) =>
-  institution === "cda"
+  config.studyUnitCounts?.[institution] ??
+  (institution === "cda"
     ? (config.studyCdaUnits ?? DEFAULT_STUDY_UNITS)
-    : DEFAULT_STUDY_UNITS;
+    : DEFAULT_STUDY_UNITS);
+export const studyUnitCounts = (
+  config: Pick<RoomConfig, "studyCdaUnits" | "studyUnitCounts">,
+) => ({
+  cda: studyUnits(config, "cda"),
+  call: studyUnits(config, "call"),
+  posted: studyUnits(config, "posted"),
+});
 export const studyUnitsPerSide = (
-  config: Pick<RoomConfig, "studyCdaUnits" | "marketSize">,
+  config: Pick<RoomConfig, "studyCdaUnits" | "studyUnitCounts" | "marketSize">,
   institution: Institution = "cda",
 ) => studyTemplateSideCount(config) * studyUnits(config, institution);
 export const studyUnitsError = (units: number) =>
   !Number.isInteger(units) || units < 1 || units > MAX_STUDY_UNITS
-    ? `CDAの1人あたりの単位数は1〜${MAX_STUDY_UNITS}の整数で設定してください。`
+    ? `1人あたりの単位数は1〜${MAX_STUDY_UNITS}の整数で設定してください。`
     : "";
 
 export function resizeStudySettings(

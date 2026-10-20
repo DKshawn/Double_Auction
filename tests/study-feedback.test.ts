@@ -108,16 +108,17 @@ test("the demo renders unfilled feedback, blocks stage skipping and switches at 
   assert.equal(session.getSnapshot().view.study!.market.institution, "call");
 });
 
-test("demo fast-forward stops at a new feedback stage without consuming its eight seconds", async () => {
+test("demo fast-forward stops at feedback without consuming the shared review time", async () => {
   for (const first of ["cda", "call", "posted"] as const) {
     const session = new DemoSession(first, "seller", 1000);
     await session.command({ type: "start" }, true);
     session.advanceTime(3000);
     const state = session.getSnapshot();
-    assert.equal(state.view.study!.market.round, first === "cda" ? 1 : 5);
+    assert.equal(state.view.study!.market.round, 1);
     assert.equal(state.view.study!.market.stage, "feedback");
-    assert.equal(state.view.study!.market.remainingMs, 8000);
-    assert.equal(state.view.study!.market.deadline, state.now + 8000);
+    const ms = first === "cda" ? 8000 : 5000;
+    assert.equal(state.view.study!.market.remainingMs, ms);
+    assert.equal(state.view.study!.market.deadline, state.now + ms);
   }
 });
 
@@ -130,7 +131,7 @@ test("skipping a Posted stage stops when bot purchases finish the last period ea
   }
   const state = session.getSnapshot();
   assert.equal(state.view.study!.market.stage, "feedback");
-  assert.equal(state.view.study!.market.round, 5);
-  assert.equal(state.view.study!.market.remainingMs, 8000);
-  assert.equal(state.view.study!.market.deadline, state.now + 8000);
+  assert.equal(state.view.study!.market.round, 1);
+  assert.equal(state.view.study!.market.remainingMs, 5000);
+  assert.equal(state.view.study!.market.deadline, state.now + 5000);
 });

@@ -10,13 +10,16 @@ import {
   studyProfileIndex,
   studyRole,
   studyRoleIndex,
-  studyUnits,
+  studyUnitCounts,
   studyInstitutions,
   studyUnitsError,
-  resizeStudySettings,
 } from "@/lib/study-config";
 import type { Command, RoomView } from "@/lib/types";
-import type { StudyGeneratedAssignment } from "@/lib/study-types";
+import type {
+  StudyGeneratedAssignment,
+  StudyUnitCounts,
+  Institution,
+} from "@/lib/study-types";
 import { StudyPresetPicker } from "./study-preset-picker";
 import { StudyUnitFields } from "./study-unit-settings";
 import { StudyAllocationPreview } from "./study-allocation-preview";
@@ -78,21 +81,27 @@ export function StudyPresetGenerator({
   const allocation = teacher.allocation;
   const marketSize = allocation?.templateSize ?? studyMarketSize(view.config);
   const perSide = studyTemplateSideCount({ marketSize });
-  const [unitsDraft, setUnitsDraft] = useState(String(studyUnits(view.config)));
+  const institutions = studyInstitutions(view.config);
+  const primary = institutions[0];
+  const [unitsDraft, setUnitsDraft] = useState<Record<Institution, string>>(
+    () =>
+      Object.fromEntries(
+        Object.entries(studyUnitCounts(view.config)).map(([key, value]) => [
+          key,
+          String(value),
+        ]),
+      ) as Record<Institution, string>,
+  );
   const [commission, setCommission] = useState(studyCommission(view.config));
-  const unitsPerParticipant = Number(unitsDraft);
+  const unitsByInstitution = Object.fromEntries(
+    Object.entries(unitsDraft).map(([key, value]) => [key, Number(value)]),
+  ) as StudyUnitCounts;
+  const unitsPerParticipant = unitsByInstitution[primary];
   const units = perSide * unitsPerParticipant;
-  const unitsError = studyUnitsError(unitsPerParticipant);
-  const savedOther = studyInstitutions(view.config).some((i) => i !== "cda")
-    ? (teacher.otherSettings ??
-      (unitsPerParticipant !== studyUnits(view.config)
-        ? teacher.settings
-        : undefined))
-    : undefined;
-  const otherSettings =
-    savedOther && allocation
-      ? resizeStudySettings(savedOther, marketSize, 2)
-      : savedOther;
+  const unitsError =
+    institutions
+      .map((i) => studyUnitsError(unitsByInstitution[i]))
+      .find(Boolean) ?? "";
   const savedGeneration = teacher.generation && (
     <div className="study-saved-generation">
       <p className="callout">
@@ -122,29 +131,12 @@ export function StudyPresetGenerator({
         </p>
       )}
       <StudyPresetPicker
-        existingPreset={
-          teacher.preset && !unitsError
-            ? {
-                label: teacher.preset.label,
-                settings: resizeStudySettings(
-                  teacher.preset.settings,
-                  marketSize,
-                  unitsPerParticipant,
-                ),
-              }
-            : undefined
-        }
+        existingPreset={teacher.preset}
         units={units}
         unitsPerParticipant={unitsPerParticipant}
+        unitsByInstitution={unitsByInstitution}
+        institutions={institutions}
         marketLayout={allocation?.layout}
-        otherSettings={otherSettings}
-        otherUnits={
-          (unitsPerParticipant !== 2 || Boolean(otherSettings)) &&
-          studyInstitutions(view.config).some((i) => i !== "cda") &&
-          marketSize !== studyMarketSize(view.config)
-            ? perSide * 2
-            : undefined
-        }
         revision={view.study!.settingsRevision}
         initialGenerator={teacher.generation}
         disabled={disabled}
@@ -153,9 +145,12 @@ export function StudyPresetGenerator({
         validationError={unitsError}
         renderUnitFields={(fieldsDisabled) => (
           <StudyUnitFields
-            cdaUnits={unitsDraft}
-            onChange={(value) => {
-              setUnitsDraft(value);
+            units={unitsDraft}
+            onChange={(institution, value) => {
+              setUnitsDraft((previous) => ({
+                ...previous,
+                [institution]: value,
+              }));
               onDraftChange?.();
             }}
             disabled={fieldsDisabled || locked}
@@ -173,6 +168,7 @@ export function StudyPresetGenerator({
                   plan={allocation}
                   config={view.config}
                   settings={preview.settings}
+                  settingsByInstitution={preview.settingsByInstitution}
                   otherSettings={other}
                   commission={commission}
                 />
@@ -184,7 +180,8 @@ export function StudyPresetGenerator({
             type: "study-settings",
             settings: preview.settings,
             commission: amount,
-            unitsPerParticipant,
+            unitsByInstitution,
+            settingsByInstitution: preview.settingsByInstitution,
             ...(preview.generator ? { generator: preview.generator } : {}),
             expectedRevision: preview.revision,
           });

@@ -53,7 +53,7 @@ export const STUDY_RULES = {
   teacherHistoryDisplay: "all-selected-periods-with-institution-filter",
   postedOffers:
     "sealed-until-configured-offer-deadline-single-price-final-quantity",
-  postedSubmissionQuantity: "one-or-two-units",
+  postedSubmissionQuantity: "up-to-configured-remaining-units",
   postedAbstention: "no-submission-by-deadline",
   postedBuyerOrder: "random-every-period",
   nonResponse: "skip-at-deadline",

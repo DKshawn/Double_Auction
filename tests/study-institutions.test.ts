@@ -307,10 +307,12 @@ for (const institutions of selections)
           settleDeadline(room, now, events);
         }
         assert.equal(market.trades.filter((t) => t.round === round).length, 2);
-        if (institution === "cda" || expected[round - 1].last) {
+        {
           assert.equal(market.stage, "feedback");
           const endedAt = market.periods.at(-1)!.endedAt!;
-          assert.equal(market.deadline, endedAt + 8000);
+          const reviewMs =
+            institution === "cda" || expected[round - 1].last ? 8000 : 5000;
+          assert.equal(market.deadline, endedAt + reviewMs);
           const views = [buyer, seller].map((p) =>
             toView(room, p, now, "local"),
           );
@@ -348,9 +350,7 @@ for (const institutions of selections)
             render(views[0]).includes(
               round === room.config.rounds
                 ? "実験終了まで"
-                : institution === "cda"
-                  ? "次の取引開始まで"
-                  : "次の制度まで",
+                : "次の取引開始まで",
             ),
           );
           settleDeadline(room, market.deadline! - 1, events);
@@ -378,8 +378,7 @@ for (const institutions of selections)
       );
       assert.equal(
         events.filter((e) => e.type === "feedback-started").length,
-        expected.filter((period) => period.institution === "cda" || period.last)
-          .length,
+        expected.length,
       );
       const finalRound = market.round;
       settleDeadline(room, now + 100000, events);
@@ -537,8 +536,8 @@ test("markets with different orders use their own cumulative period boundaries a
     ["call", "posted", "posted", "posted", "cda", "cda"],
   ];
   const boundaries = [
-    [3, 4, 5, 6],
-    [1, 4, 5, 6],
+    [1, 2, 3, 4, 5, 6],
+    [1, 2, 3, 4, 5, 6],
   ];
   const events: AuditEvent[] = [];
   let now = room.createdAt + 1000;

@@ -31,6 +31,7 @@ export type RoomConfig = {
   studyPeriods?: Partial<StudyPeriods>;
   studyCommission?: number;
   studyCdaUnits?: number;
+  studyUnitCounts?: Partial<Record<Institution, number>>;
   title: string;
   capacity: number;
   rounds: number;

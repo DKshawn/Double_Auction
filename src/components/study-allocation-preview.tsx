@@ -7,6 +7,7 @@ import type {
   StudyAllocationPlan,
   StudySettings,
   StudyEquilibrium,
+  StudySchedules,
 } from "@/lib/study-types";
 import { StudyConditionPreview } from "./study-condition-preview";
 
@@ -15,12 +16,14 @@ export function StudyAllocationPreview({
   config,
   settings,
   otherSettings,
+  settingsByInstitution,
   commission,
 }: {
   plan: StudyAllocationPlan;
   config: RoomConfig;
   settings: StudySettings;
   otherSettings?: StudySettings;
+  settingsByInstitution?: StudySchedules;
   commission: number;
 }) {
   const actualConfig = { ...config, studyLayout: plan.layout };
@@ -28,7 +31,8 @@ export function StudyAllocationPreview({
     studyInstitutions(config).map((institution) => {
       const actual = studyMarketSettings(
         actualConfig,
-        institution === "cda" ? settings : (otherSettings ?? settings),
+        settingsByInstitution?.[institution] ??
+          (institution === "cda" ? settings : (otherSettings ?? settings)),
         index + 1,
       );
       const waiting = !counts.buyers || !counts.sellers;

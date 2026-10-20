@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { CheckCircle2, Info, X } from "lucide-react";
 import { decimal } from "@/lib/client";
 import type { StudyView } from "@/lib/study-types";
@@ -12,11 +12,13 @@ export function StudyTradeFeedback({
   buyer,
   feedbackRound = null,
   feedbackPeriod,
+  countdown,
 }: {
   trades: PersonalTrade[];
   buyer: boolean;
   feedbackRound?: number | null;
   feedbackPeriod?: number;
+  countdown?: ReactNode;
 }) {
   // The initial snapshot is history, not a new fill. Compare confirmed IDs so
   // polling, command retries and trades initiated by the counterparty behave alike.
@@ -37,6 +39,7 @@ export function StudyTradeFeedback({
       aria-live="polite"
       aria-atomic="true"
     >
+      {countdown}
       {feedbackRound !== null ? (
         <PeriodNotice
           trades={trades.filter((trade) => trade.round === feedbackRound)}
@@ -96,7 +99,7 @@ function TradeNotice({
 }) {
   const [visible, setVisible] = useState(true);
   useEffect(() => {
-    const timer = window.setTimeout(() => setVisible(false), 8000);
+    const timer = window.setTimeout(() => setVisible(false), 2500);
     return () => window.clearTimeout(timer);
   }, []);
   if (!visible) return null;

@@ -126,9 +126,14 @@ for (const selected of selections) {
       demo.advanceTime(60);
       const market = demo.getSnapshot().view.study!.market;
       if (market.stage === "feedback") {
-        feedback.push(market.institution);
-        assert.equal(market.remainingMs, 8000);
-        demo.advanceTime(7);
+        const ending =
+          market.institution === "cda" ||
+          market.institutionPeriod ===
+            settings.studyPeriods![market.institution];
+        if (ending) feedback.push(market.institution);
+        const seconds = ending ? 8 : 5;
+        assert.equal(market.remainingMs, seconds * 1000);
+        demo.advanceTime(seconds - 1);
         assert.equal(demo.getSnapshot().view.study!.market.stage, "feedback");
         assert.equal(demo.getSnapshot().view.study!.market.remainingMs, 1000);
         demo.advanceTime(1);

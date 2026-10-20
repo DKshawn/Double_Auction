@@ -77,7 +77,7 @@ export function StudyTimingFields({
       </div>
       <p className={error ? "error-message" : "field-help"} aria-live="polite">
         {error ||
-          `1〜3600秒の整数。${institutions.includes("call") ? "Call Marketは1期に4回受付します。" : ""}${institutions.includes("posted") && postedBatch ? "Posted Offerは全買い手が同じ取引時間を使い、1秒ごとに約定します。" : ""}`}
+          `1〜3600秒の整数。${institutions.includes("call") ? "Call Marketは1期に4回、5単位の設定では5回受付します。" : ""}${institutions.includes("posted") && postedBatch ? "Posted Offerは全買い手が同じ取引時間を使い、1秒ごとに約定します。" : ""}`}
       </p>
     </>
   );

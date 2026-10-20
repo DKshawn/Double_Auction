@@ -255,9 +255,12 @@ test("custom Call timing controls all four clearing deadlines and the following 
   }
   assert.equal(m.trades.length, 1);
   assert.equal(m.trades[0].at, 8000);
+  assert.equal(m.stage, "feedback");
+  assert.equal(m.deadline, 34000);
+  settleDeadline(room, 34000, events);
   assert.equal(m.round, 2);
   assert.equal(m.call, 1);
-  assert.equal(m.deadline, 36000);
+  assert.equal(m.deadline, 41000);
 });
 
 test("five-second Call uses the server deadline across pause, resume and persisted reconnect", () => {
@@ -294,9 +297,11 @@ test("five-second Call uses the server deadline across pause, resume and persist
   );
   settleDeadline(restored, 117500, events);
   assert.equal(restored.study!.markets[0].clearings.length, 4);
+  assert.equal(restored.study!.markets[0].stage, "feedback");
+  settleDeadline(restored, 122500, events);
   assert.equal(restored.study!.markets[0].round, 2);
   assert.equal(restored.study!.markets[0].call, 1);
-  assert.equal(restored.study!.markets[0].deadline, 122500);
+  assert.equal(restored.study!.markets[0].deadline, 127500);
   assert.equal(restored.config.studyTiming!.callSeconds, 5);
 });
 
@@ -382,9 +387,12 @@ test("legacy saved Posted timing preserves sealed offers and gives each next buy
   assert.equal(m.buyerIndex, 1);
   assert.equal(m.deadline, 17000);
   settleDeadline(room, 17000, events);
+  assert.equal(m.stage, "feedback");
+  assert.equal(m.deadline, 22000);
+  settleDeadline(room, 22000, events);
   assert.equal(m.round, 2);
   assert.equal(m.stage, "offer");
-  assert.equal(m.deadline, 28000);
+  assert.equal(m.deadline, 33000);
 });
 
 test("minimum and maximum timing settings advance through exactly fifteen periods", () => {
@@ -402,7 +410,8 @@ test("minimum and maximum timing settings advance through exactly fifteen period
     });
     send("teacher", { type: "start" }, 1000);
     // Five CDA periods, five four-call periods, five offer + one-buyer periods.
-    const end = 1000 + seconds * 35000 + 7 * STUDY_FEEDBACK_SECONDS * 1000;
+    const end =
+      1000 + seconds * 35000 + 7 * STUDY_FEEDBACK_SECONDS * 1000 + 8 * 5000;
     settleDeadline(room, end - 1, events);
     assert.equal(room.phase, "running");
     settleDeadline(room, end, events);
@@ -666,6 +675,8 @@ test("Call publishes submitted prices, clears only at the deadline at 97.5, expi
   assert.equal(study.markets[0].trades.at(-1)!.value, 104);
   settleDeadline(room, 121000, events);
   assert.equal(room.phase, "running");
+  assert.equal(study.markets[0].stage, "feedback");
+  settleDeadline(room, 126000, events);
   assert.equal(study.markets[0].round, 2);
   assert.equal(study.markets[0].clearings.length, 4);
   assert.equal(study.markets[0].clearings.at(-1)!.price, null);
@@ -698,6 +709,8 @@ test("four Calls advance without submissions, trades or inferred abstention reco
       false,
     );
   }
+  assert.equal(study.markets[0].stage, "feedback");
+  settleDeadline(room, 126000, events);
   assert.equal(study.markets[0].round, 2);
   assert.equal(study.markets[0].call, 1);
   assert.equal(study.markets[0].trades.length, 0);
@@ -852,32 +865,34 @@ test("Posted quote history preserves public snapshots without leaking pending of
   );
 
   settleDeadline(room, 81000, events);
+  assert.equal(market.stage, "feedback");
+  settleDeadline(room, 86000, events);
   assert.equal(market.round, 2);
-  send(sellers[0], { type: "posted-offer", price: 177, quantity: 1 }, 82000);
+  send(sellers[0], { type: "posted-offer", price: 177, quantity: 1 }, 87000);
   assert.deepEqual(
-    toView(room, first, 82000, "local").study!.market.offerHistory,
+    toView(room, first, 87000, "local").study!.market.offerHistory,
     published,
   );
   const restored = JSON.parse(JSON.stringify(room)) as Room;
   assert.deepEqual(
-    toView(restored, first, 82000, "local").study!.market.offerHistory,
+    toView(restored, first, 87000, "local").study!.market.offerHistory,
     published,
   );
   const exported = JSON.parse(
-    exportData(room, events, 82000, "settings").content,
+    exportData(room, events, 87000, "settings").content,
   );
   assert.deepEqual(exported.markets[0].offerHistory, published);
 
-  settleDeadline(room, 141000, events);
+  settleDeadline(room, 146000, events);
   assert.deepEqual(
-    toView(room, first, 141000, "local").study!.market.offerHistory.map(
+    toView(room, first, 146000, "local").study!.market.offerHistory.map(
       (offer) => offer.price,
     ),
     [91, 177],
   );
   delete restored.study!.markets[0].offerHistory;
   assert.deepEqual(
-    toView(restored, first, 82000, "local").study!.market.offerHistory,
+    toView(restored, first, 87000, "local").study!.market.offerHistory,
     [],
   );
 });
@@ -900,6 +915,8 @@ test("Posted Offer advances without seller submissions, trades or inferred zero-
     /価格提示中/,
   );
   settleDeadline(room, 141000, events);
+  assert.equal(market.stage, "feedback");
+  settleDeadline(room, 146000, events);
   assert.equal(market.round, 2);
   assert.equal(market.stage, "offer");
   assert.equal(market.periods[0].completion, "complete");
@@ -922,10 +939,12 @@ test("pause freezes substage timers, deadlines catch up without browsers, and ne
   assert.equal(study.markets[0].deadline, 120000);
   settleDeadline(room, 210000, events);
   assert.equal(study.markets[0].clearings.length, 4);
+  assert.equal(study.markets[0].stage, "feedback");
+  settleDeadline(room, 215000, events);
   assert.equal(room.phase, "running");
   assert.equal(room.round, 2);
   assert.equal(study.markets[0].call, 1);
-  assert.equal(study.markets[0].deadline, 240000);
+  assert.equal(study.markets[0].deadline, 245000);
   assert.equal(study.markets[0].orders.length, 0);
 });
 
@@ -1193,17 +1212,17 @@ test("convergence slope uses institution-local periods and omits interrupted and
 test("mixed institutions advance independently and resume each market's own remaining time", () => {
   const { room, study, send, events } = classroom(6);
   send("teacher", { type: "start" }, 1000);
-  settleDeadline(room, 121000, events);
+  settleDeadline(room, 126000, events);
   assert.equal(study.markets.filter((m) => m.round === 2).length, 2);
   assert.ok(
     study.markets.filter((m) => m.round === 2).every((m) => m.stage === "call"),
   );
   assert.equal(room.phase, "running");
   assert.throws(
-    () => send("teacher", { type: "start" }, 121000),
+    () => send("teacher", { type: "start" }, 126000),
     /開始できません/,
   );
-  send("teacher", { type: "pause" }, 121000);
+  send("teacher", { type: "pause" }, 126000);
   send("teacher", { type: "resume" }, 200000);
   settleDeadline(room, 220000, events);
   assert.equal(study.markets.filter((m) => m.round === 2).length, 4);
@@ -1250,10 +1269,10 @@ test("other markets changing periods never invalidate a student's orders or rese
     expectedStage: before.study!.market.stageKey,
     command: { type: "study-quote", price: 70 } as Command,
   };
-  settleDeadline(room, 121000, events);
+  settleDeadline(room, 126000, events);
   assert.equal(room.round, 2);
-  execute(room, buyers[0], req, 121000, events);
-  const view = toView(room, buyers[0], 121000, "local");
+  execute(room, buyers[0], req, 126000, events);
+  const view = toView(room, buyers[0], 126000, "local");
   assert.equal(view.round, 1);
   assert.equal(view.me.roundProfit, 40);
   assert.equal(view.study!.unitsUsed, 1);
@@ -1337,18 +1356,14 @@ test("interrupting periods while paused preserves the pause and excludes interru
   assert.equal(room.phase, "paused");
   assert.ok(
     study.markets.every(
-      (m) =>
-        m.deadline === null &&
-        (m.order[0] === "cda"
-          ? m.round === 1 && m.stage === "feedback"
-          : m.round === 2),
+      (m) => m.deadline === null && m.round === 1 && m.stage === "feedback",
     ),
   );
   assert.ok(
     study.markets.every((m) => m.periods[0].completion === "interrupted"),
   );
   settleDeadline(room, 300000, events);
-  assert.equal(study.markets.filter((m) => m.stage === "feedback").length, 2);
+  assert.equal(study.markets.filter((m) => m.stage === "feedback").length, 6);
   send("teacher", { type: "resume" }, 400000);
   assert.ok(study.markets.every((m) => m.deadline! > 400000));
   settleDeadline(room, 408000, events);

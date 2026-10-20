@@ -6,6 +6,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { PGlite } from "@electric-sql/pglite";
 import { studyUnits, studyUnitsPerSide } from "../src/lib/study-config";
 import {
+  presetStudyConditions,
+  conditionSchedules,
+} from "../src/lib/study-conditions";
+import { studyAllocationConditions } from "../src/lib/study-allocation";
+import { commandSchema, createRoomSchema } from "../src/lib/server/http";
+import {
   generateStaircase,
   generatedStudySettings,
 } from "../src/lib/study-generator";
@@ -35,7 +41,7 @@ import { StudyRoom } from "../src/components/study-room";
 import { StudySettingsEditor } from "../src/components/study-settings";
 import type { Command, RoomConfig, RoomView } from "../src/lib/types";
 import type { Room, Participant, AuditEvent } from "../src/lib/auction-model";
-import type { StudyGeneratorConfig } from "../src/lib/study-types";
+import type { Institution, StudyGeneratorConfig } from "../src/lib/study-types";
 
 const config: RoomConfig = {
   title: "CDAの単位数",
@@ -153,6 +159,357 @@ function currentValues(markup: string) {
   );
 }
 
+test("the API accepts independent 1–5 unit counts and rejects invalid or incomplete schedules", () => {
+  for (const institution of ["cda", "call", "posted"] as const) {
+    for (const units of [1, 3, 5]) {
+      const c = { ...config, studyUnitCounts: { [institution]: units } };
+      assert.ok(
+        createRoomSchema.safeParse({ config: c, password: "Local-Test-Only" })
+          .success,
+      );
+      assert.equal(studyUnits(c, institution), units);
+    }
+    for (const units of [0, 6, 1.5])
+      assert.equal(
+        studyRoomConfigSchema.safeParse({
+          ...config,
+          studyUnitCounts: { [institution]: units },
+        }).success,
+        false,
+      );
+  }
+  for (const command of [
+    { type: "call-submit", prices: [110, 100, 90, 80, 70] },
+    { type: "posted-offer", price: 70, quantity: 5 },
+    { type: "posted-bid", price: 70, quantity: 5 },
+  ])
+    assert.ok(
+      commandSchema.safeParse({
+        requestId: randomUUID(),
+        expectedRound: 1,
+        command,
+      }).success,
+    );
+  const c = classroom(2);
+  const before = JSON.stringify(c.room);
+  assert.throws(
+    () =>
+      c.send("teacher", {
+        type: "study-settings",
+        settings: c.room.study!.settings,
+        unitsByInstitution: { cda: 1, call: 3, posted: 5 },
+        expectedRevision: 0,
+      }),
+    /再度プレビュー/,
+  );
+  assert.equal(JSON.stringify(c.room), before);
+});
+
+function institutionClassroom(
+  institution: Institution,
+  units: number,
+  batch = false,
+) {
+  const c = classroom(units);
+  c.room.config = {
+    ...config,
+    studyInstitutions: [institution],
+    rounds: 1,
+    studyUnitCounts: { cda: 1, call: units, posted: units },
+    ...(batch ? { studyPostedMechanism: "batch-bids-v1" as const } : {}),
+  };
+  const settings = c.room.study!.settings;
+  c.room.study!.conditionsByInstitution = {
+    [institution]: { settings, basis: settings },
+  };
+  c.room.study!.markets[0].order = [institution];
+  return c;
+}
+
+function checkCurrentUnit(
+  c: ReturnType<typeof classroom>,
+  used: number,
+  units: number,
+) {
+  for (const person of [c.buyer, c.seller]) {
+    const view = studyView(c.room, person, c.now(), "local");
+    assert.equal(view.study!.unitsUsed, used);
+    const shown = currentValues(studentMarkup(view));
+    assert.equal((shown.match(/<b>/g) ?? []).length, used === units ? 0 : 1);
+    if (used < units) {
+      assert.match(shown, new RegExp(`${used + 1}単位目 / ${units}単位`));
+      assert.ok(shown.includes(`${unitLimits(c.room, person)[used]} 円`));
+      for (let future = used + 1; future < units; future++)
+        assert.ok(!shown.includes(`${future + 1}単位目`));
+    } else
+      assert.ok(
+        studentMarkup(view).includes(`今期の全${units}単位を`),
+        "completed students see completion instead of another unit",
+      );
+  }
+}
+
+for (const units of [1, 3, 5]) {
+  test(`Call Market supports ${units} units with sequential private values and correct settlement`, () => {
+    const c = institutionClassroom("call", units);
+    c.send("teacher", { type: "start" });
+    checkCurrentUnit(c, 0, units);
+    assert.throws(
+      () => c.send(c.buyer, { type: "call-submit", prices: [100, 90] }),
+      /1単位/,
+    );
+    let used = 0;
+    while (used < units) {
+      const quantity = 1;
+      c.send(c.buyer, {
+        type: "call-submit",
+        prices: Array(quantity).fill(100),
+      });
+      c.send(c.seller, {
+        type: "call-submit",
+        prices: Array(quantity).fill(100),
+      });
+      c.advance();
+      used += quantity;
+      checkCurrentUnit(c, used, units);
+    }
+    const trades = c.room.study!.markets[0].trades;
+    assert.equal(trades.length, units);
+    assert.deepEqual(
+      trades.map((t) => t.buyerUnit),
+      Array.from({ length: units }, (_, i) => i + 1),
+    );
+    assert.deepEqual(
+      trades.map((t) => t.sellerUnit),
+      trades.map((t) => t.buyerUnit),
+    );
+    assert.deepEqual(
+      trades.map((t) => t.value),
+      c.room.study!.settings.values[0],
+    );
+  });
+  for (const batch of [false, true])
+    test(`Posted Offer ${batch ? "batch" : "legacy"} supports ${units} units and reveals the next value/cost after each fill`, () => {
+      const c = institutionClassroom("posted", units, batch);
+      c.send("teacher", { type: "start" });
+      checkCurrentUnit(c, 0, units);
+      assert.throws(
+        () =>
+          c.send(c.seller, { type: "posted-offer", price: 100, quantity: 2 }),
+        /数量/,
+      );
+      c.send(c.seller, { type: "posted-offer", price: 100, quantity: 1 });
+      c.advance();
+      for (let i = 0; i < units; i++) {
+        if (i > 0)
+          c.send(c.seller, {
+            type: "posted-offer",
+            price: 100 + i,
+            quantity: 1,
+          });
+        assert.throws(
+          () =>
+            c.send(c.seller, { type: "posted-offer", price: 100, quantity: 1 }),
+          /約定後/,
+        );
+        if (batch) {
+          assert.throws(
+            () =>
+              c.send(c.buyer, { type: "posted-bid", price: 120, quantity: 2 }),
+            /数量/,
+          );
+          c.send(c.buyer, { type: "posted-bid", price: 120, quantity: 1 });
+          assert.throws(
+            () =>
+              c.send(c.buyer, { type: "posted-bid", price: 120, quantity: 1 }),
+            /数量/,
+          );
+          c.advance();
+        } else
+          c.send(c.buyer, {
+            type: "posted-buy",
+            offerId: c.room.study!.markets[0].offers.at(-1)!.id,
+            quantity: 1,
+          });
+        checkCurrentUnit(c, i + 1, units);
+      }
+      const trades = c.room.study!.markets[0].trades;
+      assert.equal(trades.length, units);
+      assert.deepEqual(
+        trades.map((t) => t.value),
+        c.room.study!.settings.values[0],
+      );
+      assert.deepEqual(
+        trades.map((t) => t.cost),
+        c.room.study!.settings.costs[0],
+      );
+      assert.equal(c.room.study!.markets[0].offers[0].remaining, 0);
+      assert.equal(c.room.study!.markets[0].offerHistory!.length, units);
+      assert.deepEqual(
+        trades.map((t) => t.price),
+        Array.from({ length: units }, (_, i) => 100 + i),
+      );
+    });
+}
+
+test("per-institution Default conditions preserve their original basis through attendance resizing", () => {
+  const c = classroom(2);
+  c.room.config = {
+    ...config,
+    marketSize: 16,
+    studyUnitCounts: { cda: 1, call: 3, posted: 5 },
+  };
+  const study = c.room.study!;
+  study.conditionsByInstitution = presetStudyConditions(
+    c.room.config,
+    pptStudySettings(),
+  );
+  const original = conditionSchedules(study.conditionsByInstitution);
+  study.conditionsByInstitution = studyAllocationConditions(
+    c.room.config,
+    study,
+    6,
+  ).conditionsByInstitution;
+  study.conditionsByInstitution = studyAllocationConditions(
+    c.room.config,
+    study,
+    16,
+  ).conditionsByInstitution;
+  assert.deepEqual(
+    conditionSchedules(study.conditionsByInstitution!),
+    original,
+  );
+});
+
+test("the five-unit demo submits one bot order at a time and keeps Posted open while the seller reprices", async () => {
+  const demo = new DemoSession("posted", "seller", 1000, {
+    config: {
+      ...config,
+      studyInstitutions: ["posted"],
+      studyPeriods: { posted: 1 },
+      rounds: 1,
+      studyUnitCounts: { cda: 2, call: 3, posted: 5 },
+      studyCommission: 0,
+      studyPostedMechanism: "batch-bids-v1",
+      studyTiming: {
+        cdaSeconds: 180,
+        callSeconds: 30,
+        offerSeconds: 60,
+        buyerSeconds: 10,
+        purchaseSeconds: 80,
+      },
+    },
+  });
+  assert.equal(await demo.command({ type: "start" }, true), true);
+  for (let unit = 1; unit <= 5; unit++) {
+    assert.equal(
+      await demo.command({ type: "posted-offer", price: unit, quantity: 1 }),
+      true,
+    );
+    if (unit === 1) demo.skipStage();
+    demo.advanceTime(3);
+    const view = demo.getSnapshot().view;
+    assert.equal(view.study!.unitsUsed, unit);
+    assert.equal(view.study!.market.myOffer!.quantity, 1);
+    assert.equal(
+      view.study!.market.stage,
+      unit === 5 ? "feedback" : "purchase",
+    );
+    assert.ok(
+      view.study!.market.posted!.bids.every((bid) => bid.quantity === 1),
+    );
+  }
+  const call = new DemoSession("call", "buyer", 1000, {
+    config: {
+      ...config,
+      studyInstitutions: ["call"],
+      rounds: 1,
+      studyUnitCounts: { cda: 2, call: 5, posted: 3 },
+      studyCommission: 0,
+    },
+  });
+  assert.equal(await call.command({ type: "start" }, true), true);
+  for (let unit = 1; unit <= 5; unit++) {
+    assert.equal(call.getSnapshot().view.study!.market.orders.length, 1);
+    assert.equal(
+      await call.command({ type: "call-submit", prices: [99999] }),
+      true,
+    );
+    call.skipStage();
+    assert.equal(call.getSnapshot().view.study!.unitsUsed, unit);
+  }
+});
+
+test("formal rooms persist and export independent unit counts through the HTTP command schema", async () => {
+  const pg = new PGlite();
+  const db = localDatabase(pg);
+  try {
+    await migrate(db);
+    let service = new AuctionService(db);
+    const cfg: RoomConfig = {
+      ...config,
+      marketSize: 8,
+      capacity: 8,
+      studyCommission: 0,
+      studyUnitCounts: { cda: 1, call: 3, posted: 5 },
+    };
+    const request = createRoomSchema.parse({
+      config: cfg,
+      password: "Local-Units-Only-2026",
+      generator,
+    });
+    const teacher = await service.create(
+      request.config,
+      request.password,
+      request.accessKey,
+      request.generator,
+    );
+    service = new AuctionService(db);
+    let view = await service.view(teacher.code, teacher.token);
+    for (const [institution, units] of Object.entries(cfg.studyUnitCounts!) as [
+      Institution,
+      number,
+    ][])
+      assert.deepEqual(
+        view.study!.teacher!.settingsByInstitution![institution],
+        generatedStudySettings(generator, 4 * units, units),
+      );
+    const counts = { cda: 2, call: 5, posted: 3 };
+    const conditions = presetStudyConditions(
+      { ...cfg, studyUnitCounts: counts },
+      pptStudySettings(),
+    );
+    const schedules = conditionSchedules(conditions);
+    const command = commandSchema.parse({
+      requestId: randomUUID(),
+      expectedRound: 0,
+      command: {
+        type: "study-settings",
+        settings: schedules.cda,
+        settingsByInstitution: schedules,
+        unitsByInstitution: counts,
+        commission: 0,
+        expectedRevision: view.study!.settingsRevision,
+      },
+    });
+    await service.command(teacher.code, teacher.token, command);
+    service = new AuctionService(db);
+    view = await service.view(teacher.code, teacher.token);
+    assert.deepEqual(view.config.studyUnitCounts, counts);
+    assert.deepEqual(view.study!.teacher!.settingsByInstitution, schedules);
+    assert.equal(view.study!.teacher!.generation, undefined);
+    assert.deepEqual(view.study!.teacher!.preset!.settings, pptStudySettings());
+    const bundle = await service.export(teacher.code, teacher.token);
+    const data = JSON.parse(
+      exportData(bundle.room, bundle.events, bundle.now, "settings").content,
+    );
+    assert.deepEqual(data.rules.unitsPerInstitution, counts);
+    assert.deepEqual(data.schedulesByInstitution, schedules);
+  } finally {
+    await pg.close();
+  }
+});
+
 test("CDA accepts 1–5 integer units; old rooms and the other institutions retain two units", () => {
   assert.equal(studyUnits({}), 2);
   for (const units of [1, 2, 3, 4, 5]) {
@@ -176,7 +533,7 @@ test("CDA accepts 1–5 integer units; old rooms and the other institutions reta
       studyInstitutions: ["call"],
       rounds: 1,
     }).success,
-    false,
+    true,
   );
 });
 
@@ -278,7 +635,7 @@ for (const units of [1, 2, 3, 4, 5])
     assert.equal(output.rules.unitsPerPeriod, units === 2 ? 2 : null);
   });
 
-test("Call and Posted still show and trade two units after a five-unit CDA period, with their own metrics", () => {
+test("saved rooms retain two-unit Call and Posted schedules and display only the current unit", () => {
   const c = classroom(5);
   c.send("teacher", { type: "start" });
   c.send("teacher", { type: "end-round" });
@@ -289,7 +646,7 @@ test("Call and Posted still show and trade two units after a five-unit CDA perio
     assert.equal(view.study!.unitLimits!.length, 2);
     assert.equal(
       (currentValues(studentMarkup(view)).match(/<b>/g) ?? []).length,
-      2,
+      1,
     );
   }
   assert.throws(
@@ -347,7 +704,7 @@ test("Call and Posted still show and trade two units after a five-unit CDA perio
   );
 });
 
-test("teacher settings show an editable CDA count and disabled matching two-unit inputs for other modes", () => {
+test("teacher settings allow an independent unit count for each institution", () => {
   const entry = renderToStaticMarkup(
     createElement(TeacherForm, {
       status: { mode: "local", ready: true, keyRequired: false },
@@ -364,7 +721,7 @@ test("teacher settings show an editable CDA count and disabled matching two-unit
   assert.match(entry, /aria-haspopup="dialog">作成前に詳細を設定/);
   const markup = renderToStaticMarkup(
     createElement(StudyUnitFields, {
-      cdaUnits: "5",
+      units: { cda: "5", call: "4", posted: "3" },
       onChange: () => {},
       disabled: false,
     }),
@@ -373,11 +730,14 @@ test("teacher settings show an editable CDA count and disabled matching two-unit
     markup,
     /aria-label="CDAの1人あたりの単位数"[^>]*min="1"[^>]*max="5"[^>]*value="5"/,
   );
-  for (const institution of ["Call Market", "Posted Offer"])
+  for (const [institution, units] of [
+    ["Call Market", 4],
+    ["Posted Offer", 3],
+  ])
     assert.match(
       markup,
       new RegExp(
-        `aria-label="${institution}の1人あたりの単位数"[^>]*disabled=""[^>]*value="2"`,
+        `aria-label="${institution}の1人あたりの単位数"[^>]*value="${units}"`,
       ),
     );
   const room = classroom(5).room;

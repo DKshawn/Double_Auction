@@ -4,6 +4,7 @@ import {
   studyInstitutions,
   studyMarketSettings,
   studyMarketSize,
+  studyTemplateSideCount,
   studyUnits,
 } from "./study-config";
 import { generatedStudySettings } from "./study-generator";
@@ -11,7 +12,11 @@ import { studyCommission, studyCommissionError } from "./study-commission";
 import type { RoomConfig } from "./types";
 import type { Room } from "./auction-model";
 import type { Study } from "./study-core";
-import type { StudyAllocationPlan } from "./study-types";
+import type {
+  StudyAllocationPlan,
+  StudyConditions,
+  StudySettings,
+} from "./study-types";
 
 /** One shared plan for the waiting-room preview, authoritative cutoff and exports. */
 export function studyAllocationPlan(
@@ -83,7 +88,32 @@ export function studyAllocationConditions(
   config: RoomConfig,
   study: Study,
   templateSize: number,
-) {
+): {
+  settings: StudySettings;
+  otherSettings?: StudySettings;
+  conditionsByInstitution?: StudyConditions;
+} {
+  if (study.conditionsByInstitution) {
+    const conditions: StudyConditions = {};
+    for (const institution of studyInstitutions(config)) {
+      const saved = study.conditionsByInstitution[institution];
+      const units = studyUnits(config, institution);
+      const basis =
+        saved?.basis ?? study.conditionBasis?.settings ?? study.settings;
+      const settings = saved?.generator
+        ? generatedStudySettings(
+            saved.generator,
+            studyTemplateSideCount({ marketSize: templateSize }) * units,
+            units,
+          )
+        : resizeStudySettings(basis, templateSize, units);
+      conditions[institution] = { ...saved, basis, settings };
+    }
+    return {
+      settings: conditions[studyInstitutions(config)[0]]!.settings,
+      conditionsByInstitution: conditions,
+    };
+  }
   const people = templateSize / 2;
   const basis = study.conditionBasis;
   const units = studyUnits(config);
@@ -116,6 +146,24 @@ export function studyAllocationConditionError(
   conditions: ReturnType<typeof studyAllocationConditions>,
   plan: StudyAllocationPlan,
 ) {
+  if (conditions.conditionsByInstitution) {
+    const actualConfig = { ...config, studyLayout: plan.layout };
+    for (const institution of studyInstitutions(config)) {
+      const settings =
+        conditions.conditionsByInstitution[institution]!.settings;
+      const error = studyCommissionError(studyCommission(config), settings);
+      if (error) return error;
+      for (const [i, counts] of plan.layout.entries()) {
+        if (!counts.buyers || !counts.sellers) continue;
+        const actualError = studyCommissionError(
+          studyCommission(config),
+          studyMarketSettings(actualConfig, settings, i + 1),
+        );
+        if (actualError) return `市場${i + 1}：${actualError}`;
+      }
+    }
+    return "";
+  }
   let error = studyCommissionError(
     studyCommission(config),
     conditions.settings,

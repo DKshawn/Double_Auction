@@ -7,6 +7,7 @@ import {
   studyTimingSchema,
   studyInstitutionsSchema,
   studyPeriodsSchema,
+  studyUnitCountsSchema,
 } from "./study";
 import { studyRoomConfigSchema } from "../study-room-config";
 import {
@@ -19,6 +20,7 @@ import {
   MAX_STUDY_UNITS,
   studyUnits,
   studyUnitsPerSide,
+  studyInstitutions,
 } from "../study-config";
 import { studyCommissionSchema } from "../study-commission";
 import { MAX_PRICE } from "../price";
@@ -210,11 +212,12 @@ export const createRoomSchema = z
         data.config.protocol !== "institutions-v1"
       )
         throw new Error("この供需プリセットは制度比較実験で選択してください。");
-      generatedStudySettings(
-        data.generator,
-        studyUnitsPerSide(data.config),
-        studyUnits(data.config),
-      );
+      for (const institution of studyInstitutions(data.config))
+        generatedStudySettings(
+          data.generator,
+          studyUnitsPerSide(data.config, institution),
+          studyUnits(data.config, institution),
+        );
     } catch (error) {
       context.addIssue({
         code: "custom",
@@ -293,6 +296,15 @@ export const commandSchema = z
           settings: studySettingsSchema,
           generator: studyGeneratorConfigSchema.optional(),
           commission: studyCommissionSchema.optional(),
+          unitsByInstitution: studyUnitCountsSchema.optional(),
+          settingsByInstitution: z
+            .object({
+              cda: studySettingsSchema.optional(),
+              call: studySettingsSchema.optional(),
+              posted: studySettingsSchema.optional(),
+            })
+            .strict()
+            .optional(),
           unitsPerParticipant: z
             .number()
             .int()
@@ -313,28 +325,31 @@ export const commandSchema = z
       z
         .object({
           type: z.literal("call-submit"),
-          prices: z.array(z.number().int().min(1).max(MAX_PRICE)).min(1).max(2),
+          prices: z
+            .array(z.number().int().min(1).max(MAX_PRICE))
+            .min(1)
+            .max(MAX_STUDY_UNITS),
         })
         .strict(),
       z
         .object({
           type: z.literal("posted-offer"),
           price: z.number().int().min(1).max(MAX_PRICE),
-          quantity: z.number().int().min(1).max(2),
+          quantity: z.number().int().min(1).max(MAX_STUDY_UNITS),
         })
         .strict(),
       z
         .object({
           type: z.literal("posted-bid"),
           price: z.number().int().min(1).max(MAX_PRICE),
-          quantity: z.number().int().min(1).max(2),
+          quantity: z.number().int().min(1).max(MAX_STUDY_UNITS),
         })
         .strict(),
       z
         .object({
           type: z.literal("posted-buy"),
           offerId: z.uuid(),
-          quantity: z.number().int().min(1).max(2),
+          quantity: z.number().int().min(1).max(MAX_STUDY_UNITS),
         })
         .strict(),
       z.object({ type: z.literal("posted-pass") }).strict(),

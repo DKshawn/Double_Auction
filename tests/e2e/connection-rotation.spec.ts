@@ -220,7 +220,7 @@ test("short CDA rotates during End/Start, preserves fills, pauses the overlay an
       f.buyer.page.getByRole("heading", { name: "第2期 Start", exact: true }),
     ).toBeVisible();
     await expect(quote).toBeDisabled();
-    await expect(f.buyer.page.locator(".study-start-countdown")).toContainText(
+    await expect(f.buyer.page.locator(".study-countdown-card")).toContainText(
       "教員が再開するまで",
     );
     expect((await f.snapshot(f.buyer.context)).study!.market.remainingMs).toBe(

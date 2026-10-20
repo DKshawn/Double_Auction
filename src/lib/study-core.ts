@@ -15,6 +15,9 @@ import type {
   StudyLobby,
   StudyGeneration,
   StudyGeneratorConfig,
+  StudyConditions,
+  StudyUnitCounts,
+  StudySchedules,
 } from "./study-types";
 import { generatedStudySettings, seededStudySeats } from "./study-generator";
 import {
@@ -25,7 +28,6 @@ import {
   studyAllocationWaitingMessage,
 } from "./study-allocation";
 import { STUDY_FEEDBACK_SECONDS, STUDY_START_SECONDS } from "./study-types";
-import { STUDY_RULES } from "./study-rules";
 import {
   MAX_STAGE_SECONDS,
   postedPurchaseSeconds,
@@ -49,6 +51,9 @@ import {
   studyMarketSettings,
   MAX_STUDY_MARKETS,
   studyUnits,
+  studySingleUnitOrders,
+  studyCallsPerPeriod,
+  studyUnitCounts,
   studyUnitsPerSide,
   studyUnitsError,
   studyInstitutions,
@@ -61,6 +66,7 @@ import {
   studyPeriodCount,
   resizeStudySettings,
 } from "./study-config";
+import { presetStudyConditions } from "./study-conditions";
 import {
   AuctionError,
   emit,
@@ -111,6 +117,7 @@ export type Study = {
   settings: StudySettings;
   // When CDA's unit count changes, Call and Posted keep their two-unit conditions.
   otherSettings?: StudySettings;
+  conditionsByInstitution?: StudyConditions;
   // Preserve the source schedule so changing market counts never resamples an
   // already reduced template and loses the original marginal schedule.
   conditionBasis?: { settings: StudySettings; otherSettings?: StudySettings };
@@ -148,6 +155,13 @@ export const studyPeriodsSchema = z
     cda: institutionPeriods.optional(),
     call: institutionPeriods.optional(),
     posted: institutionPeriods.optional(),
+  })
+  .strict();
+export const studyUnitCountsSchema = z
+  .object({
+    cda: z.number().int().min(1).max(MAX_STUDY_UNITS),
+    call: z.number().int().min(1).max(MAX_STUDY_UNITS),
+    posted: z.number().int().min(1).max(MAX_STUDY_UNITS),
   })
   .strict();
 export const studySettingsSchema = z
@@ -213,6 +227,9 @@ export function recordStudyGeneratedAssignments(room: Room) {
   const generation = room.study?.generation;
   if (!generation) return;
   const perSide = studyTemplateSideCount(room.config);
+  const institution = room.study?.conditionsByInstitution
+    ? studyInstitutions(room.config)[0]
+    : "cda";
   generation.assignments = room.participants
     .filter((p) => p.seat >= 0)
     .map((p) => {
@@ -225,10 +242,10 @@ export function recordStudyGeneratedAssignments(room: Room) {
         alias: p.alias,
         role: p.role,
         sortedUnits: Array.from(
-          { length: studyUnits(room.config) },
+          { length: studyUnits(room.config, institution) },
           (_, unit) => index + 1 + unit * perSide,
         ),
-        limits: [...unitLimits(room, p, "cda")],
+        limits: [...unitLimits(room, p, institution)],
       };
     });
 }
@@ -243,11 +260,20 @@ export function applyStudyGenerator(
     throw new AuctionError("条件は実験開始前のみ変更できます。", 409);
   let settings: StudySettings;
   try {
-    settings = generatedStudySettings(
-      generator,
-      studyUnitsPerSide(room.config),
-      studyUnits(room.config),
-    );
+    if (room.study.conditionsByInstitution) {
+      const conditions = presetStudyConditions(
+        room.config,
+        room.study.conditionBasis?.settings ?? room.study.settings,
+        generator,
+      );
+      room.study.conditionsByInstitution = conditions;
+      settings = conditions[studyInstitutions(room.config)[0]]!.settings;
+    } else
+      settings = generatedStudySettings(
+        generator,
+        studyUnitsPerSide(room.config),
+        studyUnits(room.config),
+      );
   } catch (error) {
     throw new AuctionError(
       error instanceof Error ? error.message : "生成条件を確認してください。",
@@ -341,9 +367,10 @@ export const settingsForInstitution = (
   market?: number,
 ) => {
   const settings =
-    institution === "cda"
+    room.study!.conditionsByInstitution?.[institution]?.settings ??
+    (institution === "cda"
       ? room.study!.settings
-      : (room.study!.otherSettings ?? room.study!.settings);
+      : (room.study!.otherSettings ?? room.study!.settings));
   return market ? studyMarketSettings(room.config, settings, market) : settings;
 };
 export const unitLimits = (
@@ -357,6 +384,18 @@ export const unitLimits = (
   ];
   return profiles[studyProfileIndex(room.config, p.seat, profiles.length)];
 };
+function roomCommissionError(room: Room, commission: number, market?: number) {
+  return (
+    studyInstitutions(room.config)
+      .map((institution) =>
+        studyCommissionError(
+          commission,
+          settingsForInstitution(room, institution, market),
+        ),
+      )
+      .find(Boolean) ?? ""
+  );
+}
 export const unitsUsed = (room: Room, p: Participant) =>
   marketFor(room, p).trades.filter(
     (t) =>
@@ -578,16 +617,19 @@ function finishMarket(
   m.deadline = null;
   m.remainingMs = 0;
   m.spreadValue = null;
-  if (
-    showFeedback &&
-    (institutionFor(room, m) === "cda" ||
+  if (showFeedback) {
+    // Preserve the eight-second result display for CDA and institution endings.
+    // Other periods use five seconds to review the upcoming conditions. This
+    // shared server deadline never consumes the next period's trading time.
+    const seconds =
+      institutionFor(room, m) === "cda" ||
       marketRound(room, m) ===
-        studyPeriodAt(room.config, m.order, marketRound(room, m)).last)
-  ) {
-    // Hold the finished period and its fills for every participant in this market.
-    schedule(m, "feedback", at, STUDY_FEEDBACK_SECONDS);
+        studyPeriodAt(room.config, m.order, marketRound(room, m)).last
+        ? STUDY_FEEDBACK_SECONDS
+        : STUDY_START_SECONDS;
+    schedule(m, "feedback", at, seconds);
     log(room, m, events, at, "feedback-started", "system", {
-      seconds: STUDY_FEEDBACK_SECONDS,
+      seconds,
     });
   } else if (
     completion === "complete" &&
@@ -747,7 +789,16 @@ function clearPosted(
   }
   if (
     at >= posted.endsAt! ||
-    m.offers.every((offer) => offer.remaining === 0)
+    (studySingleUnitOrders(room.config)
+      ? !room.participants.some(
+          (p) =>
+            !p.withdrawnAt &&
+            p.role === "seller" &&
+            marketFor(room, p).id === m.id &&
+            m.submitted.includes(p.id) &&
+            unitsUsed(room, p) < studyUnits(room.config, "posted"),
+        )
+      : m.offers.every((offer) => offer.remaining === 0))
   ) {
     log(room, m, events, at, "posted-bids-expired", "system", {
       bids: posted.bids
@@ -894,6 +945,8 @@ function closeAdmission(
       : {}),
   };
   study.settings = conditions.settings;
+  if (conditions.conditionsByInstitution)
+    study.conditionsByInstitution = conditions.conditionsByInstitution;
   if (conditions.otherSettings) study.otherSettings = conditions.otherSettings;
   room.config.marketSize = plan.templateSize;
   room.config.studyLayout = plan.layout;
@@ -972,7 +1025,7 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
         finishMarket(room, m, events, at, "complete");
       else if (m.stage === "call") {
         clearCall(room, m, events, at);
-        if (m.call === STUDY_RULES.callsPerPeriod)
+        if (m.call === studyCallsPerPeriod(room.config))
           finishMarket(room, m, events, at, "complete");
         else {
           m.call++;
@@ -1048,6 +1101,133 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
   }
   sync(room);
   return changed;
+}
+
+function applyInstitutionSettings(
+  room: Room,
+  cmd: {
+    unitsByInstitution: StudyUnitCounts;
+    settingsByInstitution?: StudySchedules;
+    generator?: StudyGeneratorConfig;
+    commission?: number;
+  },
+  now: number,
+  events: AuditEvent[],
+) {
+  const counts = studyUnitCountsSchema.safeParse(cmd.unitsByInstitution);
+  if (!counts.success) throw new AuctionError(studyUnitsError(NaN));
+  const study = room.study!;
+  const institutions = studyInstitutions(room.config);
+  const allocation = studyRoomAllocation(room);
+  const templateSize = allocation?.templateSize ?? studyMarketSize(room.config);
+  const people = studyTemplateSideCount({ marketSize: templateSize });
+  const conditions: StudyConditions = { ...study.conditionsByInstitution };
+  for (const institution of institutions) {
+    const units = counts.data[institution];
+    const parsed = studySettingsSchema.safeParse(
+      cmd.settingsByInstitution?.[institution],
+    );
+    if (
+      !parsed.success ||
+      parsed.data.values.length !== people ||
+      parsed.data.values[0].length !== units
+    )
+      throw new AuctionError(
+        `${institution}：${people}人×${units}単位の供需条件を再度プレビューしてください。`,
+      );
+    if (cmd.generator) {
+      const generated = generatedStudySettings(
+        cmd.generator,
+        people * units,
+        units,
+      );
+      if (JSON.stringify(generated) !== JSON.stringify(parsed.data))
+        throw new AuctionError(
+          "生成条件と価値・費用が一致しません。再度プレビューしてください。",
+        );
+    }
+    const previousBasis =
+      conditions[institution]?.basis ??
+      study.conditionBasis?.settings ??
+      settingsForInstitution(room, institution);
+    const basis =
+      JSON.stringify(
+        resizeStudySettings(previousBasis, templateSize, units),
+      ) === JSON.stringify(parsed.data)
+        ? previousBasis
+        : parsed.data;
+    conditions[institution] = {
+      settings: parsed.data,
+      basis: structuredClone(basis),
+      ...(cmd.generator ? { generator: structuredClone(cmd.generator) } : {}),
+    };
+  }
+  const commission = cmd.commission ?? studyCommission(room.config);
+  const nextConfig = {
+    ...room.config,
+    marketSize: templateSize,
+    studyUnitCounts: counts.data,
+    studyCdaUnits: counts.data.cda,
+    studyCommission: commission,
+  };
+  const settings = conditions[institutions[0]]!.settings;
+  const error = studyAllocationConditionError(
+    nextConfig,
+    { settings, conditionsByInstitution: conditions },
+    allocation ?? {
+      layout: [],
+      attendance: 0,
+      templateSize,
+      requestedMarkets: 1,
+    },
+  );
+  if (error) throw new AuctionError(error);
+  const changed =
+    JSON.stringify(studyUnitCounts(room.config)) !==
+      JSON.stringify(counts.data) ||
+    institutions.some(
+      (i) =>
+        JSON.stringify(settingsForInstitution(room, i)) !==
+        JSON.stringify(conditions[i]!.settings),
+    );
+  study.conditionsByInstitution = conditions;
+  study.settings = settings;
+  room.config = nextConfig;
+  if (
+    allocation?.layout.length &&
+    study.lobby?.admission?.status === "closed"
+  ) {
+    room.config.studyLayout = allocation.layout;
+    room.config.markets = allocation.layout.length;
+    if (study.markets.length !== allocation.layout.length)
+      study.markets = createStudy(
+        allocation.layout.length,
+        settings,
+        institutions,
+      ).markets;
+  }
+  if (cmd.generator) applyStudyGenerator(room, cmd.generator, now);
+  else {
+    delete study.generation;
+    for (const participant of room.participants)
+      participant.limits.apple = unitLimits(room, participant)[0] ?? 0;
+    if (changed && study.lobby) {
+      study.lobby.revision++;
+      study.lobby.randomizedAt = null;
+    }
+  }
+  study.revision++;
+  if (study.lobby?.admission) delete study.lobby.admission.error;
+  emit(room, events, now, "study-settings", "teacher", {
+    settings,
+    conditionsByInstitution: conditions,
+    unitsByInstitution: counts.data,
+    commission,
+    ...(study.generation
+      ? { generation: structuredClone(study.generation) }
+      : {}),
+    revision: study.revision,
+  });
 }
 
 export function executeStudy(
@@ -1298,10 +1478,6 @@ export function executeStudy(
         throw new AuctionError(
           `各時間は1〜${MAX_STAGE_SECONDS}秒の整数で設定してください。`,
         );
-      if (!selection.data.includes("cda") && studyUnits(room.config) !== 2)
-        throw new AuctionError(
-          "CDAを外す前に、1人あたりの単位数を2に変更してください。",
-        );
       const institutions = DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
         selection.data.includes(i),
       );
@@ -1310,11 +1486,36 @@ export function executeStudy(
         (studyUnits(room.config) !== 2 && institutions.some((i) => i !== "cda")
           ? resizeStudySettings(study.settings, studyMarketSize(room.config), 2)
           : undefined);
-      const error = studyCommissionError(
-        studyCommission(room.config),
-        study.settings,
-        institutions.some((i) => i !== "cda") ? otherSettings : undefined,
-      );
+      const nextConditions = study.conditionsByInstitution
+        ? { ...study.conditionsByInstitution }
+        : undefined;
+      if (nextConditions) {
+        for (const institution of institutions) {
+          if (!nextConditions[institution])
+            Object.assign(
+              nextConditions,
+              presetStudyConditions(
+                { ...room.config, studyInstitutions: [institution] },
+                study.conditionBasis?.settings ?? study.settings,
+                study.generation,
+              ),
+            );
+        }
+      }
+      const error = nextConditions
+        ? institutions
+            .map((i) =>
+              studyCommissionError(
+                studyCommission(room.config),
+                nextConditions[i]!.settings,
+              ),
+            )
+            .find(Boolean)
+        : studyCommissionError(
+            studyCommission(room.config),
+            study.settings,
+            institutions.some((i) => i !== "cda") ? otherSettings : undefined,
+          );
       if (error) throw new AuctionError(error);
       const changed =
         institutions.join() !== studyInstitutions(room.config).join();
@@ -1328,6 +1529,10 @@ export function executeStudy(
         ]),
       );
       room.config.studyInstitutions = institutions;
+      if (nextConditions) {
+        study.conditionsByInstitution = nextConditions;
+        study.settings = nextConditions[institutions[0]]!.settings;
+      }
       room.config.studyPeriods = selectedPeriods;
       if (timing?.success) {
         room.config.studyTiming = timing.data;
@@ -1357,13 +1562,7 @@ export function executeStudy(
         revision: study.revision,
       });
     } else if (cmd.type === "study-commission") {
-      const error = studyCommissionError(
-        cmd.commission,
-        study.settings,
-        studyInstitutions(room.config).some((i) => i !== "cda")
-          ? study.otherSettings
-          : undefined,
-      );
+      const error = roomCommissionError(room, cmd.commission);
       if (error) throw new AuctionError(error);
       room.config.studyCommission = cmd.commission;
       study.revision++;
@@ -1385,7 +1584,19 @@ export function executeStudy(
         timing: parsed.data,
         revision: study.revision,
       });
+    } else if (cmd.unitsByInstitution) {
+      applyInstitutionSettings(
+        room,
+        { ...cmd, unitsByInstitution: cmd.unitsByInstitution },
+        now,
+        events,
+      );
     } else {
+      if (study.conditionsByInstitution || cmd.settingsByInstitution)
+        throw new AuctionError(
+          "制度別の単位数と供需条件を確認するため、画面を再読込してください。",
+          409,
+        );
       const units = cmd.unitsPerParticipant ?? studyUnits(room.config);
       const allocation = studyRoomAllocation(room);
       const templateSize =
@@ -1577,23 +1788,15 @@ export function executeStudy(
         if (waitingMessage) throw new AuctionError(waitingMessage, 409);
         if (study.lobby?.admission?.error)
           throw new AuctionError(study.lobby.admission.error, 409);
-        const error = studyCommissionError(
-          studyCommission(room.config),
-          study.settings,
-          studyInstitutions(room.config).some((i) => i !== "cda")
-            ? study.otherSettings
-            : undefined,
-        );
+        const error = roomCommissionError(room, studyCommission(room.config));
         if (error) throw new AuctionError(error);
       }
       if (study.lobby) {
         for (const market of study.markets) {
-          const error = studyCommissionError(
+          const error = roomCommissionError(
+            room,
             studyCommission(room.config),
-            settingsForInstitution(room, "cda", market.id),
-            studyInstitutions(room.config).some((i) => i !== "cda")
-              ? settingsForInstitution(room, "call", market.id)
-              : undefined,
+            market.id,
           );
           if (error) throw new AuctionError(`市場${market.id}：${error}`);
         }
@@ -1812,6 +2015,10 @@ export function executeStudy(
       }
       spreadUpdate(room, m, events, now);
     } else if (cmd.type === "call-submit") {
+      if (studySingleUnitOrders(room.config) && cmd.prices.length !== 1)
+        throw new AuctionError(
+          "現在の1単位だけ注文できます。約定後、次の単位を注文してください。",
+        );
       if (m.stage !== "call" || m.submitted.includes(actor.id))
         throw new AuctionError(
           "この回の注文は受付終了または送信済みです。",
@@ -1820,17 +2027,16 @@ export function executeStudy(
       if (!cmd.prices.length || cmd.prices.length > remaining)
         throw new AuctionError("残りの取引可能数を確認してください。");
       cmd.prices.forEach(checkPrice);
-      if (
-        cmd.prices.some(
-          (p, i) =>
-            i > 0 &&
-            (actor.role === "buyer"
-              ? p > cmd.prices[i - 1]
-              : p < cmd.prices[i - 1]),
-        )
-      )
+      const invalidUnit = cmd.prices.findIndex(
+        (p, i) =>
+          i > 0 &&
+          (actor.role === "buyer"
+            ? p > cmd.prices[i - 1]
+            : p < cmd.prices[i - 1]),
+      );
+      if (invalidUnit !== -1)
         throw new AuctionError(
-          "2単位目の買値は1単位目以下、売値は1単位目以上にしてください。",
+          `${maximumUnits + 1 - remaining + invalidUnit}単位目の買値は前の単位以下、売値は前の単位以上にしてください。`,
         );
       for (const [i, price] of cmd.prices.entries()) {
         const id = randomUUID(),
@@ -1854,23 +2060,36 @@ export function executeStudy(
       }
       m.submitted.push(actor.id);
     } else if (cmd.type === "posted-offer") {
+      const sequential = studySingleUnitOrders(room.config);
+      const nextUnit =
+        sequential && m.stage === "purchase" && unitsUsed(room, actor) > 0;
       if (
-        m.stage !== "offer" ||
+        (m.stage !== "offer" && !nextUnit) ||
         actor.role !== "seller" ||
-        m.submitted.includes(actor.id)
+        (sequential
+          ? m.offers.some(
+              (offer) =>
+                offer.participantId === actor.id && offer.remaining > 0,
+            )
+          : m.submitted.includes(actor.id))
       )
         throw new AuctionError(
-          "売り手は価格提示中に1回だけ送信できます。",
+          sequential
+            ? "現在の単位の約定後に、次の単位の価格を提示してください。"
+            : "売り手は価格提示中に1回だけ送信できます。",
           409,
         );
       checkPrice(cmd.price);
       if (
         !Number.isInteger(cmd.quantity) ||
+        (sequential && cmd.quantity !== 1) ||
         cmd.quantity < 1 ||
         cmd.quantity > remaining
       )
         throw new AuctionError(
-          `数量は1〜${maximumUnits}単位で、残りの取引可能数以内にしてください。`,
+          sequential
+            ? "注文数量は現在の1単位だけにしてください。"
+            : `数量は1〜${maximumUnits}単位で、残りの取引可能数以内にしてください。`,
         );
       const offer: PostedOffer = {
         id: randomUUID(),
@@ -1885,8 +2104,29 @@ export function executeStudy(
         offer.at = now;
       }
       m.offers.push(offer);
-      m.submitted.push(actor.id);
+      if (!m.submitted.includes(actor.id)) m.submitted.push(actor.id);
       log(room, m, events, now, "posted-offer", actor.id, { ...offer });
+      if (nextUnit) {
+        const sequence = log(
+          room,
+          m,
+          events,
+          now,
+          "offers-published",
+          "system",
+          { offers: [offer] },
+        );
+        (m.offerHistory ??= []).push({
+          id: offer.id,
+          participantId: actor.id,
+          alias: actor.alias,
+          price: offer.price,
+          quantity: 1,
+          round: marketRound(room, m),
+          at: now,
+          sequence,
+        });
+      }
     } else if (cmd.type === "posted-bid") {
       if (m.stage !== "purchase" || !m.posted || actor.role !== "buyer")
         throw new AuctionError(
@@ -1899,6 +2139,8 @@ export function executeStudy(
         .reduce((sum, bid) => sum + bid.remaining, 0);
       if (
         !Number.isInteger(cmd.quantity) ||
+        (studySingleUnitOrders(room.config) &&
+          (cmd.quantity !== 1 || reserved > 0)) ||
         cmd.quantity < 1 ||
         cmd.quantity > remaining - reserved
       )
@@ -1930,6 +2172,7 @@ export function executeStudy(
         const offer = m.offers.find((o) => o.id === cmd.offerId);
         if (
           !offer ||
+          (studySingleUnitOrders(room.config) && cmd.quantity !== 1) ||
           !Number.isInteger(cmd.quantity) ||
           cmd.quantity < 1 ||
           cmd.quantity > Math.min(remaining, offer.remaining)

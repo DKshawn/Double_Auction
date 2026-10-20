@@ -92,6 +92,8 @@ test("Posted history retains published quotes and sold-out trades across periods
     turn++
   ) {
     session.skipStage();
+    if (session.getSnapshot().view.study!.market.stage === "feedback")
+      session.advanceTime(5);
   }
   assert.equal(session.getSnapshot().view.study!.market.round, 2);
   assert.equal(session.getSnapshot().view.study!.market.stage, "offer");
@@ -144,6 +146,8 @@ test("Call history shows the fourth clearing after automatic period advance, inc
   assert.equal(history(session).rows.length, 3);
   session.skipStage();
 
+  assert.equal(session.getSnapshot().view.study!.market.remainingMs, 5000);
+  session.advanceTime(5);
   const market = session.getSnapshot().view.study!.market;
   assert.equal(market.round, 2);
   assert.equal(market.call, 1);
@@ -168,7 +172,14 @@ test("Call history shows the fourth clearing after automatic period advance, inc
   assert.equal(rows[3][4], `${market.clearings[0].quantity}単位`);
   assert.doesNotMatch(section, /123|買01|売01/);
 
-  for (let call = 0; call < 16; call++) session.skipStage();
+  for (let call = 0; call < 16; call++) {
+    session.skipStage();
+    if (
+      call < 15 &&
+      session.getSnapshot().view.study!.market.stage === "feedback"
+    )
+      session.advanceTime(5);
+  }
   session.advanceTime(8);
   assert.equal(session.getSnapshot().view.study!.market.institution, "cda");
   assert.deepEqual(history(session).rows, []);
@@ -202,6 +213,7 @@ test("sellers see Call history in institution-relative periods without the previ
     true,
   );
   session.skipStage();
+  session.advanceTime(5);
   const market = session.getSnapshot().view.study!.market;
   assert.equal(market.round, 7);
   assert.equal(market.call, 1);

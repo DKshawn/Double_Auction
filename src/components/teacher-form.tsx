@@ -14,9 +14,8 @@ import {
   studyInstitutions,
   studyMarketSize,
   studyTemplateSideCount,
-  studyUnitsPerSide,
-  resizeStudySettings,
   studyUnits,
+  studyUnitCounts,
   studyUnitsError,
 } from "@/lib/study-config";
 import type { ServerStatus } from "@/lib/server/config";
@@ -40,6 +39,8 @@ import type {
   StudyPeriods,
   StudyGeneratorConfig,
   StudySettings,
+  StudyUnitCounts,
+  StudySchedules,
 } from "@/lib/study-types";
 import { TeacherRooms } from "./teacher-rooms";
 import type { RoomConfig } from "@/lib/types";
@@ -48,7 +49,10 @@ import {
   StudyPresetPicker,
   type StudyPresetPreview,
 } from "./study-preset-picker";
-import { generatedStudySettings } from "@/lib/study-generator";
+import {
+  conditionSchedules,
+  presetStudyConditions,
+} from "@/lib/study-conditions";
 import { studyAllocationPlan } from "@/lib/study-allocation";
 import { StudyUnitFields } from "./study-unit-settings";
 import { StudyAllocationPreview } from "./study-allocation-preview";
@@ -119,8 +123,12 @@ export function TeacherForm({
   const [marketMode, setMarketMode] = useState<"auto" | "manual">(
     initialConfig?.studyMarketMode ?? (initialConfig ? "manual" : "auto"),
   );
-  const [cdaUnits, setCdaUnits] = useState(
-    String(studyUnits(initialConfig ?? {})),
+  const [unitsDraft, setUnitsDraft] = useState<Record<Institution, string>>(
+    () => ({
+      cda: String(studyUnits(initialConfig ?? {}, "cda")),
+      call: String(studyUnits(initialConfig ?? {}, "call")),
+      posted: String(studyUnits(initialConfig ?? {}, "posted")),
+    }),
   );
   const [timing, setTiming] = useState(() => ({
     ...DEFAULT_STUDY_TIMING,
@@ -139,52 +147,46 @@ export function TeacherForm({
   const [adoptedConditions, setAdoptedConditions] = useState<{
     marketSize: number;
     units: number;
+    unitsByInstitution: StudyUnitCounts;
+    settingsByInstitution?: StudySchedules;
     generator?: StudyGeneratorConfig;
     settings?: StudySettings;
     otherSettings?: StudySettings;
-  } | null>(() => ({
-    marketSize: studyMarketSize(initialConfig ?? {}),
-    units: studyUnits(initialConfig ?? {}),
-    settings: initialGenerator
-      ? generatedStudySettings(
-          initialGenerator,
-          studyUnitsPerSide(initialConfig ?? {}),
-          studyUnits(initialConfig ?? {}),
-        )
-      : conditionPreset
-        ? resizeStudySettings(
+  } | null>(() => {
+    const config = initialConfig ?? {
+      title: "",
+      capacity: 16,
+      rounds: 15,
+      duration: 180,
+    };
+    const primary = studyInstitutions(config)[0];
+    const schedules = conditionPreset
+      ? conditionSchedules(
+          presetStudyConditions(
+            config,
             conditionPreset.settings,
-            studyMarketSize(initialConfig ?? {}),
-            studyUnits(initialConfig ?? {}),
-          )
-        : undefined,
-    ...(initialGenerator
-      ? { generator: structuredClone(initialGenerator) }
-      : {}),
-    ...(studyUnits(initialConfig ?? {}) !== 2 &&
-    studyInstitutions(initialConfig ?? {}).some((i) => i !== "cda")
-      ? {
-          otherSettings: initialGenerator
-            ? generatedStudySettings(
-                initialGenerator,
-                studyUnitsPerSide(initialConfig ?? {}, "call"),
-              )
-            : conditionPreset
-              ? resizeStudySettings(
-                  conditionPreset.settings,
-                  studyMarketSize(initialConfig ?? {}),
-                )
-              : undefined,
-        }
-      : {}),
-  }));
+            initialGenerator,
+          ),
+        )
+      : undefined;
+    return {
+      marketSize: studyMarketSize(config),
+      units: studyUnits(config, primary),
+      unitsByInstitution: studyUnitCounts(config),
+      settings: schedules?.[primary],
+      settingsByInstitution: schedules,
+      ...(initialGenerator
+        ? { generator: structuredClone(initialGenerator) }
+        : {}),
+    };
+  });
   function configurationSnapshot() {
     return {
       preset,
       marketCount,
       marketSize,
       marketMode,
-      cdaUnits,
+      unitsDraft,
       timing,
       commission,
       institutions,
@@ -209,7 +211,7 @@ export function TeacherForm({
       setMarketCount(saved.marketCount);
       setMarketSize(saved.marketSize);
       setMarketMode(saved.marketMode);
-      setCdaUnits(saved.cdaUnits);
+      setUnitsDraft(saved.unitsDraft);
       setTiming(saved.timing);
       setCommission(saved.commission);
       setInstitutions(saved.institutions);
@@ -247,29 +249,38 @@ export function TeacherForm({
   );
   const count = allocation.requestedMarkets;
   const size = allocation.templateSize;
-  const units = institutions.includes("cda") ? Number(cdaUnits) : 2;
-  const unitsError = studyUnitsError(units);
-  const otherSettings =
-    units !== 2 && institutions.some((i) => i !== "cda") && conditionPreset
-      ? resizeStudySettings(conditionPreset.settings, size)
-      : undefined;
+  const unitsByInstitution = Object.fromEntries(
+    Object.entries(unitsDraft).map(([key, value]) => [key, Number(value)]),
+  ) as StudyUnitCounts;
+  const units = unitsByInstitution[institutions[0] ?? "cda"];
+  const unitsError =
+    institutions
+      .map((i) => studyUnitsError(unitsByInstitution[i]))
+      .find(Boolean) ?? "";
   const layoutError = studyLayoutError(
     marketMode === "auto" ? count : Number(marketCount),
     attendance,
     true,
   );
   const timingError = studyTimingError(timing, institutions);
-  const commissionError = studyCommissionError(
-    commission,
-    adoptedConditions?.settings,
-    institutions.some((i) => i !== "cda")
-      ? adoptedConditions?.otherSettings
-      : undefined,
-  );
+  const commissionError =
+    Object.values(adoptedConditions?.settingsByInstitution ?? {})
+      .map((settings) => studyCommissionError(commission, settings))
+      .find(Boolean) ||
+    studyCommissionError(
+      commission,
+      adoptedConditions?.settings,
+      institutions.some((i) => i !== "cda")
+        ? adoptedConditions?.otherSettings
+        : undefined,
+    );
   const conditionsPending =
     !adoptedConditions ||
     adoptedConditions.marketSize !== size ||
-    adoptedConditions.units !== units;
+    adoptedConditions.units !== units ||
+    institutions.some(
+      (i) => adoptedConditions?.unitsByInstitution[i] !== unitsByInstitution[i],
+    );
   const configurationError =
     layoutError ||
     unitsError ||
@@ -297,6 +308,9 @@ export function TeacherForm({
       institutionError ||
       periodsError ||
       timingError ||
+      Object.values(preview.settingsByInstitution ?? {})
+        .map((settings) => studyCommissionError(amount, settings))
+        .find(Boolean) ||
       studyCommissionError(amount, preview.settings, preview.otherSettings);
     if (invalid) {
       setError(invalid);
@@ -305,6 +319,8 @@ export function TeacherForm({
     setAdoptedConditions({
       marketSize: size,
       units,
+      unitsByInstitution,
+      settingsByInstitution: preview.settingsByInstitution,
       generator: preview.generator,
       settings: preview.settings,
       otherSettings: preview.otherSettings,
@@ -364,7 +380,8 @@ export function TeacherForm({
             duration: selectedTiming.cdaSeconds,
             studyTiming: selectedTiming,
             studyCommission: commission,
-            studyCdaUnits: units,
+            studyCdaUnits: unitsByInstitution.cda,
+            studyUnitCounts: unitsByInstitution,
             studyInstitutions: institutions,
             studyPeriods: Object.fromEntries(
               institutions.map((i) => [i, periods[i]]),
@@ -408,27 +425,12 @@ export function TeacherForm({
   const conditionSection = (
     <div className="teacher-condition-layout">
       <StudyPresetPicker
-        existingPreset={
-          conditionPreset && !layoutError && !unitsError
-            ? {
-                label: conditionPreset.label,
-                settings: resizeStudySettings(
-                  conditionPreset.settings,
-                  size,
-                  units,
-                ),
-              }
-            : undefined
-        }
+        existingPreset={conditionPreset}
         units={studyTemplateSideCount({ marketSize: size }) * units}
         unitsPerParticipant={units}
+        unitsByInstitution={unitsByInstitution}
+        institutions={institutions}
         marketLayout={allocation.layout}
-        otherSettings={otherSettings}
-        otherUnits={
-          units !== 2 && institutions.some((i) => i !== "cda")
-            ? studyUnitsPerSide({ marketSize: size }, "call")
-            : undefined
-        }
         initialGenerator={adoptedConditions?.generator}
         disabled={pending}
         validationError={
@@ -440,9 +442,12 @@ export function TeacherForm({
         }
         renderUnitFields={(fieldsDisabled) => (
           <StudyUnitFields
-            cdaUnits={cdaUnits}
-            onChange={(value) => {
-              setCdaUnits(value);
+            units={unitsDraft}
+            onChange={(institution, value) => {
+              setUnitsDraft((previous) => ({
+                ...previous,
+                [institution]: value,
+              }));
               setAdoptedConditions(null);
               setError("");
             }}
@@ -468,6 +473,7 @@ export function TeacherForm({
               studyInstitutions: institutions,
             }}
             settings={preview.settings}
+            settingsByInstitution={preview.settingsByInstitution}
             otherSettings={other}
             commission={commission}
           />
@@ -888,7 +894,7 @@ export function TeacherForm({
               id={configurationId}
               index={2}
               label="供需条件"
-              summary={`${adoptedConditions?.generator ? "カスタム" : (conditionPreset?.label ?? "Default")} · ${institutions.map((i) => `${INSTITUTIONS[i].short} ${i === "cda" ? units : 2}単位`).join(" · ")} · Commission ${commission}円`}
+              summary={`${adoptedConditions?.generator ? "カスタム" : (conditionPreset?.label ?? "Default")} · ${institutions.map((i) => `${INSTITUTIONS[i].short} ${unitsByInstitution[i]}単位`).join(" · ")} · Commission ${commission}円`}
               expanded={configurationStep === 2}
               complete={
                 detailsSaved && !configurationError && !conditionsPending

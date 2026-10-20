@@ -5,7 +5,11 @@ import { decimal } from "@/lib/client";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import type { StudyView } from "@/lib/study-types";
 import type { RoomConfig, RoomView } from "@/lib/types";
-import { studyMarketCounts, studyPeriodAt } from "@/lib/study-config";
+import {
+  studyMarketCounts,
+  studyPeriodAt,
+  studyCallsPerPeriod,
+} from "@/lib/study-config";
 
 export function StudyMarketOverview({
   teacher,
@@ -75,7 +79,7 @@ export function StudyMarketOverview({
       </div>
       <p className="muted">
         {chosenRound === null
-          ? "各市場の現在の期を集計（Callは4回分）。期の右の時間は現在の段階の残り時間です。"
+          ? `各市場の現在の期を集計（Callは${studyCallsPerPeriod(config)}回分）。期の右の時間は現在の段階の残り時間です。`
           : `第${chosenRound}期の集計です。進行期・残り時間・入室・状態は現在の状況です。`}
         市場名を押すと表示を切り替え、ダブルクリックで注文・清算を開きます。
       </p>
@@ -129,7 +133,7 @@ export function StudyMarketOverview({
                     : market.stage === "feedback"
                       ? "結果確認"
                       : market.stage === "call"
-                        ? `受付 ${market.call}/4`
+                        ? `受付 ${market.call}/${studyCallsPerPeriod(config)}`
                         : market.stage === "offer"
                           ? "価格提示"
                           : "取引中",

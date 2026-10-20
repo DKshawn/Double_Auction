@@ -187,6 +187,8 @@ test("Call demo publishes orders, clears uniformly, retains unit limits across c
     false,
   );
   for (let i = 0; i < 3; i++) demo.skipStage();
+  assert.equal(demo.getSnapshot().view.study!.market.remainingMs, 5000);
+  demo.advanceTime(5);
   assert.equal(demo.getSnapshot().view.study!.market.round, 2);
   assert.equal(demo.getSnapshot().view.phase, "running");
   assert.equal(demo.getSnapshot().view.study!.unitsUsed, 0);
@@ -206,6 +208,8 @@ test("Call demo advances all four calls without human orders and allows trading 
       assert.equal(view.me.profit, 0);
       demo.skipStage();
     }
+    assert.equal(demo.getSnapshot().view.study!.market.remainingMs, 5000);
+    demo.advanceTime(5);
     const next = demo.getSnapshot().view;
     assert.equal(next.study!.market.round, 2);
     assert.equal(next.study!.market.call, 1);
@@ -307,7 +311,7 @@ test("Posted demo collects human bids with bots and only trades at a one-second 
 test("demo shows different market periods and clocks without rejecting a human in a slower market", async () => {
   const demo = new DemoSession("cda", "buyer", 1000);
   await demo.command({ type: "start" }, true);
-  demo.advanceTime(120);
+  demo.advanceTime(125);
   assert.equal(demo.getSnapshot().view.round, 1);
   assert.equal(await demo.command({ type: "study-quote", price: 100 }), true);
   demo.toggleTeacher();

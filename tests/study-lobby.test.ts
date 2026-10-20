@@ -304,13 +304,7 @@ test("demo countdown survives pause and trading cannot start before assignment a
   demo.toggleTeacher();
   assert.match(markup(), /割り当てが完了しました/);
   assert.equal(await demo.command({ type: "start" }, true), true);
-  // Random assignment can place the demo student in any starting institution.
-  assert.match(
-    markup(),
-    demo.getSnapshot().view.study!.market.institution === "cda"
-      ? /第1期 Start/
-      : /まもなく実験が始まります/,
-  );
+  assert.match(markup(), /第1期 Start/);
   assert.equal(demo.getSnapshot().view.study!.market.deadline, 6000);
   demo.advanceTime(2);
   assert.equal(await demo.command({ type: "pause" }, true), true);

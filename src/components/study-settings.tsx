@@ -7,6 +7,7 @@ import { studyCommission } from "@/lib/study-commission";
 import { StudyPresetGenerator } from "./study-preset-generator";
 import { StudyConditionPreview } from "./study-condition-preview";
 import { isValidPrice } from "@/lib/price";
+import { INSTITUTIONS } from "@/lib/study-rules";
 
 export function StudySettingsEditor({
   view,
@@ -46,8 +47,6 @@ export function StudySettingsEditor({
           <h2>供需条件の設定</h2>
           <p className="muted">
             全市場・全期で条件を固定します。開始後は変更できません。
-            {teacher.otherSettings &&
-              "現在はCDAの条件を表示しています。Call Market・Posted Offerは従来の2単位の条件を保ちます。"}
           </p>
         </div>
       </div>
@@ -65,6 +64,7 @@ export function StudySettingsEditor({
         <StudyConditionPreview settings={settings} commission={commission} />
       )}
       {!onConfirmed &&
+        !teacher.settingsByInstitution &&
         teacher.otherSettings &&
         institutions.some((i) => i !== "cda") && (
           <details className="study-other-conditions">
@@ -75,6 +75,25 @@ export function StudySettingsEditor({
             />
           </details>
         )}
+      {!onConfirmed &&
+        teacher.settingsByInstitution &&
+        institutions.slice(1).map((institution) => {
+          const schedule = teacher.settingsByInstitution![institution];
+          return (
+            schedule && (
+              <details className="study-other-conditions" key={institution}>
+                <summary>
+                  {INSTITUTIONS[institution].short}の条件（各自
+                  {schedule.values[0].length}単位）
+                </summary>
+                <StudyConditionPreview
+                  settings={schedule}
+                  commission={commission}
+                />
+              </details>
+            )
+          );
+        })}
     </section>
   );
 }

@@ -27,17 +27,14 @@ export function studyCountdownLabel(
   if (market.stage === "purchase") return "取引終了まで";
   if (market.stage === "offer") return "価格提示の締切まで";
   if (market.stage === "feedback")
-    return market.round === totalRounds
-      ? "実験終了まで"
-      : market.institution === "cda"
-        ? "次の取引開始まで"
-        : "次の制度まで";
+    return market.round === totalRounds ? "実験終了まで" : "次の取引開始まで";
   if (market.stage === "countdown") return "取引開始まで";
   return "この段階の残り時間";
 }
 
-// CDA uses the existing eight-second server-side feedback stage: End for
-// three seconds, then Start for five. The trading deadline is never shortened.
+// Review the next period during the last five seconds of server-side feedback.
+// CDA and institution endings retain eight seconds of results; other periods
+// use a five-second Start. The trading deadline is never shortened.
 export function studyPeriodTransition(
   config: RoomConfig,
   phase: Phase,
@@ -46,14 +43,14 @@ export function studyPeriodTransition(
 ): { kind: "Start" | "End"; period: number; seconds: number } | null {
   if (phase !== "running" && phase !== "paused") return null;
   const remaining = studyRemainingMs(phase, market, now);
-  if (market.stage === "countdown" && market.institution === "cda")
+  if (market.stage === "countdown")
     return { kind: "Start", period: 1, seconds: Math.ceil(remaining / 1000) };
   if (market.stage !== "feedback") return null;
   const next =
     market.round < config.rounds
       ? studyPeriodAt(config, market.order, market.round + 1)
       : null;
-  if (remaining <= STUDY_START_SECONDS * 1000 && next?.institution === "cda")
+  if (remaining <= STUDY_START_SECONDS * 1000 && next)
     return {
       kind: "Start",
       period: next.period,

@@ -31,11 +31,13 @@ import {
   studyMarketCounts,
   studyUnitsPerSide,
   studyUnits,
+  studySingleUnitOrders,
   studyRole,
   studyRoleIndex,
 } from "./study-config";
 import { studyRoomConfigSchema } from "./study-room-config";
 import { generatedStudySettings } from "./study-generator";
+import { presetStudyConditions } from "./study-conditions";
 import { studyCommission, studyCommissionError } from "./study-commission";
 import { csv } from "./csv";
 import { studyExport } from "./study-export";
@@ -221,7 +223,9 @@ export class DemoSession {
       institutions,
       studyUnits(config) === 2
         ? undefined
-        : this.options.generator && institutions.some((i) => i !== "cda")
+        : !config.studyUnitCounts &&
+            this.options.generator &&
+            institutions.some((i) => i !== "cda")
           ? generatedStudySettings(
               this.options.generator,
               studyUnitsPerSide(config, "call"),
@@ -232,6 +236,14 @@ export class DemoSession {
       settings: structuredClone(DEMO_SETTINGS),
       otherSettings: structuredClone(DEMO_SETTINGS),
     };
+    if (config.studyUnitCounts) {
+      study.conditionsByInstitution = presetStudyConditions(
+        config,
+        DEMO_SETTINGS,
+        this.options.generator,
+      );
+      study.settings = study.conditionsByInstitution[institutions[0]]!.settings;
+    }
     if (this.options.lobby)
       study.lobby = {
         revision: 0,
@@ -330,11 +342,20 @@ export class DemoSession {
     const commissionError = studyCommissionError(
       studyCommission(config),
       this.room.study!.settings,
-      institutions.some((i) => i !== "cda")
+      !study.conditionsByInstitution && institutions.some((i) => i !== "cda")
         ? this.room.study!.otherSettings
         : undefined,
     );
     if (commissionError) throw new Error(commissionError);
+    for (const condition of Object.values(
+      study.conditionsByInstitution ?? {},
+    )) {
+      const error = studyCommissionError(
+        studyCommission(config),
+        condition.settings,
+      );
+      if (error) throw new Error(error);
+    }
     this.publish();
   };
 
@@ -503,8 +524,9 @@ export class DemoSession {
     if (this.room.phase !== "running" || this.role !== "buyer") return;
     if (this.market.stage === "offer") this.skipStage();
     if (this.market.posted) return;
-    // Each preceding buyer needs at most two purchases and a pass.
-    const attempts = this.market.buyerOrder.length * 3;
+    const attempts =
+      this.market.buyerOrder.length *
+      (studyUnits(this.room.config, "posted") + 1);
     for (let i = 0; i < attempts && this.market.stage === "purchase"; i++) {
       const id = this.market.buyerOrder[this.market.buyerIndex];
       if (id === this.humanId) break;
@@ -518,8 +540,21 @@ export class DemoSession {
     if (this.room.phase !== "running") return;
     for (const bot of this.bots) {
       const market = marketFor(this.room, bot);
-      if (!["call", "offer"].includes(market.stage)) continue;
-      if (market.submitted.includes(bot.id)) continue;
+      const sequential = studySingleUnitOrders(this.room.config);
+      const nextOffer =
+        sequential &&
+        market.stage === "purchase" &&
+        bot.role === "seller" &&
+        unitsUsed(this.room, bot) > 0;
+      if (!["call", "offer"].includes(market.stage) && !nextOffer) continue;
+      if (
+        nextOffer
+          ? market.offers.some(
+              (offer) => offer.participantId === bot.id && offer.remaining > 0,
+            )
+          : market.submitted.includes(bot.id)
+      )
+        continue;
       const used = unitsUsed(this.room, bot);
       if (
         used >=
@@ -534,14 +569,19 @@ export class DemoSession {
         this.sendBot(bot, {
           type: "call-submit",
           prices: limits
-            .slice(used)
+            .slice(used, sequential ? used + 1 : undefined)
             .map((limit) => (bot.role === "buyer" ? limit - 12 : limit + 12)),
         });
-      } else if (market.stage === "offer" && bot.role === "seller") {
+      } else if (
+        (market.stage === "offer" || nextOffer) &&
+        bot.role === "seller"
+      ) {
         this.sendBot(bot, {
           type: "posted-offer",
-          price: limits.at(-1)! + 12,
-          quantity: studyUnits(this.room.config, "posted") - used,
+          price: (sequential ? limits[used] : limits.at(-1)!) + 12,
+          quantity: sequential
+            ? 1
+            : studyUnits(this.room.config, "posted") - used,
         });
       }
     }
@@ -555,8 +595,12 @@ export class DemoSession {
       const reserved = market.posted.bids
         .filter((bid) => bid.participantId === bot.id)
         .reduce((sum, bid) => sum + bid.remaining, 0);
-      const available = 2 - used - reserved;
-      if (available > 0)
+      const available =
+        studyUnits(this.room.config, "posted") - used - reserved;
+      if (
+        available > 0 &&
+        (!studySingleUnitOrders(this.room.config) || reserved === 0)
+      )
         this.sendBot(bot, {
           type: "posted-bid",
           price: unitLimits(this.room, bot)[used + reserved] - 12,
@@ -572,12 +616,14 @@ export class DemoSession {
       this.sendBot(bot, { type: "posted-pass" });
       return;
     }
-    const quantity = Math.min(
-      offer.remaining,
-      unitLimits(this.room, bot)
-        .slice(used)
-        .filter((value) => offer.price <= value).length,
-    );
+    const quantity = studySingleUnitOrders(this.room.config)
+      ? 1
+      : Math.min(
+          offer.remaining,
+          unitLimits(this.room, bot)
+            .slice(used)
+            .filter((value) => offer.price <= value).length,
+        );
     this.sendBot(bot, { type: "posted-buy", offerId: offer.id, quantity });
   }
 

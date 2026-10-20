@@ -36,6 +36,18 @@ const PRESETS = [
     height: 982,
     description: "1512 × 982 · Retina 2×",
   },
+  {
+    screen: "iPad Pro M4 11インチ",
+    width: 1210,
+    height: 834,
+    description: "1210 × 834 · 横向き · Retina 2×",
+  },
+  {
+    screen: "iPad Pro M4 13インチ",
+    width: 1376,
+    height: 1032,
+    description: "1376 × 1032 · 横向き · Retina 2×",
+  },
 ] as const;
 
 export function DemoPreview() {

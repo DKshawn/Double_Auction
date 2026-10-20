@@ -26,7 +26,12 @@ import { randomInt, randomUUID } from "node:crypto";
 import type { CommandRequest, RoomConfig, RoomView } from "../types";
 import type { RoomSession } from "../room-session";
 import type { RoomSummary } from "../room-management";
-import type { StudyGeneratorConfig, StudySettings } from "../study-types";
+import type {
+  StudyGeneratorConfig,
+  StudySettings,
+  StudyConditions,
+} from "../study-types";
+import { presetStudyConditions } from "../study-conditions";
 import { generatedStudySettings } from "../study-generator";
 import { studyAllocationPlan } from "../study-allocation";
 import {
@@ -59,6 +64,7 @@ import {
   studyTimingSchema,
   studyInstitutionsSchema,
   studyPeriodsSchema,
+  studyUnitCountsSchema,
   unitLimits,
   recordStudyGeneratedAssignments,
   applyStudyGenerator,
@@ -113,10 +119,12 @@ export class AuctionService {
       const institutions = DEFAULT_STUDY_INSTITUTIONS.filter((i) =>
         selection.data.includes(i),
       );
-      if (!institutions.includes("cda") && studyUnits(config) !== 2)
-        throw new AuctionError(
-          "Call Market・Posted Offerの単位数は2で固定です。",
-        );
+      if (
+        config.studyUnitCounts &&
+        !studyUnitCountsSchema.partial().safeParse(config.studyUnitCounts)
+          .success
+      )
+        throw new AuctionError(studyUnitsError(NaN));
       const periods = studyPeriodsSchema.safeParse(config.studyPeriods ?? {});
       if (!periods.success)
         throw new AuctionError(
@@ -158,7 +166,30 @@ export class AuctionService {
       };
     }
     let otherStudySettings: StudySettings | undefined;
-    if (generator) {
+    let initialConditions: StudyConditions | undefined;
+    if (config.protocol === "institutions-v1" && config.studyUnitCounts) {
+      try {
+        initialConditions = presetStudyConditions(
+          config,
+          pptStudySettings(),
+          generator,
+        );
+        for (const condition of Object.values(initialConditions)) {
+          const error = studyCommissionError(
+            studyCommission(config),
+            condition.settings,
+          );
+          if (error) throw new Error(error);
+        }
+      } catch (error) {
+        throw new AuctionError(
+          error instanceof Error
+            ? error.message
+            : "供需条件を確認してください。",
+        );
+      }
+    }
+    if (generator && !initialConditions) {
       generator = structuredClone(generator);
       try {
         generatedStudySettings(
@@ -182,7 +213,7 @@ export class AuctionService {
         );
       }
     }
-    if (config.protocol === "institutions-v1") {
+    if (config.protocol === "institutions-v1" && !initialConditions) {
       const settings = generator
         ? generatedStudySettings(
             generator,
@@ -268,6 +299,13 @@ export class AuctionService {
           receipts: [],
         };
         const events: AuditEvent[] = [];
+        if (initialConditions) {
+          room.study!.conditionsByInstitution =
+            structuredClone(initialConditions);
+          room.study!.settings = structuredClone(
+            initialConditions[studyInstitutions(config)[0]]!.settings,
+          );
+        }
         if (otherStudySettings)
           room.study!.otherSettings = structuredClone(otherStudySettings);
         if (generator) applyStudyGenerator(room, generator, now);
@@ -278,6 +316,12 @@ export class AuctionService {
             ? {
                 protocol: room.study.protocol,
                 settings: room.study.settings,
+                ...(room.study.conditionsByInstitution
+                  ? {
+                      conditionsByInstitution:
+                        room.study.conditionsByInstitution,
+                    }
+                  : {}),
                 ...(room.study.otherSettings
                   ? { otherSettings: room.study.otherSettings }
                   : {}),

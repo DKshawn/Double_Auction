@@ -3,7 +3,11 @@ import { studyAllocationPreview } from "./study-allocation";
 import type { Institution, StudyMarketView, StudyMetric } from "./study-types";
 import type { RoomView } from "./types";
 import type { Participant, Room } from "./auction-model";
-import { studyPeriodAt, studyMarketId } from "./study-config";
+import {
+  studyPeriodAt,
+  studyMarketId,
+  studyInstitutions,
+} from "./study-config";
 import { studyTradeProfit } from "./study-commission";
 import { postedBookOrders } from "./posted-auction";
 import {
@@ -298,8 +302,13 @@ function publicMarket(
       : (m.posted ? common.orders : m.orders).filter(
           (o) => o.participantId === id,
         ),
-    submitted: m.submitted.includes(id),
-    myOffer: m.offers.find((o) => o.participantId === id) ?? null,
+    submitted:
+      institutionFor(room, m) === "posted" && room.config.studyUnitCounts
+        ? m.offers.some(
+            (offer) => offer.participantId === id && offer.remaining > 0,
+          )
+        : m.submitted.includes(id),
+    myOffer: m.offers.findLast((o) => o.participantId === id) ?? null,
   };
 }
 export function studyView(
@@ -399,6 +408,25 @@ export function studyView(
         teacher || (study.lobby && room.phase === "waiting")
           ? null
           : unitLimits(room, actor),
+      ...(!teacher &&
+      market.stage === "feedback" &&
+      publicState.round < room.config.rounds
+        ? {
+            nextConditions: {
+              institution: studyPeriodAt(
+                room.config,
+                market.order,
+                publicState.round + 1,
+              ).institution,
+              unitLimits: unitLimits(
+                room,
+                actor,
+                studyPeriodAt(room.config, market.order, publicState.round + 1)
+                  .institution,
+              ),
+            },
+          }
+        : {}),
       unitsUsed: teacher ? 0 : unitsUsed(room, actor),
       myTrades: myTradeNotifications.filter(
         (t) => t.institution === publicState.institution,
@@ -418,6 +446,16 @@ export function studyView(
       ...(allocation ? { allocation } : {}),
       settings: study.settings,
       ...(study.otherSettings ? { otherSettings: study.otherSettings } : {}),
+      ...(study.conditionsByInstitution
+        ? {
+            settingsByInstitution: Object.fromEntries(
+              studyInstitutions(room.config).map((i) => [
+                i,
+                settingsForInstitution(room, i),
+              ]),
+            ),
+          }
+        : {}),
       ...(study.generation ? { generation: study.generation } : {}),
       markets: study.markets.map((m) =>
         publicMarket(room, m, actor, now, cache),

@@ -195,6 +195,8 @@ export type StudyView = {
   settingsRevision: number;
   market: StudyMarketView;
   unitLimits: UnitValues | null;
+  // Own upcoming conditions, so the Start prompt can preview a fresh first unit.
+  nextConditions?: { institution: Institution; unitLimits: UnitValues };
   unitsUsed: number;
   myTrades: {
     id: string;
@@ -209,6 +211,7 @@ export type StudyView = {
   myTradeNotifications?: StudyView["myTrades"];
   teacher?: {
     settings: StudySettings;
+    settingsByInstitution?: StudySchedules;
     otherSettings?: StudySettings;
     preset?: { label: string; settings: StudySettings };
     generation?: StudyGeneration;
@@ -238,6 +241,17 @@ export type StudyView = {
     marketEquilibria?: Record<number, Record<Institution, StudyEquilibrium>>;
   };
 };
+export type StudyUnitCounts = Record<Institution, number>;
+export type StudyInstitutionConditions = {
+  settings: StudySettings;
+  basis: StudySettings;
+  generator?: StudyGeneratorConfig;
+};
+export type StudyConditions = Partial<
+  Record<Institution, StudyInstitutionConditions>
+>;
+export type StudySchedules = Partial<Record<Institution, StudySettings>>;
+
 export type StudyCommand =
   | {
       type: "study-admission";
@@ -275,6 +289,8 @@ export type StudyCommand =
       generator?: StudyGeneratorConfig;
       commission?: number;
       unitsPerParticipant?: number;
+      unitsByInstitution?: StudyUnitCounts;
+      settingsByInstitution?: StudySchedules;
       expectedRevision: number;
     }
   | { type: "study-quote"; price: number }

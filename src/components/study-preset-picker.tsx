@@ -11,6 +11,9 @@ import type {
   StudyGeneratorConfig,
   StudySettings,
   StudyAllocationPlan,
+  StudyUnitCounts,
+  StudySchedules,
+  Institution,
 } from "@/lib/study-types";
 import {
   StudyConditionPreview,
@@ -20,10 +23,16 @@ import { StudyCommissionField } from "./study-commission-settings";
 import { studyCommissionError } from "@/lib/study-commission";
 import { MAX_PRICE } from "@/lib/price";
 import { studyMarketSettings } from "@/lib/study-config";
+import {
+  conditionSchedules,
+  presetStudyConditions,
+} from "@/lib/study-conditions";
+import { INSTITUTIONS } from "@/lib/study-rules";
 
 export type StudyPresetPreview = {
   settings: StudySettings;
   otherSettings?: StudySettings;
+  settingsByInstitution?: StudySchedules;
   generator?: StudyGeneratorConfig;
   revision: number;
 };
@@ -33,6 +42,8 @@ export function StudyPresetPicker({
   existingPreset,
   units,
   unitsPerParticipant = 2,
+  unitsByInstitution,
+  institutions,
   otherSettings,
   otherUnits,
   revision = 0,
@@ -55,6 +66,8 @@ export function StudyPresetPicker({
   existingPreset?: { label: string; settings: StudySettings };
   units: number;
   unitsPerParticipant?: number;
+  unitsByInstitution?: StudyUnitCounts;
+  institutions?: readonly Institution[];
   otherSettings?: StudySettings;
   // Creation derives the other institutions' two-unit schedule from the same preset.
   // After creation their saved conditions are passed unchanged via otherSettings.
@@ -100,7 +113,9 @@ export function StudyPresetPicker({
   const perSide = units / unitsPerParticipant;
   const blocked = disabled || confirming;
   const fieldsBlocked = blocked;
-  const cdaOnly = unitsPerParticipant !== 2 || Boolean(otherSettings);
+  const cdaOnly =
+    !unitsByInstitution &&
+    (unitsPerParticipant !== 2 || Boolean(otherSettings));
   function otherConditions(generator?: StudyGeneratorConfig) {
     if (!otherUnits || !generator) return otherSettings;
     try {
@@ -112,6 +127,7 @@ export function StudyPresetPicker({
     }
   }
   let candidate: StudySettings | undefined;
+  let candidates: StudySchedules | undefined;
   let candidateOther: StudySettings | undefined = otherSettings;
   let generationError = "";
   let otherError = "";
@@ -124,9 +140,27 @@ export function StudyPresetPicker({
       throw new Error(
         "Defaultの供需条件を取得できません。画面を再読込してください。",
       );
-    candidate = generator
-      ? generatedStudySettings(generator, units, unitsPerParticipant)
-      : existingPreset!.settings;
+    if (unitsByInstitution && institutions?.length) {
+      candidates = conditionSchedules(
+        presetStudyConditions(
+          {
+            title: "",
+            rounds: 1,
+            duration: 1,
+            capacity: perSide * 2,
+            marketSize: perSide * 2,
+            studyInstitutions: [...institutions],
+            studyUnitCounts: unitsByInstitution,
+          },
+          existingPreset?.settings ?? { values: [], costs: [] },
+          generator,
+        ),
+      );
+      candidate = candidates[institutions[0]];
+    } else
+      candidate = generator
+        ? generatedStudySettings(generator, units, unitsPerParticipant)
+        : existingPreset!.settings;
   } catch (e) {
     generationError =
       e instanceof Error ? e.message : "パラメータを確認してください。";
@@ -137,12 +171,13 @@ export function StudyPresetPicker({
     otherError =
       e instanceof Error ? e.message : "他制度の供需条件を確認してください。";
   }
+  const templateSettings = candidates ? Object.values(candidates) : [];
   const actualSettings =
-    candidate && marketLayout
+    candidates && marketLayout
       ? marketLayout.flatMap((counts, i) =>
           !counts.buyers || !counts.sellers
             ? []
-            : [
+            : templateSettings.map((settings) =>
                 studyMarketSettings(
                   {
                     title: "",
@@ -151,37 +186,60 @@ export function StudyPresetPicker({
                     duration: 0,
                     studyLayout: marketLayout,
                   },
-                  candidate!,
+                  settings,
                   i + 1,
                 ),
-                ...(candidateOther
-                  ? [
-                      studyMarketSettings(
-                        {
-                          title: "",
-                          capacity: 0,
-                          rounds: 0,
-                          duration: 0,
-                          studyLayout: marketLayout,
-                        },
-                        candidateOther,
-                        i + 1,
-                      ),
-                    ]
-                  : []),
-              ],
+              ),
         )
-      : [];
+      : candidate && marketLayout
+        ? marketLayout.flatMap((counts, i) =>
+            !counts.buyers || !counts.sellers
+              ? []
+              : [
+                  studyMarketSettings(
+                    {
+                      title: "",
+                      capacity: 0,
+                      rounds: 0,
+                      duration: 0,
+                      studyLayout: marketLayout,
+                    },
+                    candidate!,
+                    i + 1,
+                  ),
+                  ...(candidateOther
+                    ? [
+                        studyMarketSettings(
+                          {
+                            title: "",
+                            capacity: 0,
+                            rounds: 0,
+                            duration: 0,
+                            studyLayout: marketLayout,
+                          },
+                          candidateOther,
+                          i + 1,
+                        ),
+                      ]
+                    : []),
+                ],
+          )
+        : [];
   const commissionError =
     studyCommissionError(commission, candidate, candidateOther) ||
-    actualSettings
+    [...templateSettings, ...actualSettings]
       .map((s) => studyCommissionError(commission, s))
       .find(Boolean) ||
     "";
   // A preview is derived from the current inputs; saving still requires confirmation.
   const preview: StudyPresetPreview | null =
     candidate && !generationError && !otherError
-      ? { settings: candidate, generator, revision }
+      ? {
+          settings: candidate,
+          settingsByInstitution: candidates,
+          generator,
+          revision,
+        }
       : null;
   const previewError = generationError || otherError || error;
 
@@ -215,7 +273,7 @@ export function StudyPresetPicker({
         amount={commission}
         settings={candidate}
         otherSettings={candidateOther}
-        additionalSettings={actualSettings}
+        additionalSettings={[...templateSettings, ...actualSettings]}
         disabled={fieldsBlocked || locked}
         onChange={(amount) => {
           onCommissionChange(amount);
@@ -225,7 +283,10 @@ export function StudyPresetPicker({
       {custom && !validationError && (
         <>
           <p className="field-help">
-            {cdaOnly && "CDA："}条件テンプレート：買い手{perSide}人・売り手
+            {unitsByInstitution && institutions
+              ? `${INSTITUTIONS[institutions[0]].short}：`
+              : cdaOnly && "CDA："}
+            条件テンプレート：買い手{perSide}人・売り手
             {perSide}人、各
             {unitsPerParticipant}単位、片側{units}単位。
             {cdaOnly && "Call Market・Posted Offerは各自2単位です。"}
@@ -290,7 +351,9 @@ export function StudyPresetPicker({
       {(custom || renderAllocation) && preview && (
         <div className="study-generated-preview">
           <h3>
-            {cdaOnly && "CDA："}
+            {unitsByInstitution && institutions
+              ? `${INSTITUTIONS[institutions[0]].short}：`
+              : cdaOnly && "CDA："}
             {preview.generator
               ? "カスタムのプレビュー"
               : `${existingPreset?.label}のプレビュー`}
@@ -311,6 +374,26 @@ export function StudyPresetPicker({
             </p>
           )}
           {renderAssignments?.(preview)}
+          {candidates &&
+            institutions
+              ?.slice(1)
+              .filter(
+                (i) =>
+                  JSON.stringify(candidates[i]) !==
+                  JSON.stringify(preview.settings),
+              )
+              .map((i) => (
+                <details className="study-other-conditions" key={i}>
+                  <summary>
+                    {INSTITUTIONS[i].short}の条件（各自{unitsByInstitution![i]}
+                    単位）
+                  </summary>
+                  <StudyConditionPreview
+                    settings={candidates![i]!}
+                    commission={commission}
+                  />
+                </details>
+              ))}
           {candidateOther && (
             <details className="study-other-conditions">
               <summary>Call Market・Posted Offerの条件（各自2単位）</summary>

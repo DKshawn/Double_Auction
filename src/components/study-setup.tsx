@@ -98,7 +98,9 @@ export function StudySetup({
   const labels = ["制度と進行", "市場・取引条件", "入室締切", "割り当て確認"];
   const summaries = [
     programSummary,
-    `${admission.targetMarkets}市場 · ${studyUnits(view.config)}単位 · Commission ${studyCommission(view.config)}円`,
+    `${admission.targetMarkets}市場 · ${studyInstitutions(view.config)
+      .map((i) => `${INSTITUTIONS[i].short} ${studyUnits(view.config, i)}単位`)
+      .join("・")} · Commission ${studyCommission(view.config)}円`,
     admission.status === "closed"
       ? `${view.participantCount}人・締切済み`
       : admission.closesAt !== null

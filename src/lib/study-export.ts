@@ -4,6 +4,8 @@ import {
   studyMarketSize,
   studyMarketCounts,
   studyUnits,
+  studySingleUnitOrders,
+  studyCallsPerPeriod,
   studyInstitutions,
   studyPeriodCount,
   studyPeriodAt,
@@ -41,15 +43,27 @@ export function studyExport(
           phase: room.phase,
           rules: {
             ...STUDY_RULES,
-            unitsPerPeriod:
-              studyUnits(room.config) === 2 ||
-              studyInstitutions(room.config).every((i) => i === "cda")
-                ? studyUnits(room.config)
-                : null,
+            callsPerPeriod: studyCallsPerPeriod(room.config),
+            ...(studySingleUnitOrders(room.config)
+              ? {
+                  callSubmission: "one-current-unit-per-participant-per-call",
+                  postedOffers:
+                    "first-unit-sealed-then-next-unit-requoted-after-fill",
+                  postedSubmissionQuantity:
+                    "one-current-unit-with-no-outstanding-order",
+                }
+              : {}),
+            unitsPerPeriod: studyInstitutions(room.config).every(
+              (i) =>
+                studyUnits(room.config, i) ===
+                studyUnits(room.config, studyInstitutions(room.config)[0]),
+            )
+              ? studyUnits(room.config, studyInstitutions(room.config)[0])
+              : null,
             unitsPerInstitution: {
               cda: studyUnits(room.config),
-              call: 2,
-              posted: 2,
+              call: studyUnits(room.config, "call"),
+              posted: studyUnits(room.config, "posted"),
             },
             commission: studyCommission(room.config),
             ...studyTiming(room.config),
@@ -91,8 +105,22 @@ export function studyExport(
               }
             : {}),
           schedules: study.settings,
-          schedulesInstitution: study.otherSettings ? "cda" : "all-selected",
-          ...(study.otherSettings
+          ...(study.conditionsByInstitution
+            ? {
+                schedulesByInstitution: Object.fromEntries(
+                  studyInstitutions(room.config).map((i) => [
+                    i,
+                    settingsForInstitution(room, i),
+                  ]),
+                ),
+              }
+            : {}),
+          schedulesInstitution: study.conditionsByInstitution
+            ? studyInstitutions(room.config)[0]
+            : study.otherSettings
+              ? "cda"
+              : "all-selected",
+          ...(!study.conditionsByInstitution && study.otherSettings
             ? { otherInstitutionSchedules: study.otherSettings }
             : {}),
           ...(study.generation ? { generation: study.generation } : {}),

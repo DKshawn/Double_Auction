@@ -196,6 +196,88 @@ async function classroom(markets = 1, marketSize = 16) {
   return { teacher, students, send };
 }
 
+test("single-unit Posted orders survive reloads, reject concurrent future orders and allow repricing after each fill", async () => {
+  const { teacher, students, send } = await classroom(1, 2);
+  const initial = await service.export(teacher.code, teacher.token);
+  initial.room.config.studyInstitutions = ["posted"];
+  initial.room.config.studyPeriods = { posted: 1 };
+  initial.room.config.rounds = 1;
+  initial.room.study!.markets[0].order = ["posted"];
+  await saveFixture(initial.room);
+  const settings = { values: [[200, 180, 160]], costs: [[40, 60, 80]] };
+  await send(teacher.token, {
+    type: "study-settings",
+    settings,
+    unitsByInstitution: { cda: 2, call: 2, posted: 3 },
+    settingsByInstitution: { posted: settings },
+    expectedRevision: 0,
+    commission: 0,
+  });
+  const seller = students.find((s) => s.view.me.role === "seller")!;
+  const buyer = students.find((s) => s.view.me.role === "buyer")!;
+  await send(teacher.token, { type: "start" });
+  for (let unit = 1; unit <= 3; unit++) {
+    const offered = await Promise.allSettled([
+      send(seller.token, {
+        type: "posted-offer",
+        price: 90 + unit,
+        quantity: 1,
+      }),
+      send(seller.token, {
+        type: "posted-offer",
+        price: 90 + unit,
+        quantity: 1,
+      }),
+    ]);
+    assert.equal(offered.filter((r) => r.status === "fulfilled").length, 1);
+    assert.equal(offered.filter((r) => r.status === "rejected").length, 1);
+    if (unit === 1) {
+      const sealed = await service.export(teacher.code, teacher.token);
+      settleDeadline(sealed.room, sealed.room.study!.markets[0].deadline!, []);
+      sealed.room.study!.markets[0].deadline = Date.now() + 60000;
+      sealed.room.study!.markets[0].posted!.endsAt = Date.now() + 120000;
+      await saveFixture(sealed.room);
+    }
+    const queued = await Promise.allSettled([
+      send(buyer.token, { type: "posted-bid", price: 150, quantity: 1 }),
+      send(buyer.token, { type: "posted-bid", price: 150, quantity: 1 }),
+    ]);
+    assert.equal(queued.filter((r) => r.status === "fulfilled").length, 1);
+    assert.equal(queued.filter((r) => r.status === "rejected").length, 1);
+    const pending = await service.export(teacher.code, teacher.token);
+    pending.room.study!.markets[0].deadline = Date.now() - 1;
+    await saveFixture(pending.room);
+    const reloaded = new AuctionService(db);
+    const sellerView = await reloaded.view(teacher.code, seller.token);
+    const buyerView = await reloaded.view(teacher.code, buyer.token);
+    assert.equal(sellerView.study!.unitsUsed, unit);
+    assert.equal(buyerView.study!.unitsUsed, unit);
+    assert.equal(sellerView.study!.market.submitted, false);
+    assert.equal(sellerView.study!.market.myOffer!.price, 90 + unit);
+    assert.equal(sellerView.study!.market.myOffer!.remaining, 0);
+    assert.equal(sellerView.study!.market.offerHistory.length, unit);
+    assert.equal(buyerView.study!.market.trades.length, unit);
+    assert.equal(
+      sellerView.study!.market.stage,
+      unit === 3 ? "feedback" : "purchase",
+    );
+    if (unit < 3) {
+      const next = await service.export(teacher.code, teacher.token);
+      next.room.study!.markets[0].deadline = Date.now() + 60000;
+      await saveFixture(next.room);
+    }
+  }
+  const saved = await service.export(teacher.code, teacher.token);
+  assert.deepEqual(
+    saved.room.study!.markets[0].trades.map((trade) => trade.price),
+    [91, 92, 93],
+  );
+  assert.deepEqual(
+    saved.room.study!.markets[0].trades.map((trade) => trade.sellerUnit),
+    [1, 2, 3],
+  );
+});
+
 test("feedback persists a final Call fill and one shared deadline for every student, then retains late notifications", async () => {
   const { teacher, students, send } = await classroom(1, 4);
   const fixture = await service.export(teacher.code, teacher.token);

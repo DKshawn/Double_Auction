@@ -6,13 +6,13 @@ import {
 import type { Institution } from "@/lib/study-types";
 
 export function StudyUnitFields({
-  cdaUnits,
+  units,
   onChange,
   disabled,
   institutions = DEFAULT_STUDY_INSTITUTIONS,
 }: {
-  cdaUnits: string;
-  onChange: (units: string) => void;
+  units: Record<Institution, string>;
+  onChange: (institution: Institution, units: string) => void;
   disabled: boolean;
   institutions?: readonly Institution[];
 }) {
@@ -30,9 +30,9 @@ export function StudyUnitFields({
               max={MAX_STUDY_UNITS}
               step={1}
               required
-              value={institution === "cda" ? cdaUnits : 2}
-              onChange={(e) => onChange(e.target.value)}
-              disabled={disabled || institution !== "cda"}
+              value={units[institution]}
+              onChange={(e) => onChange(institution, e.target.value)}
+              disabled={disabled}
             />
           </label>
         ))}

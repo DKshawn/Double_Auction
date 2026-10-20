@@ -434,9 +434,7 @@ export function StudyWaitingRoom({
                 <li key={institution}>
                   {INSTITUTIONS[institution].short}{" "}
                   {studyPeriodCount(view.config, institution)}期
-                  {institution === "cda" &&
-                    studyUnits(view.config) !== 2 &&
-                    `・1人${studyUnits(view.config)}単位／期`}
+                  {`・1人${studyUnits(view.config, institution)}単位／期`}
                 </li>
               ))}
             </ul>

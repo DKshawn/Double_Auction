@@ -515,6 +515,9 @@ test("legacy Posted skips departed buyers and never opens an empty buyer turn", 
   for (const buyer of buyers) f.withdraw(buyer, 6100);
   const market = f.study.markets[0];
   settleDeadline(f.room, market.deadline!, f.events);
+  assert.equal(market.stage, "feedback");
+  assert.equal(market.remainingMs, 5000);
+  settleDeadline(f.room, market.deadline!, f.events);
   assert.equal(market.round, 2);
   assert.equal(market.stage, "offer");
   assert.equal(market.buyerOrder.length, 0);

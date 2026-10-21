@@ -167,6 +167,7 @@ export type StudyMetric = {
 export type StudyMarketView = {
   id: number;
   round: number;
+  periodStartedAt?: number;
   order: Institution[];
   institution: Institution;
   institutionPeriod: number;

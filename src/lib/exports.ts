@@ -14,6 +14,11 @@ export const EXPORTS = [
     label: "操作ログ CSV",
     empty: "操作ログはまだありません。",
   },
+  {
+    kind: "actions",
+    label: "操作明細 CSV",
+    empty: "操作明細はまだありません。",
+  },
   { kind: "settings", label: "実験条件 JSON", empty: "" },
 ] as const;
 

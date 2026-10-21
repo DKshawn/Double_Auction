@@ -1,4 +1,5 @@
 "use client";
+import { blockInteraction } from "@/lib/action-tracker";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -262,6 +263,8 @@ function Book({
         {view.me.role !== side && quotes[0] && (
           <button
             className={`button accept-button ${buyer ? "bid-accept" : "ask-accept"}`}
+            data-audit-button="quote.accept-best"
+            data-audit-command="accept"
             disabled={
               disabled ||
               view.me.used.includes(quotes[0].good) ||
@@ -311,7 +314,10 @@ function OrderForm({
   );
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!valid) return;
+    if (!valid) {
+      blockInteraction("INVALID_PRICE", "価格と取引条件を確認してください。");
+      return;
+    }
     setSending(true);
     await command({ type: "quote", good, price: Number(price) });
     setSending(false);
@@ -350,7 +356,11 @@ function OrderForm({
             <span>ほかの商品を選んで取引できます。</span>
           </div>
         ) : (
-          <form onSubmit={submit}>
+          <form
+            onSubmit={submit}
+            data-audit-command="quote"
+            data-audit-form="quote.submit"
+          >
             <label className="field order-price-label">
               {buyer ? "買いたい価格" : "売りたい価格"}
               <span className="price-input-wrap">
@@ -407,6 +417,8 @@ function OrderForm({
             <button
               className="icon-button"
               aria-label="注文を取り消す"
+              data-audit-button="quote.cancel"
+              data-audit-command="cancel"
               disabled={disabled}
               onClick={() => void command({ type: "cancel", good })}
             >

@@ -1,4 +1,5 @@
 import { STUDY_RULES } from "./study-rules";
+import { actionExport, eventOperations } from "./action-log";
 import { STUDY_START_SECONDS } from "./study-types";
 import {
   studyMarketSize,
@@ -24,6 +25,7 @@ export function studyExport(
   kind: string,
   csv: (rows: unknown[][]) => string,
 ): ExportFile {
+  if (kind === "actions") return actionExport(eventOperations(events));
   const study = room.study!,
     teacher = studyView(room, "teacher", now, "online").study!.teacher!;
   if (kind === "settings")

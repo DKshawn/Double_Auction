@@ -187,6 +187,7 @@ export const StudyMarketHistory = memo(function StudyMarketHistory({
             type="button"
             className="text-button"
             disabled={!newestFirst.length}
+            data-audit-button="market-history.latest"
             onClick={() => list.current?.scrollTo({ top: 0 })}
           >
             最新

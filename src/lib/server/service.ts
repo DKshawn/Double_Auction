@@ -1,4 +1,12 @@
 import { inMarketQueue } from "./market-queue";
+import {
+  annotateOperation,
+  clientLogs,
+  operationInput,
+  readActionLogs,
+  writeActionLogs,
+} from "./action-log";
+import { actionExport, type ClientAction, type Operation } from "../action-log";
 import { studyTiming } from "../study-timing";
 import {
   studyCommission,
@@ -703,44 +711,163 @@ export class AuctionService {
     token: string | undefined,
     request: CommandRequest,
     session?: RoomSession,
+    receivedAt = Date.now(),
   ) {
+    let failureContext:
+      Pick<Operation, "actor" | "round" | "market" | "stage"> | undefined;
     const scope = await timed("command.auth_scope", () =>
       this.scope(code, token, session),
     );
-    await this.locked(
-      code,
-      (room, now, events) => {
-        const actor = authenticate(room, token);
-        if (
-          actor !== "teacher" &&
-          (scope ? room.receipts.length : room.sequence) > 50_000
-        )
-          throw new AuctionError(
-            "操作数の上限に達しました。実験データを保存してください。",
-            429,
+    try {
+      await this.locked(
+        code,
+        (room, now, events) => {
+          const actor = authenticate(room, token);
+          const actorId = actor === "teacher" ? actor : actor.id;
+          const market =
+            room.study && actor !== "teacher" && actor.seat >= 0
+              ? marketFor(room, actor)
+              : undefined;
+          failureContext = {
+            actor: actorId,
+            round: market?.round ?? room.round,
+            ...(market ? { market: market.id, stage: market.stage } : {}),
+          };
+          if (
+            actor !== "teacher" &&
+            (scope ? room.receipts.length : room.sequence) > 50_000
+          )
+            throw new AuctionError(
+              "操作数の上限に達しました。実験データを保存してください。",
+              429,
+            );
+          // Never persist a partially applied rejected command.
+          const candidate = timedSync("command.clone", () =>
+            structuredClone(room),
           );
-        // Never persist a partially applied rejected command.
-        const candidate = timedSync("command.clone", () =>
-          structuredClone(room),
-        );
-        const commandEvents: AuditEvent[] = [];
-        timedSync("command.execute", () =>
-          execute(
-            candidate,
-            actor === "teacher"
-              ? actor
-              : candidate.participants.find((p) => p.id === actor.id)!,
-            request,
-            now,
-            commandEvents,
-          ),
-        );
-        Object.assign(room, candidate);
-        events.push(...commandEvents);
-      },
-      scope,
-    );
+          const commandEvents: AuditEvent[] = [];
+          timedSync("command.execute", () =>
+            execute(
+              candidate,
+              actor === "teacher"
+                ? actor
+                : candidate.participants.find((p) => p.id === actor.id)!,
+              request,
+              now,
+              commandEvents,
+            ),
+          );
+          // Extend the existing event INSERT, with no additional SQL or network
+          // round trip on successful commands. Replayed request IDs stay inert.
+          if (
+            !room.receipts.some(
+              (receipt) =>
+                receipt.actor === actorId &&
+                receipt.requestId === request.requestId,
+            )
+          )
+            annotateOperation(
+              candidate,
+              commandEvents,
+              actorId,
+              request,
+              receivedAt,
+              now,
+            );
+          Object.assign(room, candidate);
+          events.push(...commandEvents);
+        },
+        scope,
+      );
+    } catch (error) {
+      // The market queue/transaction has already released its lock. Rejection
+      // diagnostics never update room state, receipts, or historical events.
+      if (failureContext) {
+        const operation: Operation = {
+          ...failureContext,
+          requestId: request.requestId,
+          commandType: request.command.type,
+          input: operationInput(request.command),
+          receivedAt,
+          processedAt: Date.now(),
+          ...(request.interaction ? { interaction: request.interaction } : {}),
+          status: error instanceof AuctionError ? "rejected" : "unconfirmed",
+          errorCode:
+            error instanceof AuctionError ? error.code : "SERVER_UNAVAILABLE",
+          reason:
+            error instanceof AuctionError
+              ? error.message
+              : "処理結果を確認できません。リクエストIDで照合してください。",
+        };
+        try {
+          await writeActionLogs(this.db, code, [
+            {
+              source: "server",
+              actor: operation.actor,
+              at: operation.processedAt,
+              data: operation,
+            },
+          ]);
+        } catch {
+          console.error("Action diagnostics could not be saved");
+        }
+      }
+      throw error;
+    }
+    // A failed response projection must never turn an already committed command
+    // into a rejected operation. Outcome lookup uses the durable event above.
     return this.view(code, token, session);
+  }
+
+  async recordActions(
+    code: string,
+    token: string | undefined,
+    entries: ClientAction[],
+    expectedParticipantId?: string,
+  ) {
+    const { root } = await readRoomRoot(this.db, code);
+    const actor = authenticate(root, token);
+    if (actor === "teacher")
+      throw new AuctionError("学生として入室してください。", 403);
+    if (expectedParticipantId && expectedParticipantId !== actor.id)
+      throw new AuctionError("入室情報が変わりました。元の学生として再入室してください。", 401, "SESSION_CHANGED");
+    await writeActionLogs(
+      this.db,
+      code,
+      clientLogs(actor.id, entries, Date.now()),
+    );
+    return { saved: entries.map((entry) => entry.id) };
+  }
+
+  async operationOutcome(
+    code: string,
+    token: string | undefined,
+    requestId: string,
+  ) {
+    const { root } = await readRoomRoot(this.db, code);
+    const actor = authenticate(root, token);
+    const logs = await readActionLogs(
+      this.db,
+      code,
+      actor === "teacher" ? actor : actor.id,
+      requestId,
+    );
+    const operations = logs
+      .filter((log) => log.source === "server")
+      .map((log) => log.data as Operation);
+    return (
+      operations.find((op) => op.status === "success") ??
+      operations.find((op) => op.status === "rejected") ??
+      null
+    );
+  }
+
+  async exportActions(code: string, token?: string) {
+    const { root } = await readRoomRoot(this.db, code);
+    if (authenticate(root, token) !== "teacher")
+      throw new AuctionError("データ出力は教員のみ利用できます。", 403);
+    // Read-only: no deadline settlement, partitioning or room version changes.
+    return actionExport(await readActionLogs(this.db, code));
   }
 
   async export(code: string, token?: string) {

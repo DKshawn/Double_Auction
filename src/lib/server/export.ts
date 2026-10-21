@@ -1,4 +1,5 @@
 import { GOODS } from "../catalog";
+import { actionExport, eventOperations } from "../action-log";
 import { toView } from "./engine";
 import type { AuditEvent, Room } from "./model";
 import { studyExport } from "./study-export";
@@ -15,6 +16,7 @@ export function exportData(
 ) {
   if (!isExportKind(kind))
     throw new AuctionError("ダウンロード形式が正しくありません。", 400);
+  if (kind === "actions") return actionExport(eventOperations(events));
   if (room.study) return studyExport(room, events, now, kind, csv);
   const teacher = toView(room, "teacher", now, "online").teacher!;
   if (kind === "settings")

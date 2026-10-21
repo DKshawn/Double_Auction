@@ -2,6 +2,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
+    public code = "OPERATION_REJECTED",
   ) {
     super(message);
   }
@@ -21,7 +22,11 @@ export async function api<T>(
   });
   const result = await response.json();
   if (!response.ok)
-    throw new ApiError(result.error || "通信に失敗しました。", response.status);
+    throw new ApiError(
+      result.error || "通信に失敗しました。",
+      response.status,
+      result.code,
+    );
   return result as T;
 }
 export const errorMessage = (error: unknown) =>

@@ -641,6 +641,8 @@ function checkPrice(price: number) {
   if (!isValidPrice(price))
     throw new AuctionError(
       `注文価格は1〜${MAX_PRICE}円の整数で入力してください。`,
+      400,
+      "INVALID_PRICE",
     );
 }
 function trade(
@@ -1251,6 +1253,7 @@ export function executeStudy(
     throw new AuctionError(
       "期が切り替わりました。最新の画面を確認してください。",
       409,
+      "ROUND_CHANGED",
     );
   const cmd = request.command,
     study = room.study!;
@@ -1919,11 +1922,12 @@ export function executeStudy(
       room.phase !== "running" ||
       ["done", "waiting", "countdown", "feedback"].includes(m.stage)
     )
-      throw new AuctionError("現在は取引時間外です。", 409);
+      throw new AuctionError("現在は取引時間外です。", 409, "OUTSIDE_TRADING");
     if (request.expectedStage !== stageKey(room, m))
       throw new AuctionError(
         "受付時間または取引段階が切り替わりました。最新の画面を確認してください。",
         409,
+        "STAGE_CHANGED",
       );
     const maximumUnits = studyUnits(room.config, institutionFor(room, m));
     const remaining = maximumUnits - unitsUsed(room, actor);
@@ -1949,6 +1953,7 @@ export function executeStudy(
           throw new AuctionError(
             `今期は${maximumUnits}単位の取引が完了しています。`,
             409,
+            "UNITS_EXHAUSTED",
           );
         const opposite = m.orders
           .filter((o) => o.side !== actor.role)
@@ -1962,7 +1967,11 @@ export function executeStudy(
           cmd.type === "study-accept" &&
           (!opposite || opposite.id !== cmd.orderId)
         )
-          throw new AuctionError("最良注文が変更または約定済みです。", 409);
+          throw new AuctionError(
+            "最良注文が変更または約定済みです。",
+            409,
+            "BEST_ORDER_CHANGED",
+          );
         const price = cmd.type === "study-quote" ? cmd.price : opposite.price;
         checkPrice(price);
         archiveOrders(

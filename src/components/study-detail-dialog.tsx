@@ -37,6 +37,7 @@ export function StudyDetailDialog({
           type="button"
           className={triggerClassName}
           aria-haspopup="dialog"
+          data-audit-button={`details.open:${title}`}
           disabled={disabled}
           onClick={() => dialog.current?.showModal()}
         >
@@ -54,6 +55,7 @@ export function StudyDetailDialog({
           <button
             type="button"
             className="button secondary"
+            data-audit-button={`details.close:${title}`}
             onClick={() => dialog.current?.close()}
           >
             <X size={16} /> 閉じる

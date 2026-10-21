@@ -114,6 +114,7 @@ function TradeNotice({
         type="button"
         className="text-button"
         aria-label="取引通知を閉じる"
+        data-audit-button="trade-notice.close"
         onClick={() => setVisible(false)}
       >
         <X size={18} />

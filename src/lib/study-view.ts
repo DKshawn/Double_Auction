@@ -144,6 +144,9 @@ function publicMarket(
   const common: PublicMarket = cache?.markets.get(key) ?? {
     id: m.id,
     round: marketRound(room, m),
+    periodStartedAt: m.periods.find(
+      (period) => period.round === marketRound(room, m),
+    )?.startedAt,
     order: m.order,
     institution: institutionFor(room, m),
     institutionPeriod: period.period,

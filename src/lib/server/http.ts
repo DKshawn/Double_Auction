@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuctionError } from "./model";
+import { interactionSchema } from "./action-log";
 import { marketSettingsSchema } from "./market-settings";
 import {
   studySettingsSchema,
@@ -161,7 +162,7 @@ export function roomViewResponse(request: NextRequest, view: RoomView) {
 
 export function failure(error: unknown) {
   if (error instanceof AuctionError)
-    return json({ error: error.message }, error.status);
+    return json({ error: error.message, code: error.code }, error.status);
   // Do not log request bodies, credentials, or driver connection strings.
   console.error(
     "Auction request failed",
@@ -171,6 +172,7 @@ export function failure(error: unknown) {
     {
       error:
         "サーバーに接続できませんでした。設定を確認するか、少し待って再試行してください。",
+      code: "SERVER_UNAVAILABLE",
     },
     503,
   );
@@ -237,6 +239,7 @@ const good = z.enum(["apple", "banana", "orange"]);
 export const commandSchema = z
   .object({
     requestId: z.uuid(),
+    interaction: interactionSchema.optional(),
     expectedRound: z.number().int().min(0).max(MAX_STUDY_ROUNDS),
     expectedStage: z.string().max(50).optional(),
     command: z.discriminatedUnion("type", [

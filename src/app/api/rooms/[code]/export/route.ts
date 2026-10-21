@@ -15,10 +15,17 @@ export async function GET(
     const kind = request.nextUrl.searchParams.get("kind") || "trades";
     if (!isExportKind(kind))
       return json({ error: "ダウンロード形式が正しくありません。" }, 400);
-    const { room, events, now } = await (
-      await service()
-    ).export(code, tokenFor(request, code));
-    const result = exportData(room, events, now, kind);
+    const auction = await service();
+    const result =
+      kind === "actions"
+        ? await auction.exportActions(code, tokenFor(request, code))
+        : await (async () => {
+            const { room, events, now } = await auction.export(
+              code,
+              tokenFor(request, code),
+            );
+            return exportData(room, events, now, kind);
+          })();
     if (result.rowCount === 0)
       return json(
         { error: EXPORTS.find((item) => item.kind === kind)!.empty },

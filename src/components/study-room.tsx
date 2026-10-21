@@ -38,6 +38,7 @@ import {
   studyPeriodTransition,
 } from "@/lib/study-timing";
 import { decimal, timeLabel } from "@/lib/client";
+import { blockInteraction } from "@/lib/action-tracker";
 import { isValidPrice, MAX_PRICE } from "@/lib/price";
 import { INSTITUTIONS } from "@/lib/study-rules";
 import {
@@ -1073,6 +1074,8 @@ function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
                         <div className="study-market-order" key={q}>
                           <button
                             className="button secondary full study-buy-button"
+                            data-audit-button="posted.buy"
+                            data-audit-command="posted-buy"
                             disabled={disabled || !mine}
                             onClick={() =>
                               void command({
@@ -1166,10 +1169,22 @@ function PostedBidForm({ view, market, command, disabled }: MarketProps) {
       {available > 0 ? (
         <form
           className="study-order-form"
+          data-audit-form="posted.bid"
+          data-audit-command="posted-bid"
           onSubmit={async (event) => {
             event.preventDefault();
-            if (disabled || market.stage !== "purchase") return;
+            if (disabled || market.stage !== "purchase") {
+              blockInteraction(
+                "BUTTON_DISABLED",
+                "現在は購入希望を送信できません。",
+              );
+              return;
+            }
             if (!isValidPrice(Number(price))) {
+              blockInteraction(
+                "INVALID_PRICE",
+                `買値は1〜${MAX_PRICE}円の整数で入力してください。`,
+              );
               setError(`買値は1〜${MAX_PRICE}円の整数で入力してください。`);
               return;
             }
@@ -1356,10 +1371,17 @@ function ExistingStudentOrder({
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setValidation("");
-    if (formDisabled) return;
+    if (formDisabled) {
+      blockInteraction("BUTTON_DISABLED", "現在は注文できません。");
+      return;
+    }
     const prices =
       market.institution === "call" ? callPrices.map(Number) : [Number(price)];
     if (prices.some((p) => !isValidPrice(p))) {
+      blockInteraction(
+        "INVALID_PRICE",
+        `注文価格は1〜${MAX_PRICE}円の整数で入力してください。`,
+      );
       setValidation(`注文価格は1〜${MAX_PRICE}円の整数で入力してください。`);
       return;
     }
@@ -1378,6 +1400,18 @@ function ExistingStudentOrder({
   return (
     <form
       onSubmit={submit}
+      data-audit-command={
+        market.institution === "cda"
+          ? "study-quote"
+          : market.institution === "call"
+            ? "call-submit"
+            : "posted-offer"
+      }
+      data-audit-form={
+        market.institution === "cda"
+          ? "quote.submit"
+          : `${market.institution}.submit`
+      }
       noValidate
       className={`study-order-form ${market.institution === "call" && !sequential ? "study-call-form" : ""}`}
     >
@@ -1461,6 +1495,8 @@ function ExistingStudentOrder({
           <div className="study-market-order">
             <button
               type="submit"
+              data-audit-button="quote.submit"
+              data-audit-command="study-quote"
               className="button primary full"
               disabled={formDisabled}
             >
@@ -1471,6 +1507,8 @@ function ExistingStudentOrder({
           <div className="study-market-order">
             <button
               type="button"
+              data-audit-button="quote.accept-best"
+              data-audit-command="study-accept"
               className="button primary full"
               disabled={formDisabled || !best}
               onClick={() => {

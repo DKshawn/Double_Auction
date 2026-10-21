@@ -17,6 +17,7 @@ export async function POST(
   request: NextRequest,
   ctx: { params: Promise<{ code: string }> },
 ) {
+  const receivedAt = Date.now();
   try {
     const code = codeFor((await ctx.params).code);
     const data = await body(request, commandSchema);
@@ -27,6 +28,7 @@ export async function POST(
           tokenFor(request, code),
           data,
           sessionFor(request),
+          receivedAt,
         ),
       ),
     );

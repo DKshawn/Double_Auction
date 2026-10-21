@@ -1,4 +1,5 @@
 import type { GoodId } from "./catalog";
+import type { Interaction } from "./action-log";
 import type {
   Institution,
   StudyCommand,
@@ -129,6 +130,7 @@ export type LegacyCommand =
 export type Command = LegacyCommand | StudyCommand;
 export type CommandRequest = {
   requestId: string;
+  interaction?: Interaction;
   expectedRound: number;
   expectedStage?: string;
   command: Command;

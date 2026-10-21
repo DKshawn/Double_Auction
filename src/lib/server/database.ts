@@ -34,6 +34,15 @@ export const SCHEMA = [
     event jsonb NOT NULL,
     PRIMARY KEY (room_code, sequence)
   )`,
+  // Append-only diagnostics; no migration or backfill of existing room/events.
+  `CREATE TABLE IF NOT EXISTS auction_action_logs (
+    room_code text NOT NULL REFERENCES auction_rooms(code) ON DELETE CASCADE,
+    actor text NOT NULL,
+    source text NOT NULL,
+    event_id text NOT NULL,
+    entry jsonb NOT NULL,
+    PRIMARY KEY (room_code, actor, source, event_id)
+  )`,
   `CREATE TABLE IF NOT EXISTS auction_markets (
     room_code text NOT NULL REFERENCES auction_rooms(code),
     market_id integer NOT NULL,

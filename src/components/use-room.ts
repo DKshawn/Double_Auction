@@ -6,6 +6,7 @@ import { RoomEventStream } from "@/lib/room-event-stream";
 import { goodName } from "@/lib/catalog";
 import { api, ApiError, errorMessage } from "@/lib/client";
 import { roomApiHref, type RoomSession } from "@/lib/room-session";
+import { ActionTracker } from "@/lib/action-tracker";
 
 export function useRoom(code: string, session: RoomSession) {
   const [view, setView] = useState<RoomView | null>(null);
@@ -24,6 +25,23 @@ export function useRoom(code: string, session: RoomSession) {
   const refresh = useRef<() => void>(() => {});
   const busy = useRef(false);
   const latest = useRef<RoomView | null>(null);
+  const actionTracker = useRef<ActionTracker | null>(null);
+  const participantId = !authError && view?.me.role !== "teacher" ? view?.me.id : undefined;
+  useEffect(() => {
+    if (session !== "student" || !participantId) return;
+    const tracker = new ActionTracker(
+      code,
+      participantId,
+      () => latest.current,
+      () => offset.current,
+    );
+    actionTracker.current = tracker;
+    const detach = tracker.attach();
+    return () => {
+      actionTracker.current = null;
+      detach();
+    };
+  }, [code, session, participantId]);
 
   const acceptView = useCallback((next: RoomView) => {
     // A response already in flight must not re-enable trading while offline.
@@ -189,13 +207,27 @@ export function useRoom(code: string, session: RoomSession) {
   }, [code, session, acceptView]);
 
   async function command(command: Command) {
-    if (!view || busy.current || !connected || !navigator.onLine) return false;
+    const requestId = crypto.randomUUID();
+    const tracker = actionTracker.current;
+    const activation = tracker?.startCommand(command, requestId);
+    if (!view || busy.current || !connected || !navigator.onLine) {
+      if (activation)
+        tracker?.blockCommand(
+          activation,
+          busy.current ? "CLIENT_BUSY" : "CLIENT_OFFLINE",
+          busy.current
+            ? "前の操作を処理しています。"
+            : "接続がないため送信されませんでした。",
+        );
+      return false;
+    }
     busy.current = true;
     setPending(true);
     setError("");
     setNotice(null);
     const request: CommandRequest = {
-      requestId: crypto.randomUUID(),
+      requestId,
+      ...(activation ? { interaction: activation.event.interaction } : {}),
       expectedRound: view.round,
       expectedStage: view.study?.market.stageKey,
       command,
@@ -216,6 +248,7 @@ export function useRoom(code: string, session: RoomSession) {
         }
       }
       acceptView(next!);
+      if (activation) tracker?.finishCommand(activation, "acknowledged");
       const newTrade = next!.trades.find(
         (t) =>
           !view.trades.some((old) => old.id === t.id) &&
@@ -238,6 +271,13 @@ export function useRoom(code: string, session: RoomSession) {
         });
       return true;
     } catch (e) {
+      if (activation)
+        tracker?.finishCommand(
+          activation,
+          e instanceof ApiError && e.status < 500 ? "rejected" : "unconfirmed",
+          e instanceof ApiError ? e.code : "NETWORK_UNCONFIRMED",
+          errorMessage(e),
+        );
       setError(errorMessage(e));
       refresh.current();
       return false;

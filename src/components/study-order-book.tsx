@@ -73,6 +73,7 @@ export function StudyOrderBook({
           <button
             type="button"
             aria-pressed={display === "list"}
+            data-audit-button="order-book.list"
             onClick={() => setDisplay("list")}
           >
             <List size={14} aria-hidden="true" /> 一覧
@@ -80,6 +81,7 @@ export function StudyOrderBook({
           <button
             type="button"
             aria-pressed={display === "chart"}
+            data-audit-button="order-book.chart"
             onClick={() => setDisplay("chart")}
           >
             <ChartBar size={14} aria-hidden="true" /> 棒グラフ

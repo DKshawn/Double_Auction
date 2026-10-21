@@ -145,7 +145,8 @@ test("short CDA rotates during End/Start, preserves fills, pauses the overlay an
     for (const target of [page, f.buyer.page, f.seller.page])
       target.on("pageerror", (error) => errors.push(error.message));
     f.buyer.page.on("request", (request) => {
-      if (request.url().endsWith("/events")) streams.push(Date.now());
+      if (new URL(request.url()).pathname.endsWith("/events"))
+        streams.push(Date.now());
     });
     await page
       .getByRole("button", { name: "実験設定を変更", exact: true })
@@ -282,7 +283,8 @@ test("long CDA rotates after four real minutes without losing a standing order o
     const before = await f.snapshot(f.buyer.context);
     const streams: number[] = [];
     f.buyer.page.on("request", (request) => {
-      if (request.url().endsWith("/events")) streams.push(Date.now());
+      if (new URL(request.url()).pathname.endsWith("/events"))
+        streams.push(Date.now());
     });
     await f.buyer.page.reload();
     await expect(quote).toBeEnabled();

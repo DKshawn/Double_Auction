@@ -7,9 +7,96 @@ import { RealtimeBroker, type StreamEvent } from "../src/lib/server/realtime";
 import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
 import type { RoomView, Command } from "../src/lib/types";
 import type { Room } from "../src/lib/auction-model";
+import { lockBundle } from "../src/lib/server/market-store";
+import {
+  cachedRoomRoot,
+  readRoomRoot,
+} from "../src/lib/server/room-read-cache";
 
 const url = process.env.LOCAL_TEST_DATABASE_URL;
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+test(
+  "local PostgreSQL: a cached root is revalidated after waiting for a concurrent writer's lock",
+  { skip: !url },
+  async () => {
+    const db = postgresDatabase(url!),
+      other = postgresDatabase(url!);
+    const release = Promise.withResolvers<void>();
+    const acquired = Promise.withResolvers<void>();
+    let writer: Promise<void> | undefined;
+    try {
+      await migrate(db);
+      const service = new AuctionService(db);
+      const teacher = await service.create(
+        {
+          title: "Before lock",
+          protocol: "institutions-v1",
+          markets: 1,
+          marketSize: 2,
+          capacity: 2,
+          rounds: 1,
+          duration: 180,
+          studyInstitutions: ["cda"],
+          studyPeriods: { cda: 1 },
+        },
+        "Local-lock-only",
+        "",
+      );
+      await readRoomRoot(db, teacher.code);
+      writer = other.transaction(async (tx) => {
+        // Deliberately keep the logical version unchanged to exercise xmin too.
+        await tx.query(
+          "UPDATE auction_rooms SET state=jsonb_set(state, '{config,title}', '\"After lock\"') WHERE code=$1",
+          [teacher.code],
+        );
+        acquired.resolve();
+        await release.promise;
+      });
+      await Promise.race([acquired.promise, writer]);
+      let finished = false;
+      const reader = db.transaction(async (tx) => {
+        const bundle = await lockBundle(
+          tx,
+          teacher.code,
+          1,
+          false,
+          cachedRoomRoot(db, teacher.code),
+        );
+        finished = true;
+        return bundle;
+      });
+      try {
+        await delay(50);
+        assert.equal(
+          finished,
+          false,
+          "cached data must not bypass the row lock",
+        );
+      } finally {
+        release.resolve();
+      }
+      const bundle = await reader;
+      await writer;
+      assert.equal(bundle.root.config.title, "After lock");
+      assert.equal(
+        cachedRoomRoot(db, teacher.code)!.root.config.title,
+        "Before lock",
+        "transaction-local rows never enter the shared cache",
+      );
+      assert.equal(
+        (await service.view(teacher.code, teacher.token)).config.title,
+        "After lock",
+      );
+      await service.deleteRoom(teacher.code, "");
+    } finally {
+      release.resolve();
+      await writer?.catch(() => {});
+      await db.close();
+      await other.close();
+    }
+  },
+);
 async function until(fn: () => boolean, timeout = 5000) {
   const end = Date.now() + timeout;
   while (!fn()) {
@@ -191,9 +278,17 @@ test(
       await send(teacher.token, { type: "resume" });
       await until(() => streamed!.phase === "running");
 
-      // Switch via teacher controls, never changing the rule durations themselves.
-      for (let i = 0; i < 5; i++)
+      // Periods now have a feedback interval. Wait for the real timer/push before
+      // ending the next period, rather than issuing a command during feedback.
+      for (let i = 0; i < 5; i++) {
         await send(teacher.token, { type: "end-round" });
+        await until(
+          () =>
+            streamed!.round === i + 2 &&
+            streamed!.study!.market.stage !== "feedback",
+          15_000,
+        );
+      }
       await until(() => streamed!.study!.market.stage === "call");
       assert.equal(
         streamed!.study!.market.trades.length,
@@ -213,7 +308,17 @@ test(
       ]);
       await send(seller.token, { type: "call-submit", prices: [40, 60] });
       const stranger = await svc.view(teacher.code, buyers[1].token);
-      assert.deepEqual(stranger.study!.market.orders, []);
+      // Current Call rules publish submitted prices; private values and each
+      // participant's own submission remain separately scoped.
+      assert.deepEqual(
+        stranger.study!.market.orders.map((o) => o.price).sort((a, b) => a - b),
+        [40, 60, 100, 120],
+      );
+      assert.ok(
+        stranger.study!.market.orders.every(
+          (o) => !("value" in o) && !("cost" in o),
+        ),
+      );
       assert.deepEqual(stranger.study!.market.myOrders, []);
       await db.transaction(async (tx) => {
         await tx.query(

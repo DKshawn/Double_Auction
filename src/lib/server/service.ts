@@ -49,10 +49,14 @@ import {
   assemble,
   lockBundle,
   partition,
-  readBundle,
   saveBundle,
   writeEvents,
 } from "./market-store";
+import {
+  cachedRoomRoot,
+  readRoomBundle,
+  readRoomRoot,
+} from "./room-read-cache";
 import { execute, settleDeadline, toView } from "./engine";
 import { defaultMarketSettings, limitsForSeat } from "./experiment";
 import { AuctionError, emit, type AuditEvent, type Room } from "./model";
@@ -359,7 +363,7 @@ export class AuctionService {
     const outcome = await inMarketQueue(this.db, code, scope, () =>
       this.db.transaction(async (tx): Promise<Outcome<T>> => {
         const bundle = await timed("command.lock_bundle", () =>
-          lockBundle(tx, code, scope),
+          lockBundle(tx, code, scope, false, cachedRoomRoot(this.db, code)),
         );
         const room = timedSync("state.assemble", () => assemble(bundle, scope));
         const before = JSON.stringify(room);
@@ -618,7 +622,7 @@ export class AuctionService {
     const scope = await timed("command.auth_scope", () =>
       this.scope(code, token, session),
     );
-    const bundle = await readBundle(this.db, code, scope);
+    const bundle = await readRoomBundle(this.db, code, scope);
     const room = timedSync("state.assemble", () => assemble(bundle, scope));
     const actor = authenticate(room, token);
     const now = bundle.now;
@@ -644,13 +648,7 @@ export class AuctionService {
     token?: string,
     session?: RoomSession,
   ): Promise<number | undefined> {
-    const result = await this.db.query<{ state: Room }>(
-      "SELECT state FROM auction_rooms WHERE code = $1",
-      [code],
-    );
-    if (!result.rows.length)
-      throw new AuctionError("ルームが見つかりません。", 404);
-    const root = result.rows[0].state;
+    const { root } = await readRoomRoot(this.db, code);
     const actor = authenticate(root, token);
     if (session && (actor === "teacher") !== (session === "teacher"))
       throw new AuctionError(
@@ -676,7 +674,7 @@ export class AuctionService {
   async advance(code: string, scope?: number) {
     // A teacher read must not serialize deadlines in unrelated markets.
     if (!scope) {
-      const bundle = await readBundle(this.db, code);
+      const bundle = await readRoomBundle(this.db, code);
       if (bundle.root.storageVersion) {
         if (
           bundle.root.phase === "waiting" &&

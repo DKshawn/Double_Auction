@@ -13,6 +13,7 @@
     "test": "tsx --test tests/*.test.ts",
     "test:local-postgres": "tsx --test tests/local-postgres.test.ts",
     "test:load-local": "tsx scripts/load-local.ts",
+    "test:transfer-local": "tsx scripts/measure-local-transfer.ts",
     "test:e2e": "playwright test",
     "db:migrate": "tsx scripts/migrate.ts"
   },

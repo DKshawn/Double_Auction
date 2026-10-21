@@ -376,7 +376,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
     const [download] = await Promise.all([
       teacherPage.waitForEvent("download", { timeout: 15_000 }),
       teacherPage
-        .getByRole("link", { name: /取引履歴.*CSV/ })
+        .getByRole("button", { name: /取引履歴.*CSV/ })
         .click({ timeout: 15_000 }),
     ]);
     expect(download.suggestedFilename()).toBe(`auction-${code}-trades.csv`);

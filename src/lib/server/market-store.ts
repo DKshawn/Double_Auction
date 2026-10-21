@@ -5,6 +5,7 @@ import { AuctionError, type AuditEvent, type Room } from "./model";
 import type { StudyMarket } from "../study-core";
 
 export type MarketRow = {
+  revision?: string;
   market_id: number;
   state: StudyMarket;
   version: number;
@@ -13,7 +14,35 @@ export type MarketRow = {
   history_separated: boolean;
   history_cursor: number;
 };
-export type Bundle = { root: Room; markets: MarketRow[]; now: number };
+export type RootSnapshot = { root: Room; rootRevision?: string };
+export type Bundle = RootSnapshot & { markets: MarketRow[]; now: number };
+
+// xmin changes on every row update, including storage migrations that leave the
+// application version unchanged. Include the room incarnation and logical version
+// too; these are opaque equality tokens, never clocks or ordered transaction IDs.
+const rootRevision = `(r.xmin::text || ':' || (r.state->>'version') || ':' || (r.state->>'createdAt'))`;
+const marketRevision = `(m.xmin::text || ':' || m.version::text)`;
+
+export async function readRoot(
+  db: Sql,
+  code: string,
+  previous?: RootSnapshot,
+  lock?: "SHARE" | "UPDATE",
+): Promise<RootSnapshot> {
+  if (previous?.root.code !== code) previous = undefined;
+  const result = await db.query<{ root: Room | null; root_revision: string }>(
+    `SELECT CASE WHEN ${rootRevision} = $2 THEN NULL ELSE r.state END AS root,
+      ${rootRevision} AS root_revision
+     FROM auction_rooms r WHERE r.code = $1${lock ? ` FOR ${lock}` : ""}`,
+    [code, previous?.rootRevision ?? null],
+  );
+  if (!result.rows.length)
+    throw new AuctionError("ルームが見つかりません。", 404);
+  return {
+    root: result.rows[0].root ?? previous!.root,
+    rootRevision: result.rows[0].root_revision,
+  };
+}
 
 export function assemble(
   { root, markets }: Bundle,
@@ -142,31 +171,52 @@ export async function readBundle(
   scope?: number | number[],
   previous?: Bundle,
 ): Promise<Bundle> {
-  const cursors = Object.fromEntries(
-    (previous?.markets ?? [])
-      .filter((m) => m.history_separated)
-      .map((m) => [m.market_id, m.history_cursor]),
+  if (previous?.root.code !== code) previous = undefined;
+  const known = Object.fromEntries(
+    (previous?.markets ?? []).map((m) => [
+      m.market_id,
+      {
+        revision: m.revision,
+        cursor: m.history_separated ? m.history_cursor : 0,
+      },
+    ]),
   );
-  // Metadata, hot state and history suffix all come from the SAME SQL snapshot.
+  // Revalidate every requested row in the SAME SQL snapshot. An unchanged row
+  // returns only its revision; changed rows include hot state and a history suffix.
+  // No TTL or cached revision can skip this database check.
   const result = await db.query<{
-    root: Room;
-    markets: (MarketRow & {
-      history: NonNullable<StudyMarket["orderHistory"]>;
-      history_start: number;
-    })[];
+    root: Room | null;
+    root_revision: string;
+    markets: {
+      market_id: number;
+      revision: string;
+      data:
+        | (MarketRow & {
+            history: NonNullable<StudyMarket["orderHistory"]>;
+            history_start: number;
+          })
+        | null;
+    }[];
     now: string;
   }>(
-    `SELECT r.state AS root,
+    `SELECT CASE WHEN ${rootRevision} = $4 THEN NULL ELSE r.state END AS root,
+      ${rootRevision} AS root_revision,
       COALESCE((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.market_id) FROM (
-        SELECT m.market_id, m.state, m.version, m.sequence, m.receipts,
-          m.history_separated, m.history_cursor, c.cursor AS history_start,
-          COALESCE((SELECT jsonb_agg(h.entry ORDER BY h.closed_sequence)
+        SELECT m.market_id, ${marketRevision} AS revision,
+          CASE WHEN r.state->>'createdAt' = $5 AND
+            ${marketRevision} = $3::jsonb->m.market_id::text->>'revision' THEN NULL
+          ELSE jsonb_build_object(
+          'state', m.state, 'version', m.version, 'sequence', m.sequence, 'receipts', m.receipts,
+          'history_separated', m.history_separated, 'history_cursor', m.history_cursor,
+          'history_start', c.cursor,
+          'history', COALESCE((SELECT jsonb_agg(h.entry ORDER BY h.closed_sequence)
             FROM auction_order_history h WHERE h.room_code = m.room_code
-              AND h.market_id = m.market_id AND h.closed_sequence > c.cursor), '[]'::jsonb) AS history
+              AND h.market_id = m.market_id AND h.closed_sequence > c.cursor), '[]'::jsonb)) END AS data
         FROM auction_markets m
-        CROSS JOIN LATERAL (SELECT CASE WHEN m.history_separated AND m.history_cursor >=
-          COALESCE(($3::jsonb->>m.market_id::text)::int, 0)
-          THEN COALESCE(($3::jsonb->>m.market_id::text)::int, 0) ELSE 0 END AS cursor) c
+        CROSS JOIN LATERAL (SELECT CASE WHEN r.state->>'createdAt' = $5 AND
+          m.history_separated AND m.history_cursor >=
+          COALESCE(($3::jsonb->m.market_id::text->>'cursor')::int, 0)
+          THEN COALESCE(($3::jsonb->m.market_id::text->>'cursor')::int, 0) ELSE 0 END AS cursor) c
         WHERE m.room_code = r.code AND ($2::int[] IS NULL OR m.market_id = ANY($2))
       ) x), '[]'::jsonb) AS markets,
       (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now
@@ -174,20 +224,26 @@ export async function readBundle(
     [
       code,
       scope === undefined ? null : Array.isArray(scope) ? scope : [scope],
-      JSON.stringify(cursors),
+      JSON.stringify(known),
+      previous?.rootRevision ?? null,
+      previous ? String(previous.root.createdAt) : null,
     ],
   );
   if (!result.rows.length)
     throw new AuctionError("ルームが見つかりません。", 404);
   const value = result.rows[0];
-  const markets = value.markets.map(({ history, history_start, ...row }) => {
+  const markets = value.markets.map(({ market_id, revision, data }) => {
+    const cached = previous?.markets.find((m) => m.market_id === market_id);
+    if (!data) return cached!;
+    const { history, history_start, ...fields } = data;
+    const row: MarketRow = { ...fields, market_id, revision };
     if (row.history_separated) {
-      const old = previous?.markets.find(
-        (m) =>
-          m.market_id === row.market_id &&
-          m.history_separated &&
-          m.history_cursor === history_start,
-      );
+      const old =
+        history_start > 0 &&
+        cached?.history_separated &&
+        cached.history_cursor === history_start
+          ? cached
+          : undefined;
       const prefix = old?.state.orderHistory ?? [];
       row.state = {
         ...row.state,
@@ -196,7 +252,12 @@ export async function readBundle(
     }
     return row;
   });
-  return { root: value.root, markets, now: Number(value.now) };
+  return {
+    root: value.root ?? previous!.root,
+    rootRevision: value.root_revision,
+    markets,
+    now: Number(value.now),
+  };
 }
 
 export async function lockBundle(
@@ -204,16 +265,14 @@ export async function lockBundle(
   code: string,
   scope?: number,
   includeHistory = false,
+  previous?: RootSnapshot,
 ): Promise<Bundle> {
   const result = await timed("db.root_lock_read", () =>
-    tx.query<{ state: Room }>(
-      `SELECT state FROM auction_rooms WHERE code = $1 FOR ${scope ? "SHARE" : "UPDATE"}`,
-      [code],
-    ),
+    readRoot(tx, code, previous, scope ? "SHARE" : "UPDATE"),
   );
-  if (!result.rows.length)
-    throw new AuctionError("ルームが見つかりません。", 404);
-  const root = result.rows[0].state;
+  // Transactions may partition or edit this root. Never mutate a read cache or
+  // expose uncommitted state to another command/feed sharing the process.
+  const root = structuredClone(result.root);
   if (!scope) await partition(tx, root);
   if (scope && !root.storageVersion)
     throw new Error("Market storage must be initialized before a scoped write");

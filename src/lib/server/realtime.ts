@@ -8,7 +8,8 @@ import { authenticate } from "./auth";
 import { toView } from "./engine";
 import { AuctionError } from "./model";
 import type { Database } from "./database";
-import { assemble, readBundle, revisions, type Bundle } from "./market-store";
+import { assemble, revisions, type Bundle } from "./market-store";
+import { readRoomBundle } from "./room-read-cache";
 import { AuctionService } from "./service";
 
 export type StreamEvent = {
@@ -86,15 +87,15 @@ class RoomFeed {
       try {
         if (!this.bundle || scopes.includes(0))
           this.bundle = await timed("push.read", () =>
-            readBundle(this.db, this.code),
+            readRoomBundle(this.db, this.code, undefined, this.bundle),
           );
         else {
           const next = await timed("push.read", () =>
-            readBundle(this.db, this.code, scopes, this.bundle),
+            readRoomBundle(this.db, this.code, scopes, this.bundle),
           );
           if (next.root.version !== this.bundle.root.version) {
             this.bundle = await timed("push.read", () =>
-              readBundle(this.db, this.code),
+              readRoomBundle(this.db, this.code, undefined, this.bundle),
             );
             scopes.push(0);
           } else {

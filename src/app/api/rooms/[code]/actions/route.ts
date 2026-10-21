@@ -15,7 +15,12 @@ export async function POST(
     return json(
       await (
         await service()
-      ).recordActions(code, tokenFor(request, code, "student"), batch.entries, batch.participantId),
+      ).recordActions(
+        code,
+        tokenFor(request, code, "student"),
+        batch.entries,
+        batch.participantId,
+      ),
     );
   } catch (error) {
     return failure(error);

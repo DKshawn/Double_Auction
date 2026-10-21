@@ -760,11 +760,8 @@ export class AuctionService {
           // Extend the existing event INSERT, with no additional SQL or network
           // round trip on successful commands. Replayed request IDs stay inert.
           if (
-            !room.receipts.some(
-              (receipt) =>
-                receipt.actor === actorId &&
-                receipt.requestId === request.requestId,
-            )
+            candidate.receipts.length > room.receipts.length ||
+            commandEvents.length
           )
             annotateOperation(
               candidate,
@@ -773,6 +770,7 @@ export class AuctionService {
               request,
               receivedAt,
               now,
+              failureContext,
             );
           Object.assign(room, candidate);
           events.push(...commandEvents);
@@ -830,7 +828,11 @@ export class AuctionService {
     if (actor === "teacher")
       throw new AuctionError("学生として入室してください。", 403);
     if (expectedParticipantId && expectedParticipantId !== actor.id)
-      throw new AuctionError("入室情報が変わりました。元の学生として再入室してください。", 401, "SESSION_CHANGED");
+      throw new AuctionError(
+        "入室情報が変わりました。元の学生として再入室してください。",
+        401,
+        "SESSION_CHANGED",
+      );
     await writeActionLogs(
       this.db,
       code,

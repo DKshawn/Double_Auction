@@ -105,6 +105,18 @@ const names: Record<string, string> = {
   "posted-buy": "提示注文を購入",
   "posted-pass": "購入を見送る",
 };
+const results: Record<string, string> = {
+  quote_accepted: "注文受付（提出時は未約定）",
+  trade_executed: "約定",
+  orders_cancelled: "注文取消",
+  no_orders_to_cancel: "取消対象なし",
+  call_order_submitted: "Call注文受付",
+  offer_submitted: "販売提示受付",
+  bid_submitted: "購入希望受付",
+  purchase_passed: "購入見送り",
+  operation_completed: "処理完了",
+  button_activated: "ボタン操作を受付（端末）",
+};
 
 // One row per activation/command. Server commits override client observations,
 // including timeouts and lost HTTP responses. Historical events are not inferred.
@@ -138,6 +150,9 @@ export function actionExport(logs: ActionLog[]): ExportFile {
       "リクエストID",
       "ボタンID",
       "表示名",
+      "操作方法",
+      "タブID",
+      "端末連番",
       "操作",
       "コマンド",
       "市場",
@@ -154,6 +169,7 @@ export function actionExport(logs: ActionLog[]): ExportFile {
       "端末応答受信_UTC",
       "結果",
       "成功結果",
+      "結果説明",
       "失敗コード",
       "失敗理由",
       "記録根拠",
@@ -176,6 +192,9 @@ export function actionExport(logs: ActionLog[]): ExportFile {
       op?.requestId ?? client?.requestId,
       interaction?.button,
       click?.label,
+      click?.method,
+      interaction?.tabId,
+      click?.sequence,
       names[command] ?? (command || interaction?.button),
       command,
       op?.market ?? click?.market,
@@ -197,6 +216,9 @@ export function actionExport(logs: ActionLog[]): ExportFile {
       iso(client?.respondedAt),
       status === "acknowledged" ? "unconfirmed" : status,
       success ? (op?.result?.code ?? client?.result) : "",
+      success
+        ? (results[op?.result?.code ?? client?.result ?? ""] ?? "処理完了")
+        : "",
       success ? "" : (op?.errorCode ?? client?.errorCode),
       success ? "" : (op?.reason ?? client?.reason),
       op ? "server" : "client",

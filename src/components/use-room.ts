@@ -26,7 +26,8 @@ export function useRoom(code: string, session: RoomSession) {
   const busy = useRef(false);
   const latest = useRef<RoomView | null>(null);
   const actionTracker = useRef<ActionTracker | null>(null);
-  const participantId = !authError && view?.me.role !== "teacher" ? view?.me.id : undefined;
+  const participantId =
+    !authError && view?.me.role !== "teacher" ? view?.me.id : undefined;
   useEffect(() => {
     if (session !== "student" || !participantId) return;
     const tracker = new ActionTracker(

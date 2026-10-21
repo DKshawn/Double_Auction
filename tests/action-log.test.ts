@@ -282,12 +282,21 @@ test("batch uploads deduplicate by ID, cannot forge server identity, and exports
   };
   assert.equal(
     actionBatchSchema.safeParse({
+      participantId: buyer.view.me.id,
+      entries: [event],
+    }).success,
+    true,
+  );
+  assert.equal(
+    actionBatchSchema.safeParse({
+      participantId: buyer.view.me.id,
       entries: [{ ...event, actor: seller.view.me.id }],
     }).success,
     false,
   );
   assert.equal(
     actionBatchSchema.safeParse({
+      participantId: buyer.view.me.id,
       entries: [{ ...event, status: "local_success" }],
     }).success,
     false,
@@ -321,7 +330,15 @@ test("batch uploads deduplicate by ID, cannot forge server identity, and exports
     service.recordActions(teacher.code, "expired-token", [event]),
   );
   await assert.rejects(service.exportActions(teacher.code, buyer.token));
-  await assert.rejects(service.recordActions(teacher.code, buyer.token, [event], seller.view.me.id), /入室情報/);
+  await assert.rejects(
+    service.recordActions(
+      teacher.code,
+      buyer.token,
+      [event],
+      seller.view.me.id,
+    ),
+    /入室情報/,
+  );
 });
 
 test("a response failure after commit stays successful and overrides a client timeout in CSV", async () => {

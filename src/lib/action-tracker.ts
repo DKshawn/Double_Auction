@@ -276,7 +276,7 @@ export class ActionTracker {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ participantId: this.actor, entries: batch }),
+          body: JSON.stringify({ participantId: this.actor, entries: batch }),
           keepalive,
           signal: AbortSignal.timeout(8000),
         },
@@ -308,13 +308,27 @@ export class ActionTracker {
     };
     const invalid = (event: Event) => {
       const field = event.target;
-      if (!(field instanceof HTMLInputElement) || !field.form?.dataset.auditCommand) return;
+      if (
+        !(field instanceof HTMLInputElement) ||
+        !field.form?.dataset.auditCommand
+      )
+        return;
       if (!this.current || this.current.finished)
-        this.begin(field.form.dataset.auditForm ?? "form.submit", "フォーム送信", "keyboard", field.form.dataset.auditCommand);
-      this.block(field.type === "number" ? "INVALID_PRICE" : "CLIENT_VALIDATION", field.validationMessage || "入力内容を確認してください。");
+        this.begin(
+          field.form.dataset.auditForm ?? "form.submit",
+          "フォーム送信",
+          "keyboard",
+          field.form.dataset.auditCommand,
+        );
+      this.block(
+        field.type === "number" ? "INVALID_PRICE" : "CLIENT_VALIDATION",
+        field.validationMessage || "入力内容を確認してください。",
+      );
     };
     document.addEventListener("invalid", invalid, true);
-    this.cleanups.push(() => document.removeEventListener("invalid", invalid, true));
+    this.cleanups.push(() =>
+      document.removeEventListener("invalid", invalid, true),
+    );
     const online = () => {
       void this.flush();
     };

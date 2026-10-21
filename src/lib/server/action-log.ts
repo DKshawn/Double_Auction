@@ -51,7 +51,10 @@ export const clientActionSchema = z
     "成功操作には失敗理由を記録しません。",
   );
 export const actionBatchSchema = z
-  .object({ participantId: z.uuid(), entries: z.array(clientActionSchema).min(1).max(32) })
+  .object({
+    participantId: z.uuid(),
+    entries: z.array(clientActionSchema).min(1).max(32),
+  })
   .strict();
 
 export function operationInput(
@@ -79,6 +82,7 @@ export function annotateOperation(
   request: CommandRequest,
   receivedAt: number,
   now: number,
+  context?: Pick<Operation, "round" | "market" | "stage">,
 ) {
   const trades = events
     .filter((event) => event.type === "trade")
@@ -110,9 +114,17 @@ export function annotateOperation(
     requestId: request.requestId,
     commandType: cmd.type,
     actor,
-    round: order?.round ?? events.at(-1)?.round ?? room.round,
-    ...(order?.detail.market ? { market: Number(order.detail.market) } : {}),
-    ...(order?.detail.stage ? { stage: String(order.detail.stage) } : {}),
+    round: order?.round ?? context?.round ?? events.at(-1)?.round ?? room.round,
+    ...(context?.market
+      ? { market: context.market }
+      : order?.detail.market
+        ? { market: Number(order.detail.market) }
+        : {}),
+    ...(context?.stage
+      ? { stage: context.stage }
+      : order?.detail.stage
+        ? { stage: String(order.detail.stage) }
+        : {}),
     input: operationInput(cmd),
     receivedAt,
     processedAt: now,
@@ -147,7 +159,15 @@ export function annotateOperation(
   if (period) operation.periodStartedAt = period.startedAt;
   let target = order ?? events.find((event) => event.actor === actor);
   if (!target) {
-    emit(room, events, now, "command-completed", actor);
+    emit(
+      room,
+      events,
+      now,
+      "command-completed",
+      actor,
+      { market: operation.market, stage: operation.stage },
+      operation.round,
+    );
     target = events.at(-1)!;
   }
   target.detail.operation = operation;

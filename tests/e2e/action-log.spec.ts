@@ -45,7 +45,12 @@ async function classroom(teacher: Page, browser: Browser, baseURL: string) {
     expect(response.ok(), await response.text()).toBe(true);
   };
   const admission = (await snapshot(teacher.context())).study!.lobby!;
-  if (admission.admission) await send({ type: "study-admission", action: "open", expectedRevision: admission.revision });
+  if (admission.admission)
+    await send({
+      type: "study-admission",
+      action: "open",
+      expectedRevision: admission.revision,
+    });
   for (let i = 0; i < 2; i++) {
     const context = await browser.newContext({ baseURL });
     contexts.push(context);
@@ -55,8 +60,16 @@ async function classroom(teacher: Page, browser: Browser, baseURL: string) {
     expect(response.ok(), await response.text()).toBe(true);
   }
   const lobby = (await snapshot(teacher.context())).study!.lobby!;
-  if (lobby.admission) await send({ type: "study-admission", action: "close", markets: 1, marketMode: "manual", expectedRevision: lobby.revision });
-  else await send({ type: "study-randomize", expectedRevision: lobby.revision });
+  if (lobby.admission)
+    await send({
+      type: "study-admission",
+      action: "close",
+      markets: 1,
+      marketMode: "manual",
+      expectedRevision: lobby.revision,
+    });
+  else
+    await send({ type: "study-randomize", expectedRevision: lobby.revision });
   const students = await Promise.all(
     contexts.map(async (context) => ({
       context,
@@ -116,12 +129,22 @@ test("all button activations, validation, distinct commands and rejections are a
     await route.continue();
   });
   try {
+    const unavailable = room.buyer.page.locator(
+      '[data-audit-button="quote.accept-best"]',
+    );
+    await expect(unavailable).toBeDisabled();
+    await unavailable.scrollIntoViewIfNeeded();
+    const bounds = (await unavailable.boundingBox())!;
+    await room.buyer.page.mouse.click(
+      bounds.x + bounds.width / 2,
+      bounds.y + bounds.height / 2,
+    );
     await room.seller.page
       .locator('[data-audit-button="quote.submit"]')
       .click();
-    await expect(room.seller.page.locator('.study-order-form [role="alert"]')).toContainText(
-      "整数で入力",
-    );
+    await expect(
+      room.seller.page.locator('.study-order-form [role="alert"]'),
+    ).toContainText("整数で入力");
     expect(sellerRequests).toHaveLength(0);
     await room.seller.page
       .locator('[data-audit-button="order-book.chart"]')
@@ -196,12 +219,24 @@ test("all button activations, validation, distinct commands and rejections are a
         { timeout: 25_000 },
       )
       .toContain("INVALID_PRICE");
+    await expect
+      .poll(
+        async () => {
+          const response = await teacher.request.get(
+            `${room.api}/export?kind=actions&session=teacher`,
+          );
+          return response.ok() ? response.text() : "";
+        },
+        { timeout: 25_000 },
+      )
+      .toContain("BUTTON_DISABLED");
     const csv = await (
       await teacher.request.get(
         `${room.api}/export?kind=actions&session=teacher`,
       )
     ).text();
     expect(csv).toContain("BEST_ORDER_CHANGED");
+    expect(csv).toContain("BUTTON_DISABLED");
     expect(csv).toContain("order-book.chart");
     expect(csv).toContain("study-accept");
     expect(csv).toContain("study-quote");
@@ -213,6 +248,57 @@ test("all button activations, validation, distinct commands and rejections are a
     expect(errors).toEqual([]);
   } finally {
     gate.resolve();
+    await room.close();
+  }
+});
+
+test("lost command responses retry the same request and reconcile to one successful operation", async ({
+  page: teacher,
+  browser,
+  baseURL,
+}) => {
+  const room = await classroom(teacher, browser, baseURL!);
+  const attempts: CommandRequest[] = [];
+  let reconciled = false;
+  room.seller.page.on("response", (response) => {
+    if (
+      response.request().method() === "GET" &&
+      response.url().includes("/actions?") &&
+      response.url().includes("requestId=") &&
+      response.ok()
+    )
+      reconciled = true;
+  });
+  await room.seller.page.route(`**${room.api}/commands?*`, async (route) => {
+    attempts.push(route.request().postDataJSON());
+    const committed = await route.fetch();
+    expect(committed.ok()).toBe(true);
+    await route.abort("failed");
+  });
+  try {
+    await room.seller.page.locator(".study-price-input input").fill("80");
+    await room.seller.page
+      .locator('[data-audit-button="quote.submit"]')
+      .click();
+    await expect.poll(() => attempts.length).toBe(2);
+    expect(attempts[0].requestId).toBe(attempts[1].requestId);
+    await expect.poll(() => reconciled).toBe(true);
+    expect(
+      (await room.snapshot(room.seller.context)).study!.market.orders,
+    ).toHaveLength(1);
+    const csv = await (
+      await teacher.request.get(
+        `${room.api}/export?kind=actions&session=teacher`,
+      )
+    ).text();
+    const rows = csv
+      .split("\r\n")
+      .filter((line) => line.includes(attempts[0].requestId));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain('"success"');
+    expect(rows[0]).toContain('"quote_accepted"');
+    expect(rows[0]).not.toContain("NETWORK_UNCONFIRMED");
+  } finally {
     await room.close();
   }
 });

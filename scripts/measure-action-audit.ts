@@ -14,6 +14,14 @@ import { settleDeadline } from "../src/lib/server/engine";
 import type { AuditEvent } from "../src/lib/auction-model";
 
 async function main() {
+  const attendance = Number(process.argv[2] ?? 2);
+  if (
+    !Number.isInteger(attendance) ||
+    attendance < 2 ||
+    attendance > 998 ||
+    attendance % 2
+  )
+    throw new Error("Use an even attendance between 2 and 998");
   const pg = new PGlite();
   const base = localDatabase(pg);
   let queries = 0;
@@ -35,8 +43,8 @@ async function main() {
       {
         title: "Audit benchmark",
         protocol: "institutions-v1",
-        capacity: 2,
-        marketSize: 2,
+        capacity: attendance,
+        marketSize: attendance,
         markets: 1,
         rounds: 15,
         duration: 3600,
@@ -50,12 +58,10 @@ async function main() {
     await db.transaction(async (tx) =>
       saveBundle(tx, await lockBundle(tx, teacher.code), initial.room, []),
     );
-    const student = await service.join(
-      teacher.code,
-      "Benchmark student",
-      "123456",
-    );
-    await service.join(teacher.code, "Benchmark counterparty", "123456");
+    const students = [];
+    for (let i = 0; i < attendance; i++)
+      students.push(await service.join(teacher.code, `B${i}`, "1234"));
+    const student = students[0];
     await service.command(teacher.code, teacher.token, {
       requestId: randomUUID(),
       expectedRound: 0,
@@ -82,6 +88,14 @@ async function main() {
         requestId: randomUUID(),
         expectedRound: view.round,
         expectedStage: view.study!.market.stageKey,
+        interaction: {
+          id: randomUUID(),
+          button: "quote.submit",
+          clickedAt: Date.now(),
+          clockOffsetMs: 0,
+          tabId: "00000000-0000-4000-8000-000000000001",
+          elapsedMs: i,
+        },
         command: { type: "study-quote", price: 50 + (i % 2) },
       });
       if (i >= 10) {
@@ -90,13 +104,51 @@ async function main() {
       }
     }
     elapsed.sort((a, b) => a - b);
+    const views = await Promise.all(
+      students.map((student) => service.view(teacher.code, student.token)),
+    );
+    const burstBefore = queries,
+      burstStart = performance.now();
+    const burst = await Promise.all(
+      students.map(async (student, index) => {
+        const start = performance.now(),
+          current = views[index];
+        await service.command(teacher.code, student.token, {
+          requestId: randomUUID(),
+          expectedRound: current.round,
+          expectedStage: current.study!.market.stageKey,
+          command: {
+            type: "study-quote",
+            price: current.me.role === "buyer" ? 1 : 99999,
+          },
+          interaction: {
+            id: randomUUID(),
+            button: "quote.submit",
+            clickedAt: Date.now(),
+            clockOffsetMs: 0,
+            tabId: "00000000-0000-4000-8000-000000000001",
+            elapsedMs: index,
+          },
+        });
+        return performance.now() - start;
+      }),
+    );
+    burst.sort((a, b) => a - b);
     console.log(
       JSON.stringify({
         storage: "isolated in-memory PGlite",
+        attendance,
         samples: elapsed.length,
         p50Ms: elapsed[Math.floor(elapsed.length * 0.5)],
         p95Ms: elapsed[Math.floor(elapsed.length * 0.95)],
         sqlPerCommand: [...new Set(counts)],
+        burst: {
+          requests: burst.length,
+          p50Ms: burst[Math.floor(burst.length * 0.5)],
+          p95Ms: burst[Math.floor(burst.length * 0.95)],
+          totalMs: performance.now() - burstStart,
+          sqlTotal: queries - burstBefore,
+        },
       }),
     );
   } finally {

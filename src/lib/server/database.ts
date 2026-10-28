@@ -62,6 +62,17 @@ export const SCHEMA = [
   )`,
   `ALTER TABLE auction_markets ADD COLUMN IF NOT EXISTS history_separated boolean NOT NULL DEFAULT false`,
   `ALTER TABLE auction_markets ADD COLUMN IF NOT EXISTS history_cursor integer NOT NULL DEFAULT 0`,
+  `ALTER TABLE auction_markets ADD COLUMN IF NOT EXISTS receipt_count integer NOT NULL DEFAULT 0`,
+  // New requests append keys here; existing embedded receipts are not migrated.
+  `CREATE TABLE IF NOT EXISTS auction_market_receipts (
+    room_code text NOT NULL,
+    market_id integer NOT NULL,
+    actor text NOT NULL,
+    request_id text NOT NULL,
+    sequence integer NOT NULL,
+    PRIMARY KEY (room_code, market_id, actor, request_id),
+    FOREIGN KEY (room_code, market_id) REFERENCES auction_markets(room_code, market_id) ON DELETE CASCADE
+  )`,
   `CREATE TABLE IF NOT EXISTS auction_order_history (
     room_code text NOT NULL,
     market_id integer NOT NULL,

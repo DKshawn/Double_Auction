@@ -77,7 +77,7 @@ export default function DemoRoom({
         : market.stage === "call"
           ? "今の注文を清算"
           : market.stage === "purchase"
-            ? market.posted
+            ? view.config.studyPostedMechanism === "batch-bids-v1"
               ? "次の1秒清算へ"
               : "今の購入時間を終了"
             : "今期を終了";
@@ -203,7 +203,12 @@ export default function DemoRoom({
                           : market.stage === "call"
                             ? "希望価格を送信し、「今の注文を清算」を押すと待たずに結果を確認できます。"
                             : market.posted
-                              ? "提示の締切後は1秒ごとに約定します。現在の1単位を注文し、約定後に次の単位の価格を入力してください。"
+                              ? view.config.studyPostedMechanism ===
+                                "direct-purchase-v1"
+                                ? role === "buyer"
+                                  ? "売り手の提示から購入してください。取引価格は選んだ提示価格です。"
+                                  : "売り手の提示価格で購入されます。約定後は次の単位の価格を提示できます。"
+                                : "提示の締切後は1秒ごとに約定します。現在の1単位を注文し、約定後に次の単位の価格を入力してください。"
                               : market.stage === "offer"
                                 ? role === "seller"
                                   ? "販売価格と数量を送信し、「提示を締め切って公開」を押してください。"

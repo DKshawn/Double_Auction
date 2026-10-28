@@ -12,6 +12,8 @@ import { assemble, revisions, type Bundle } from "./market-store";
 import { readRoomBundle } from "./room-read-cache";
 import { AuctionService } from "./service";
 
+export const MARKET_PUSH_INTERVAL_MS = 40;
+
 export type StreamEvent = {
   type: "snapshot" | "patch" | "heartbeat" | "session-error";
   data: unknown;
@@ -79,9 +81,13 @@ class RoomFeed {
     return this.worker;
   }
   private async drain() {
-    // Coalesce commits arriving in the same short burst into one read per market.
-    await new Promise((resolve) => setTimeout(resolve, 10));
     while (this.queued.size && !this.closed) {
+      // Keep a window on EVERY iteration, including a continuously busy market.
+      // A one-time debounce would otherwise publish almost every later commit.
+      await new Promise((resolve) =>
+        setTimeout(resolve, MARKET_PUSH_INTERVAL_MS),
+      );
+      if (this.closed) return;
       const scopes = [...this.queued];
       this.queued.clear();
       try {

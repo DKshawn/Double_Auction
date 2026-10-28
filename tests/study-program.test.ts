@@ -176,7 +176,7 @@ test("program validation and the single-user demo use the same command", async (
   const view = session.getSnapshot().view;
   assert.equal(view.config.rounds, 2);
   assert.deepEqual(view.config.studyInstitutions, ["posted"]);
-  assert.equal(view.config.studyPostedMechanism, "batch-bids-v1");
+  assert.equal(view.config.studyPostedMechanism, "direct-purchase-v1");
   assert.equal(view.config.studyTiming?.offerSeconds, 5);
   assert.equal(view.config.studyTiming?.purchaseSeconds, 80);
   assert.equal(view.participantCount, 2);

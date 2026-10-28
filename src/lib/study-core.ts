@@ -564,7 +564,7 @@ function startMarket(
     m.call = 1;
     schedule(m, "call", at, timing.callSeconds);
   } else {
-    if (room.config.studyPostedMechanism === "batch-bids-v1")
+    if (room.config.studyPostedMechanism)
       m.posted = { bids: [], batch: 0, endsAt: null, remainingMs: 0 };
     schedule(m, "offer", at, timing.offerSeconds);
   }
@@ -763,6 +763,19 @@ function nextBuyer(
     });
   }
 }
+function postedSupplyExhausted(room: Room, m: StudyMarket) {
+  return studySingleUnitOrders(room.config)
+    ? !room.participants.some(
+        (p) =>
+          !p.withdrawnAt &&
+          p.role === "seller" &&
+          marketFor(room, p).id === m.id &&
+          m.submitted.includes(p.id) &&
+          unitsUsed(room, p) < studyUnits(room.config, "posted"),
+      )
+    : m.offers.every((offer) => offer.remaining === 0);
+}
+
 function clearPosted(
   room: Room,
   m: StudyMarket,
@@ -789,19 +802,7 @@ function clearPosted(
     bid.remaining -= match.quantity;
     offer.remaining -= match.quantity;
   }
-  if (
-    at >= posted.endsAt! ||
-    (studySingleUnitOrders(room.config)
-      ? !room.participants.some(
-          (p) =>
-            !p.withdrawnAt &&
-            p.role === "seller" &&
-            marketFor(room, p).id === m.id &&
-            m.submitted.includes(p.id) &&
-            unitsUsed(room, p) < studyUnits(room.config, "posted"),
-        )
-      : m.offers.every((offer) => offer.remaining === 0))
-  ) {
+  if (at >= posted.endsAt! || postedSupplyExhausted(room, m)) {
     log(room, m, events, at, "posted-bids-expired", "system", {
       bids: posted.bids
         .filter((bid) => bid.remaining > 0)
@@ -1052,7 +1053,9 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
           "purchase",
           at,
           m.posted
-            ? POSTED_BATCH_MS / 1000
+            ? room.config.studyPostedMechanism === "direct-purchase-v1"
+              ? postedPurchaseSeconds(room.config)
+              : POSTED_BATCH_MS / 1000
             : studyTiming(room.config).buyerSeconds,
         );
         if (m.posted) {
@@ -1071,8 +1074,10 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
             offers: m.offers,
             ...(m.posted
               ? {
-                  mechanism: "batch-bids-v1",
-                  batchMs: POSTED_BATCH_MS,
+                  mechanism: room.config.studyPostedMechanism,
+                  ...(room.config.studyPostedMechanism === "batch-bids-v1"
+                    ? { batchMs: POSTED_BATCH_MS }
+                    : {}),
                   endsAt: m.posted.endsAt,
                 }
               : { buyerOrder: m.buyerOrder }),
@@ -1090,10 +1095,16 @@ export function settleStudy(room: Room, now: number, events: AuditEvent[]) {
             sequence,
           })),
         );
-        if (!m.posted && m.buyerOrder.length === 0)
+        if (
+          (!m.posted && m.buyerOrder.length === 0) ||
+          (room.config.studyPostedMechanism === "direct-purchase-v1" &&
+            postedSupplyExhausted(room, m))
+        )
           finishMarket(room, m, events, at, "complete");
       } else if (m.stage === "purchase") {
-        if (m.posted) clearPosted(room, m, events, at);
+        if (room.config.studyPostedMechanism === "direct-purchase-v1")
+          finishMarket(room, m, events, at, "complete");
+        else if (m.posted) clearPosted(room, m, events, at);
         else {
           log(room, m, events, at, "buyer-timeout", m.buyerOrder[m.buyerIndex]);
           nextBuyer(room, m, events, at);
@@ -1543,7 +1554,7 @@ export function executeStudy(
       }
       room.config.rounds = studyTotalRounds(room.config);
       if (otherSettings) study.otherSettings = otherSettings;
-      if (addedPosted) room.config.studyPostedMechanism = "batch-bids-v1";
+      if (addedPosted) room.config.studyPostedMechanism = "direct-purchase-v1";
       if (changed) {
         const next = createStudy(
           study.markets.length,
@@ -2137,9 +2148,16 @@ export function executeStudy(
         });
       }
     } else if (cmd.type === "posted-bid") {
-      if (m.stage !== "purchase" || !m.posted || actor.role !== "buyer")
+      if (
+        m.stage !== "purchase" ||
+        !m.posted ||
+        room.config.studyPostedMechanism !== "batch-bids-v1" ||
+        actor.role !== "buyer"
+      )
         throw new AuctionError(
-          "買い手は共通の取引時間中に買い注文を送信できます。",
+          room.config.studyPostedMechanism === "direct-purchase-v1"
+            ? "買い手は売り手の提示価格から購入してください。"
+            : "買い手は共通の取引時間中に買い注文を送信できます。",
           409,
         );
       checkPrice(cmd.price);
@@ -2170,13 +2188,20 @@ export function executeStudy(
       m.posted.bids.push(bid);
       log(room, m, events, now, "posted-bid", actor.id, { ...bid });
     } else if (cmd.type === "posted-buy" || cmd.type === "posted-pass") {
+      const direct = room.config.studyPostedMechanism === "direct-purchase-v1";
       if (
-        m.posted ||
         m.stage !== "purchase" ||
         actor.role !== "buyer" ||
-        m.buyerOrder[m.buyerIndex] !== actor.id
+        (direct
+          ? !m.posted || cmd.type !== "posted-buy"
+          : m.posted || m.buyerOrder[m.buyerIndex] !== actor.id)
       )
-        throw new AuctionError("現在はあなたの購入時間ではありません。", 409);
+        throw new AuctionError(
+          direct
+            ? "現在は提示価格から購入できません。"
+            : "現在はあなたの購入時間ではありません。",
+          409,
+        );
       if (cmd.type === "posted-buy") {
         const offer = m.offers.find((o) => o.id === cmd.offerId);
         if (
@@ -2196,7 +2221,10 @@ export function executeStudy(
         for (let i = 0; i < cmd.quantity; i++)
           trade(room, m, actor, seller, offer.price, events, now);
         offer.remaining -= cmd.quantity;
-        if (unitsUsed(room, actor) === maximumUnits)
+        if (direct) {
+          if (postedSupplyExhausted(room, m))
+            finishMarket(room, m, events, now, "complete");
+        } else if (unitsUsed(room, actor) === maximumUnits)
           nextBuyer(room, m, events, now);
       } else {
         log(room, m, events, now, "buyer-pass", actor.id);

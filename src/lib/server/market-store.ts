@@ -11,6 +11,9 @@ export type MarketRow = {
   version: number;
   sequence: number;
   receipts: Room["receipts"];
+  receipt_count?: number;
+  // Transaction-local lookup only; never copied into the legacy JSON column.
+  persisted_receipts?: Room["receipts"];
   history_separated: boolean;
   history_cursor: number;
 };
@@ -69,7 +72,10 @@ export function assemble(
     ...room.study!,
     markets: markets.map((m) => (mutable ? structuredClone(m.state) : m.state)),
   };
-  room.receipts = [...root.receipts, ...markets.flatMap((m) => m.receipts)];
+  room.receipts = [
+    ...root.receipts,
+    ...markets.flatMap((m) => [...m.receipts, ...(m.persisted_receipts ?? [])]),
+  ];
   room.sequence = Math.max(root.sequence, ...markets.map((m) => m.sequence));
   room.version = root.version + markets.reduce((sum, m) => sum + m.version, 0);
   room.round = Math.max(
@@ -207,6 +213,7 @@ export async function readBundle(
             ${marketRevision} = $3::jsonb->m.market_id::text->>'revision' THEN NULL
           ELSE jsonb_build_object(
           'state', m.state, 'version', m.version, 'sequence', m.sequence, 'receipts', m.receipts,
+          'receipt_count', m.receipt_count,
           'history_separated', m.history_separated, 'history_cursor', m.history_cursor,
           'history_start', c.cursor,
           'history', COALESCE((SELECT jsonb_agg(h.entry ORDER BY h.closed_sequence)
@@ -266,6 +273,7 @@ export async function lockBundle(
   scope?: number,
   includeHistory = false,
   previous?: RootSnapshot,
+  receipt?: Room["receipts"][number],
 ): Promise<Bundle> {
   const result = await timed("db.root_lock_read", () =>
     readRoot(tx, code, previous, scope ? "SHARE" : "UPDATE"),
@@ -279,7 +287,7 @@ export async function lockBundle(
   const rows = root.storageVersion
     ? await timed("db.market_lock_read", () =>
         tx.query<MarketRow>(
-          `SELECT market_id, state, version, sequence, receipts, history_separated, history_cursor
+          `SELECT market_id, state, version, sequence, receipts, receipt_count, history_separated, history_cursor
      FROM auction_markets WHERE room_code = $1 AND ($2::int IS NULL OR market_id = $2)
      ORDER BY market_id FOR UPDATE`,
           [code, scope ?? null],
@@ -303,10 +311,104 @@ export async function lockBundle(
       row.state.orderHistory =
         history.rows.find((h) => h.market_id === row.market_id)?.entries ?? [];
   }
-  const clock = await tx.query<{ now: string }>(
-    "SELECT (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now",
+  // A fresh statement AFTER the market lock sees receipts committed by the
+  // previous writer, including a concurrent retry from another app process.
+  const clock = await tx.query<{
+    now: string;
+    receipts: { market_id: number; actor: string; requestId: string }[];
+  }>(
+    `SELECT (extract(epoch FROM clock_timestamp()) * 1000)::bigint AS now,
+      COALESCE((SELECT jsonb_agg(jsonb_build_object('market_id', market_id,
+        'actor', actor, 'requestId', request_id) ORDER BY market_id, sequence, actor, request_id)
+        FROM auction_market_receipts WHERE room_code = $1
+          AND ($2::int IS NULL OR market_id = $2)
+          AND ($3::text IS NULL OR actor = $3)
+          AND ($4::text IS NULL OR request_id = $4)
+          AND $5::boolean), '[]'::jsonb) AS receipts`,
+    [
+      code,
+      scope ?? null,
+      receipt?.actor ?? null,
+      receipt?.requestId ?? null,
+      includeHistory || Boolean(receipt),
+    ],
   );
+  for (const row of rows.rows)
+    row.persisted_receipts = clock.rows[0].receipts
+      .filter((r) => r.market_id === row.market_id)
+      .map(({ actor, requestId }) => ({ actor, requestId }));
   return { root, markets: rows.rows, now: Number(clock.rows[0].now) };
+}
+
+const receiptKey = (receipt: Room["receipts"][number]) =>
+  `${receipt.actor}:${receipt.requestId}`;
+
+async function writeMarket(
+  tx: Sql,
+  room: Room,
+  market: StudyMarket,
+  old: MarketRow,
+  events?: AuditEvent[],
+) {
+  const ids = new Set(room.participants.map((p) => p.id));
+  const known = new Set(
+    [...old.receipts, ...(old.persisted_receipts ?? [])].map(receiptKey),
+  );
+  const receipts = room.receipts.filter(
+    (r) =>
+      ids.has(r.actor) &&
+      !known.has(receiptKey(r)) &&
+      studyMarketId(
+        room.config,
+        room.participants.find((p) => p.id === r.actor)!.seat,
+      ) === market.id,
+  );
+  const entries = (market.orderHistory ?? []).slice(
+    old.state.orderHistory?.length ?? 0,
+  );
+  if (
+    entries.some(
+      (e, i) =>
+        e.closedSequence <=
+        (i ? entries[i - 1].closedSequence : old.history_cursor),
+    )
+  )
+    throw new Error("Archived order sequences must increase");
+  // One database round trip, one transaction: state, receipt, history, audit and
+  // notification either all commit or all roll back. Notification is delivered
+  // only after COMMIT, even when PostgreSQL executes the CTEs in another order.
+  await tx.query(
+    `WITH new_receipts AS (
+      INSERT INTO auction_market_receipts (room_code, market_id, actor, request_id, sequence)
+      SELECT $1, $2, r->>'actor', r->>'requestId', $4 FROM jsonb_array_elements($5::jsonb) r
+      ON CONFLICT DO NOTHING RETURNING request_id
+    ), new_history AS (
+      INSERT INTO auction_order_history (room_code, market_id, closed_sequence, entry)
+      SELECT $1, $2, (e->>'closedSequence')::int, e FROM jsonb_array_elements($6::jsonb) e
+    ), saved_market AS (
+      UPDATE auction_markets SET state = $3::jsonb, version = version + 1,
+        sequence = $4, history_cursor = $7,
+        receipt_count = receipt_count + (SELECT count(*)::int FROM new_receipts)
+      WHERE room_code = $1 AND market_id = $2
+    ), new_events AS (
+      INSERT INTO auction_market_events (room_code, market_id, sequence, event)
+      SELECT $1, $2, (e->>'sequence')::int, e FROM jsonb_array_elements($8::jsonb) e
+    ) SELECT CASE WHEN $9::boolean THEN pg_notify('auction_changes', $10) END`,
+    [
+      room.code,
+      market.id,
+      JSON.stringify(hotState(market)),
+      room.sequence,
+      JSON.stringify(receipts),
+      JSON.stringify(entries),
+      entries.at(-1)?.closedSequence ?? old.history_cursor,
+      JSON.stringify(
+        (events ?? []).map((event) => ({ ...event, scope: market.id })),
+      ),
+      events !== undefined,
+      JSON.stringify({ code: room.code, market: market.id }),
+    ],
+  );
 }
 
 export async function writeEvents(
@@ -334,6 +436,15 @@ export async function saveBundle(
   events: AuditEvent[],
   scope?: number,
 ) {
+  if (scope && room.storageVersion) {
+    const old = before.markets.find((m) => m.market_id === scope);
+    const market = room.study!.markets.find((m) => m.id === scope);
+    if (!old || !market || room.study!.markets.length !== 1)
+      throw new Error("Scoped writes must contain exactly their locked market");
+    await writeMarket(tx, room, market, old, events);
+    room.version = before.root.version + old.version + 1;
+    return;
+  }
   if (room.storageVersion) {
     const removed = scope
       ? []
@@ -389,33 +500,16 @@ export async function saveBundle(
       const oldCount = old.state.orderHistory?.length ?? 0;
       const entries = (market.orderHistory ?? []).slice(oldCount);
       const hot = hotState(market);
+      const known = new Set(
+        [...old.receipts, ...(old.persisted_receipts ?? [])].map(receiptKey),
+      );
       const changed =
         entries.length > 0 ||
         JSON.stringify(hotState(old.state)) !== JSON.stringify(hot) ||
-        JSON.stringify(old.receipts) !== JSON.stringify(receipts);
+        receipts.some((r) => !known.has(receiptKey(r)));
       version += old.version + (changed ? 1 : 0);
       if (!changed) continue;
-      if (
-        entries.some(
-          (e, i) =>
-            e.closedSequence <=
-            (i ? entries[i - 1].closedSequence : old.history_cursor),
-        )
-      )
-        throw new Error("Archived order sequences must increase");
-      await appendHistory(tx, room.code, market.id, entries);
-      await tx.query(
-        `UPDATE auction_markets SET state = $3::jsonb, version = version + 1, sequence = $4,
-          receipts = $5::jsonb, history_cursor = $6 WHERE room_code = $1 AND market_id = $2`,
-        [
-          room.code,
-          market.id,
-          JSON.stringify(hot),
-          room.sequence,
-          JSON.stringify(receipts),
-          entries.at(-1)?.closedSequence ?? old.history_cursor,
-        ],
-      );
+      await writeMarket(tx, room, market, old);
     }
     if (!scope)
       await tx.query(

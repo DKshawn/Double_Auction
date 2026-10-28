@@ -254,8 +254,16 @@ function publicMarket(
         cache?.orders.set(o, value);
         return value;
       }),
+    // Keep one published card per seller while the next unit is being repriced.
+    // Purchase validation still uses the exact offer ID and its remaining stock.
     offers: ["purchase", "done"].includes(m.stage)
-      ? m.offers.filter((o) => o.remaining > 0)
+      ? room.config.studyPostedMechanism === "direct-purchase-v1"
+        ? [
+            ...new Map(
+              m.offers.map((offer) => [offer.participantId, offer]),
+            ).values(),
+          ]
+        : m.offers.filter((o) => o.remaining > 0)
       : [],
     offerHistory: (m.offerHistory ?? [])
       .filter((offer) => visible(offer.round))

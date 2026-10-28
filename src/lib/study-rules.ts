@@ -19,8 +19,7 @@ export const INSTITUTIONS: Record<
   posted: {
     name: "売り手価格提示市場",
     short: "Posted Offer",
-    description:
-      "売り手の提示後、買い手が買値を注文し、1秒ごとに価格優先で約定します。",
+    description: "売り手が価格を提示し、買い手がその価格で購入します。",
   },
 };
 export const STUDY_RULES = {

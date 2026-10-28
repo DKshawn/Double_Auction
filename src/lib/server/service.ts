@@ -170,7 +170,7 @@ export class AuctionService {
         duration: timing.data.cdaSeconds,
         studyTiming: timing.data,
         ...(institutions.includes("posted")
-          ? { studyPostedMechanism: "batch-bids-v1" as const }
+          ? { studyPostedMechanism: "direct-purchase-v1" as const }
           : {}),
         studyCommission: commission.data,
         studyCdaUnits: studyUnits(config),
@@ -365,27 +365,55 @@ export class AuctionService {
 
   private async locked<T>(
     code: string,
-    fn: (room: Room, now: number, events: AuditEvent[]) => T | Promise<T>,
+    fn: (
+      room: Room,
+      now: number,
+      events: AuditEvent[],
+      receiptCount: number,
+    ) => T | Promise<T>,
     scope?: number,
+    receipt?: Room["receipts"][number],
   ): Promise<T> {
     const outcome = await inMarketQueue(this.db, code, scope, () =>
       this.db.transaction(async (tx): Promise<Outcome<T>> => {
         const bundle = await timed("command.lock_bundle", () =>
-          lockBundle(tx, code, scope, false, cachedRoomRoot(this.db, code)),
+          lockBundle(
+            tx,
+            code,
+            scope,
+            false,
+            cachedRoomRoot(this.db, code),
+            receipt,
+          ),
         );
         const room = timedSync("state.assemble", () => assemble(bundle, scope));
-        const before = JSON.stringify(room);
+        // Scoped commands/deadlines emit audit events for every mutation. The
+        // room-wide path also includes unaudited login/administrative changes.
+        const before = scope ? undefined : JSON.stringify(room);
+        const receiptsBefore = room.receipts.length;
+        const receiptCount =
+          bundle.root.receipts.length +
+          bundle.markets.reduce(
+            (sum, m) => sum + m.receipts.length + (m.receipt_count ?? 0),
+            0,
+          );
         const now = bundle.now; // After acquiring the lock: no pre-lock timestamps.
         const events: AuditEvent[] = [];
-        settleDeadline(room, now, events);
+        const deadlineChanged = settleDeadline(room, now, events);
         let result: Outcome<T>;
         try {
-          result = { value: await fn(room, now, events) };
+          result = { value: await fn(room, now, events, receiptCount) };
         } catch (error) {
           if (!(error instanceof AuctionError)) throw error;
           result = { error };
         }
-        if (JSON.stringify(room) !== before) {
+        if (
+          scope
+            ? deadlineChanged ||
+              events.length > 0 ||
+              room.receipts.length !== receiptsBefore
+            : JSON.stringify(room) !== before
+        ) {
           await timed("command.save", () =>
             saveBundle(tx, bundle, room, events, scope),
           );
@@ -627,7 +655,7 @@ export class AuctionService {
     token?: string,
     session?: RoomSession,
   ): Promise<RoomView> {
-    const scope = await timed("command.auth_scope", () =>
+    const { scope } = await timed("command.auth_scope", () =>
       this.scope(code, token, session),
     );
     const bundle = await readRoomBundle(this.db, code, scope);
@@ -655,7 +683,7 @@ export class AuctionService {
     code: string,
     token?: string,
     session?: RoomSession,
-  ): Promise<number | undefined> {
+  ): Promise<{ scope: number | undefined; actor: string }> {
     const { root } = await readRoomRoot(this.db, code);
     const actor = authenticate(root, token);
     if (session && (actor === "teacher") !== (session === "teacher"))
@@ -671,12 +699,14 @@ export class AuctionService {
     }
     // Admission and reallocation are room-wide transactions. Avoid capturing an
     // old market scope while a teacher is moving participants between markets.
-    return root.storageVersion &&
+    const scope =
+      root.storageVersion &&
       actor !== "teacher" &&
       actor.seat >= 0 &&
       !(root.study?.lobby && root.phase === "waiting")
-      ? studyMarketId(root.config, actor.seat)
-      : undefined;
+        ? studyMarketId(root.config, actor.seat)
+        : undefined;
+    return { scope, actor: actor === "teacher" ? actor : actor.id };
   }
 
   async advance(code: string, scope?: number) {
@@ -715,13 +745,13 @@ export class AuctionService {
   ) {
     let failureContext:
       Pick<Operation, "actor" | "round" | "market" | "stage"> | undefined;
-    const scope = await timed("command.auth_scope", () =>
+    const { scope, actor: actorId } = await timed("command.auth_scope", () =>
       this.scope(code, token, session),
     );
     try {
       await this.locked(
         code,
-        (room, now, events) => {
+        (room, now, events, receiptCount) => {
           const actor = authenticate(room, token);
           const actorId = actor === "teacher" ? actor : actor.id;
           const market =
@@ -735,7 +765,10 @@ export class AuctionService {
           };
           if (
             actor !== "teacher" &&
-            (scope ? room.receipts.length : room.sequence) > 50_000
+            (scope ? receiptCount : room.sequence) > 50_000 &&
+            !room.receipts.some(
+              (r) => r.actor === actorId && r.requestId === request.requestId,
+            )
           )
             throw new AuctionError(
               "操作数の上限に達しました。実験データを保存してください。",
@@ -776,6 +809,7 @@ export class AuctionService {
           events.push(...commandEvents);
         },
         scope,
+        scope ? { actor: actorId, requestId: request.requestId } : undefined,
       );
     } catch (error) {
       // The market queue/transaction has already released its lock. Rejection

@@ -274,7 +274,7 @@ test("all 12 demo markets finish 15 periods with isolated trades and all Call cl
   assert.deepEqual(demo.getSnapshot().view.study!.myTrades, []);
 });
 
-test("Posted demo collects human bids with bots and only trades at a one-second clearing", async () => {
+test("Posted demo buyers purchase their selected published offer immediately without entering a bid", async () => {
   for (let run = 0; run < 12; run++) {
     const demo = new DemoSession("posted", "buyer", 1000);
     await demo.command({ type: "start" }, true);
@@ -290,15 +290,16 @@ test("Posted demo collects human bids with bots and only trades at a one-second 
       assert.ok(offer);
       assert.equal(
         await demo.command({
-          type: "posted-bid",
-          price: 99999,
+          type: "posted-buy",
+          offerId: offer.id,
           quantity: 1,
         }),
         true,
       );
+      const trades = demo.getSnapshot().view.study!.myTrades;
+      assert.equal(trades.length, unit + 1);
+      assert.equal(trades.at(-1)!.price, offer.price);
     }
-    assert.equal(demo.getSnapshot().view.study!.myTrades.length, 0);
-    demo.skipStage();
     assert.equal(demo.getSnapshot().view.study!.myTrades.length, 2);
     assert.equal(
       demo.getSnapshot().view.study!.unitsUsed,

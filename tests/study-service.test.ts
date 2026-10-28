@@ -70,6 +70,7 @@ test("room credentials cannot read or export another room, and expired/student c
 test("Posted database transactions reserve concurrent bids and persist one lottery/fill across concurrent reads and retries", async () => {
   const { teacher, students, send } = await classroom(1, 6);
   const initial = await service.export(teacher.code, teacher.token);
+  initial.room.config.studyPostedMechanism = "batch-bids-v1";
   initial.room.study!.markets[0].order = ["posted", "call", "cda"];
   await saveFixture(initial.room);
   await send(teacher.token, { type: "start" });
@@ -150,6 +151,107 @@ test("Posted database transactions reserve concurrent bids and persist one lotte
   );
 });
 
+test("Posted direct purchases serialize competing buyers and persist the selected price without duplicate fills", async () => {
+  const { teacher, students, send } = await classroom(1, 6);
+  const initial = await service.export(teacher.code, teacher.token);
+  assert.equal(initial.room.config.studyPostedMechanism, "direct-purchase-v1");
+  initial.room.study!.markets[0].order = ["posted", "call", "cda"];
+  await saveFixture(initial.room);
+  await send(teacher.token, { type: "start" });
+  const sellers = students.filter((s) => s.view.me.role === "seller");
+  const buyers = students.filter((s) => s.view.me.role === "buyer");
+  await send(sellers[0].token, {
+    type: "posted-offer",
+    price: 80,
+    quantity: 1,
+  });
+  await send(sellers[1].token, {
+    type: "posted-offer",
+    price: 90,
+    quantity: 2,
+  });
+  const offered = await service.export(teacher.code, teacher.token);
+  const market = offered.room.study!.markets[0];
+  settleDeadline(offered.room, market.deadline!, []);
+  market.deadline = Date.now() + 120000;
+  market.posted!.endsAt = market.deadline;
+  await saveFixture(offered.room);
+  const offerId = market.offers[0].id;
+  const attempts = await Promise.allSettled(
+    buyers.map((buyer) =>
+      send(buyer.token, { type: "posted-buy", offerId, quantity: 1 }),
+    ),
+  );
+  assert.equal(
+    attempts.filter((result) => result.status === "fulfilled").length,
+    1,
+  );
+  assert.equal(
+    attempts.filter((result) => result.status === "rejected").length,
+    2,
+  );
+  const winner =
+    buyers[attempts.findIndex((result) => result.status === "fulfilled")];
+  const current = await service.view(teacher.code, winner.token);
+  const request = {
+    requestId: randomUUID(),
+    expectedRound: current.round,
+    expectedStage: current.study!.market.stageKey,
+    command: {
+      type: "posted-buy" as const,
+      offerId: market.offers[1].id,
+      quantity: 1,
+    },
+  };
+  await Promise.all([
+    service.command(teacher.code, winner.token, request),
+    service.command(teacher.code, winner.token, request),
+  ]);
+  const saved = await service.export(teacher.code, teacher.token);
+  const finalMarket = saved.room.study!.markets[0];
+  assert.deepEqual(
+    finalMarket.trades.map((trade) => trade.price),
+    [80, 90],
+  );
+  assert.deepEqual(
+    finalMarket.offers.map((offer) => offer.remaining),
+    [0, 1],
+  );
+  assert.ok(
+    finalMarket.trades.every((trade) => trade.buyerId === winner.view.me.id),
+  );
+  assert.equal(
+    saved.events.filter((event) => event.type === "trade").length,
+    2,
+  );
+  assert.ok(
+    !saved.events.some((event) => event.type === "posted-batch-cleared"),
+  );
+  const reloaded = await new AuctionService(db).view(
+    teacher.code,
+    winner.token,
+  );
+  assert.equal(reloaded.study!.unitsUsed, 2);
+  assert.deepEqual(
+    reloaded.study!.myTrades.map((trade) => trade.price),
+    [80, 90],
+  );
+  assert.equal(reloaded.study!.market.activeBuyer, null);
+  assert.ok(
+    reloaded.study!.market.orders.every((order) => order.side === "seller"),
+  );
+  await assert.rejects(
+    send(winner.token, {
+      type: "posted-buy",
+      offerId: market.offers[1].id,
+      quantity: 1,
+    }),
+  );
+  await assert.rejects(
+    send(buyers[0].token, { type: "posted-bid", price: 100, quantity: 1 }),
+  );
+});
+
 async function saveFixture(room: Room) {
   await db.transaction(async (tx) => {
     const before = await lockBundle(tx, room.code, undefined, true);
@@ -199,6 +301,7 @@ async function classroom(markets = 1, marketSize = 16) {
 test("single-unit Posted orders survive reloads, reject concurrent future orders and allow repricing after each fill", async () => {
   const { teacher, students, send } = await classroom(1, 2);
   const initial = await service.export(teacher.code, teacher.token);
+  initial.room.config.studyPostedMechanism = "batch-bids-v1";
   initial.room.config.studyInstitutions = ["posted"];
   initial.room.config.studyPeriods = { posted: 1 };
   initial.room.config.rounds = 1;

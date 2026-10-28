@@ -2236,7 +2236,7 @@
   padding: 19.2px 22.4px;
   border: 1.6px solid #a5d4c1;
   border-radius: 19.2px;
-  background: rgb(241 252 246 / 30%);
+  background: rgb(241 252 246 / 40%);
   color: #22654f;
   box-shadow: 0 12.8px 44.8px #183f2526;
   max-height: calc(100dvh - 24px);
@@ -2870,6 +2870,9 @@
   white-space: normal;
   overflow-wrap: anywhere;
   text-align: center;
+}
+.study-offer-actions .study-market-order:only-child {
+  grid-column: 1 / -1;
 }
 .study-offer-actions .study-buy-button {
   gap: 4px;

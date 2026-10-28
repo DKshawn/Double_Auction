@@ -295,12 +295,12 @@ for (const institutions of selections)
           now = market.deadline!;
           settleDeadline(room, now, events);
           trade(buyer, {
-            type: "posted-bid",
-            price: 120,
+            type: "posted-buy",
+            offerId: market.offers[0].id,
             quantity: 2,
           });
         }
-        // Each institution advances at its own deadline; Posted fills at the next batch.
+        // Each institution advances at its own deadline; Posted purchases fill immediately.
         while (market.round === round && market.stage !== "feedback") {
           assert.ok(market.deadline);
           now = market.deadline!;

@@ -71,6 +71,15 @@ export function studyExport(
             ...studyTiming(room.config),
             postedMechanism:
               room.config.studyPostedMechanism ?? "sequential-v1",
+            ...(room.config.studyPostedMechanism === "direct-purchase-v1"
+              ? {
+                  postedPurchaseSeconds: postedPurchaseSeconds(room.config),
+                  postedBuyerOrder: "purchase-request-arrival",
+                  postedSellerSelection: "buyer-selects-published-offer",
+                  postedExecutionPrice: "seller-offer",
+                  postedBidSubmission: "not-allowed",
+                }
+              : {}),
             ...(room.config.studyPostedMechanism === "batch-bids-v1"
               ? {
                   postedPurchaseSeconds: postedPurchaseSeconds(room.config),

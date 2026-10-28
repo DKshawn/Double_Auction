@@ -55,25 +55,27 @@ test("Posted history retains published quotes and sold-out trades across periods
     .sort((a, b) => a.price - b.price)[0];
   assert.ok(
     offer,
-    "inventory must be available when the shared bid window starts",
+    "inventory must be available when the shared purchase window starts",
   );
   const tradeCount = market.trades.length;
   assert.equal(
     await session.command({
-      type: "posted-bid",
-      price: 99999,
+      type: "posted-buy",
+      offerId: offer.id,
       quantity: 2,
     }),
     true,
   );
   assert.equal(
     session.getSnapshot().view.study!.market.trades.length,
-    tradeCount,
+    tradeCount + 2,
   );
-  session.skipStage();
   const afterPurchase = session.getSnapshot().view.study!.market;
   assert.equal(session.getSnapshot().view.study!.myTrades.length, 2);
-  assert.ok(!afterPurchase.offers.some((item) => item.id === offer.id));
+  assert.equal(
+    afterPurchase.offers.find((item) => item.id === offer.id)!.remaining,
+    0,
+  );
   assert.equal(
     afterPurchase.offerHistory.find((item) => item.id === offer.id)!.quantity,
     2,

@@ -139,7 +139,7 @@ test("success audits distinguish limit submission and best acceptance, correlate
   });
   queries.length = 0;
   const posted = await service.command(teacher.code, seller.token, quoted);
-  assert.equal(queries.length, 9); // First quote; replacement adds one existing history INSERT.
+  assert.ok(queries.length <= 7); // History, state, receipt and audit share one write.
   assert.ok(
     queries.every((q) => !q.sql.includes("INSERT INTO auction_action_logs")),
   );

@@ -97,7 +97,7 @@ export function StudyProgramEditor({
         disabled={!editable}
         marketSize={view.config.marketSize ?? 16}
         postedBatch={
-          view.config.studyPostedMechanism === "batch-bids-v1" ||
+          Boolean(view.config.studyPostedMechanism) ||
           !studyInstitutions(view.config).includes("posted")
         }
       />

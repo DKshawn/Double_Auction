@@ -104,7 +104,7 @@ export class DemoSession {
       },
     );
     if (studyInstitutions(this.config).includes("posted"))
-      this.config.studyPostedMechanism = "batch-bids-v1";
+      this.config.studyPostedMechanism = "direct-purchase-v1";
     this.teacher = options.teacher ?? false;
     if (options.generator)
       this.options.generator = structuredClone(options.generator);
@@ -591,7 +591,10 @@ export class DemoSession {
     if (bot.id === this.humanId) return;
     const used = unitsUsed(this.room, bot);
     const market = marketFor(this.room, bot);
-    if (market.posted) {
+    if (
+      market.posted &&
+      this.room.config.studyPostedMechanism === "batch-bids-v1"
+    ) {
       const reserved = market.posted.bids
         .filter((bid) => bid.participantId === bot.id)
         .reduce((sum, bid) => sum + bid.remaining, 0);
@@ -613,7 +616,7 @@ export class DemoSession {
       .offers.filter((o) => o.remaining > 0 && o.price <= limit)
       .sort((a, b) => a.price - b.price)[0];
     if (!offer) {
-      this.sendBot(bot, { type: "posted-pass" });
+      if (!market.posted) this.sendBot(bot, { type: "posted-pass" });
       return;
     }
     const quantity = studySingleUnitOrders(this.room.config)

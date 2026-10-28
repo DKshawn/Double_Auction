@@ -743,6 +743,10 @@ function StudentConditions(props: MarketProps & { reviewing: boolean }) {
   const study = view.study!;
   const totalUnits = studyUnits(view.config, market.institution);
   const completed = study.unitsUsed >= totalUnits;
+  const directBuyer =
+    market.institution === "posted" &&
+    view.me.role === "buyer" &&
+    view.config.studyPostedMechanism === "direct-purchase-v1";
   return (
     <aside
       className={`panel study-section private-panel ${market.institution === "posted" && view.me.role === "buyer" ? "study-purchase-conditions" : ""}${reviewing ? " study-conditions-review" : ""}`}
@@ -775,24 +779,29 @@ function StudentConditions(props: MarketProps & { reviewing: boolean }) {
           )}
         </div>
       </div>
-      <div
-        className={`study-private-order${completed ? " study-completed-order" : ""}`}
-      >
-        {completed ? (
-          <p className="success-message study-completion-message" role="status">
-            今期の全{totalUnits}単位を
-            {view.me.role === "buyer" ? "購入" : "販売"}しました。
-          </p>
-        ) : (
-          <StudentOrder
-            key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
-            {...props}
-            view={view}
-            market={market}
-            disabled={props.disabled || reviewing}
-          />
-        )}
-      </div>
+      {(!directBuyer || completed) && (
+        <div
+          className={`study-private-order${completed ? " study-completed-order" : ""}`}
+        >
+          {completed ? (
+            <p
+              className="success-message study-completion-message"
+              role="status"
+            >
+              今期の全{totalUnits}単位を
+              {view.me.role === "buyer" ? "購入" : "販売"}しました。
+            </p>
+          ) : (
+            <StudentOrder
+              key={`${market.round}-${market.stageKey}-${study.unitsUsed}`}
+              {...props}
+              view={view}
+              market={market}
+              disabled={props.disabled || reviewing}
+            />
+          )}
+        </div>
+      )}
     </aside>
   );
 }
@@ -1007,7 +1016,7 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
       </StudyOrderBook>
     );
   return (
-    <LegacyOfferBoard
+    <PostedOfferCards
       view={view}
       market={market}
       command={command}
@@ -1016,8 +1025,11 @@ function OfferBoard({ view, market, command, disabled }: MarketProps) {
   );
 }
 
-function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
-  const mine = market.activeBuyer === view.me.alias && view.me.role === "buyer";
+function PostedOfferCards({ view, market, command, disabled }: MarketProps) {
+  const direct = view.config.studyPostedMechanism === "direct-purchase-v1";
+  const mine =
+    view.me.role === "buyer" &&
+    (direct || market.activeBuyer === view.me.alias);
   const timing = studyTiming(view.config);
   const myTurn = market.stage === "purchase" && mine;
   const sortedOffers = [...market.offers].sort((a, b) => a.price - b.price);
@@ -1025,7 +1037,7 @@ function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
     <section className="panel study-section study-offers study-market-workspace">
       <div className="study-offer-heading">
         <h2>売り手の提示価格</h2>
-        {market.stage === "purchase" && (
+        {market.stage === "purchase" && !direct && (
           <span
             className={`study-offer-buyer-label ${myTurn ? "is-my-turn" : ""}`}
             role="status"
@@ -1048,7 +1060,10 @@ function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
           <div className="study-offer-content">
             <div className="study-offer-list" aria-label="売り手の提示一覧">
               {sortedOffers.map((o) => (
-                <div className="study-offer-card" key={o.id}>
+                <div
+                  className="study-offer-card"
+                  key={direct ? o.participantId : o.id}
+                >
                   <div className="study-offer-info">
                     <b>{money(o.price)}</b>
                   </div>
@@ -1074,9 +1089,10 @@ function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
                         <div className="study-market-order" key={q}>
                           <button
                             className="button secondary full study-buy-button"
+                            aria-label={`${money(o.price)}で${q}単位購入`}
                             data-audit-button="posted.buy"
                             data-audit-command="posted-buy"
-                            disabled={disabled || !mine}
+                            disabled={disabled || !myTurn}
                             onClick={() =>
                               void command({
                                 type: "posted-buy",
@@ -1097,7 +1113,19 @@ function LegacyOfferBoard({ view, market, command, disabled }: MarketProps) {
                         </div>
                       ))}
                     {o.remaining === 0 && (
-                      <span className="muted">売り切れ</span>
+                      <div className="study-market-order">
+                        <button
+                          className="button secondary full study-buy-button"
+                          disabled
+                        >
+                          売り切れ
+                        </button>
+                        {view.me.role === "buyer" && (
+                          <small className="field-help" aria-hidden="true">
+                            &nbsp;
+                          </small>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

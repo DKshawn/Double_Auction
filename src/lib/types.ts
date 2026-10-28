@@ -27,7 +27,7 @@ export type RoomConfig = {
   studyLayout?: { buyers: number; sellers: number }[];
   studyTiming?: StudyTiming;
   // Absent on old rooms, whose saved sequential protocol remains readable.
-  studyPostedMechanism?: "batch-bids-v1";
+  studyPostedMechanism?: "batch-bids-v1" | "direct-purchase-v1";
   studyInstitutions?: Institution[];
   studyPeriods?: Partial<StudyPeriods>;
   studyCommission?: number;

@@ -87,7 +87,7 @@ for (const selected of selections) {
     assert.deepEqual(view.config, {
       ...settings,
       ...(selected.includes("posted")
-        ? { studyPostedMechanism: "batch-bids-v1" }
+        ? { studyPostedMechanism: "direct-purchase-v1" }
         : {}),
     });
     assert.equal(view.me.role, "teacher");
@@ -160,7 +160,7 @@ for (const selected of selections) {
     assert.deepEqual(demo.getSnapshot().view.config, {
       ...settings,
       ...(selected.includes("posted")
-        ? { studyPostedMechanism: "batch-bids-v1" }
+        ? { studyPostedMechanism: "direct-purchase-v1" }
         : {}),
     });
     assert.equal(demo.getSnapshot().view.phase, "waiting");
@@ -343,7 +343,7 @@ test("teacher settings stay locked after starting, including pauses and completi
   assertSettingsLocked(false);
 });
 
-test("Posted demo opens a shared bid window for more than eight buyers", async () => {
+test("Posted demo opens a shared purchase window for more than eight buyers", async () => {
   const settings = {
     ...config(["posted"]),
     marketSize: 64,

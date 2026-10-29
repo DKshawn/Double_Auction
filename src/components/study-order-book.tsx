@@ -241,8 +241,8 @@ export function StudyBookChart({
           {rows.map(({ kind, price, buyer, seller }) => {
             const ownQuantity =
               (buyer?.ownQuantity ?? 0) + (seller?.ownQuantity ?? 0);
-            const range =
-              kind === "above" ? "> " : kind === "below" ? "< " : "";
+            const displayPrice =
+              kind === "above" ? "Over" : kind === "below" ? "Under" : price;
             const priceLabel = `${price}円${kind === "above" ? "より高い注文の合計" : kind === "below" ? "より安い注文の合計" : ""}`;
             const label = `${priceLabel}、買い${buyer?.quantity ?? 0}単位、売り${seller?.quantity ?? 0}単位${ownQuantity ? `、あなたの注文${ownQuantity}単位を含む` : ""}`;
             return (
@@ -259,8 +259,7 @@ export function StudyBookChart({
                     maximum={scaleMaximum}
                   />
                   <span className="study-book-chart-price">
-                    {range}
-                    {price}
+                    {displayPrice}
                     {ownQuantity > 0 && (
                       <span
                         className="study-book-chart-own-dot"
@@ -311,7 +310,7 @@ function StudyBookChartBar({
           />
         )}
       </span>
-      <b className="study-book-chart-quantity">{level?.quantity ?? "—"}</b>
+      <b className="study-book-chart-quantity">{level?.quantity || "—"}</b>
     </span>
   );
 }

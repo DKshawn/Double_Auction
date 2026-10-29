@@ -220,8 +220,9 @@ test("CDA chart summary bars use the combined quantity scale and preserve owners
     html,
     /20円より安い注文の合計、買い20単位、売り0単位、あなたの注文1単位を含む/,
   );
-  assert.match(html, /&gt; 21/);
-  assert.match(html, /&lt; 20/);
+  assert.match(html, />Over</);
+  assert.match(html, />Under</);
+  assert.doesNotMatch(html, /class="study-book-chart-quantity">0</);
   assert.match(html, /style="width:100%"/);
   assert.match(html, /style="width:5%"/);
 });

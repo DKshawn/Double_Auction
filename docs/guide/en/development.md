@@ -59,6 +59,28 @@ Keep all released experiments together on `main`. Use short-lived feature branch
 
 Key Double Auction files are `src/experiments/double-auction/lib/study-core.ts` for rules, `study-view.ts` and `study-export.ts` in the same directory for views/statistics and exports, and `src/experiments/double-auction/components/study-room.tsx` and `study-settings.tsx` for the interface and settings. Photo credits are in [public/fruits/CREDITS.md](../../../public/fruits/CREDITS.md).
 
+## Documentation synchronization
+
+The **Documentation sync** PR check compares all committed changes in the PR from the common branch point, not only the latest commit. It checks READMEs and related guides for missing Japanese, Chinese, or English updates. Check annotations and the run summary list unchanged or missing language files and the changes that triggered the reminder. Documentation warnings do not automatically block merging. A Git comparison failure fails the check instead of reporting an inspection that did not run.
+
+| Change                                                                     | Guides checked                                                    |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Experiment modules, or routes/styles with an experiment name in their path | The corresponding `double-auction.md`, `emh.md`, or `judgment.md` |
+| Demo code                                                                  | `demo.md` and the relevant experiment or shared guide             |
+| Shared UI, entry, and room code                                            | `classroom.md`                                                    |
+| Shared server code                                                         | `classroom.md` and `development.md`                               |
+| Scripts, Actions workflows, dependencies, and runtime configuration        | `development.md`                                                  |
+
+These changes also check all three READMEs. Editing one language of a README or a guide under `docs/guide/{ja,zh-CN,en}/` checks the other versions of that same document, including newly added guide topics. Deleting or renaming only one language warns; retiring or renaming all three guide versions together is allowed for documentation-only changes. Test-only changes, `AGENTS.md`, and archived source materials under `docs/upstream` are not treated as feature changes.
+
+Run the same comparison locally after committing. Uncommitted edits are not included:
+
+```sh
+npm run docs:check -- --base origin/main --head HEAD
+```
+
+This is a changed-file reminder. It cannot assess translation meaning or accuracy, or determine whether a refactor needs documentation. Review the corresponding versions and links, and include necessary updates in the same PR. If no update is needed, explain why during review rather than making meaningless edits to silence the warning.
+
 ---
 
 [Home](../../../README.en.md) · [Classroom guide](classroom.md) · [Double Auction](double-auction.md) · [Demo Model](demo.md) · [EMH asset market experiment](emh.md) · [Judgement under Uncertainty](judgment.md)

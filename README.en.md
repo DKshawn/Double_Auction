@@ -26,6 +26,8 @@ A classroom experiment platform with one entry point for Double Auction, EMH, an
 
 Built with Next.js / React / TypeScript, deployed on Vercel + Neon PostgreSQL, and run with Node.js 24.x. Released experiments are independent modules maintained together on `main`.
 
+The **Documentation sync** PR check warns about missing Japanese, Chinese, or English updates to READMEs and related guides.
+
 - [Local setup, environment variables, deployment, and verification](docs/guide/en/development.md)
 - [Architecture and development policy](docs/architecture.md)
 - [Experiment materials index (Japanese and original materials)](material/README.md)

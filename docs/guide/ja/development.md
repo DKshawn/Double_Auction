@@ -61,6 +61,28 @@ npm run build
 
 主要な実装は `src/experiments/double-auction/lib/study-core.ts`（ルール）、`study-view.ts`（表示・統計）、`study-export.ts`（出力）、`src/experiments/double-auction/components/study-room.tsx`（画面）、`study-settings.tsx`（設定）です。写真の出典は [public/fruits/CREDITS.md](../../../public/fruits/CREDITS.md) に記載しています。
 
+## 三語ドキュメントの同期チェック
+
+PR の **Documentation sync** は、PR 全体のコミット済み変更を共通の分岐点から比較し、README と関連ガイドの日中英更新漏れをチェックします。最終コミットだけでは判定しません。チェック画面の警告と実行概要に、未更新または存在しない言語・ファイル、および判定のきっかけとなった変更を表示します。文書の警告はマージを自動で止めません。比較自体に失敗した場合は、検査済みと誤認しないようチェックを失敗させます。
+
+| 変更                                                     | 確認するガイド                                              |
+| -------------------------------------------------------- | ----------------------------------------------------------- |
+| 各実験モジュール・実験名を含むルートやスタイル           | `double-auction.md`、`emh.md`、`judgment.md` の該当するもの |
+| Demo のコード                                            | `demo.md` と該当する実験または共通ガイド                    |
+| 共通の画面・入室・ルーム関連コード                       | `classroom.md`                                              |
+| 共通サーバーコード                                       | `classroom.md` と `development.md`                          |
+| スクリプト・Actions ワークフロー・依存関係・実行環境設定 | `development.md`                                            |
+
+上記の変更では3つの README も確認します。README または `docs/guide/{ja,zh-CN,en}/` の1言語だけを編集した場合も、同じ文書の残りの言語を確認します。新しいガイド名も対象です。1言語だけの削除・改名は警告し、文書だけの変更ではガイド3言語の同時廃止・改名を許容します。テストだけの変更、`AGENTS.md`、保存済みの `docs/upstream` 原資料は機能変更として扱いません。
+
+ローカルでも、コミット後に同じ比較を実行できます。未コミットの編集は対象外です。
+
+```sh
+npm run docs:check -- --base origin/main --head HEAD
+```
+
+ファイルの変更有無によるリマインダーであり、翻訳の意味・正確さや、リファクタリングに文書変更が必要かどうかは自動判定できません。警告が出たら該当3版の内容とリンクを確認し、必要な修正を同じ PR に含めてください。変更不要と判断した場合はレビューで理由を示し、警告を消すだけの無意味な編集は避けます。
+
 ---
 
 [ホーム](../../../README.md) · [授業での使い方](classroom.md) · [Double Auction](double-auction.md) · [Demo Model](demo.md) · [EMH 資産市場実験](emh.md) · [Judgement under Uncertainty](judgment.md)

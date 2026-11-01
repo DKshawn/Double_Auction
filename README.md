@@ -26,6 +26,8 @@ Double Auction、EMH、Judgement under Uncertainty を一つの入口から実�
 
 Next.js / React / TypeScript、Vercel + Neon PostgreSQL。Node.js 24.x を使います。正式な実験は同じ `main` で独立モジュールとして管理します。
 
+PR の **Documentation sync** チェックは、日中英の README と関連ガイドの更新漏れを警告します。
+
 - [ローカル起動・環境変数・デプロイ・検証](docs/guide/ja/development.md)
 - [構成と開発方針（English）](docs/architecture.md)
 - [実験資料](material/README.md)

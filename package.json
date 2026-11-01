@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "docs:check": "node scripts/check-docs-sync.mjs",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:local-postgres": "tsx --test tests/local-postgres.test.ts",

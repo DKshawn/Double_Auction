@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: ".nvmrc"
+          package-manager-cache: false
       - name: Check Japanese, Chinese, and English documentation
         env:
           DOCS_BASE_SHA: ${{ github.event.pull_request.base.sha }}

@@ -9,9 +9,8 @@
 - Source commit: `bd28b3460366671917b477d590c2be0a274f867b`
 - Source documents, tests and license notices: `docs/upstream/judgment/manifest.json`
 
-The current release integrates DoubleAuction, EMH and Judgment on `main` after
-verification. The URL above is the configured production entry; release and
-post-deployment verification results are recorded separately below when completed.
+DoubleAuction, EMH and Judgment are released together on `main`. The production
+entry above was verified on 2026-11-01 (Asia/Tokyo).
 
 ## Data disposition
 
@@ -34,5 +33,52 @@ the maintained repository, production entry and new issue tracker.
 
 ## Release evidence
 
-Pending release verification. Do not treat this record as a completed deployment
-or archive until actual commit/deployment IDs and outcomes are added.
+- Integration PR: https://github.com/DKshawn/Double_Auction/pull/1
+- Integration commit: `2880f817e7924cb33ae822a2a76abc4510fc1c51`
+- Released main commit: `a3e58870e02c6e5fec286f5398a7fb5df41085bf`
+- Preview deployment: `dpl_Fn5zNTemUB6KZkTD9LwrZWhYuNmy`, READY.
+- Production deployment: `dpl_Crx3Uonny9ioT1qhfz9RKiKhTteH`, READY, `sin1`.
+- Public production alias: https://doubleauction.vercel.app
+- PR CI: https://github.com/DKshawn/Double_Auction/actions/runs/41277402220
+- Released main CI: https://github.com/DKshawn/Double_Auction/actions/runs/41277602717
+
+Both CI runs passed lint, formatting, type generation/typecheck, tests and build.
+Local tests: 404 total, 401 passed, 3 optional loopback PostgreSQL tests skipped,
+0 failed. The full production flows below used the actual Neon-backed APIs.
+
+| Check                        | Actual result                                                                                                                                                                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Teacher experiment selection | Three independent options rendered on the public production website                                                                                                                                                           |
+| Judgment HTTP                | All 14 enabled studies / 86 pages saved; role isolation, same-origin enforcement, duplicate submission, translated presentation records, CSV/JSON and reentry passed                                                          |
+| Judgment browser             | Created room, joined with seven-digit ID, started lesson, changed to English, refreshed and recovered page 2, completed five-second task, teacher saw 3/3 saved, downloaded four-line CSV, ended lesson with answers retained |
+| EMH HTTP                     | Fourteen students in groups of 7 and 7, a trade, pause/resume, six rounds in both markets, reveal and CSV exports passed                                                                                                      |
+| DoubleAuction HTTP           | Create, join, random allocation, five-second countdown, CDA trade, idempotent retry, student/teacher reentry, settlement and exports passed                                                                                   |
+| Room management              | All experiments listed through shared management; the five exact agent-created verification rooms were removed after snapshots were saved                                                                                     |
+| Existing data                | Every original row in all seven auction tables matched the pre-release backup; all five original rooms remained                                                                                                               |
+
+After verification cleanup, original table counts were unchanged: 5 rooms,
+10 markets, 335 room events, 4,459 market events and 1,281 order-history entries.
+The original action-log and receipt tables remained empty. Data backups, private
+verification snapshots and credentials are not committed.
+
+## Completed archive
+
+- Historical repository: https://github.com/DKshawn/Exp-all-in-one
+- Migration notice PR: https://github.com/DKshawn/Exp-all-in-one/pull/1
+- Final main commit: `4574849f751f00f9457b4612eb02cb63864cc728`
+- Record: https://github.com/DKshawn/Exp-all-in-one/blob/main/MIGRATION.md
+- GitHub API confirmed `archived: true`; the public repository page displayed
+  its read-only archive banner on 2026-11-01.
+
+The three READMEs and repository description link to the maintained repository,
+teacher/student entries and new issue tracker. The historical README generator
+retains these notices; `npm run check` passed for all 32 JavaScript files, 21
+catalog entries and three READMEs. Only documentation and its generator changed.
+The pinned source remains an ancestor of final main, and runtime code is intact.
+Tags and releases were empty before and after archival. No repository was deleted.
+The original local directory, including uncommitted teacher UI edits, was not
+modified by the archival work; a separate checkout was used.
+
+No legacy website needed redirection and no legacy SQLite records were imported,
+as confirmed by the owner. All subsequent development and issue reporting belong
+in the maintained repository.

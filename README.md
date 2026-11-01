@@ -1,10 +1,10 @@
-# 経済実験プラットフォーム
+# Exp-all-in-one
 
 DoubleAuction・EMH・判断と認知バイアス実験を一つの教員入口から実施します。
 
 - 教員入口: https://doubleauction.vercel.app/teacher
 - 学生入口: https://doubleauction.vercel.app
-- 開発・問い合わせ: https://github.com/DKshawn/Double_Auction
+- 開発・問い合わせ: https://github.com/DKshawn/Exp-all-in-one
 - [構成と開発手順](docs/architecture.md)
 - [Judgment 移行記録](docs/releases/unified-platform-migration.md)
 - [Judgment の原典・実施条件・制約](docs/upstream/judgment/README.md)
@@ -20,7 +20,7 @@ DoubleAuction を基盤に、商品市場の制度比較、EMH 資産市場実�
 
 ## 判断ラボ
 
-出典は [Exp-all-in-one](https://github.com/DKshawn/Exp-all-in-one)、実装は `src/experiments/judgment/` です。[固定した出典と変更点](src/experiments/judgment/UPSTREAM.md) を参照してください。
+出典は旧 Judgment 単独版（旧名 `DKshawn/Exp-all-in-one`）、実装は `src/experiments/judgment/` です。[固定した出典と変更点](src/experiments/judgment/UPSTREAM.md) を参照してください。
 
 1. 実施可能な14課題から選択し、課題順・選択肢順のランダム化を別々に設定します。選択前に全課題を自動選択することはありません。学生画面のプレビューは回答を保存せず、制限時間を停止します。
 2. ルームを作り、学生にコードを共有します。学生は7桁の学生証番号（先頭の0を保持）と4桁の暗証番号で入室し、教員の開始を待ちます。
@@ -46,7 +46,7 @@ DoubleAuction を基盤に、商品市場の制度比較、EMH 資産市場実�
 
 部屋コードは `lab_room_registry` で各実験にまたがって一意に管理します。既存の `auction_*` テーブルに加え、EMH は `emh_sessions`、`emh_markets`、`emh_command_receipts`、`emh_login_attempts` を使います。接続時の migration で作成・既存コード登録を行います。新しい接続文字列は不要です。各市場の行ロック、DB時刻、操作IDによる再送処理を使い、取得時にも期限を処理します。学生は自分の市場だけ、教員は全体と選択市場を取得します。正式な配当値はサーバー用ファイルに置きます。
 
-統合はローカルで検証し、クラウドへのデプロイ・既存データの移行は実施していません。ローカル用の検証には `LOCAL_ONLY=1` と別の `PGLITE_DATA_DIR` を指定し、`DATABASE_URL` と `LOCAL_DATABASE_URL` を空にしてください。既存のローカルDBを複数サーバーから同時に開かないでください。999人は受付上限であり、クラウドでの同時接続性能を保証する数ではありません。
+統合版はローカルおよび公開済みの Vercel + Neon 環境で検証済みです。[移行・検証記録](docs/releases/unified-platform-migration.md)を参照してください。旧 Judgment の SQLite データは取り込んでいません。ローカル用の検証には `LOCAL_ONLY=1` と別の `PGLITE_DATA_DIR` を指定し、`DATABASE_URL` と `LOCAL_DATABASE_URL` を空にしてください。既存のローカルDBを複数サーバーから同時に開かないでください。999人は受付上限であり、クラウドでの同時接続性能を保証する数ではありません。
 
 サーバー起動中の HTTP 検証は `npx tsx scripts/verify-emh-http.ts`（既定 `http://127.0.0.1:3200`、`EMH_TEST_ORIGIN` で変更）。教員用キー未設定の独立したローカルDBで実行し、検証用ルームを作成します。
 

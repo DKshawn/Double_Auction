@@ -2,10 +2,10 @@
 
 ## Source and destination
 
-- Maintained repository: https://github.com/DKshawn/Double_Auction
+- Maintained repository: https://github.com/DKshawn/Exp-all-in-one
 - Vercel project: `double_auction`
 - Production entry: https://doubleauction.vercel.app
-- Judgment source: https://github.com/DKshawn/Exp-all-in-one
+- Historical Judgment source: `DKshawn/Exp-all-in-one` (GitHub repository ID `1435420427`)
 - Source commit: `bd28b3460366671917b477d590c2be0a274f867b`
 - Source documents, tests and license notices: `docs/upstream/judgment/manifest.json`
 
@@ -33,14 +33,14 @@ the maintained repository, production entry and new issue tracker.
 
 ## Release evidence
 
-- Integration PR: https://github.com/DKshawn/Double_Auction/pull/1
+- Integration PR: https://github.com/DKshawn/Exp-all-in-one/pull/1
 - Integration commit: `2880f817e7924cb33ae822a2a76abc4510fc1c51`
 - Released main commit: `a3e58870e02c6e5fec286f5398a7fb5df41085bf`
 - Preview deployment: `dpl_Fn5zNTemUB6KZkTD9LwrZWhYuNmy`, READY.
 - Production deployment: `dpl_Crx3Uonny9ioT1qhfz9RKiKhTteH`, READY, `sin1`.
 - Public production alias: https://doubleauction.vercel.app
-- PR CI: https://github.com/DKshawn/Double_Auction/actions/runs/41277402220
-- Released main CI: https://github.com/DKshawn/Double_Auction/actions/runs/41277602717
+- PR CI: https://github.com/DKshawn/Exp-all-in-one/actions/runs/41277402220
+- Released main CI: https://github.com/DKshawn/Exp-all-in-one/actions/runs/41277602717
 
 Both CI runs passed lint, formatting, type generation/typecheck, tests and build.
 Local tests: 404 total, 401 passed, 3 optional loopback PostgreSQL tests skipped,
@@ -61,12 +61,12 @@ After verification cleanup, original table counts were unchanged: 5 rooms,
 The original action-log and receipt tables remained empty. Data backups, private
 verification snapshots and credentials are not committed.
 
-## Completed archive
+## Completed archive at initial release
 
-- Historical repository: https://github.com/DKshawn/Exp-all-in-one
-- Migration notice PR: https://github.com/DKshawn/Exp-all-in-one/pull/1
+- Historical repository name: `DKshawn/Exp-all-in-one` (ID `1435420427`)
+- Migration notice PR: historical repository PR #1, included in the local metadata backup
 - Final main commit: `4574849f751f00f9457b4612eb02cb63864cc728`
-- Record: https://github.com/DKshawn/Exp-all-in-one/blob/main/MIGRATION.md
+- Saved record: [original migration notice](../upstream/judgment/migration-20261101.md)
 - GitHub API confirmed `archived: true`; the public repository page displayed
   its read-only archive banner on 2026-11-01.
 
@@ -75,10 +75,19 @@ teacher/student entries and new issue tracker. The historical README generator
 retains these notices; `npm run check` passed for all 32 JavaScript files, 21
 catalog entries and three READMEs. Only documentation and its generator changed.
 The pinned source remains an ancestor of final main, and runtime code is intact.
-Tags and releases were empty before and after archival. No repository was deleted.
+Tags and releases were empty before and after the initial archival.
 The original local directory, including uncommitted teacher UI edits, was not
 modified by the archival work; a separate checkout was used.
 
 No legacy website needed redirection and no legacy SQLite records were imported,
 as confirmed by the owner. All subsequent development and issue reporting belong
 in the maintained repository.
+
+## Subsequent repository naming decision
+
+The owner subsequently requested deletion of the retired repository and reuse
+of `Exp-all-in-one` for this unified platform. The maintained repository is
+still ID `1389400487`; the Judgment source was a different repository.
+See the [repository rename record](repository-rename.md) for the current
+status and verified local history backup. Historical source URLs above
+describe provenance and must not be confused with the new platform URL.

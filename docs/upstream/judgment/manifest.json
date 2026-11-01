@@ -112,5 +112,7 @@
       "destination": "docs/upstream/judgment/tests/timed-response.test.mjs",
       "sha256": "276c44716ed2d7404cb1abefcad221d006928f74b4bdd3c6778714e445ee15c5"
     }
-  ]
+  ],
+  "repositoryId": 1435420427,
+  "repositoryUrlScope": "Historical source URL at the pinned commit; reused by the unified platform after migration."
 }

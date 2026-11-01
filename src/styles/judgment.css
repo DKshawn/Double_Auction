@@ -190,6 +190,7 @@
 }
 .judgment-preview-toolbar > div {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-left: auto;
 }

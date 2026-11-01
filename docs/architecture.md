@@ -1,6 +1,6 @@
 # Unified experiment platform
 
-Maintained repository: https://github.com/DKshawn/Double_Auction
+Maintained repository: https://github.com/DKshawn/Exp-all-in-one
 
 All released experiments live on `main`. Develop on short-lived feature branches,
 run the checks below, review the diff, then merge and delete the feature branch.

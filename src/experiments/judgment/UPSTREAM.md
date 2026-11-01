@@ -1,6 +1,11 @@
 # 判断ラボ source and integration
 
-Source: https://github.com/DKshawn/Exp-all-in-one
+Original standalone source: `DKshawn/Exp-all-in-one`, GitHub repository ID
+`1435420427`. That historical URL now identifies the unified platform
+(repository ID `1389400487`), following the owner-requested rename on 2026-11-01.
+The original files and source revision remain pinned below. See
+[the rename record](../../../docs/releases/repository-rename.md) for provenance
+and the verified local Git history backup.
 
 Pinned revision: `bd28b3460366671917b477d590c2be0a274f867b` (v0.6.0).
 

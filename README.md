@@ -1,10 +1,10 @@
-# 経済実験プラットフォーム
+# Exp-all-in-one
 
 DoubleAuction・EMH・判断と認知バイアス実験を一つの教員入口から実施します。
 
 - 教員入口: https://doubleauction.vercel.app/teacher
 - 学生入口: https://doubleauction.vercel.app
-- 開発・問い合わせ: https://github.com/DKshawn/Double_Auction
+- 開発・問い合わせ: https://github.com/DKshawn/Exp-all-in-one
 - [構成と開発手順](docs/architecture.md)
 - [Judgment 移行記録](docs/releases/unified-platform-migration.md)
 - [Judgment の原典・実施条件・制約](docs/upstream/judgment/README.md)
@@ -20,7 +20,7 @@ DoubleAuction を基盤に、商品市場の制度比較、EMH 資産市場実�
 
 ## 判断ラボ
 
-出典は [Exp-all-in-one](https://github.com/DKshawn/Exp-all-in-one)、実装は `src/experiments/judgment/` です。[固定した出典と変更点](src/experiments/judgment/UPSTREAM.md) を参照してください。
+出典は旧 Judgment 単独版（旧名 `DKshawn/Exp-all-in-one`）、実装は `src/experiments/judgment/` です。[固定した出典と変更点](src/experiments/judgment/UPSTREAM.md) を参照してください。
 
 1. 実施可能な14課題から選択し、課題順・選択肢順のランダム化を別々に設定します。選択前に全課題を自動選択することはありません。学生画面のプレビューは回答を保存せず、制限時間を停止します。
 2. ルームを作り、学生にコードを共有します。学生は7桁の学生証番号（先頭の0を保持）と4桁の暗証番号で入室し、教員の開始を待ちます。

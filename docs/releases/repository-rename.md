@@ -11,12 +11,18 @@ three-experiment migration and production verification were complete.
 - Main at rename: `73615a6787d20dd955c3c117029950fe7c757c0e`, preserved
 - Teacher entry: https://doubleauction.vercel.app/teacher
 - Student entry: https://doubleauction.vercel.app
-- Vercel project: `double_auction` (`prj_QxEwAY8jf0SBexUkclptvR9xMT4f`)
+- Vercel project: `exp-all-in-one` (`prj_QxEwAY8jf0SBexUkclptvR9xMT4f`)
+- Vercel dashboard: https://vercel.com/dkshawns-projects/exp-all-in-one
 
 The platform retains its commits, pull requests, issues and CI history. The local
 platform `origin` now uses the new repository URL. The Vercel project and Neon
 database remain the existing resources. All three experiments remain on `main`;
 DoubleAuction is still the name of one experiment module.
+
+On the same day, the owner also requested the Vercel project rename from
+`double_auction` to `exp-all-in-one`. Vercel requires lowercase project names.
+The project ID, GitHub connection, Node.js 24.x setting and existing production
+domain remain the same. The local CLI link now uses the current project name.
 
 ## Retired Judgment source
 

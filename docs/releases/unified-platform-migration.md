@@ -3,7 +3,7 @@
 ## Source and destination
 
 - Maintained repository: https://github.com/DKshawn/Exp-all-in-one
-- Vercel project: `double_auction`
+- Vercel project: `exp-all-in-one` (renamed from `double_auction` on 2026-11-01)
 - Production entry: https://doubleauction.vercel.app
 - Historical Judgment source: `DKshawn/Exp-all-in-one` (GitHub repository ID `1435420427`)
 - Source commit: `bd28b3460366671917b477d590c2be0a274f867b`

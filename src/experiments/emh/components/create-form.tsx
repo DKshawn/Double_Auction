@@ -1,6 +1,5 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ServerStatus } from "@/lib/server/config";
 import { api, errorMessage } from "@/lib/client";
@@ -95,7 +94,6 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
       <button className="button primary full" disabled={busy || !status.ready}>
         {busy ? "作成中…" : "ルームを作成"}
       </button>
-      <Link href="/emh/demo">練習する</Link>
     </form>
   );
 }

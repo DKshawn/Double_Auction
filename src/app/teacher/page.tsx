@@ -1,3 +1,4 @@
+import { DemoEntryLink } from "@/components/demo-entry-link";
 import { TeacherHub } from "@/components/teacher-hub";
 import { TeacherReentry } from "@/components/teacher-reentry";
 import { EmhCreateForm } from "@/experiments/emh/components/create-form";
@@ -37,10 +38,20 @@ export default async function Teacher({
     );
   }
   if (!code && !returnRoom && legacy !== "1" && experiment !== "institutions") {
+    const demoHref =
+      experiment === "emh"
+        ? "/emh/demo"
+        : experiment === "judgment"
+          ? "/judgment/demo"
+          : null;
     return (
       <>
-        <Header>
-          <Link href="/">学生の入室画面</Link>
+        <Header homeHref="/teacher">
+          {demoHref ? (
+            <DemoEntryLink href={demoHref} />
+          ) : (
+            <Link href="/">学生の入室画面</Link>
+          )}
         </Header>
         <main className="teacher-hub-main">
           {experiment === "judgment" ? (
@@ -66,9 +77,7 @@ export default async function Teacher({
   return (
     <>
       <Header homeHref="/teacher">
-        <Link className="button demo-entry-button" href="/demo">
-          Demo Model
-        </Link>
+        <DemoEntryLink href="/demo" />
       </Header>
       <main
         className={

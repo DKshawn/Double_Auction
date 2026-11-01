@@ -9,9 +9,11 @@ import {
 export function JudgmentPreview({
   protocols,
   onClose,
+  demo = false,
 }: {
   protocols: PreviewProtocol[];
   onClose: () => void;
+  demo?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null),
     handle = useRef<AppHandle | null>(null);
@@ -29,14 +31,14 @@ export function JudgmentPreview({
     <dialog
       ref={dialog}
       className="judgment-preview"
-      aria-label="学生画面のプレビュー"
+      aria-label={demo ? "ひとりデモ" : "学生画面のプレビュー"}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
       }}
     >
       <div className="judgment-preview-toolbar">
-        <strong>プレビュー</strong>
+        <strong>{demo ? "ひとりデモ" : "プレビュー"}</strong>
         <span>回答は保存されません。制限時間は停止しています。</span>
         <div>
           <button
@@ -54,7 +56,7 @@ export function JudgmentPreview({
             スキップ
           </button>
           <button className="button primary" onClick={onClose}>
-            閉じる
+            {demo ? "実験設定に戻る" : "閉じる"}
           </button>
         </div>
       </div>

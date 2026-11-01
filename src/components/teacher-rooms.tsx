@@ -1,4 +1,5 @@
 "use client";
+import { JUDGMENT_NAME } from "@/experiments/judgment/constants";
 
 import { useEffect, useRef, useState } from "react";
 import { FlaskConical, RefreshCw, Search, Trash2 } from "lucide-react";
@@ -259,7 +260,7 @@ export function TeacherRooms({
                   </div>
                   <div className="teacher-room-institutions">
                     {room.experiment === "judgment" ? (
-                      <span>判断ラボ</span>
+                      <span>{JUDGMENT_NAME}</span>
                     ) : room.experiment === "emh" ? (
                       <span>EMH · 資産市場実験</span>
                     ) : room.institutions.length ? (

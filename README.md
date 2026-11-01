@@ -9,16 +9,18 @@ DoubleAuction・EMH・判断と認知バイアス実験を一つの教員入口�
 - [Judgment 移行記録](docs/releases/unified-platform-migration.md)
 - [Judgment の原典・実施条件・制約](docs/upstream/judgment/README.md)
 
-DoubleAuction を基盤に、商品市場の制度比較、EMH 資産市場実験、判断ラボを選べる授業用プラットフォームです。Next.js / React / TypeScript、Vercel + Neon PostgreSQL。初期表示は日本語です。
+DoubleAuction を基盤に、商品市場の制度比較、EMH 資産市場実験、Judgement under Uncertaintyを選べる授業用プラットフォームです。Next.js / React / TypeScript、Vercel + Neon PostgreSQL。初期表示は日本語です。
 
 ## 共通の入口
 
-- `/teacher` で **Double Auction**、**EMH**、**判断ラボ** を選び、ルームを作成します。保存済みの全実験のルームも同じ一覧で管理します。
-- 学生は `/` でルームコード・ニックネーム・4桁の暗証番号を入力します。判断ラボでは名前欄が7桁の学生証番号に切り替わります。コードから実験を判別し、`/room/[code]` へ案内します。
+各実験の教員用ページ右上にある **Demo Model** から、教員用キーやルーム作成なしで試せます。Double Auction は `/demo`、EMH は `/emh/demo`、Judgement under Uncertainty は `/judgment/demo` です。Judgement のデモは課題を選択して開始し、回答は保存せず、制限時間を停止したプレビューで確認します。
+
+- `/teacher` で **Double Auction**、**EMH**、**Judgement under Uncertainty** を選び、ルームを作成します。保存済みの全実験のルームも同じ一覧で管理します。
+- 学生は `/` でルームコード・ニックネーム・4桁の暗証番号を入力します。Judgement under Uncertaintyでは名前欄が7桁の学生証番号に切り替わります。コードから実験を判別し、`/room/[code]` へ案内します。
 - 教員の再入室とルーム管理には従来のパスワード・教員用キーを使います。教員と学生の Cookie は別々です。
 - Double Auction の詳細設定・制度・デモ・既存ルームはそのまま利用できます。
 
-## 判断ラボ
+## Judgement under Uncertainty
 
 出典は旧 Judgment 単独版（旧名 `DKshawn/Exp-all-in-one`）、実装は `src/experiments/judgment/` です。[固定した出典と変更点](src/experiments/judgment/UPSTREAM.md) を参照してください。
 
@@ -177,7 +179,7 @@ DoubleAuction を基盤に、商品市場の制度比較、EMH 資産市場実�
 
 ## ローカル起動
 
-Node.js 22以上を使用します。
+Node.js 24.xを使用します（`.nvmrc`・CI・Vercel の設定と共通）。`package.json` の `engines.node` も `24.x` に固定し、将来のメジャーバージョンへの自動切り替えを防ぎます。
 
 ```sh
 npm ci

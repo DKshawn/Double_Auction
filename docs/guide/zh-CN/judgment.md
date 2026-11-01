@@ -1,0 +1,20 @@
+# Judgement under Uncertainty
+
+[日本語](../ja/judgment.md) · [中文](../zh-CN/judgment.md) · [English](../en/judgment.md)
+
+该模块来自旧 Judgment 独立版（旧仓库名为 `DKshawn/Exp-all-in-one`），实现位于 `src/experiments/judgment/`。源提交版本与修改记录见[迁移来源说明（英文）](../../../src/experiments/judgment/UPSTREAM.md)。
+
+1. 从14项可实施任务中选择，分别设置任务顺序与选项顺序的随机化。点击任务后的圆圈 **i** 可查看说明、预计用时和实施条件，不改变勾选状态。系统不会预先自动全选。学生画面预览不保存回答，计时限制暂停。
+2. 创建房间并分享代码。学生使用7位学号（保留开头的0）和4位数字 PIN 加入，等待教师开始。
+3. 开始时为每名学生分配条件，学生按自己的进度回答。允许中途加入。条件和顺序被保存，重新进入后不会改变。学生画面支持日语、中文和 English。
+4. 五秒乘法估计在开始后计时，不接收超时输入，并记录刷新等中断及未作答。谈话任务使用真实搭档的学号，在同一实施轮次内匹配双方回答。
+5. 教师查看参与进度并结束实施。随后可在同一房间重新选择任务，开始下一轮；已完成的回答按实施轮次分别保留。
+6. CSV 每行对应一条回答；完整 JSON 包括条件、随机种子、任务全文、语言历史、测量记录、实施历史和谈话配对分析。选择全部14项任务时共86页。
+
+不会启动原 SQLite 服务。模块在共用 PostgreSQL 连接下使用 `judgment_*` 表，并在共用房间代码注册表中登记。Vercel + Neon 配置与平台共用，旧应用的 SQLite 数据不会自动迁移。
+
+单模块验证：`npx tsx --test tests/judgment-platform.test.ts`。完整 HTTP 流程使用隔离的本地服务器运行 `npx tsx scripts/verify-judgment-http.ts`，默认地址为 `http://127.0.0.1:3200`，可通过 `JUDGMENT_TEST_ORIGIN` 修改。脚本会创建测试房间，不要连接云端数据库执行。
+
+---
+
+[首页](../../../README.zh-CN.md) · [课堂使用流程](classroom.md) · [Double Auction](double-auction.md) · [Demo Model](demo.md) · [EMH 资产市场实验](emh.md) · [开发、部署与验证](development.md)

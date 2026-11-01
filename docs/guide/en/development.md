@@ -1,0 +1,64 @@
+# Development, deployment and verification
+
+[日本語](../ja/development.md) · [中文](../zh-CN/development.md) · [English](../en/development.md)
+
+## Local setup
+
+The local project folder is `Exp-all-in-one`. Run all commands from that repository root.
+
+Use Node.js 24.x, matching `.nvmrc`, CI, and Vercel. `package.json` also pins `engines.node` to `24.x` to prevent automatic changes to future major versions.
+
+```sh
+npm ci
+npm run dev
+```
+
+On Windows, `pwsh -NoProfile -File scripts/dev-local.ps1` starts an isolated local verification environment on port 3200, using `.data/platform-verification`. The old EMH folder is no longer needed; see the [consolidation record](../../releases/emh-folder-consolidation.md).
+
+The ordinary development server's teacher entry is `http://localhost:3000/teacher`. The student entry `/` and shared header do not display teacher or demo links. Without Neon configured, the app uses embedded PostgreSQL through PGlite at `.data/auction`. Do not open the same data directory from multiple servers. Production uses Neon.
+
+## Vercel + Neon
+
+| Environment variable | Purpose                                                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`       | Neon pooled PostgreSQL connection string; required on Vercel                                                    |
+| `TEACHER_ACCESS_KEY` | Shared teacher key for room creation, management, and deletion; required on Vercel and not shared with students |
+| `PGLITE_DATA_DIR`    | Optional local data directory                                                                                   |
+
+Deploy from GitHub to Vercel. The function region in `vercel.json` is `sin1`, matching Neon Singapore. Tables initialize on first connection, or manually with `npm run db:migrate`. Production does not fall back to a local database.
+
+Keep `.env*`, `.data`, `work`, and test artifacts out of Git. Use a separate Neon branch for preview environments.
+
+## Synchronization and consistency
+
+SSE streams order and trade changes, normally sending only authorized view deltas. Initial connections and reconnects receive a current snapshot. Double Auction students see history for the configured periods of the current institution; cumulative profits and all teacher records are retained. Reconnection and low-frequency HTTP reads recover from interrupted streams. One participant disconnecting does not automatically pause other participants or the experiment clock. Teachers control all-market pauses. Order deadlines still use database time.
+
+Experiment 1 stores trading state, deduplication IDs, and audit records by market. Student orders lock only their market row; teacher pause/resume operations coordinate all markets through the shared-settings lock. State and audit records commit in one transaction. Deadlines advance on connected servers; if everyone disconnects, the next access catches up from the recorded timestamps.
+
+Local PostgreSQL uses LISTEN/NOTIFY to notify other application processes. Direct notifications online require `REALTIME_DATABASE_URL`, a direct connection that supports LISTEN. Without it, the server polls a small per-room version list and streams deltas. Local measurements cannot guarantee cloud capacity or cost.
+
+Authentication tokens use HttpOnly cookies; the database stores hashes only. Passwords and PINs use salted scrypt. Teacher data requires authentication. Students are not sent others' values or costs, or other markets' orders. Call order books publish only their market's prices and remaining quantities. Audit CSVs distinguish shared operations from market operations.
+
+See [local PostgreSQL setup and the 192-participant load check (Japanese)](../../local-capacity-testing.md). `LOCAL_ONLY=1` and `LOCAL_DATABASE_URL` keep verification away from cloud connections. Distinguish single-process PGlite checks from concurrent checks using actual PostgreSQL.
+
+## Verification and development policy
+
+```sh
+npm run lint
+npm run format:check
+npm run typecheck
+npm test
+npm run build
+```
+
+Automated tests cover the three institutions, marginal values and per-unit orders for 1–5 units, balanced institution-order allocation, database admission for 96 participants across six markets, concurrent requests, deadlines, pauses, convergence metrics, private information, exports, and compatibility with saved rooms. Module-specific HTTP verification is documented under [EMH](emh.md) and [Judgement](judgment.md).
+
+`tests/e2e` contains Playwright browser tests. `npm run test:e2e` uses a dedicated local database. Do not point `E2E_BASE_URL`, which selects an existing environment, at production. The suite includes regression checks for legacy 12-person CDA rooms and the teacher form for creating Experiment 1.
+
+Keep all released experiments together on `main`. Use short-lived feature branches, validate, merge, and delete the branch. The platform owns entry points, rooms, sessions, and database connections; modules own experiment rules and data. See the [architecture and development policy](../../architecture.md).
+
+Key Double Auction files are `src/experiments/double-auction/lib/study-core.ts` for rules, `study-view.ts` and `study-export.ts` in the same directory for views/statistics and exports, and `src/experiments/double-auction/components/study-room.tsx` and `study-settings.tsx` for the interface and settings. Photo credits are in [public/fruits/CREDITS.md](../../../public/fruits/CREDITS.md).
+
+---
+
+[Home](../../../README.en.md) · [Classroom guide](classroom.md) · [Double Auction](double-auction.md) · [Demo Model](demo.md) · [EMH asset market experiment](emh.md) · [Judgement under Uncertainty](judgment.md)

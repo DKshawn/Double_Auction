@@ -9,8 +9,8 @@ three-experiment migration and production verification were complete.
 - Previous name: `DKshawn/Double_Auction`
 - GitHub repository ID: `1389400487`, unchanged by the rename
 - Main at rename: `73615a6787d20dd955c3c117029950fe7c757c0e`, preserved
-- Teacher entry: https://doubleauction.vercel.app/teacher
-- Student entry: https://doubleauction.vercel.app
+- Teacher entry: https://exp-all-in-one.vercel.app/teacher
+- Student entry: https://exp-all-in-one.vercel.app
 - Vercel project: `exp-all-in-one` (`prj_QxEwAY8jf0SBexUkclptvR9xMT4f`)
 - Vercel dashboard: https://vercel.com/dkshawns-projects/exp-all-in-one
 
@@ -21,8 +21,18 @@ DoubleAuction is still the name of one experiment module.
 
 On the same day, the owner also requested the Vercel project rename from
 `double_auction` to `exp-all-in-one`. Vercel requires lowercase project names.
-The project ID, GitHub connection, Node.js 24.x setting and existing production
-domain remain the same. The local CLI link now uses the current project name.
+At that step, the project ID, GitHub connection, Node.js 24.x setting and
+production domain were unchanged. The local CLI link uses the current project name.
+
+The owner then requested the production domain to match the unified platform.
+`exp-all-in-one.vercel.app` is now attached to the same project and production
+deployment. HTTPS, the teacher/student pages, all three demo routes and the
+Neon-backed room list were verified before switching the old address.
+`doubleauction.vercel.app` now redirects with HTTP 308, preserving the path and
+query string, including room codes. The GitHub repository homepage and current
+entry links use the new domain. Existing rooms and data remain in the same
+database; browser sessions are host-scoped, so users must reenter on the new
+address. Historical migration notices retain the addresses used at the time.
 
 ## Retired Judgment source
 

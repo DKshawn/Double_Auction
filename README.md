@@ -2,8 +2,8 @@
 
 DoubleAuction・EMH・判断と認知バイアス実験を一つの教員入口から実施します。
 
-- 教員入口: https://doubleauction.vercel.app/teacher
-- 学生入口: https://doubleauction.vercel.app
+- 教員入口: https://exp-all-in-one.vercel.app/teacher
+- 学生入口: https://exp-all-in-one.vercel.app
 - Vercel プロジェクト: [exp-all-in-one](https://vercel.com/dkshawns-projects/exp-all-in-one)
 - 開発・問い合わせ: https://github.com/DKshawn/Exp-all-in-one
 - [構成と開発手順](docs/architecture.md)
@@ -13,6 +13,8 @@ DoubleAuction・EMH・判断と認知バイアス実験を一つの教員入口�
 DoubleAuction を基盤に、商品市場の制度比較、EMH 資産市場実験、Judgement under Uncertaintyを選べる授業用プラットフォームです。Next.js / React / TypeScript、Vercel + Neon PostgreSQL。初期表示は日本語です。
 
 ## 共通の入口
+
+旧アドレス `doubleauction.vercel.app` はパスとクエリを保って新アドレスへ転送します。旧アドレスで入室していた場合は、新アドレスで一度再入室してください。
 
 各実験の教員用ページ右上にある **Demo Model** から、教員用キーやルーム作成なしで試せます。Double Auction は `/demo`、EMH は `/emh/demo`、Judgement under Uncertainty は `/judgment/demo` です。Judgement のデモは課題を選択して開始し、回答は保存せず、制限時間を停止したプレビューで確認します。
 

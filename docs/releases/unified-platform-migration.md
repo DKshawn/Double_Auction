@@ -4,13 +4,14 @@
 
 - Maintained repository: https://github.com/DKshawn/Exp-all-in-one
 - Vercel project: `exp-all-in-one` (renamed from `double_auction` on 2026-11-01)
-- Production entry: https://doubleauction.vercel.app
+- Production entry: https://exp-all-in-one.vercel.app
 - Historical Judgment source: `DKshawn/Exp-all-in-one` (GitHub repository ID `1435420427`)
 - Source commit: `bd28b3460366671917b477d590c2be0a274f867b`
 - Source documents, tests and license notices: `docs/upstream/judgment/manifest.json`
 
 DoubleAuction, EMH and Judgment are released together on `main`. The production
-entry above was verified on 2026-11-01 (Asia/Tokyo).
+entry above was verified on 2026-11-01 (Asia/Tokyo). The later project/domain
+renames and redirect verification are recorded in [repository-rename.md](repository-rename.md).
 
 ## Data disposition
 
@@ -38,7 +39,7 @@ the maintained repository, production entry and new issue tracker.
 - Released main commit: `a3e58870e02c6e5fec286f5398a7fb5df41085bf`
 - Preview deployment: `dpl_Fn5zNTemUB6KZkTD9LwrZWhYuNmy`, READY.
 - Production deployment: `dpl_Crx3Uonny9ioT1qhfz9RKiKhTteH`, READY, `sin1`.
-- Public production alias: https://doubleauction.vercel.app
+- Original public production alias (now redirects to the unified domain): https://doubleauction.vercel.app
 - PR CI: https://github.com/DKshawn/Exp-all-in-one/actions/runs/41277402220
 - Released main CI: https://github.com/DKshawn/Exp-all-in-one/actions/runs/41277602717
 

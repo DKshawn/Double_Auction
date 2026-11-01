@@ -50,18 +50,88 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
-.judgment-study-grid label {
+.judgment-study-option {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
+  align-items: center;
   border: 1px solid var(--line);
   border-radius: 9px;
+}
+.judgment-study-option > label {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  gap: 12px;
+  padding: 16px;
   cursor: pointer;
 }
-.judgment-study-grid label.selected {
+.judgment-study-option.selected {
   border-color: var(--accent);
   background: var(--lavender);
+}
+.judgment-study-info.button {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  margin-right: 12px;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1;
+}
+.judgment-study-dialog {
+  width: min(600px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 16px 56px #22283d26;
+}
+.judgment-study-dialog::backdrop {
+  background: #22283d80;
+}
+.judgment-study-dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 24px 0;
+}
+.judgment-study-dialog-heading h2 {
+  font-size: 20px;
+  line-height: 1.5;
+}
+.judgment-study-dialog-heading .button {
+  flex-shrink: 0;
+}
+.judgment-study-dialog-content {
+  padding: 20px 24px 24px;
+  line-height: 1.8;
+}
+.judgment-study-duration {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+.judgment-study-conditions {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.judgment-study-conditions h3 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.judgment-study-conditions p {
+  font-size: 13px;
+}
+.judgment-study-conditions p + p {
+  margin-top: 8px;
 }
 .judgment-settings input[type="checkbox"] {
   accent-color: var(--accent);

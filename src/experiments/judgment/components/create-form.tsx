@@ -3,9 +3,9 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { ServerStatus } from "@/lib/server/config";
 import { api, errorMessage } from "@/lib/client";
-import type { PreviewProtocol, Settings, Study } from "../types";
+import type { Settings, Study } from "../types";
 import { SettingsFields } from "./settings-fields";
-import { JudgmentPreview } from "./preview";
+import { JUDGMENT_NAME } from "../constants";
 export function JudgmentCreateForm({
   status,
   studies,
@@ -19,12 +19,11 @@ export function JudgmentCreateForm({
     randomizeExperiments: false,
     randomizeChoices: false,
   });
-  const [title, setTitle] = useState("判断ラボ"),
+  const [title, setTitle] = useState(JUDGMENT_NAME),
     [password, setPassword] = useState(""),
     [accessKey, setAccessKey] = useState("");
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [preview, setPreview] = useState<PreviewProtocol[] | null>(null);
+    [error, setError] = useState("");
   async function create(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -42,43 +41,16 @@ export function JudgmentCreateForm({
       setBusy(false);
     }
   }
-  async function showPreview() {
-    setBusy(true);
-    setError("");
-    try {
-      const result = await api<{ protocols: PreviewProtocol[] }>(
-        "/api/judgment/preview",
-        { settings, accessKey },
-      );
-      setPreview(result.protocols);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
     <>
       <form className="judgment-create" onSubmit={create}>
-        <h1>判断ラボ</h1>
+        <h1>{JUDGMENT_NAME}</h1>
         <SettingsFields
           settings={settings}
           studies={studies}
           onChange={setSettings}
           disabled={busy}
         />
-        <button
-          type="button"
-          className="button secondary"
-          disabled={
-            busy ||
-            !settings.studyIds.length ||
-            (status.keyRequired && !accessKey)
-          }
-          onClick={() => void showPreview()}
-        >
-          学生画面をプレビュー
-        </button>
         <div className="judgment-room-fields">
           <label className="field">
             実験名
@@ -135,9 +107,6 @@ export function JudgmentCreateForm({
           {busy ? "処理中…" : "ルームを作成"}
         </button>
       </form>
-      {preview && (
-        <JudgmentPreview protocols={preview} onClose={() => setPreview(null)} />
-      )}
     </>
   );
 }

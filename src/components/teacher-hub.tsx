@@ -1,4 +1,5 @@
 "use client";
+import { JUDGMENT_NAME } from "@/experiments/judgment/constants";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TeacherRooms } from "./teacher-rooms";
@@ -27,7 +28,7 @@ export function TeacherHub({ status }: { status: ServerStatus }) {
           <span>資産市場実験</span>
         </Link>
         <Link className="experiment-card" href="/teacher?experiment=judgment">
-          <h2>判断ラボ</h2>
+          <h2>{JUDGMENT_NAME}</h2>
           <p>確率判断や意思決定を通して、認知の偏りを観察する。</p>
         </Link>
       </div>

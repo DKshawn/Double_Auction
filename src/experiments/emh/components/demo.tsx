@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { RotateCcw, Play, Pause } from "lucide-react";
 import {
   act,
@@ -162,6 +163,9 @@ export function Demo() {
   }
   return (
     <Shell wide room>
+      <Link className="back-link" href="/teacher?experiment=emh">
+        教員用ページへ
+      </Link>
       <div className="demo-toolbar">
         <span className="demo-tag">デモ</span>
         <div className="segmented">

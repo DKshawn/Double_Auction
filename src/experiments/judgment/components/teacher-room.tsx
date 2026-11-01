@@ -1,4 +1,5 @@
 "use client";
+import { JUDGMENT_NAME } from "../constants";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Header } from "@/components/shell";
@@ -119,7 +120,7 @@ export function JudgmentTeacherRoom({
       </Header>
       <main className="judgment-teacher">
         <div className="judgment-section-heading">
-          <h1>{data?.title ?? "判断ラボ"}</h1>
+          <h1>{data?.title ?? JUDGMENT_NAME}</h1>
           <span className="judgment-room-code">{code}</span>
         </div>
         {connectionError && (

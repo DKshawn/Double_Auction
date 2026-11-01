@@ -1,3 +1,4 @@
+import { JUDGMENT_NAME } from "@/experiments/judgment/constants";
 import Link from "next/link";
 import { Layers3, UsersRound, RefreshCcw } from "lucide-react";
 import { Header } from "@/components/shell";
@@ -41,7 +42,7 @@ export default async function Home({
                 <p>情報と資産価格</p>
               </div>
               <div>
-                <h2>判断ラボ</h2>
+                <h2>{JUDGMENT_NAME}</h2>
                 <p>確率判断と意思決定</p>
               </div>
             </div>

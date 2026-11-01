@@ -1,0 +1,64 @@
+# 开发、部署与验证
+
+[日本語](../ja/development.md) · [中文](../zh-CN/development.md) · [English](../en/development.md)
+
+## 本地启动
+
+本地项目文件夹为 `Exp-all-in-one`，所有命令都从该仓库根目录运行。
+
+使用 Node.js 24.x，与 `.nvmrc`、CI 和 Vercel 的设置一致。`package.json` 的 `engines.node` 固定为 `24.x`，避免自动切换到将来的主版本。
+
+```sh
+npm ci
+npm run dev
+```
+
+Windows 上可使用 `pwsh -NoProfile -File scripts/dev-local.ps1` 启动隔离的本地验证环境，端口为3200，数据目录为 `.data/platform-verification`。不再需要旧 EMH 文件夹，见[整理记录（英文）](../../releases/emh-folder-consolidation.md)。
+
+普通开发服务器的教师入口为 `http://localhost:3000/teacher`。学生入口 `/` 和共用页眉不显示教师及 Demo 链接。未配置 Neon 时使用嵌入式 PostgreSQL（PGlite），默认保存在 `.data/auction`；不要让多个服务器同时打开同一保存目录。生产环境使用 Neon。
+
+## Vercel + Neon
+
+| 环境变量             | 用途                                                              |
+| -------------------- | ----------------------------------------------------------------- |
+| `DATABASE_URL`       | Neon pooled PostgreSQL 连接字符串，Vercel 必需                    |
+| `TEACHER_ACCESS_KEY` | 创建房间、管理列表和删除的共用教师密钥，Vercel 必需，不分享给学生 |
+| `PGLITE_DATA_DIR`    | 可选的本地数据保存目录                                            |
+
+通过 GitHub 部署到 Vercel。`vercel.json` 的函数区域为 `sin1`，与 Neon Singapore 一致。首次连接自动初始化表，也可手动运行 `npm run db:migrate`。生产环境不会回退到本地数据库。
+
+`.env*`、`.data`、`work` 和测试产物不提交到 Git。预览环境应使用单独的 Neon 分支。
+
+## 同步与一致性
+
+SSE 推送订单和成交变化，通常仅发送当前身份有权查看的差量，首次连接或重连时发送最新快照。Double Auction 的学生历史仅涵盖当前制度配置的期数，累计利润和教师的所有期记录仍保留。断线后自动重连，并以低频 HTTP 查询补充。单个学生断线不会自动暂停其他参加者或实验时钟；全市场暂停由教师操作。订单截止仍以数据库时间判断。
+
+实验1按市场保存交易状态、去重ID和操作记录。学生订单仅锁定所在市场行；教师暂停或恢复等操作通过共用设置锁协调全市场。状态和审计记录在同一事务中提交。服务器有连接时继续推进截止时间；所有人断开后，下次访问也会按已记录的时间补齐状态。
+
+本地 PostgreSQL 用 LISTEN/NOTIFY 通知其他应用进程。线上直接通知需要额外的 `REALTIME_DATABASE_URL`，使用支持 LISTEN 的直连。未设置时，服务器查询每个房间的小型版本列表并推送差量。本地实测不能保证云端能力或费用。
+
+认证令牌保存在 HttpOnly Cookie 中，数据库只存哈希；密码和 PIN 使用带盐 scrypt。教师数据仅在认证后返回；学生不会收到其他人的价值、成本或其他市场的订单。Call 订单簿仅公开本市场的价格与剩余数量。审计 CSV 的记录范围区分共用操作和市场操作。
+
+[本地 PostgreSQL 与192人负载验证（日文）](../../local-capacity-testing.md)说明了如何使用 `LOCAL_ONLY=1` 和 `LOCAL_DATABASE_URL` 阻止验证连接云端。PGlite 单进程测试和真实 PostgreSQL 并发测试应分别看待。
+
+## 验证与开发约定
+
+```sh
+npm run lint
+npm run format:check
+npm run typecheck
+npm test
+npm run build
+```
+
+自动测试检查三种交易制度、1至5单位的边际价值与逐单位订单、制度顺序的均衡分配、6市场96人的数据库加入、并发请求、截止、暂停、收敛指标、私有信息、导出和已有房间兼容性。各模块的 HTTP 验证方法见 [EMH](emh.md) 和 [Judgement](judgment.md)。
+
+`tests/e2e` 是 Playwright 浏览器测试，`npm run test:e2e` 使用专用本地数据库。指定已有环境的 `E2E_BASE_URL` 不应指向生产地址。包含旧12人 CDA 的回归测试和教师新建实验1的表单测试。
+
+所有正式实验共同维护在 `main`，开发使用短期功能分支，验证后合并并删除分支。平台负责入口、房间、会话与数据库连接，各实验模块负责自己的规则和数据。详见[架构与开发约定（英文）](../../architecture.md)。
+
+Double Auction 的主要实现包括 `src/experiments/double-auction/lib/study-core.ts`（规则）、同目录的 `study-view.ts`（视图与统计）、`study-export.ts`（导出），以及 `src/experiments/double-auction/components/study-room.tsx`（页面）和同目录的 `study-settings.tsx`（设置）。照片来源见 [public/fruits/CREDITS.md](../../../public/fruits/CREDITS.md)。
+
+---
+
+[首页](../../../README.zh-CN.md) · [课堂使用流程](classroom.md) · [Double Auction](double-auction.md) · [Demo Model](demo.md) · [EMH 资产市场实验](emh.md) · [Judgement under Uncertainty](judgment.md)

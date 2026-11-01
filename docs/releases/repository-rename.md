@@ -34,6 +34,24 @@ entry links use the new domain. Existing rooms and data remain in the same
 database; browser sessions are host-scoped, so users must reenter on the new
 address. Historical migration notices retain the addresses used at the time.
 
+## Local checkout
+
+The maintained local directory was renamed from `DoubleAuction` to
+`Exp-all-in-one` on 2026-11-01. The existing checkout was renamed in place:
+Git history, local data, dependencies and the Vercel project link were retained.
+The Git HEAD, directory identity and key configuration hashes were checked
+before and after the rename.
+
+The platform's `AGENTS.md` and local startup instructions use the new directory
+name. The sibling EMH project's instructions and local maintenance scripts point
+to `../Exp-all-in-one`. The existing Codex project was updated to the new name and
+source folder, retaining its project ID and chats. Historical source manifests
+and backups remain unchanged.
+
+Generated Next.js caches were cleared after moving. Type checking and the
+production build passed from the new directory. The local development server was
+restarted on port 3200 with the existing local verification database.
+
 ## Retired Judgment source
 
 The standalone Judgment source was a different repository, ID `1435420427`,

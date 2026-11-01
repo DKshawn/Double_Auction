@@ -4,6 +4,8 @@ Do not add meaningless arrows. Use arrows only when they communicate a clear dir
 
 Keep the color palette consistent with DoubleAuction: blue-purple primary, cool gray backgrounds, teal for buying, and warm orange for selling. Reuse the shared color tokens in `src/app/globals.css`.
 
+The maintained platform checkout is `Exp-all-in-one`, matching `DKshawn/Exp-all-in-one`. Run development and release commands from this repository root and use repository-relative paths in scripts. `DoubleAuction` names an experiment module. The sibling `../EMH` directory retains original materials and the standalone source.
+
 Keep released experiments together on `main`, in `src/experiments/double-auction`, `src/experiments/emh`, and `src/experiments/judgment`. Shared entry, room management, sessions, UI tokens, and database connections belong to the platform layer. Develop on short-lived feature branches and merge after validation; do not maintain a permanent branch per experiment. Preserve migration provenance and existing experiment data.
 
 <!-- BEGIN:nextjs-agent-rules -->

@@ -384,7 +384,7 @@ export function StudyPresetPicker({
               )
               .map((i) => (
                 <details className="study-other-conditions" key={i}>
-                  <summary>
+                  <summary className="button secondary small-button disclosure-button">
                     {INSTITUTIONS[i].short}の条件（各自{unitsByInstitution![i]}
                     単位）
                   </summary>
@@ -396,7 +396,9 @@ export function StudyPresetPicker({
               ))}
           {candidateOther && (
             <details className="study-other-conditions">
-              <summary>Call Market・Posted Offerの条件（各自2単位）</summary>
+              <summary className="button secondary small-button disclosure-button">
+                Call Market・Posted Offerの条件（各自2単位）
+              </summary>
               <StudyConditionPreview
                 settings={candidateOther}
                 commission={commission}

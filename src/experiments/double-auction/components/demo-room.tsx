@@ -242,6 +242,7 @@ export default function DemoRoom({
           </p>
           <p className="demo-note">
             <Link
+              className="button secondary small-button"
               href="/demo/preview"
               target="_blank"
               rel="noopener noreferrer"

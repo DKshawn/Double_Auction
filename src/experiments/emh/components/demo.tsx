@@ -163,7 +163,10 @@ export function Demo() {
   }
   return (
     <Shell wide room>
-      <Link className="back-link" href="/teacher?experiment=emh">
+      <Link
+        className="button secondary small-button"
+        href="/teacher?experiment=emh"
+      >
         教員用ページへ
       </Link>
       <div className="demo-toolbar">

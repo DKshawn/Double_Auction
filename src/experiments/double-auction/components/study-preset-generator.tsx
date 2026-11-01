@@ -112,7 +112,7 @@ export function StudyPresetGenerator({
         {teacher.generation.seed}
       </p>
       <details>
-        <summary>
+        <summary className="button secondary small-button disclosure-button">
           保存した分配表（
           {teacher.generation.assignmentConfirmedAt === null
             ? "割当の確認待ち"
@@ -230,7 +230,7 @@ export function StudyPresetGenerator({
           return (
             <>
               <details>
-                <summary>
+                <summary className="button secondary small-button disclosure-button">
                   シード {preview.generator.seed} の学生割当を確認（
                   {rows.length}
                   人入室済み）

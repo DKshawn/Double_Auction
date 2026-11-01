@@ -327,16 +327,7 @@
   min-height: 56px;
 }
 .judgment-app .text-button {
-  border: 0;
-  background: transparent;
-  padding: 10px 8px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
   min-height: 44px;
-}
-.judgment-app .text-button:hover {
-  text-decoration: underline;
 }
 .judgment-app .form-error {
   color: var(--red);
@@ -571,15 +562,7 @@
   color: var(--muted);
 }
 .judgment-app .ranking-return {
-  display: block;
-  min-height: 28px;
-  margin: 2px 0;
-  padding: 3px 0;
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font-size: 13px;
-  text-align: center;
+  margin: 8px 0;
 }
 .judgment-app .ranking-return:disabled {
   visibility: hidden;

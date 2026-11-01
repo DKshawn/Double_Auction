@@ -398,7 +398,9 @@ export function ResultsPanel({ room }: { room: RoomView }) {
       </div>
       {teacher ? (
         <details className="metric-help">
-          <summary>指標の計算</summary>
+          <summary className="button secondary small-button disclosure-button">
+            指標の計算
+          </summary>
           <p>
             価格 / PF：その期の平均取引成立価格 ÷
             完全予見均衡価格。取引成立がない期は空欄です。

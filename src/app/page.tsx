@@ -13,7 +13,9 @@ export default async function Home({
   return (
     <>
       <Header>
-        <Link href="/teacher">教員用ページ</Link>
+        <Link className="button secondary small-button" href="/teacher">
+          教員用ページ
+        </Link>
       </Header>
       <main className="home-main">
         <section className="home-grid">
@@ -94,8 +96,12 @@ export default async function Home({
         </section>
       </main>
       <div className="site-footer platform-guide-links">
-        <Link href="/guide">Double Auction のルール</Link>
-        <Link href="/emh/guide">EMH のルール</Link>
+        <Link className="button secondary small-button" href="/guide">
+          Double Auction のルール
+        </Link>
+        <Link className="button secondary small-button" href="/emh/guide">
+          EMH のルール
+        </Link>
       </div>
     </>
   );

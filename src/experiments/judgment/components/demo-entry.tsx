@@ -43,7 +43,10 @@ export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
         <span className="demo-header-tag">ひとりデモ</span>
       </Header>
       <main className="teacher-hub-main">
-        <Link className="back-link" href="/teacher?experiment=judgment">
+        <Link
+          className="button secondary small-button"
+          href="/teacher?experiment=judgment"
+        >
           教員用ページへ
         </Link>
         <form className="judgment-create" onSubmit={start}>

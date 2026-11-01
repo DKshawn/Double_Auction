@@ -68,7 +68,9 @@ export function StudySettingsEditor({
         teacher.otherSettings &&
         institutions.some((i) => i !== "cda") && (
           <details className="study-other-conditions">
-            <summary>Call Market・Posted Offerの条件（各自2単位）</summary>
+            <summary className="button secondary small-button disclosure-button">
+              Call Market・Posted Offerの条件（各自2単位）
+            </summary>
             <StudyConditionPreview
               settings={teacher.otherSettings}
               commission={commission}
@@ -82,7 +84,7 @@ export function StudySettingsEditor({
           return (
             schedule && (
               <details className="study-other-conditions" key={institution}>
-                <summary>
+                <summary className="button secondary small-button disclosure-button">
                   {INSTITUTIONS[institution].short}の条件（各自
                   {schedule.values[0].length}単位）
                 </summary>

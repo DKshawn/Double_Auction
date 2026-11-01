@@ -308,13 +308,13 @@ summary.disclosure-button {
 .home-main {
   max-width: 1160px;
   margin: 0 auto;
-  padding: 70px 32px 0;
+  padding: 70px 32px 32px;
 }
 .home-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 398px;
   gap: 72px;
-  align-items: start;
+  align-items: center;
 }
 .home-story {
   padding-top: 7px;
@@ -329,12 +329,6 @@ summary.disclosure-button {
 .home-story h1 em {
   font-style: normal;
   color: var(--accent);
-}
-.hero-description {
-  font-size: 14px;
-  line-height: 2.1;
-  color: var(--muted);
-  letter-spacing: 0.025em;
 }
 .fruit-showcase {
   margin-top: 32px;
@@ -394,23 +388,6 @@ summary.disclosure-button {
 }
 .fruit-orange {
   background: #fffaf5;
-}
-.hero-facts {
-  display: flex;
-  gap: 22px;
-  flex-wrap: wrap;
-  margin-top: 35px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.hero-facts span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.hero-facts svg {
-  color: var(--accent);
-  opacity: 0.8;
 }
 .join-card {
   background: #fff;
@@ -945,10 +922,6 @@ summary.disclosure-button {
   .join-form {
     padding: 26px;
   }
-  .hero-facts {
-    gap: 12px;
-    font-size: 10px;
-  }
   .home-steps {
     gap: 24px;
   }
@@ -974,7 +947,7 @@ summary.disclosure-button {
     flex-wrap: wrap;
   }
   .home-main {
-    padding: 35px 24px 0;
+    padding: 35px 24px 32px;
   }
   .home-grid {
     grid-template-columns: 1fr;
@@ -987,9 +960,6 @@ summary.disclosure-button {
     font-size: 43px;
     margin-top: 13px;
   }
-  .hero-description {
-    font-size: 12px;
-  }
   .fruit-showcase {
     max-width: none;
     margin-top: 25px;
@@ -998,12 +968,6 @@ summary.disclosure-button {
   .fruit-tile img {
     max-height: 130px;
     object-fit: contain;
-  }
-  .hero-facts {
-    justify-content: center;
-    font-size: 11px;
-    gap: 22px;
-    margin-top: 30px;
   }
   .join-card {
     max-width: 500px;
@@ -1079,7 +1043,7 @@ summary.disclosure-button {
     font-size: 10px;
   }
   .home-main {
-    padding: 30px 16px 0;
+    padding: 30px 16px 32px;
   }
   .home-story h1 {
     font-size: 39px;
@@ -1089,10 +1053,6 @@ summary.disclosure-button {
   }
   .fruit-tile > div > span {
     font-size: 8px;
-  }
-  .hero-facts {
-    gap: 14px;
-    font-size: 10px;
   }
   .join-form {
     padding: 23px;

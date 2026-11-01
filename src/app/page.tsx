@@ -1,6 +1,4 @@
-import { JUDGMENT_NAME } from "@/experiments/judgment/constants";
 import Link from "next/link";
-import { Layers3, UsersRound, RefreshCcw } from "lucide-react";
 import { Header } from "@/components/shell";
 import { JoinForm } from "@/components/join-form";
 
@@ -29,39 +27,6 @@ export default async function Home({
               <br />
               <em>経済学</em>を学ぼう。
             </h1>
-            <p className="hero-description">
-              取引や判断の実験に、教室のみんなで参加する。
-              <br />
-              自分の選択と実験の結果を振り返ります。
-            </p>
-            <div className="platform-home-experiments">
-              <div>
-                <h2>Double Auction</h2>
-                <p>取引制度と価格形成</p>
-              </div>
-              <div>
-                <h2>EMH</h2>
-                <p>情報と資産価格</p>
-              </div>
-              <div>
-                <h2>{JUDGMENT_NAME}</h2>
-                <p>確率判断と意思決定</p>
-              </div>
-            </div>
-            <div className="hero-facts">
-              <span>
-                <Layers3 size={17} />
-                3つの実験
-              </span>
-              <span>
-                <UsersRound size={17} />
-                教室のみんなで参加
-              </span>
-              <span>
-                <RefreshCcw size={16} />
-                選択と結果を記録
-              </span>
-            </div>
           </div>
           <div className="join-card">
             <JoinForm initialCode={code?.toUpperCase() ?? ""} />
@@ -77,7 +42,7 @@ export default async function Home({
             [
               "02",
               "実験に参加する",
-              "画面に表示されるルールに沿って、取引や課題に取り組みます。",
+              "教員の説明に沿って、画面の操作を進めます。",
             ],
             [
               "03",
@@ -95,14 +60,6 @@ export default async function Home({
           ))}
         </section>
       </main>
-      <div className="site-footer platform-guide-links">
-        <Link className="button secondary small-button" href="/guide">
-          Double Auction のルール
-        </Link>
-        <Link className="button secondary small-button" href="/emh/guide">
-          EMH のルール
-        </Link>
-      </div>
     </>
   );
 }

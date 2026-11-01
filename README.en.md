@@ -33,7 +33,7 @@ flowchart LR
     class B,C shared
 ```
 
-The teacher creates a room and shares its code. Students join and follow their own screen once the teacher starts the experiment; the teacher then downloads the results.
+The teacher creates and shares a room, and students join with its code. The teacher chooses the experiment, explains the rules, and downloads the results after the session.
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 

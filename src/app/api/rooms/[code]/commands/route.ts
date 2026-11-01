@@ -3,13 +3,13 @@ import type { NextRequest } from "next/server";
 import {
   body,
   codeFor,
-  commandSchema,
   failure,
   json,
   sessionFor,
   tokenFor,
 } from "@/lib/server/http";
-import { service } from "@/lib/server/service";
+import { commandSchema } from "@/experiments/double-auction/server/validation";
+import { service } from "@/experiments/double-auction/server/service";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;

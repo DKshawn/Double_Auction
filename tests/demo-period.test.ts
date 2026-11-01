@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DemoSession } from "../src/lib/demo";
-import type { Institution } from "../src/lib/study-types";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import type { Institution } from "../src/experiments/double-auction/lib/study-types";
 
 for (const institution of ["cda", "call", "posted"] as const) {
   test(`${institution}: next-period fast-forward settles the whole period and stops at the start of the next`, async () => {

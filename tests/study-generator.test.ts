@@ -9,25 +9,37 @@ import {
   generateStaircase,
   seededStudySeats,
   staircasePoints,
-} from "../src/lib/study-generator";
-import { equilibrium } from "../src/lib/equilibrium";
-import { DemoSession, DEMO_SETTINGS } from "../src/lib/demo";
-import { pptStudySettings, newStudy } from "../src/lib/server/study";
-import { StudyConditionPreview } from "../src/components/study-condition-preview";
+} from "../src/experiments/double-auction/lib/study-generator";
+import { equilibrium } from "../src/experiments/double-auction/lib/equilibrium";
+import {
+  DemoSession,
+  DEMO_SETTINGS,
+} from "../src/experiments/double-auction/lib/demo";
+import {
+  pptStudySettings,
+  newStudy,
+} from "../src/experiments/double-auction/server/study";
+import { StudyConditionPreview } from "../src/experiments/double-auction/components/study-condition-preview";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { commandSchema } from "../src/lib/server/http";
-import { lockBundle, saveBundle } from "../src/lib/server/market-store";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { commandSchema } from "@/experiments/double-auction/server/validation";
+import {
+  lockBundle,
+  saveBundle,
+} from "../src/experiments/double-auction/server/market-store";
 import {
   executeStudy,
   settleStudy,
   stageKey,
   unitLimits,
-} from "../src/lib/study-core";
-import { studyMetrics } from "../src/lib/study-view";
-import { exportData } from "../src/lib/server/export";
-import type { Command, RoomConfig } from "../src/lib/types";
-import type { StudyGeneratorConfig } from "../src/lib/study-types";
+} from "../src/experiments/double-auction/lib/study-core";
+import { studyMetrics } from "../src/experiments/double-auction/lib/study-view";
+import { exportData } from "../src/experiments/double-auction/server/export";
+import type {
+  Command,
+  RoomConfig,
+} from "../src/experiments/double-auction/lib/types";
+import type { StudyGeneratorConfig } from "../src/experiments/double-auction/lib/study-types";
 
 const generator: StudyGeneratorConfig = {
   kind: "overlap-staircase",

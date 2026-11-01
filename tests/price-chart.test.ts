@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PriceChart } from "../src/components/price-chart";
-import type { Trade } from "../src/lib/types";
+import { PriceChart } from "../src/experiments/double-auction/components/price-chart";
+import type { Trade } from "../src/experiments/double-auction/lib/types";
 
 function trade(id: string, round: number, price: number): Trade {
   return {

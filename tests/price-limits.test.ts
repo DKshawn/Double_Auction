@@ -1,12 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { commandSchema, createRoomSchema } from "../src/lib/server/http";
+import {
+  commandSchema,
+  createRoomSchema,
+} from "@/experiments/double-auction/server/validation";
 import {
   DEFAULT_STAIRCASE_PARAMETERS,
   generateStaircase,
-} from "../src/lib/study-generator";
-import type { Command, RoomConfig } from "../src/lib/types";
+} from "../src/experiments/double-auction/lib/study-generator";
+import type {
+  Command,
+  RoomConfig,
+} from "../src/experiments/double-auction/lib/types";
 
 const request = (command: Command) => ({
   requestId: randomUUID(),

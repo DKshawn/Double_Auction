@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DemoSession } from "../src/lib/demo";
-import { AuctionError } from "../src/lib/auction-model";
-import { EXPORTS } from "../src/lib/exports";
-import type { Institution } from "../src/lib/study-types";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import { AuctionError } from "../src/experiments/double-auction/lib/auction-model";
+import { EXPORTS } from "../src/experiments/double-auction/lib/exports";
+import type { Institution } from "../src/experiments/double-auction/lib/study-types";
 
 function createDemo(institution: Institution = "cda") {
   return new DemoSession(institution, "buyer", 1000, {

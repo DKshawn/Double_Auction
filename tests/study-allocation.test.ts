@@ -7,19 +7,25 @@ import { PGlite } from "@electric-sql/pglite";
 import {
   studyAllocationPlan,
   studyAllocationWaitingMessage,
-} from "../src/lib/study-allocation";
-import { DemoSession, DEMO_SETTINGS } from "../src/lib/demo";
-import { resizeStudySettings } from "../src/lib/study-config";
-import { generatedStudySettings } from "../src/lib/study-generator";
-import { studyRoomConfigSchema } from "../src/lib/study-room-config";
-import { studyChartViewport } from "../src/lib/study-chart";
-import { StudyAllocationPreview } from "../src/components/study-allocation-preview";
+} from "../src/experiments/double-auction/lib/study-allocation";
+import {
+  DemoSession,
+  DEMO_SETTINGS,
+} from "../src/experiments/double-auction/lib/demo";
+import { resizeStudySettings } from "../src/experiments/double-auction/lib/study-config";
+import { generatedStudySettings } from "../src/experiments/double-auction/lib/study-generator";
+import { studyRoomConfigSchema } from "../src/experiments/double-auction/lib/study-room-config";
+import { studyChartViewport } from "../src/experiments/double-auction/lib/study-chart";
+import { StudyAllocationPreview } from "../src/experiments/double-auction/components/study-allocation-preview";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { studyEquilibrium } from "../src/lib/study-view";
-import { equilibrium } from "../src/lib/equilibrium";
-import type { Command, RoomConfig } from "../src/lib/types";
-import type { StudyGeneratorConfig } from "../src/lib/study-types";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { studyEquilibrium } from "../src/experiments/double-auction/lib/study-view";
+import { equilibrium } from "../src/experiments/double-auction/lib/equilibrium";
+import type {
+  Command,
+  RoomConfig,
+} from "../src/experiments/double-auction/lib/types";
+import type { StudyGeneratorConfig } from "../src/experiments/double-auction/lib/study-types";
 
 const generator: StudyGeneratorConfig = {
   kind: "overlap-staircase",

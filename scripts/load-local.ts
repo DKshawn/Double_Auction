@@ -3,8 +3,14 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { performance, monitorEventLoopDelay } from "node:perf_hooks";
-import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
-import type { Command, RoomView } from "../src/lib/types";
+import {
+  applyPatch,
+  type RoomPatch,
+} from "../src/experiments/double-auction/lib/room-sync";
+import type {
+  Command,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
 
 const bases = (
   process.env.LOCAL_LOAD_URLS ?? "http://127.0.0.1:3200,http://127.0.0.1:3201"

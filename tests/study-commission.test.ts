@@ -4,32 +4,53 @@ import { randomUUID } from "node:crypto";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PGlite } from "@electric-sql/pglite";
-import { TeacherForm } from "../src/components/teacher-form";
-import { StudyRoom } from "../src/components/study-room";
-import { StudyTradeFeedback } from "../src/components/study-personal-trades";
+import { TeacherForm } from "../src/experiments/double-auction/components/teacher-form";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
+import { StudyTradeFeedback } from "../src/experiments/double-auction/components/study-personal-trades";
 import {
   DEFAULT_STUDY_COMMISSION,
   studyCommission,
   studyUnitProfit,
-} from "../src/lib/study-commission";
-import { execute, settleDeadline, toView } from "../src/lib/server/engine";
+} from "../src/experiments/double-auction/lib/study-commission";
+import {
+  execute,
+  settleDeadline,
+  toView,
+} from "../src/experiments/double-auction/server/engine";
 import {
   newStudy,
   marketFor,
   stageKey,
   marketRound,
   studyProfit,
-} from "../src/lib/server/study";
-import { studyMetrics, studyEquilibrium } from "../src/lib/study-view";
-import { commandSchema, createRoomSchema } from "../src/lib/server/http";
-import { exportData } from "../src/lib/server/export";
+} from "../src/experiments/double-auction/server/study";
+import {
+  studyMetrics,
+  studyEquilibrium,
+} from "../src/experiments/double-auction/lib/study-view";
+import {
+  commandSchema,
+  createRoomSchema,
+} from "@/experiments/double-auction/server/validation";
+import { exportData } from "../src/experiments/double-auction/server/export";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { lockBundle, saveBundle } from "../src/lib/server/market-store";
-import { AuctionService } from "../src/lib/server/service";
-import { studyRole } from "../src/lib/study-config";
-import type { Room, Participant, AuditEvent } from "../src/lib/auction-model";
-import type { Command, RoomConfig, CommandRequest } from "../src/lib/types";
-import type { Institution } from "../src/lib/study-types";
+import {
+  lockBundle,
+  saveBundle,
+} from "../src/experiments/double-auction/server/market-store";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { studyRole } from "../src/experiments/double-auction/lib/study-config";
+import type {
+  Room,
+  Participant,
+  AuditEvent,
+} from "../src/experiments/double-auction/lib/auction-model";
+import type {
+  Command,
+  RoomConfig,
+  CommandRequest,
+} from "../src/experiments/double-auction/lib/types";
+import type { Institution } from "../src/experiments/double-auction/lib/study-types";
 
 function fixture(institution: Institution = "cda", commission?: number) {
   const config: RoomConfig = {

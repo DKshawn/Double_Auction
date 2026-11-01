@@ -3,17 +3,26 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { RealtimeBroker } from "../src/lib/server/realtime";
-import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
-import { exportData } from "../src/lib/server/export";
-import { commandSchema } from "../src/lib/server/http";
-import { lockBundle, saveBundle } from "../src/lib/server/market-store";
-import type { Command, RoomView } from "../src/lib/types";
-import { DemoSession } from "../src/lib/demo";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { RealtimeBroker } from "../src/experiments/double-auction/server/realtime";
+import {
+  applyPatch,
+  type RoomPatch,
+} from "../src/experiments/double-auction/lib/room-sync";
+import { exportData } from "../src/experiments/double-auction/server/export";
+import { commandSchema } from "@/experiments/double-auction/server/validation";
+import {
+  lockBundle,
+  saveBundle,
+} from "../src/experiments/double-auction/server/market-store";
+import type {
+  Command,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StudyRoom } from "../src/components/study-room";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function until(check: () => boolean, timeout = 8000) {

@@ -1,0 +1,338 @@
+[
+  {
+    "id": "01-02",
+    "seed": 7,
+    "choices": false,
+    "hash": "505fbe2813dee55d8753cf25f4b300e98cfdabdc1c8e995716802cb8090d43d6"
+  },
+  {
+    "id": "01-02",
+    "seed": 7,
+    "choices": true,
+    "hash": "4efe741ce06394ee7956358f09a593f74744430396919cc8143de041d9f343ff"
+  },
+  {
+    "id": "01-02",
+    "seed": 19,
+    "choices": false,
+    "hash": "3cf08198e147dcad6c1e4ddc88e206f27ba7a0feaefa52f93df02888c3ed4415"
+  },
+  {
+    "id": "01-02",
+    "seed": 19,
+    "choices": true,
+    "hash": "1b0d3a64131e524a6c99f4f014a9262cdd6eaff90f3ffc9ee848af3fa0f52a22"
+  },
+  {
+    "id": "03-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "22874bbda45171dc3a760cd1f4dd6138a54d4ecaf9199f273ee2a9ca65ab2ca5"
+  },
+  {
+    "id": "03-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "b7f8aeaa0e0acf090da2432e31d4e3856486e1d475994a2a6cdac594b836113d"
+  },
+  {
+    "id": "03-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "0c98f2ba7ddfb8f2f4587445d03883066c737a4a8e490916f1fab5b77ad4af55"
+  },
+  {
+    "id": "03-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "bf6ecae44df959cae7fb39c49be0a1660d1099e1e4178086affc2401fcd39832"
+  },
+  {
+    "id": "03-02",
+    "seed": 7,
+    "choices": false,
+    "hash": "91c3064dcbec7e7d52a5957810398966faa406ad9fe2bd42326b03ab04ec372f"
+  },
+  {
+    "id": "03-02",
+    "seed": 7,
+    "choices": true,
+    "hash": "43e889319e089c8e49740e245693368776518f399bbca4385f21174ed29b4867"
+  },
+  {
+    "id": "03-02",
+    "seed": 19,
+    "choices": false,
+    "hash": "d62de9649dfaddcefb7cea900031a00fa82cc684f621d98b81ed625fae347137"
+  },
+  {
+    "id": "03-02",
+    "seed": 19,
+    "choices": true,
+    "hash": "152e82772519ce8731f5877e7e36869d835d797ba49729da2833dac7ec8fce92"
+  },
+  {
+    "id": "04-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "1f33212bd9e0967bb58a2339d1918e97eaa16754825d5bdfd24296e15e900407"
+  },
+  {
+    "id": "04-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "3ebc5c9ecbaf3f92bb73b983c7ba8a4431631fcc4427fc973dfe85f29457c05a"
+  },
+  {
+    "id": "04-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "c7c6fb80e15d58c1ce84b2b42f632b3ebfed6a682376711e55c5695a96bdcff0"
+  },
+  {
+    "id": "04-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "4a8625dc3752299af93761809e0d621fbad83926cdd7f4b6cad935623cfeb8da"
+  },
+  {
+    "id": "06-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "ab3765bc44962fdfc86d987a883b144b455ce99df51895eb1863b5a973f06771"
+  },
+  {
+    "id": "06-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "51a386a358eb4a185f9811653455bf30952eef19b8c2016580803e237daa332d"
+  },
+  {
+    "id": "06-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "785180cfafa2a1c5b8dce05d0e22df5f3b9c7aea9e9e04fa5af1898359f8aa21"
+  },
+  {
+    "id": "06-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "6b3a51a97a3decfe6fe47df6b7d6cebddb59bdd66442a13a39b6af203cf5a65e"
+  },
+  {
+    "id": "08-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "e34922e1a7727653e16c31b15dddba9bfa1e8e3157439980cdaa7e55092844df"
+  },
+  {
+    "id": "08-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "352f3dd674d605d25819f0100ec04cd9f90aa13d7a7db4939037fb20e6264603"
+  },
+  {
+    "id": "08-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "dfde6509974165084f73bdee606b54630f2ee6743389d9f94c0ae50017fbb733"
+  },
+  {
+    "id": "08-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "a45295e82727de90015b369160ae3fc64e9df367eafbffd1a8888eabfba70ad2"
+  },
+  {
+    "id": "09-07",
+    "seed": 7,
+    "choices": false,
+    "hash": "9b29c14da42727fac58795dce1dc5fd6995a0a9fa225d1a5dee22ef824fc5eec"
+  },
+  {
+    "id": "09-07",
+    "seed": 7,
+    "choices": true,
+    "hash": "438cc8a7e7b642694e8bfe21c8693932483d209d947ae117e7daea649de0e8de"
+  },
+  {
+    "id": "09-07",
+    "seed": 19,
+    "choices": false,
+    "hash": "010b7b60e4493dd25c17ce76437e94de50140a6626206c00ce045d65597b861b"
+  },
+  {
+    "id": "09-07",
+    "seed": 19,
+    "choices": true,
+    "hash": "644a1de1516545d1b432dd546bee780592b81e73ecd07d7f5d63846168b2ce41"
+  },
+  {
+    "id": "11-06",
+    "seed": 7,
+    "choices": false,
+    "hash": "35f7b06606720b6d3523ee3a76510de5c0acd89923ede0cff5cee8f9e0e936ee"
+  },
+  {
+    "id": "11-06",
+    "seed": 7,
+    "choices": true,
+    "hash": "82f0bf42d1f1fdee4fa8faaa54b610a5d3566e8840a3318680b87e5506a8f286"
+  },
+  {
+    "id": "11-06",
+    "seed": 19,
+    "choices": false,
+    "hash": "2372d5fc6030ea5b4d10b08237f70a2ca9e17570f79ba419635b43008d3eef2b"
+  },
+  {
+    "id": "11-06",
+    "seed": 19,
+    "choices": true,
+    "hash": "0b8476766ea365eb91ea31840a57df67d9dbc191d64bee88e73a35819b15b681"
+  },
+  {
+    "id": "12-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "80ef0ada62e5df2a4fb799a110b00a04ef7a4d2b331c1e378aca5b00ed09f405"
+  },
+  {
+    "id": "12-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "644717b5e3f70377bf0aa08f246b627110396b9ee11acad38dae087f34ae5d2a"
+  },
+  {
+    "id": "12-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "15089eda59ca6b10b4e908fbf414afdf7bb331ac4f8df8598528c9aae64cb5dd"
+  },
+  {
+    "id": "12-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "ca0e6fda12440bd8a9b0fe8974e16a4ce5942e702d79df078b53eac0d449c286"
+  },
+  {
+    "id": "14-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "27a375ffbb6f1a3381f8626f7a8f0af447b0f1a37f7a642816a0aaa2d7894ec2"
+  },
+  {
+    "id": "14-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "26baa806efce29b54f3af495213115a82529d57a57f30418fb6eac6668bcdace"
+  },
+  {
+    "id": "14-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "841a38cc0ddc239f5dec24f1ef1370524478cbe36ff13dd45e999e101e780900"
+  },
+  {
+    "id": "14-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "55fe775aa41a1181dfa95bdaaa4a83c54a14b1a3c58097251878588d585e5107"
+  },
+  {
+    "id": "23-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "d73bc708ab1a09912a44fca119261d066dcb0a6d6a82fbe5731196763891b63e"
+  },
+  {
+    "id": "23-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "564155841730756599e555776818014f7f203b25c3752d625dd4309d7bb5a83d"
+  },
+  {
+    "id": "23-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "02fbb5a17729146d96447f3f901cdaf7a6182f2fc649427940b3245fc83c2107"
+  },
+  {
+    "id": "23-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "2b1feb68194913a087af1d6d98fdfd35871f9fe973145450edf22f64f762fbe6"
+  },
+  {
+    "id": "25-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "7b070902214d9835ec4290a031eba39fdfcf4ca101a8651f05b0005c966f6abe"
+  },
+  {
+    "id": "25-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "a3f1aa54f5414313de3393863df1a8a2164ee9c0647cbaf5f6a6cb9a6375f366"
+  },
+  {
+    "id": "25-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "ea5c2c654e61424f15ad108124e9ab41e8f708e2d1298ab893b781147009fe1b"
+  },
+  {
+    "id": "25-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "c1d52ee767f1e35d5d76a27a3b185bbe355d5bad309700a8011f0ed1c779b492"
+  },
+  {
+    "id": "26-01",
+    "seed": 7,
+    "choices": false,
+    "hash": "635d442c0d173a45c91062f9c334b6cd012e517ee5f46b7bb92d153089ebbcc2"
+  },
+  {
+    "id": "26-01",
+    "seed": 7,
+    "choices": true,
+    "hash": "eccb51f65d273e8996113938a363ba9906860bb7963dc39535b61a77217f5cc5"
+  },
+  {
+    "id": "26-01",
+    "seed": 19,
+    "choices": false,
+    "hash": "20e1813b2e6b7307976c64de2800e738181ed8b79f803e03893ebb55768917e7"
+  },
+  {
+    "id": "26-01",
+    "seed": 19,
+    "choices": true,
+    "hash": "c58dac4c665e73fa6b1424ca0e1bec6dcaa5c00869054b9a633435146472b8ce"
+  },
+  {
+    "id": "33-03",
+    "seed": 7,
+    "choices": false,
+    "hash": "1f2bd4fbb3534862c081172eac9f74508fd7332b51972b5349a06e8e591d3c21"
+  },
+  {
+    "id": "33-03",
+    "seed": 7,
+    "choices": true,
+    "hash": "e011142ce783718fa341cc050eee641f98042a226f59cc3c86e03917fb33cffc"
+  },
+  {
+    "id": "33-03",
+    "seed": 19,
+    "choices": false,
+    "hash": "06a51cc3f9afdbaadb79f649cfd27917d92e3d5cb9fa7d73e73aed901aea29c3"
+  },
+  {
+    "id": "33-03",
+    "seed": 19,
+    "choices": true,
+    "hash": "f15f03c6b79f940ac0a1df899e1480ec0aac1ac77273055954c50ef22211bea5"
+  }
+]

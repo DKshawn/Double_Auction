@@ -5,22 +5,26 @@ import { PGlite } from "@electric-sql/pglite";
 import { NextRequest } from "next/server";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TeacherForm } from "../src/components/teacher-form";
-import { StudyPresetPicker } from "../src/components/study-preset-picker";
-import { DemoSession } from "../src/lib/demo";
+import { TeacherForm } from "../src/experiments/double-auction/components/teacher-form";
+import { StudyPresetPicker } from "../src/experiments/double-auction/components/study-preset-picker";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 import {
   DEFAULT_STAIRCASE_PARAMETERS,
   generateStaircase,
   seededStudySeats,
   studyGeneratorConfigSchema,
-} from "../src/lib/study-generator";
-import { body, createRoomSchema } from "../src/lib/server/http";
+} from "../src/experiments/double-auction/lib/study-generator";
+import { body } from "../src/lib/server/http";
+import { createRoomSchema } from "@/experiments/double-auction/server/validation";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { pptStudySettings } from "../src/lib/server/study";
-import { exportData } from "../src/lib/server/export";
-import type { Command, RoomConfig } from "../src/lib/types";
-import type { StudyGeneratorConfig } from "../src/lib/study-types";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { pptStudySettings } from "../src/experiments/double-auction/server/study";
+import { exportData } from "../src/experiments/double-auction/server/export";
+import type {
+  Command,
+  RoomConfig,
+} from "../src/experiments/double-auction/lib/types";
+import type { StudyGeneratorConfig } from "../src/experiments/double-auction/lib/study-types";
 
 const config: RoomConfig = {
   protocol: "institutions-v1",

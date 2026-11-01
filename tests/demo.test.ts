@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DemoSession, DEMO_SETTINGS } from "../src/lib/demo";
-import { newStudy } from "../src/lib/server/study";
+import {
+  DemoSession,
+  DEMO_SETTINGS,
+} from "../src/experiments/double-auction/lib/demo";
+import { newStudy } from "../src/experiments/double-auction/server/study";
 
 test("demo supplies 12 balanced markets and 191 virtual participants, keeps formal conditions separate and preserves the human when switching views", async () => {
   const demo = new DemoSession("cda", "buyer", 1000);

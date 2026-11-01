@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowRight,
-  FlaskConical,
-  RefreshCw,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { FlaskConical, RefreshCw, Search, Trash2 } from "lucide-react";
 import { api, ApiError, errorMessage } from "@/lib/client";
 import type { RoomSummary } from "@/lib/room-management";
 import type { ServerStatus } from "@/lib/server/config";
-import type { Phase } from "@/lib/types";
-import { INSTITUTIONS } from "@/lib/study-rules";
+import type { Phase } from "@/experiments/double-auction/lib/types";
+import { INSTITUTIONS } from "@/experiments/double-auction/lib/study-rules";
 import { Spinner } from "./shell";
 
 const PHASE_LABELS: Record<Phase, string> = {
@@ -247,15 +241,28 @@ export function TeacherRooms({
                     <span className="teacher-room-code">{room.code}</span>
                     <span>作成 {dateFormat.format(room.createdAt)}</span>
                     <span>
-                      {room.marketCount}市場 · 参加者 {room.participantCount}
+                      {room.experiment !== "judgment" &&
+                        `${room.marketCount}市場 · `}
+                      参加者 {room.participantCount}
                       {!room.flexibleAdmission && `/${room.capacity}`}人
                     </span>
                     <span>
-                      第{room.round}/{room.totalRounds}期
+                      {room.experiment === "judgment" ? (
+                        `実施 ${room.round}回`
+                      ) : (
+                        <>
+                          第{room.round}/{room.totalRounds}
+                          {room.experiment === "emh" ? "ラウンド" : "期"}
+                        </>
+                      )}
                     </span>
                   </div>
                   <div className="teacher-room-institutions">
-                    {room.institutions.length ? (
+                    {room.experiment === "judgment" ? (
+                      <span>判断ラボ</span>
+                    ) : room.experiment === "emh" ? (
+                      <span>EMH · 資産市場実験</span>
+                    ) : room.institutions.length ? (
                       room.institutions.map(({ institution, periods }) => (
                         <span key={institution}>
                           {INSTITUTIONS[institution].short} {periods}期
@@ -271,7 +278,7 @@ export function TeacherRooms({
                       onClick={() => onEnter(room.code)}
                       aria-label={`${room.code} に教員として再入室`}
                     >
-                      結果・ダウンロード / 再入室 <ArrowRight size={14} />
+                      結果・ダウンロード / 再入室
                     </button>
                     <button
                       className="button secondary small-button danger-text"

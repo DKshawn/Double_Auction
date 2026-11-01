@@ -7,24 +7,24 @@ import {
   studyCommissionLimit,
   studyCommissionError,
   studyCommissionEquilibrium,
-} from "../src/lib/study-commission";
+} from "../src/experiments/double-auction/lib/study-commission";
 import {
   generateStaircase,
   DEFAULT_STAIRCASE_PARAMETERS,
-} from "../src/lib/study-generator";
-import { pptStudySettings } from "../src/lib/server/study";
-import { DemoSession } from "../src/lib/demo";
-import { StudyConditionPreview } from "../src/components/study-condition-preview";
-import { StudyPresetPicker } from "../src/components/study-preset-picker";
+} from "../src/experiments/double-auction/lib/study-generator";
+import { pptStudySettings } from "../src/experiments/double-auction/server/study";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import { StudyConditionPreview } from "../src/experiments/double-auction/components/study-condition-preview";
+import { StudyPresetPicker } from "../src/experiments/double-auction/components/study-preset-picker";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { commandSchema } from "../src/lib/server/http";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { commandSchema } from "@/experiments/double-auction/server/validation";
 import { randomUUID } from "node:crypto";
-import type { RoomConfig } from "../src/lib/types";
+import type { RoomConfig } from "../src/experiments/double-auction/lib/types";
 import type {
   StudySettings,
   StudyGeneratorConfig,
-} from "../src/lib/study-types";
+} from "../src/experiments/double-auction/lib/study-types";
 
 const config: RoomConfig = {
   protocol: "institutions-v1",

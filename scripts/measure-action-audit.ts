@@ -8,10 +8,13 @@ import {
   type Database,
   type Sql,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { lockBundle, saveBundle } from "../src/lib/server/market-store";
-import { settleDeadline } from "../src/lib/server/engine";
-import type { AuditEvent } from "../src/lib/auction-model";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import {
+  lockBundle,
+  saveBundle,
+} from "../src/experiments/double-auction/server/market-store";
+import { settleDeadline } from "../src/experiments/double-auction/server/engine";
+import type { AuditEvent } from "../src/experiments/double-auction/lib/auction-model";
 
 async function main() {
   const attendance = Number(process.argv[2] ?? 2);

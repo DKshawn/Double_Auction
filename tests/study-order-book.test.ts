@@ -2,14 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StudyBookChart } from "../src/components/study-order-book";
+import { StudyBookChart } from "../src/experiments/double-auction/components/study-order-book";
 import {
   studyBookChartRows,
   studyBookRowCapacity,
   studyPriceLevels,
-} from "../src/lib/study-order-book";
-import type { StudyOrder } from "../src/lib/study-types";
-import { DemoSession } from "../src/lib/demo";
+} from "../src/experiments/double-auction/lib/study-order-book";
+import type { StudyOrder } from "../src/experiments/double-auction/lib/study-types";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 
 function order(
   side: StudyOrder["side"],

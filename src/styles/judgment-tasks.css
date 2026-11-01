@@ -1,0 +1,1831 @@
+/* Scoped from Exp-all-in-one, commit bd28b346; shared platform color tokens. */
+.judgment-app {
+  --page-gutter: clamp(16px, 2.5vw, 56px);
+  --app-font-family:
+    "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui,
+    sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  min-height: 100svh;
+}
+.judgment-app:lang(ja) {
+  --app-font-family:
+    "Noto Sans JP Variable", "Yu Gothic", "Hiragino Sans", sans-serif;
+}
+.judgment-app * {
+  box-sizing: border-box;
+}
+.judgment-app [hidden] {
+  display: none !important;
+}
+.judgment-app {
+  margin: 0;
+  font-family: var(--app-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.judgment-app button,
+.judgment-app input,
+.judgment-app textarea,
+.judgment-app select {
+  font: inherit;
+}
+.judgment-app button {
+  cursor: pointer;
+  text-align: center;
+  touch-action: manipulation;
+}
+.judgment-app button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.judgment-app a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.judgment-app a:hover {
+  text-decoration: underline;
+}
+.judgment-app a:focus-visible,
+.judgment-app button:focus-visible,
+.judgment-app input:focus-visible,
+.judgment-app textarea:focus-visible,
+.judgment-app select:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+.judgment-app h1,
+.judgment-app h2,
+.judgment-app p {
+  margin-top: 0;
+}
+.judgment-app h1 {
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.65;
+  letter-spacing: 0.025em;
+}
+.judgment-app h2 {
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.7;
+}
+.judgment-app p {
+  line-height: 1.9;
+}
+.judgment-app .small {
+  font-size: 12px;
+}
+.judgment-app .muted,
+.judgment-app .hint {
+  color: var(--muted);
+}
+.judgment-app .hint {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.judgment-app .skip-link {
+  position: fixed;
+  left: 16px;
+  top: -70px;
+  padding: 12px 20px;
+  background: var(--accent);
+  color: white;
+  z-index: 10;
+  border-radius: 6px;
+}
+.judgment-app .skip-link:focus {
+  top: 12px;
+}
+.judgment-app .loading {
+  text-align: center;
+  padding: 120px 20px;
+}
+.judgment-app .student-topbar {
+  height: 64px;
+  max-width: 1000px;
+  padding: 0 32px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.judgment-app > .student-topbar {
+  max-width: none;
+  padding-inline: var(--page-gutter);
+}
+.judgment-app .student-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.judgment-app .brand-icon {
+  width: 30px;
+  height: 31px;
+  position: relative;
+  display: inline-block;
+}
+.judgment-app .brand-icon i {
+  position: absolute;
+  display: block;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+}
+.judgment-app .brand-icon i:nth-child(1) {
+  top: 1px;
+  left: 7px;
+}
+.judgment-app .brand-icon i:nth-child(2) {
+  bottom: 1px;
+  left: 0;
+  background: var(--lavender);
+}
+.judgment-app .brand-icon i:nth-child(3) {
+  bottom: 1px;
+  right: 0;
+  background: var(--sell-bg);
+}
+.judgment-app .student-progress {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.judgment-app .header-tools {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.judgment-app .multiplication-expression {
+  font-size: clamp(18px, 4.5vw, 34px);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+.judgment-app .language-switch {
+  display: block;
+}
+.judgment-app .language-select {
+  appearance: none;
+  min-height: 44px;
+  min-width: 104px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+  font-size: 13px;
+}
+.judgment-app .language-select:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.judgment-app .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.judgment-app [aria-invalid="true"] {
+  border-color: var(--red) !important;
+}
+.judgment-app .student-topbar > a {
+  font-size: 13px;
+}
+.judgment-app .student-entry {
+  min-height: calc(100svh - 64px);
+  display: grid;
+  place-items: center;
+  padding: 30px 24px 112px;
+}
+.judgment-app .entry-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 42px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+.judgment-app .entry-card h1 {
+  font-size: 28px;
+  margin-bottom: 34px;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.judgment-app .field-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.judgment-app input[type="text"],
+.judgment-app input[type="number"],
+.judgment-app input:not([type]),
+.judgment-app textarea {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 14px 15px;
+  min-width: 0;
+  min-height: 48px;
+}
+.judgment-app .entry-card input {
+  width: 100%;
+  font-size: 19px;
+  min-height: 55px;
+}
+.judgment-app .entry-card .button {
+  width: 100%;
+  margin-top: 28px;
+  justify-content: center;
+}
+.judgment-app input[type="number"] {
+  width: 170px;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.judgment-app input:disabled,
+.judgment-app textarea:disabled {
+  background: var(--bg);
+}
+.judgment-app input[type="radio"],
+.judgment-app input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  cursor: pointer;
+}
+.judgment-app textarea {
+  width: 100%;
+  resize: vertical;
+  font-size: 16px;
+  line-height: 1.8;
+}
+.judgment-app .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 44px;
+  padding: 12px 22px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  text-decoration: none;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.judgment-app .button:hover {
+  text-decoration: none;
+}
+.judgment-app .button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 3px #22283d0a;
+}
+.judgment-app .button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.judgment-app .button.primary:active:not(:disabled) {
+  background: var(--accent-hover);
+}
+.judgment-app .button.secondary {
+  background: var(--paper);
+  color: var(--accent);
+  border-color: var(--line);
+}
+.judgment-app .button.secondary:hover:not(:disabled) {
+  background: var(--lavender);
+}
+.judgment-app .button.large {
+  font-size: 16px;
+  padding: 15px 26px;
+  min-width: 152px;
+  min-height: 56px;
+}
+.judgment-app .text-button {
+  border: 0;
+  background: transparent;
+  padding: 10px 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  min-height: 44px;
+}
+.judgment-app .text-button:hover {
+  text-decoration: underline;
+}
+.judgment-app .form-error {
+  color: var(--red);
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 14px 0;
+}
+.judgment-app .form-error:empty {
+  display: none;
+}
+.judgment-app .participant-main {
+  width: 100%;
+  margin: 0;
+  padding: 12px var(--page-gutter) 24px;
+}
+.judgment-app .progress-track {
+  height: 4px;
+  background: var(--line);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.judgment-app .progress-track > span {
+  display: block;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.judgment-app .task-panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px 32px;
+  box-shadow: var(--shadow);
+}
+.judgment-app .task-panel h1 {
+  font-size: 24px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+  outline: 0;
+}
+.judgment-app .task-body {
+  font-size: 16px;
+  line-height: 1.65;
+  white-space: pre-line;
+  margin-bottom: 16px;
+}
+.judgment-app .task-body p {
+  line-height: inherit;
+  margin: 0 0 8px;
+}
+.judgment-app .task-body p:last-child {
+  margin-bottom: 0;
+}
+.judgment-app .answer-field {
+  padding: 0;
+  margin: 16px 0 0;
+  border: 0;
+  min-width: 0;
+}
+.judgment-app .answer-field legend {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.55;
+  margin-bottom: 8px;
+  width: 100%;
+  padding: 0;
+}
+.judgment-app .field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 10px 20px;
+  margin-top: 16px;
+}
+.judgment-app .field-grid .answer-field {
+  margin: 0;
+}
+.judgment-app .field-grid .choice-field,
+.judgment-app .field-grid .text-field {
+  grid-column: 1/-1;
+}
+.judgment-app .field-grid .number-line input {
+  max-width: 100%;
+}
+.judgment-app .field-grid.many-numbers {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 6px 12px;
+}
+.judgment-app .many-numbers .answer-field legend {
+  font-size: 14px;
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+.judgment-app .many-numbers input[type="number"] {
+  min-height: 40px;
+  padding: 7px 10px;
+  font-size: 16px;
+}
+.judgment-app .scale-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 4px 18px;
+}
+.judgment-app .scale-grid.short-scales {
+  gap: 2px 18px;
+}
+.judgment-app .scale-grid.long-scales {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
+  gap: 4px 24px;
+}
+.judgment-app .ranking-main .task-panel {
+  padding: 18px clamp(16px, 2vw, 32px);
+}
+.judgment-app .ranking-main .task-panel h1 {
+  font-size: 22px;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+.judgment-app .ranking-main .task-body {
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.judgment-app .ranking-main .progress-track {
+  margin-bottom: 12px;
+}
+.judgment-app .ranking-board {
+  margin-top: 10px;
+  overflow-anchor: none;
+  --rank-height: 64px;
+}
+.judgment-app .ranking-board ~ .form-error {
+  display: block;
+  min-height: 24px;
+  margin: 4px 0 0;
+}
+.judgment-app .ranking-main .submit-row {
+  margin-top: 8px;
+  padding-top: 12px;
+}
+.judgment-app .ranking-main .task-bottom {
+  margin-top: 6px;
+}
+.judgment-app .ranking-instruction {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+  color: var(--muted);
+}
+.judgment-app .ranking-bank,
+.judgment-app .ranking-table {
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  scroll-behavior: auto;
+}
+.judgment-app .ranking-bank {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 7px;
+  align-content: start;
+  padding: 9px;
+}
+.judgment-app .ranking-many .ranking-bank {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px;
+}
+.judgment-app .ranking-bank-slot {
+  position: relative;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.judgment-app .ranking-bank-slot.is-empty {
+  border-color: var(--line);
+  border-style: dashed;
+}
+.judgment-app .ranking-reserve {
+  display: block;
+  visibility: hidden;
+  padding: 7px 22px;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.judgment-app .ranking-token {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 42px;
+  width: 100%;
+  padding: 7px 22px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  box-shadow: 0 1px 2px #22283d06;
+}
+.judgment-app .ranking-bank-slot > .ranking-token {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+.judgment-app .ranking-token:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+.judgment-app .ranking-token[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+  background: var(--lavender);
+}
+.judgment-app .ranking-grip {
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--muted);
+}
+.judgment-app .ranking-return {
+  display: block;
+  min-height: 28px;
+  margin: 2px 0;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  text-align: center;
+}
+.judgment-app .ranking-return:disabled {
+  visibility: hidden;
+}
+.judgment-app .ranking-table {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  grid-auto-rows: var(--rank-height);
+  align-content: start;
+  gap: 6px 14px;
+  max-height: clamp(240px, 45svh, 720px);
+  background: var(--paper);
+  padding: 8px 10px;
+  scrollbar-gutter: stable;
+}
+.judgment-app .ranking-many .ranking-table {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.judgment-app .ranking-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  height: var(--rank-height);
+  gap: 6px;
+  padding: 3px 0;
+}
+.judgment-app .ranking-place {
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  padding: 0;
+  color: var(--muted);
+  background: var(--bg);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.judgment-app .ranking-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  padding: 2px;
+}
+.judgment-app .ranking-items > .ranking-token {
+  min-height: 50px;
+  padding: 5px 20px;
+}
+.judgment-app
+  .allows-ties
+  .ranking-items:has(> .ranking-token + .ranking-token) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+}
+.judgment-app .allows-ties .ranking-empty {
+  grid-column: 1 / -1;
+}
+.judgment-app .ranking-empty {
+  flex: 1;
+  min-height: 50px;
+  width: 100%;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: transparent;
+}
+.judgment-app .has-selection .ranking-empty:hover,
+.judgment-app .has-selection .ranking-place:hover {
+  background: var(--lavender);
+  border-color: var(--accent);
+}
+.judgment-app .ranking-row.is-drop-target {
+  background: var(--lavender);
+  box-shadow: inset 0 0 0 2px var(--accent);
+  border-radius: 8px;
+}
+.judgment-app .ranking-bank.is-drop-target {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.judgment-app .ranking-token.is-dragging {
+  opacity: 0.25;
+}
+.judgment-app .ranking-board.is-dragging {
+  cursor: grabbing;
+}
+.judgment-app .ranking-ghost {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  cursor: grabbing;
+  background: var(--lavender);
+  border-color: var(--accent);
+  box-shadow: 0 12px 30px #22283d26;
+}
+@media (max-width: 700px) {
+  .judgment-app .ranking-main .task-panel {
+    padding: 18px 16px;
+  }
+  .judgment-app .ranking-many .ranking-bank {
+    max-height: 48svh;
+  }
+}
+@media (max-width: 540px) {
+  .judgment-app .ranking-bank,
+  .judgment-app .ranking-table,
+  .judgment-app .ranking-many .ranking-table {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .judgment-app .ranking-many .ranking-bank {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .judgment-app .ranking-board {
+    --rank-height: 72px;
+  }
+  .judgment-app .ranking-token,
+  .judgment-app .ranking-reserve {
+    font-size: 14px;
+  }
+}
+@media (max-width: 540px) {
+  .judgment-app .ranking-board:not(.ranking-many) {
+    --rank-height: 96px;
+  }
+}
+@media (max-width: 380px) {
+  .judgment-app .ranking-board:not(.ranking-many) {
+    --rank-height: 144px;
+  }
+}
+.judgment-app .choice-list {
+  display: grid;
+  gap: 8px;
+}
+.judgment-app .choice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1.6;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.judgment-app .choice > input {
+  margin: 5px 0 0;
+}
+.judgment-app .choice > span {
+  flex: 1;
+}
+.judgment-app .choice:has(input:checked) {
+  background: var(--lavender);
+  border-color: var(--accent);
+}
+.judgment-app .choice:has(input:not(:disabled)):hover {
+  border-color: var(--accent);
+}
+.judgment-app .number-line {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.judgment-app .number-range {
+  font-size: 12px;
+  color: var(--muted);
+}
+.judgment-app .number-line input[readonly] {
+  background: var(--lavender);
+  color: var(--accent);
+}
+.judgment-app .scale-choices {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.judgment-app .scale-choices .choice {
+  position: relative;
+  min-height: 36px;
+  padding: 5px 0;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.judgment-app .scale-choices .choice input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.judgment-app .scale-choices .choice:has(input:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.judgment-app .scale-field {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(210px, 2.2fr);
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.judgment-app .scale-field legend.sr-only {
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+}
+.judgment-app .scale-label {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.judgment-app .short-scales .scale-field {
+  grid-template-columns: minmax(100px, 1fr) minmax(190px, 1.7fr);
+  padding-top: 4px;
+}
+.judgment-app .short-scales .scale-label {
+  font-size: 13px;
+  line-height: 1.3;
+}
+.judgment-app .scale-grid .scale-choices .choice {
+  min-height: 34px;
+  line-height: 1.2;
+}
+.judgment-app .long-scales .scale-field {
+  display: block;
+}
+.judgment-app .long-scales .scale-field {
+  padding-top: 3px;
+}
+.judgment-app .long-scales .scale-label {
+  display: block;
+  margin-bottom: 3px;
+}
+.judgment-app .bag-tables {
+  display: grid;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 14px;
+}
+.judgment-app .bag-tables table {
+  border-collapse: collapse;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.judgment-app .bag-tables caption {
+  text-align: left;
+  padding-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.judgment-app .bag-tables th,
+.judgment-app .bag-tables td {
+  text-align: center;
+  padding: 7px;
+  border-bottom: 1px solid var(--line);
+}
+.judgment-app .bag-tables th {
+  font-size: 13px;
+  background: var(--lavender);
+}
+.judgment-app .na-choice {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.judgment-app .submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.judgment-app .submit-row .button.large {
+  min-height: 48px;
+  padding: 10px 22px;
+}
+.judgment-app .task-bottom {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.judgment-app .pair-entry {
+  margin-top: 24px;
+}
+.judgment-app .pair-entry input {
+  text-transform: uppercase;
+  width: 220px;
+  max-width: 100%;
+}
+.judgment-app .pair-entry .hint {
+  margin: 10px 0;
+}
+.judgment-app .pair-code {
+  font-size: 12px;
+  background: var(--bg);
+  padding: 12px 16px;
+  border-radius: 6px;
+  line-height: 1.8;
+  margin-top: 25px;
+}
+.judgment-app .pair-code strong {
+  font-size: 15px;
+  letter-spacing: 0.07em;
+  margin: 0 10px;
+}
+.judgment-app .pair-code span {
+  color: var(--muted);
+}
+.judgment-app dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  max-width: 500px;
+  width: calc(100% - 40px);
+  padding: 30px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 24px 100px #22283d30;
+}
+.judgment-app dialog::backdrop {
+  background: #22283d59;
+}
+.judgment-app .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 30px;
+}
+.judgment-app .stimulus {
+  padding: 20px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: center;
+  margin: 25px 0;
+}
+.judgment-app .stimulus.bag-tables {
+  padding: 10px;
+  margin: 12px 0;
+}
+.judgment-app .wheel-stimulus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 15px;
+}
+.judgment-app .wheel-svg {
+  width: 180px;
+  height: 180px;
+}
+.judgment-app .wheel-svg g {
+  transform-origin: 100px 100px;
+}
+.judgment-app .wheel-number {
+  font:
+    52px Georgia,
+    serif;
+  width: 140px;
+  margin: 0;
+  color: var(--accent);
+}
+.judgment-app .symbol-sequence {
+  font-family: Meiryo, sans-serif;
+  font-size: 34px;
+  letter-spacing: 0.2em;
+  padding: 36px 16px;
+}
+.judgment-app .ticket-symbol {
+  fill: var(--accent);
+  stroke: var(--accent);
+  width: 80px;
+  height: 80px;
+}
+.judgment-app .card-choices {
+  grid-template-columns: repeat(3, 1fr);
+}
+.judgment-app .card-choices .choice {
+  padding: 12px;
+}
+.judgment-app .card-choices .choice > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.judgment-app .card-choices .ticket-symbol {
+  width: 65px;
+  height: 65px;
+}
+.judgment-app .single-ticket {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 160px;
+  margin: 10px calc((100% - 160px) / 2) 25px;
+  background: var(--sell-bg);
+}
+.judgment-app .single-ticket > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.judgment-app .chip {
+  width: 95px;
+  height: 95px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 5px auto;
+  color: white;
+  font-size: 24px;
+  box-shadow: inset 0 0 0 5px #ffffff35;
+}
+.judgment-app .chip.red {
+  background: #a95048;
+}
+.judgment-app .chip.blue {
+  background: #466b92;
+}
+.judgment-app .matrix table {
+  width: 100%;
+  font-size: 14px;
+  border-collapse: collapse;
+}
+.judgment-app .matrix caption {
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.judgment-app .matrix th,
+.judgment-app .matrix td {
+  padding: 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.judgment-app .matrix thead th {
+  font-size: 12px;
+  font-weight: 500;
+}
+.judgment-app .matrix tbody td {
+  font:
+    22px Consolas,
+    monospace;
+}
+.judgment-app .drawing {
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.judgment-app .drawing svg {
+  max-height: 240px;
+  width: 100%;
+}
+.judgment-app .drawing-caption {
+  margin: 16px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.judgment-app .conversation-stage {
+  height: 210px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  gap: 40px;
+}
+.judgment-app .person {
+  position: relative;
+  width: 90px;
+  transform-origin: center bottom;
+  color: var(--muted);
+}
+.judgment-app .person svg {
+  fill: currentColor;
+  width: 100%;
+  display: block;
+}
+.judgment-app .person strong {
+  display: block;
+  font:
+    15px Consolas,
+    monospace;
+  margin-top: 8px;
+}
+.judgment-app .person.salient {
+  transform: scale(1.4);
+  margin-bottom: 12px;
+}
+.judgment-app .person.subtle {
+  transform: scale(0.8);
+}
+.judgment-app .person.speaking {
+  color: var(--accent);
+}
+.judgment-app .speech {
+  margin-top: 35px;
+  padding: 22px 20px;
+  min-height: 120px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-align: left;
+  display: flex;
+  gap: 16px;
+}
+.judgment-app .speech > span {
+  font:
+    15px Consolas,
+    monospace;
+  background: var(--lavender);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  text-align: center;
+  line-height: 30px;
+}
+.judgment-app .speech p {
+  font-size: 16px;
+  line-height: 1.9;
+  margin: 0;
+}
+.judgment-app .conversation > p:last-child {
+  margin: 12px 0 0;
+}
+.judgment-app .sum-indicator {
+  font-size: 13px;
+  margin-top: 25px;
+  padding: 12px;
+  background: var(--sell-bg);
+  color: var(--sell);
+  border-radius: 5px;
+}
+.judgment-app .sum-indicator.valid {
+  background: var(--lavender);
+  color: var(--accent);
+}
+
+.judgment-app .student-finish {
+  max-width: 640px;
+  margin: 60px auto;
+  padding: 40px 28px 80px;
+  text-align: center;
+}
+.judgment-app .student-finish h1 {
+  font-size: 28px;
+  margin-bottom: 14px;
+  outline: 0;
+}
+.judgment-app .thanks {
+  color: var(--muted);
+  font-size: 16px;
+}
+.judgment-app .completion-mark {
+  display: flex;
+  width: 62px;
+  height: 62px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 26px;
+  margin: 0 auto 28px;
+  background: var(--lavender);
+}
+.judgment-app .end-notes {
+  text-align: left;
+  margin: 36px 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.judgment-app .end-notes p:last-child {
+  margin-bottom: 0;
+}
+.judgment-app .student-finish > .button {
+  margin-top: 24px;
+}
+.judgment-app .admin-main {
+  max-width: 1120px;
+  margin: 20px auto 80px;
+  padding: 0 32px;
+}
+.judgment-app .admin-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 40px 0 30px;
+}
+.judgment-app .admin-heading h1 {
+  margin-bottom: 0;
+}
+.judgment-app .admin-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.judgment-app .table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.judgment-app .session-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+.judgment-app .session-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 16px;
+  background: var(--bg);
+  white-space: nowrap;
+}
+.judgment-app .session-table td {
+  padding: 18px 16px;
+  border-top: 1px solid var(--line);
+  white-space: nowrap;
+}
+.judgment-app .status {
+  font-size: 12px;
+  border-radius: 20px;
+  padding: 5px 10px;
+  white-space: nowrap;
+  background: var(--sell-bg);
+  color: var(--sell);
+}
+.judgment-app .status.completed {
+  background: var(--buy-bg);
+  color: var(--buy);
+}
+.judgment-app .status.withdrawn {
+  background: var(--bg);
+  color: var(--muted);
+}
+.judgment-app .empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+}
+.judgment-app .waiting-main {
+  min-height: calc(100svh - 64px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 24px 120px;
+  text-align: center;
+}
+.judgment-app .waiting-main h1 {
+  font-size: 25px;
+  margin: 28px 0 30px;
+}
+.judgment-app .waiting-mark {
+  display: flex;
+  gap: 9px;
+}
+.judgment-app .waiting-mark i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.judgment-app .waiting-mark i:nth-child(2) {
+  opacity: 0.55;
+}
+.judgment-app .waiting-mark i:nth-child(3) {
+  opacity: 0.25;
+}
+.judgment-app .experiment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.judgment-app .experiment-block {
+  min-height: 190px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  line-height: 1.8;
+}
+.judgment-app .experiment-select {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+}
+.judgment-app .experiment-select > input {
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.judgment-app .experiment-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.judgment-app .experiment-title {
+  font-weight: 650;
+  line-height: 1.6;
+}
+.judgment-app .experiment-description {
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--muted);
+}
+.judgment-app .experiment-block:has(input:checked) {
+  background: var(--lavender);
+  border-color: var(--accent);
+}
+.judgment-app .lesson-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 36px;
+  padding: 28px 0;
+}
+.judgment-app .lesson-settings label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.judgment-app .lesson-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0 28px;
+  border-top: 1px solid var(--line);
+}
+.judgment-app .lesson-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.judgment-app #selection-count,
+.judgment-app #classroom-status {
+  font-size: 14px;
+  color: var(--muted);
+}
+.judgment-app .preview-page {
+  height: 100vh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.judgment-app .preview-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 14px 22px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.judgment-app .preview-toolbar > a {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.judgment-app .preview-toolbar > strong {
+  font-size: 14px;
+}
+.judgment-app .preview-size,
+.judgment-app .preview-custom,
+.judgment-app .preview-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.judgment-app .preview-size {
+  margin-left: auto;
+}
+.judgment-app .preview-size select {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.judgment-app .preview-custom input[type="number"] {
+  width: 78px;
+  min-height: 44px;
+  padding: 9px;
+  font-size: 14px;
+}
+.judgment-app .preview-navigation {
+  white-space: nowrap;
+}
+.judgment-app #preview-progress {
+  min-width: 44px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.judgment-app .preview-stage {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+  background: var(--bg);
+}
+.judgment-app .preview-frame-box {
+  position: relative;
+  flex: none;
+  background: var(--bg);
+  box-shadow: 0 8px 32px #22283d24;
+  outline: 1px solid var(--line);
+}
+.judgment-app .preview-frame-box iframe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  border: 0;
+  transform-origin: top left;
+  background: var(--bg);
+}
+@media (min-width: 700px) {
+  .judgment-app .choice-list:not(.card-choices) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  }
+  .judgment-app .bag-tables {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+@media (min-width: 701px) {
+  .judgment-app .ranking-board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 8px 18px;
+  }
+  .judgment-app .ranking-instruction {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    align-self: center;
+  }
+  .judgment-app .ranking-bank {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+  .judgment-app .ranking-return {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    align-self: center;
+    margin: 0;
+  }
+  .judgment-app .ranking-table {
+    grid-column: 2;
+    grid-row: 2;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    max-height: none;
+  }
+  .judgment-app .ranking-board:not(.ranking-many) .ranking-bank,
+  .judgment-app .ranking-board:not(.ranking-many) .ranking-table {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .judgment-app .ranking-board:not(.ranking-many) .ranking-table {
+    grid-auto-rows: minmax(var(--rank-height), auto);
+  }
+  .judgment-app .ranking-board:not(.ranking-many) .ranking-row {
+    height: auto;
+    min-height: var(--rank-height);
+  }
+  .judgment-app .ranking-board:not(.ranking-many) .ranking-items {
+    overflow: visible;
+  }
+  .judgment-app .ranking-many {
+    --rank-height: 42px;
+  }
+  .judgment-app .ranking-many .ranking-bank {
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  }
+  .judgment-app .ranking-many .ranking-bank .ranking-token,
+  .judgment-app .ranking-many .ranking-reserve {
+    font-size: 13px;
+    line-height: 1.3;
+    padding: 6px 20px;
+  }
+  .judgment-app .ranking-many .ranking-table {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+  .judgment-app .ranking-many .ranking-table {
+    grid-auto-rows: minmax(var(--rank-height), auto);
+    row-gap: 3px;
+  }
+  .judgment-app .ranking-many .ranking-row {
+    height: auto;
+    min-height: var(--rank-height);
+  }
+  .judgment-app .ranking-many .ranking-items {
+    overflow: visible;
+  }
+  .judgment-app .ranking-many .ranking-items > .ranking-token {
+    min-height: 30px;
+    padding: 3px 15px;
+    font-size: 12.5px;
+    line-height: 1.2;
+  }
+  .judgment-app .ranking-many .ranking-empty {
+    min-height: 30px;
+  }
+}
+@media (min-width: 701px) and (max-width: 1100px) {
+  .judgment-app .scale-grid.long-scales {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 18px;
+  }
+  .judgment-app .long-scales .scale-field {
+    padding-top: 2px;
+  }
+  .judgment-app .long-scales .scale-label {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+  .judgment-app .field-grid.many-numbers {
+    gap: 3px 10px;
+  }
+  .judgment-app .scale-grid.short-scales {
+    gap: 1px 12px;
+  }
+  .judgment-app .short-scales .scale-field {
+    grid-template-columns: minmax(70px, 1fr) minmax(170px, 2fr);
+    gap: 6px;
+    padding-top: 3px;
+  }
+  .judgment-app .short-scales .scale-choices {
+    gap: 2px;
+  }
+  .judgment-app .ranking-many .ranking-bank {
+    gap: 4px;
+    padding: 6px;
+  }
+  .judgment-app .ranking-many .ranking-bank-slot,
+  .judgment-app .ranking-many .ranking-bank .ranking-token {
+    min-height: 40px;
+  }
+  .judgment-app .ranking-many .ranking-bank .ranking-token,
+  .judgment-app .ranking-many .ranking-reserve {
+    padding: 5px 6px 5px 17px;
+  }
+  .judgment-app .ranking-many .ranking-table {
+    column-gap: 5px;
+    padding-inline: 6px;
+  }
+  .judgment-app .ranking-many .ranking-row {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 3px;
+  }
+  .judgment-app .ranking-many .ranking-place {
+    width: 24px;
+    height: 24px;
+  }
+}
+@media (min-width: 700px) and (max-width: 1100px) {
+  .judgment-app .text-response-main .task-body {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .judgment-app .text-response-main textarea {
+    height: 116px;
+  }
+}
+@media (min-width: 940px) and (max-width: 1100px) {
+  .judgment-app .scale-grid.short-scales {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 701px) and (max-width: 939px) {
+  .judgment-app .scale-grid.short-scales {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .judgment-app .field-grid.many-numbers {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .judgment-app .ranking-many .ranking-bank,
+  .judgment-app .ranking-many .ranking-table {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 900px) and (max-width: 1100px) {
+  .judgment-app .ranking-many .ranking-bank,
+  .judgment-app .ranking-many .ranking-table {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .judgment-app .experiment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .judgment-app .experiment-grid {
+    grid-template-columns: 1fr;
+  }
+  .judgment-app .experiment-block {
+    min-height: 86px;
+    padding: 20px;
+  }
+  .judgment-app .lesson-settings {
+    flex-direction: column;
+  }
+  .judgment-app .lesson-actions {
+    gap: 12px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .judgment-app .lesson-buttons {
+    width: 100%;
+  }
+  .judgment-app .lesson-buttons .button {
+    flex: 1;
+  }
+  .judgment-app .preview-toolbar {
+    gap: 8px 12px;
+    padding: 10px 14px;
+  }
+  .judgment-app .preview-size {
+    width: 100%;
+    margin-left: 0;
+  }
+  .judgment-app .preview-size select {
+    flex: 1;
+    min-width: 0;
+  }
+  .judgment-app .preview-custom input[type="number"] {
+    width: 70px;
+  }
+  .judgment-app .preview-navigation {
+    margin-left: auto;
+  }
+  .judgment-app .preview-stage {
+    padding: 12px;
+  }
+}
+@media (max-width: 700px) {
+  .judgment-app .student-topbar {
+    height: 60px;
+    padding: 0 22px;
+  }
+  .judgment-app .student-entry {
+    min-height: calc(100svh - 60px);
+    padding: 25px 20px 90px;
+  }
+  .judgment-app .entry-card {
+    padding: 34px 26px;
+  }
+  .judgment-app .entry-card h1 {
+    font-size: 25px;
+    margin-bottom: 30px;
+  }
+  .judgment-app .participant-main {
+    padding: 10px var(--page-gutter) 24px;
+  }
+  .judgment-app .progress-track {
+    margin-bottom: 14px;
+  }
+  .judgment-app .task-panel {
+    padding: 20px 18px;
+  }
+  .judgment-app .task-panel h1 {
+    font-size: 22px;
+  }
+  .judgment-app .task-body {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .judgment-app .answer-field legend {
+    font-size: 14px;
+  }
+  .judgment-app .choice {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+  .judgment-app .scale-choices .choice {
+    padding: 5px 0;
+  }
+  .judgment-app .field-grid:not(.scale-grid) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  }
+  .judgment-app .submit-row {
+    gap: 12px;
+  }
+  .judgment-app .submit-row .button {
+    min-width: 136px;
+    min-height: 48px;
+    padding: 10px 20px;
+  }
+  .judgment-app .wheel-stimulus {
+    gap: 12px;
+    padding: 15px 5px;
+  }
+  .judgment-app .wheel-svg {
+    width: 130px;
+    height: 130px;
+  }
+  .judgment-app .wheel-number {
+    font-size: 38px;
+    width: 100px;
+  }
+  .judgment-app .symbol-sequence {
+    font-size: 24px;
+    letter-spacing: 0.12em;
+  }
+  .judgment-app .card-choices {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .judgment-app .card-choices .ticket-symbol {
+    width: 50px;
+    height: 50px;
+  }
+  .judgment-app .matrix {
+    padding: 12px 4px;
+  }
+  .judgment-app .matrix th,
+  .judgment-app .matrix td {
+    padding: 12px 6px;
+  }
+  .judgment-app .matrix thead th {
+    font-size: 10px;
+  }
+  .judgment-app .matrix tbody td {
+    font-size: 18px;
+  }
+  .judgment-app .matrix tbody th {
+    font-size: 12px;
+  }
+  .judgment-app .conversation-stage {
+    height: 175px;
+    gap: 20px;
+  }
+  .judgment-app .person {
+    width: 70px;
+  }
+  .judgment-app .speech {
+    padding: 16px 12px;
+    gap: 10px;
+    min-height: 150px;
+  }
+  .judgment-app .speech p {
+    font-size: 14px;
+  }
+  .judgment-app .pair-code span {
+    display: block;
+    margin-top: 5px;
+  }
+  .judgment-app .student-finish {
+    margin-top: 35px;
+  }
+  .judgment-app .student-finish h1 {
+    font-size: 25px;
+  }
+  .judgment-app .admin-main {
+    padding: 0 22px;
+  }
+  .judgment-app .admin-heading {
+    display: block;
+  }
+  .judgment-app .admin-actions {
+    margin-top: 22px;
+  }
+  .judgment-app dialog {
+    padding: 25px;
+  }
+}
+@media (max-width: 480px) {
+  .judgment-app .student-topbar {
+    padding: 0 18px;
+  }
+  .judgment-app .student-brand {
+    font-size: 14px;
+    gap: 8px;
+    letter-spacing: 0.02em;
+  }
+  .judgment-app .header-tools {
+    gap: 10px;
+  }
+  .judgment-app .student-progress {
+    font-size: 11px;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .judgment-app .language-select {
+    min-width: 90px;
+    font-size: 12px;
+    padding: 10px;
+  }
+  .judgment-app .short-scales .scale-field {
+    display: block;
+    padding-top: 6px;
+  }
+  .judgment-app .short-scales .scale-label {
+    display: block;
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  .judgment-app .scale-grid .scale-choices .choice {
+    min-height: 40px;
+  }
+  .judgment-app .submit-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .judgment-app .submit-row .button {
+    width: 100%;
+  }
+  .judgment-app #exposure-status {
+    text-align: center;
+  }
+  .judgment-app #exposure-status:empty {
+    display: none;
+  }
+  .judgment-app .dialog-actions .button {
+    flex: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .judgment-app * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

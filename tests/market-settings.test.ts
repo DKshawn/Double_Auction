@@ -2,9 +2,12 @@ import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { GOODS } from "../src/lib/catalog";
-import type { Command, MarketSettings } from "../src/lib/types";
-import { equilibrium } from "../src/lib/equilibrium";
+import { GOODS } from "../src/experiments/double-auction/lib/catalog";
+import type {
+  Command,
+  MarketSettings,
+} from "../src/experiments/double-auction/lib/types";
+import { equilibrium } from "../src/experiments/double-auction/lib/equilibrium";
 import {
   localDatabase,
   migrate,
@@ -13,10 +16,10 @@ import {
 import {
   defaultMarketSettings,
   limitsForSeat,
-} from "../src/lib/server/experiment";
-import { AuctionService } from "../src/lib/server/service";
-import { exportData } from "../src/lib/server/export";
-import { AuctionError } from "../src/lib/server/model";
+} from "../src/experiments/double-auction/server/experiment";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { exportData } from "../src/experiments/double-auction/server/export";
+import { AuctionError } from "../src/experiments/double-auction/server/model";
 
 let pg: PGlite, db: Database, service: AuctionService;
 before(async () => {

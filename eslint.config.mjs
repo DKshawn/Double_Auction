@@ -6,7 +6,8 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   globalIgnores([
-    ".next/**",
+    ".next*/**",
+    "docs/upstream/**",
     "next-env.d.ts",
     "work/**",
     ".data/**",

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DemoPreview } from "@/components/demo-preview";
+import { DemoPreview } from "@/experiments/double-auction/components/demo-preview";
 
 export const metadata: Metadata = {
   title: "画面サイズ別デモ | 市場実験室",

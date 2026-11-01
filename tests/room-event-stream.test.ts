@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { RoomEventStream } from "../src/lib/room-event-stream";
-import { diffViews } from "../src/lib/room-sync";
-import type { RoomView } from "../src/lib/types";
+import { RoomEventStream } from "../src/experiments/double-auction/lib/room-event-stream";
+import { diffViews } from "../src/experiments/double-auction/lib/room-sync";
+import type { RoomView } from "../src/experiments/double-auction/lib/types";
 
 class FakeSource {
   readyState = 1;

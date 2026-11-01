@@ -1,4 +1,4 @@
-import type { RoomView } from "./types";
+import type { RoomView } from "../experiments/double-auction/lib/types";
 
 const validCode = (code?: string) => code && /^[A-Z2-9]{6}$/.test(code);
 

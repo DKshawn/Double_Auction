@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import type { RoomView } from "../../src/lib/types";
+import type { RoomView } from "../../src/experiments/double-auction/lib/types";
 
 test("teacher edits private market conditions, students receive them, and starting locks them", async ({
   page,

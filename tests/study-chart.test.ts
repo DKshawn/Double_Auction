@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { studyChartViewport } from "../src/lib/study-chart";
-import { generateStaircase } from "../src/lib/study-generator";
-import { pptStudySettings } from "../src/lib/server/study";
+import { studyChartViewport } from "../src/experiments/double-auction/lib/study-chart";
+import { generateStaircase } from "../src/experiments/double-auction/lib/study-generator";
+import { pptStudySettings } from "../src/experiments/double-auction/server/study";
 
 const fifty = generateStaircase({ p: 800, K: 8, L: 4, d: 5 }, 50);
 const close = (actual: number, expected: number) =>

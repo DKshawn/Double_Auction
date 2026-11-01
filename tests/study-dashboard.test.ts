@@ -2,13 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StudyAllMarketResults } from "../src/components/study-room";
-import { DemoSession } from "../src/lib/demo";
+import { StudyAllMarketResults } from "../src/experiments/double-auction/components/study-room";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 import type {
   Institution,
   StudyMarketView,
   StudyMetric,
-} from "../src/lib/study-types";
+} from "../src/experiments/double-auction/lib/study-types";
 
 function trade(
   market: number,

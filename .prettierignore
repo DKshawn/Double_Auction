@@ -9,3 +9,7 @@ package-lock.json
 next-env.d.ts
 AGENTS.md
 CLAUDE.md
+
+.next-*
+src/experiments/judgment/vendor
+docs/upstream

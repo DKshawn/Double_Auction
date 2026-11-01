@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
 
 let pg: PGlite, service: AuctionService;
 before(async () => {

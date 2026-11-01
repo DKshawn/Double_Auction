@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StudyRoom } from "../src/components/study-room";
-import { DemoSession } from "../src/lib/demo";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 
 function history(session: DemoSession) {
   const { view, now } = session.getSnapshot();

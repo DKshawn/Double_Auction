@@ -1,18 +1,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { postedBatchPlan, postedBookOrders } from "../src/lib/posted-auction";
-import { newStudy, stageKey, marketRound } from "../src/lib/server/study";
-import { execute, settleDeadline, toView } from "../src/lib/server/engine";
-import type { Room, Participant, AuditEvent } from "../src/lib/server/model";
-import type { Command } from "../src/lib/types";
-import type { PostedBid, PostedOffer } from "../src/lib/study-types";
+import {
+  postedBatchPlan,
+  postedBookOrders,
+} from "../src/experiments/double-auction/lib/posted-auction";
+import {
+  newStudy,
+  stageKey,
+  marketRound,
+} from "../src/experiments/double-auction/server/study";
+import {
+  execute,
+  settleDeadline,
+  toView,
+} from "../src/experiments/double-auction/server/engine";
+import type {
+  Room,
+  Participant,
+  AuditEvent,
+} from "../src/experiments/double-auction/server/model";
+import type { Command } from "../src/experiments/double-auction/lib/types";
+import type {
+  PostedBid,
+  PostedOffer,
+} from "../src/experiments/double-auction/lib/study-types";
 import {
   DEFAULT_STUDY_TIMING,
   postedPurchaseSeconds,
   studyRemainingMs,
-} from "../src/lib/study-timing";
-import { exportData } from "../src/lib/server/export";
+} from "../src/experiments/double-auction/lib/study-timing";
+import { exportData } from "../src/experiments/double-auction/server/export";
 
 function fixture() {
   const study = newStudy(1, 6);

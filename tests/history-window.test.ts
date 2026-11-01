@@ -7,11 +7,11 @@ import {
   historyOffsets,
   historyRowAt,
   historyWindow,
-} from "../src/lib/history-window";
+} from "../src/experiments/double-auction/lib/history-window";
 import { timeLabel } from "../src/lib/client";
-import { StudyMarketHistory } from "../src/components/study-market-history";
-import type { StudyOrderHistory } from "../src/lib/study-types";
-import { DemoSession } from "../src/lib/demo";
+import { StudyMarketHistory } from "../src/experiments/double-auction/components/study-market-history";
+import type { StudyOrderHistory } from "../src/experiments/double-auction/lib/study-types";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 
 test("history windows cover every record while bounding mounted rows", () => {
   const ids = Array.from({ length: 6000 }, (_, i) => String(i));

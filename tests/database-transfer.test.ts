@@ -11,14 +11,14 @@ import {
   lockBundle,
   readBundle,
   saveBundle,
-} from "../src/lib/server/market-store";
+} from "../src/experiments/double-auction/server/market-store";
 import {
   cachedRoomRoot,
   readRoomBundle,
-} from "../src/lib/server/room-read-cache";
-import { AuctionService } from "../src/lib/server/service";
-import { RealtimeBroker } from "../src/lib/server/realtime";
-import type { RoomView } from "../src/lib/types";
+} from "../src/experiments/double-auction/server/room-read-cache";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { RealtimeBroker } from "../src/experiments/double-auction/server/realtime";
+import type { RoomView } from "../src/experiments/double-auction/lib/types";
 
 const pg = new PGlite();
 const base = localDatabase(pg);

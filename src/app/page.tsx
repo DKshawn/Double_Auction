@@ -1,7 +1,6 @@
-import Image from "next/image";
+import Link from "next/link";
 import { Layers3, UsersRound, RefreshCcw } from "lucide-react";
-import { INSTITUTIONS } from "@/lib/study-rules";
-import { Footer, Header } from "@/components/shell";
+import { Header } from "@/components/shell";
 import { JoinForm } from "@/components/join-form";
 
 export default async function Home({
@@ -12,7 +11,9 @@ export default async function Home({
   const { code } = await searchParams;
   return (
     <>
-      <Header />
+      <Header>
+        <Link href="/teacher">教員用ページ</Link>
+      </Header>
       <main className="home-main">
         <section className="home-grid">
           <div className="home-story">
@@ -21,45 +22,41 @@ export default async function Home({
               体験する、実験経済学
             </div>
             <h1>
-              取引から、
+              体験から、
               <br />
-              <em>市場</em>を学ぼう。
+              <em>経済学</em>を学ぼう。
             </h1>
             <p className="hero-description">
-              同じ商品を、選んだ制度で取引する。
+              取引や判断の実験に、教室のみんなで参加する。
               <br />
-              みんなの取引が、ひとつの市場をつくります。
+              自分の選択と実験の結果を振り返ります。
             </p>
-            <div className="study-home-product">
-              <Image
-                src="/fruits/apple.jpg"
-                alt="取引する商品：りんご"
-                width={150}
-                height={150}
-                priority
-              />
+            <div className="platform-home-experiments">
               <div>
-                <p>りんご · 各期の取引量は教員が設定</p>
-                {Object.entries(INSTITUTIONS).map(([id, institution]) => (
-                  <div className="study-home-protocol" key={id}>
-                    <b>{institution.short}</b>
-                    <span>{institution.name}</span>
-                  </div>
-                ))}
+                <h2>Double Auction</h2>
+                <p>取引制度と価格形成</p>
+              </div>
+              <div>
+                <h2>EMH</h2>
+                <p>情報と資産価格</p>
+              </div>
+              <div>
+                <h2>判断ラボ</h2>
+                <p>確率判断と意思決定</p>
               </div>
             </div>
             <div className="hero-facts">
               <span>
                 <Layers3 size={17} />
-                選べる3つの制度
+                3つの実験
               </span>
               <span>
                 <UsersRound size={17} />
-                入室人数で市場を編成
+                教室のみんなで参加
               </span>
               <span>
                 <RefreshCcw size={16} />
-                制度・期数を選択
+                選択と結果を記録
               </span>
             </div>
           </div>
@@ -72,17 +69,17 @@ export default async function Home({
             [
               "01",
               "入室して待つ",
-              "入室締切後、教員が市場と役割をランダムに割り当てます。開始後、自分の価値・費用を確認しましょう。",
+              "ルームコードで参加。開始後、自分に割り当てられた条件を確認しましょう。",
             ],
             [
               "02",
-              "価格を提示する",
-              "画面に表示される制度のルールに沿って注文・購入します。毎期の取引可能数は実験の設定によって決まります。",
+              "実験に参加する",
+              "画面に表示されるルールに沿って、取引や課題に取り組みます。",
             ],
             [
               "03",
               "結果を振り返る",
-              "各期の利益と、現在の制度の全期の価格を確認。経験によって、市場はどう変わるでしょうか。",
+              "実験が終わったら、授業で結果を確認しましょう。",
             ],
           ].map(([number, title, text]) => (
             <article key={number}>
@@ -95,7 +92,10 @@ export default async function Home({
           ))}
         </section>
       </main>
-      <Footer />
+      <div className="site-footer platform-guide-links">
+        <Link href="/guide">Double Auction のルール</Link>
+        <Link href="/emh/guide">EMH のルール</Link>
+      </div>
     </>
   );
 }

@@ -2,13 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
 import {
   RealtimeBroker,
   MARKET_PUSH_INTERVAL_MS,
-} from "../src/lib/server/realtime";
-import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
-import type { RoomView } from "../src/lib/types";
+} from "../src/experiments/double-auction/server/realtime";
+import {
+  applyPatch,
+  type RoomPatch,
+} from "../src/experiments/double-auction/lib/room-sync";
+import type { RoomView } from "../src/experiments/double-auction/lib/types";
 
 test("default local PGlite pushes authorized changes and revokes an old teacher session", async () => {
   const pg = new PGlite(),

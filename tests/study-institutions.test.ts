@@ -4,37 +4,57 @@ import { randomUUID } from "node:crypto";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PGlite } from "@electric-sql/pglite";
-import { StudyRoom } from "../src/components/study-room";
-import { StudyTimingFields } from "../src/components/study-timing-settings";
-import { INSTITUTIONS } from "../src/lib/study-rules";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
+import { StudyTimingFields } from "../src/experiments/double-auction/components/study-timing-settings";
+import { INSTITUTIONS } from "../src/experiments/double-auction/lib/study-rules";
 import {
   DEFAULT_STUDY_INSTITUTIONS,
   studyInstitutions,
   studyInstitutionOrders,
-} from "../src/lib/study-config";
+} from "../src/experiments/double-auction/lib/study-config";
 import {
   DEFAULT_STUDY_TIMING,
   studyTimingError,
   studyTimingForInstitutions,
-} from "../src/lib/study-timing";
-import type { Institution, StudyPeriods } from "../src/lib/study-types";
-import type { Command, RoomView } from "../src/lib/types";
+} from "../src/experiments/double-auction/lib/study-timing";
+import type {
+  Institution,
+  StudyPeriods,
+} from "../src/experiments/double-auction/lib/study-types";
+import type {
+  Command,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
 import {
   localDatabase,
   migrate,
   type Database,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { joinSchema } from "../src/lib/server/http";
 import {
   configSchema,
   commandSchema,
-  joinSchema,
-} from "../src/lib/server/http";
-import { execute, settleDeadline, toView } from "../src/lib/server/engine";
-import { newStudy, marketRound, stageKey } from "../src/lib/server/study";
-import { lockBundle, saveBundle } from "../src/lib/server/market-store";
-import { exportData } from "../src/lib/server/export";
-import type { AuditEvent, Participant } from "../src/lib/server/model";
+} from "@/experiments/double-auction/server/validation";
+import {
+  execute,
+  settleDeadline,
+  toView,
+} from "../src/experiments/double-auction/server/engine";
+import {
+  newStudy,
+  marketRound,
+  stageKey,
+} from "../src/experiments/double-auction/server/study";
+import {
+  lockBundle,
+  saveBundle,
+} from "../src/experiments/double-auction/server/market-store";
+import { exportData } from "../src/experiments/double-auction/server/export";
+import type {
+  AuditEvent,
+  Participant,
+} from "../src/experiments/double-auction/server/model";
 
 const selections: Institution[][] = [
   ["cda"],

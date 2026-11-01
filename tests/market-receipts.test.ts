@@ -9,9 +9,15 @@ import {
   SCHEMA,
   type Database,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { lockBundle, saveBundle } from "../src/lib/server/market-store";
-import type { Command, CommandRequest } from "../src/lib/types";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import {
+  lockBundle,
+  saveBundle,
+} from "../src/experiments/double-auction/server/market-store";
+import type {
+  Command,
+  CommandRequest,
+} from "../src/experiments/double-auction/lib/types";
 
 const pg = new PGlite();
 const db = localDatabase(pg);

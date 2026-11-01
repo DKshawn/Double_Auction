@@ -25,10 +25,15 @@ previously named `DKshawn/Exp-all-in-one`. Its pinned migration source remains
 `bd28b3460366671917b477d590c2be0a274f867b`; its final main is
 `4574849f751f00f9457b4612eb02cb63864cc728`.
 
-The current GitHub credential cannot delete that repository: the DELETE API
-returned HTTP 403. It was therefore renamed to `DKshawn/Exp-all-in-one-legacy`
+The current GitHub credential could not delete that repository: the DELETE API
+returned HTTP 403. It was temporarily renamed to `DKshawn/Exp-all-in-one-legacy`
 and returned to read-only archival, freeing the requested platform name.
-**Deletion remains pending owner action; it is not reported as complete.**
+
+The owner subsequently deleted the legacy repository on 2026-11-01. Deletion
+was verified by HTTP 404 for both the legacy repository URL and repository ID
+`1435420427`. The maintained platform was independently verified to remain
+active at `DKshawn/Exp-all-in-one` with ID `1389400487`; the old
+`DKshawn/Double_Auction` address redirects to it.
 
 Before any repository change, the complete Git history was mirrored and verified
 with `git bundle verify`. The local retirement backup contains:

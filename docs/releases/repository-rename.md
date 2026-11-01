@@ -72,7 +72,8 @@ active at `DKshawn/Exp-all-in-one` with ID `1389400487`; the old
 Before any repository change, the complete Git history was mirrored and verified
 with `git bundle verify`. The local retirement backup contains:
 
-- `EMH/backups/judgment-retired-20261101/Exp-all-in-one-legacy.bundle`
+- Current location: `work/archives/emh-legacy-20261101/backups/judgment-retired-20261101/Exp-all-in-one-legacy.bundle`
+- Original location: `EMH/backups/judgment-retired-20261101/Exp-all-in-one-legacy.bundle`
 - Bundle SHA-256: `4f2b721c0c783c02ad7000f1e70726650c6ff3f72f912cd331ee476d4fba21d0`
 - `github-metadata.json`: repository metadata and the single merged PR, with its
   comments/reviews; tags and releases were empty
@@ -88,3 +89,8 @@ Original source files and their file hashes remain in `docs/upstream/judgment`.
 Its manifest includes the historical repository ID to distinguish it from the
 current platform. Runtime behavior, experiment data and deployment credentials
 are unaffected by these documentation and repository-name changes.
+
+The later [EMH folder consolidation](emh-folder-consolidation.md) collected the
+remaining source materials, local records and history bundle inside this
+checkout as verified copies. The old EMH directory retains the originals and
+redirect instructions; the maintained platform no longer depends on it.

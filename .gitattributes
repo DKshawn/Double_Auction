@@ -1,3 +1,8 @@
 * text=auto eol=lf
 *.jpg binary
 *.png binary
+
+# Preserve the original material bytes recorded in the EMH source manifest.
+*.pdf binary
+docs/upstream/emh/README.standalone.md -text
+docs/upstream/emh/AGENTS.original.md -text

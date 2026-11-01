@@ -8,12 +8,15 @@ import {
   teacherSetupHref,
   roomNavigation,
 } from "../src/lib/room-navigation";
-import { StudyRoom } from "../src/components/study-room";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
 import { Header } from "../src/components/shell";
-import { DemoSession } from "../src/lib/demo";
-import { ExportDownloads } from "../src/components/export-downloads";
-import { EXPORTS, isExportKind } from "../src/lib/exports";
-import { csv } from "../src/lib/server/export";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import { ExportDownloads } from "../src/experiments/double-auction/components/export-downloads";
+import {
+  EXPORTS,
+  isExportKind,
+} from "../src/experiments/double-auction/lib/exports";
+import { csv } from "../src/experiments/double-auction/server/export";
 
 test("room navigation retains teacher context, respects authenticated students, and recovers expired teacher sessions", () => {
   assert.equal(teacherRoomHref("ABCD23"), "/room/ABCD23?entry=teacher");

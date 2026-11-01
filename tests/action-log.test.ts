@@ -8,21 +8,28 @@ import {
   type Database,
   type Sql,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { lockBundle, saveBundle } from "../src/lib/server/market-store";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import {
+  lockBundle,
+  saveBundle,
+} from "../src/experiments/double-auction/server/market-store";
 import {
   actionBatchSchema,
   readActionLogs,
-} from "../src/lib/server/action-log";
+} from "../src/experiments/double-auction/server/action-log";
 import {
   actionExport,
   eventOperations,
   type ClientAction,
   type Interaction,
   type Operation,
-} from "../src/lib/action-log";
-import { commandSchema } from "../src/lib/server/http";
-import type { Command, CommandRequest, RoomView } from "../src/lib/types";
+} from "../src/experiments/double-auction/lib/action-log";
+import { commandSchema } from "@/experiments/double-auction/server/validation";
+import type {
+  Command,
+  CommandRequest,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
 
 let pg: PGlite, db: Database, service: AuctionService;
 const queries: { sql: string; inTransaction: boolean }[] = [];

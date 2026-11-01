@@ -2,14 +2,20 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TeacherForm } from "../src/components/teacher-form";
-import { DemoEntry } from "../src/components/demo-entry";
-import { StudyRoom } from "../src/components/study-room";
-import { DemoSession, DEMO_SETTINGS } from "../src/lib/demo";
-import { resizeStudySettings, studyTotalRounds } from "../src/lib/study-config";
-import { configSchema } from "../src/lib/server/http";
-import type { Institution } from "../src/lib/study-types";
-import type { RoomConfig } from "../src/lib/types";
+import { TeacherForm } from "../src/experiments/double-auction/components/teacher-form";
+import { DemoEntry } from "../src/experiments/double-auction/components/demo-entry";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
+import {
+  DemoSession,
+  DEMO_SETTINGS,
+} from "../src/experiments/double-auction/lib/demo";
+import {
+  resizeStudySettings,
+  studyTotalRounds,
+} from "../src/experiments/double-auction/lib/study-config";
+import { configSchema } from "@/experiments/double-auction/server/validation";
+import type { Institution } from "../src/experiments/double-auction/lib/study-types";
+import type { RoomConfig } from "../src/experiments/double-auction/lib/types";
 
 function config(institutions: Institution[]): RoomConfig {
   const draft = {

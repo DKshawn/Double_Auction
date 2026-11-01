@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "市場実験室 | 3つの市場制度",
+  title: "市場実験室 | 経済学実験",
   description:
-    "同じ商品をCDA・Call Market・Posted Offerで取引し、市場価格が生まれる仕組みを体験する授業用実験アプリです。",
+    "Double Auction、資産市場実験、判断ラボに参加する授業用経済学実験アプリです。",
   robots: { index: false, follow: false },
 };
 export default function RootLayout({

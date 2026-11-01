@@ -6,7 +6,10 @@ import {
   type Page,
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import type { Command, RoomView } from "../../src/lib/types";
+import type {
+  Command,
+  RoomView,
+} from "../../src/experiments/double-auction/lib/types";
 
 test.describe.configure({ mode: "parallel" });
 

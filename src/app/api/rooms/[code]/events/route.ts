@@ -1,14 +1,14 @@
 import { after, type NextRequest } from "next/server";
 import { codeFor, failure, sessionFor, tokenFor } from "@/lib/server/http";
 import { database } from "@/lib/server/database";
-import { AuctionService } from "@/lib/server/service";
-import { broker } from "@/lib/server/realtime";
+import { AuctionService } from "@/experiments/double-auction/server/service";
+import { broker } from "@/experiments/double-auction/server/realtime";
 import {
   RoomStreamRotation,
   STREAM_ROTATE_MS,
   STREAM_HANDOFF_GRACE_MS,
   type RotationPlan,
-} from "@/lib/room-stream-rotation";
+} from "@/experiments/double-auction/lib/room-stream-rotation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -1,0 +1,74 @@
+import { z } from "zod";
+import type { NextRequest } from "next/server";
+import { AuctionError } from "@/lib/server/errors";
+import { sessionFor } from "@/lib/server/http";
+
+export const createSchema = z
+  .object({
+    title: z.string().trim().min(1).max(60),
+    password: z.string().min(8).max(128),
+    accessKey: z.string().max(256).default(""),
+  })
+  .strict();
+const side = z.enum(["bid", "ask"]);
+const unitKey = z.string().min(1).max(80);
+const action = z.union([
+  z
+    .object({
+      kind: z.literal("quote"),
+      side,
+      price: z.number().int().min(1).max(100000),
+      unitKey,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.enum(["accept", "cancel"]),
+      side,
+      quoteId: z.string().min(1).max(100),
+      unitKey,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.enum(["pause", "resume", "end-period", "next-year", "reveal"]),
+      expectedPhase: z.string().min(1).max(100),
+    })
+    .strict(),
+]);
+export const commandSchema = z.discriminatedUnion("scope", [
+  z
+    .object({
+      requestId: z.uuid(),
+      scope: z.literal("session"),
+      command: z
+        .object({
+          kind: z.enum([
+            "assign",
+            "reopen",
+            "start",
+            "pause-all",
+            "resume-all",
+            "reveal-all",
+          ]),
+          expectedRevision: z.number().int().min(0),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      requestId: z.uuid(),
+      scope: z.literal("market"),
+      marketId: z.number().int().min(1).max(999),
+      action,
+    })
+    .strict(),
+]);
+export function requestScope(request: NextRequest) {
+  const role = sessionFor(request) ?? "student";
+  const value = request.nextUrl.searchParams.get("market");
+  if (value !== null && !/^[1-9]\d{0,2}$/.test(value))
+    throw new AuctionError("市場番号を確認してください。", 400);
+  return { role, market: value === null ? undefined : Number(value) };
+}

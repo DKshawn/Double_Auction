@@ -8,17 +8,20 @@ import {
   studyMarketSettings,
   studyTemplateSideCount,
   studyUnitsPerSide,
-} from "../src/lib/study-config";
-import { studyRoomConfigSchema } from "../src/lib/study-room-config";
-import { generatedStudySettings } from "../src/lib/study-generator";
-import { studySettingsSchema } from "../src/lib/study-core";
-import { pptStudySettings } from "../src/lib/server/study";
-import { createRoomSchema } from "../src/lib/server/http";
-import { DemoSession } from "../src/lib/demo";
+} from "../src/experiments/double-auction/lib/study-config";
+import { studyRoomConfigSchema } from "../src/experiments/double-auction/lib/study-room-config";
+import { generatedStudySettings } from "../src/experiments/double-auction/lib/study-generator";
+import { studySettingsSchema } from "../src/experiments/double-auction/lib/study-core";
+import { pptStudySettings } from "../src/experiments/double-auction/server/study";
+import { createRoomSchema } from "@/experiments/double-auction/server/validation";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import type { Command, RoomConfig } from "../src/lib/types";
-import type { StudyGeneratorConfig } from "../src/lib/study-types";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import type {
+  Command,
+  RoomConfig,
+} from "../src/experiments/double-auction/lib/types";
+import type { StudyGeneratorConfig } from "../src/experiments/double-auction/lib/study-types";
 
 const generator: StudyGeneratorConfig = {
   kind: "overlap-staircase",

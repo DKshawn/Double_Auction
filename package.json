@@ -1,5 +1,5 @@
 {
-  "name": "double-auction-lab",
+  "name": "economics-experiment-platform",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:local-postgres": "tsx --test tests/local-postgres.test.ts",
     "test:load-local": "tsx scripts/load-local.ts",

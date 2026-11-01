@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fitStudyViewport } from "../src/lib/study-viewport";
+import { fitStudyViewport } from "../src/experiments/double-auction/lib/study-viewport";
 
 test("the reference MacBook layout remains at its original size and larger screens never enlarge text", () => {
   assert.deepEqual(fitStudyViewport(1512, 862), {

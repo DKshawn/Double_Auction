@@ -2,10 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StudyTradeFeedback } from "../src/components/study-personal-trades";
-import { StudyRoom } from "../src/components/study-room";
-import { DemoSession } from "../src/lib/demo";
-import type { StudyView } from "../src/lib/study-types";
+import { StudyTradeFeedback } from "../src/experiments/double-auction/components/study-personal-trades";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import type { StudyView } from "../src/experiments/double-auction/lib/study-types";
 
 test("final-period feedback shows only that period's fills, including losses, for both sides", () => {
   const trades: StudyView["myTrades"] = [

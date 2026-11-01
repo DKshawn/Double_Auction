@@ -6,7 +6,11 @@ import {
   type Page,
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import type { Command, CommandRequest, RoomView } from "../../src/lib/types";
+import type {
+  Command,
+  CommandRequest,
+  RoomView,
+} from "../../src/experiments/double-auction/lib/types";
 
 async function classroom(teacher: Page, browser: Browser, baseURL: string) {
   expect(new URL(baseURL).hostname).toBe("127.0.0.1");

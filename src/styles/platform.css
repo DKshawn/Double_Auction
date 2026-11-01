@@ -1,0 +1,193 @@
+.teacher-hub-main {
+  max-width: 960px;
+  margin: 40px auto 72px;
+  padding: 0 24px;
+}
+.teacher-hub-main h1 {
+  font-size: 26px;
+  margin-bottom: 24px;
+}
+.experiment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 24px 0 40px;
+}
+.experiment-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px;
+  color: var(--ink);
+}
+.experiment-card:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+  background: var(--lavender);
+}
+.experiment-card h2 {
+  font-size: 24px;
+  color: var(--accent);
+}
+.experiment-card p {
+  flex: 1;
+}
+.experiment-card > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.emh-create {
+  display: grid;
+  gap: 24px;
+  max-width: 600px;
+  margin: 24px auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px;
+}
+.emh-create h1 {
+  font-size: 23px;
+}
+.experiment-defaults {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 16px 0;
+  border-block: 1px solid var(--line);
+}
+.platform-home-experiments {
+  display: grid;
+  gap: 18px;
+  margin: 28px 0;
+}
+.platform-home-experiments h2 {
+  color: var(--accent);
+}
+.platform-home-experiments p {
+  color: var(--muted);
+  margin-top: 4px;
+}
+.platform-guide-links {
+  display: flex;
+  gap: 20px;
+}
+.emh-app .emh-session {
+  padding-block: 28px 50px;
+}
+.emh-app .emh-session-controls {
+  padding: 20px;
+  margin-bottom: 28px;
+}
+.emh-app .emh-session-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.emh-app .emh-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.emh-app .emh-market-selector {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.emh-app .emh-market-button {
+  flex: 0 0 150px;
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 9px;
+  padding: 12px;
+  color: var(--ink);
+}
+.emh-app .emh-market-button.selected {
+  border-color: var(--accent);
+  background: var(--lavender);
+}
+.emh-app .emh-market-button span {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.emh-app .emh-all-exports {
+  margin-top: 14px;
+}
+.emh-app .emh-all-exports summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.emh-app .emh-all-exports .emh-actions {
+  margin-top: 12px;
+}
+.emh-app .emh-waiting {
+  padding: 32px;
+  display: grid;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.emh-app .emh-waiting h2 {
+  font-size: 28px;
+}
+.emh-app .emh-allocation {
+  padding: 24px;
+}
+.emh-app .emh-allocation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.emh-app .emh-allocation-grid article {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 18px;
+}
+.emh-app .emh-allocation-grid h3 span {
+  float: right;
+  color: var(--muted);
+}
+.emh-app .emh-allocation-grid p {
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.emh-app .emh-roster {
+  margin-top: 24px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.emh-app .emh-dismiss {
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  margin-left: auto;
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .experiment-grid {
+    grid-template-columns: 1fr;
+  }
+  .experiment-card {
+    padding: 22px;
+  }
+  .emh-create {
+    padding: 24px;
+  }
+  .emh-app .emh-waiting {
+    padding: 24px;
+  }
+  .emh-app .emh-session-top .emh-actions {
+    gap: 8px;
+  }
+}

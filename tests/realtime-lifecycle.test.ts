@@ -8,8 +8,8 @@ import {
   migrate,
   type Database,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { broker } from "../src/lib/server/realtime";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { broker } from "../src/experiments/double-auction/server/realtime";
 import { GET } from "../src/app/api/rooms/[code]/events/route";
 
 const nextServer = createRequire(import.meta.url)(

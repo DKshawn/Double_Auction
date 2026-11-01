@@ -10,10 +10,16 @@ import {
   type Database,
   type Sql,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { lockBundle, saveBundle } from "../src/lib/server/market-store";
-import { RealtimeBroker } from "../src/lib/server/realtime";
-import type { Command, RoomView } from "../src/lib/types";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import {
+  lockBundle,
+  saveBundle,
+} from "../src/experiments/double-auction/server/market-store";
+import { RealtimeBroker } from "../src/experiments/double-auction/server/realtime";
+import type {
+  Command,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
 
 async function main() {
   const pg = new PGlite();

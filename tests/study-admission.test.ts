@@ -3,10 +3,17 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { RealtimeBroker } from "../src/lib/server/realtime";
-import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
-import { execute, settleDeadline, toView } from "../src/lib/server/engine";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { RealtimeBroker } from "../src/experiments/double-auction/server/realtime";
+import {
+  applyPatch,
+  type RoomPatch,
+} from "../src/experiments/double-auction/lib/room-sync";
+import {
+  execute,
+  settleDeadline,
+  toView,
+} from "../src/experiments/double-auction/server/engine";
 import {
   newStudy,
   unitLimits,
@@ -15,17 +22,28 @@ import {
   stageKey,
   settingsForInstitution,
   applyStudyGenerator,
-} from "../src/lib/server/study";
-import { studyMarketId, studyMarketCounts } from "../src/lib/study-config";
-import { equilibrium } from "../src/lib/equilibrium";
-import { exportData } from "../src/lib/server/export";
-import { commandSchema } from "../src/lib/server/http";
-import type { Room, Participant, AuditEvent } from "../src/lib/server/model";
-import type { RoomConfig, Command, RoomView } from "../src/lib/types";
-import type { Institution } from "../src/lib/study-types";
-import { DemoSession } from "../src/lib/demo";
-import { studyRoomConfigSchema } from "../src/lib/study-room-config";
-import { DEFAULT_STAIRCASE_PARAMETERS } from "../src/lib/study-generator";
+} from "../src/experiments/double-auction/server/study";
+import {
+  studyMarketId,
+  studyMarketCounts,
+} from "../src/experiments/double-auction/lib/study-config";
+import { equilibrium } from "../src/experiments/double-auction/lib/equilibrium";
+import { exportData } from "../src/experiments/double-auction/server/export";
+import { commandSchema } from "@/experiments/double-auction/server/validation";
+import type {
+  Room,
+  Participant,
+  AuditEvent,
+} from "../src/experiments/double-auction/server/model";
+import type {
+  RoomConfig,
+  Command,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
+import type { Institution } from "../src/experiments/double-auction/lib/study-types";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import { studyRoomConfigSchema } from "../src/experiments/double-auction/lib/study-room-config";
+import { DEFAULT_STAIRCASE_PARAMETERS } from "../src/experiments/double-auction/lib/study-generator";
 
 const config: RoomConfig = {
   title: "Flexible local test",

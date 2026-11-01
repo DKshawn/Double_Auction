@@ -1,35 +1,52 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { studyRole, studyRoleIndex } from "../src/lib/study-config";
+import {
+  studyRole,
+  studyRoleIndex,
+} from "../src/experiments/double-auction/lib/study-config";
 import {
   studyTiming,
   DEFAULT_STUDY_TIMING,
   studyRemainingMs,
   studyCountdownLabel,
-} from "../src/lib/study-timing";
+} from "../src/experiments/double-auction/lib/study-timing";
 import {
   STUDY_FEEDBACK_SECONDS,
   type StudySettings,
-} from "../src/lib/study-types";
-import { applyPatch, diffViews } from "../src/lib/room-sync";
-import type { Command } from "../src/lib/types";
-import type { AuditEvent, Participant, Room } from "../src/lib/server/model";
-import { execute, settleDeadline, toView } from "../src/lib/server/engine";
+} from "../src/experiments/double-auction/lib/study-types";
+import {
+  applyPatch,
+  diffViews,
+} from "../src/experiments/double-auction/lib/room-sync";
+import type { Command } from "../src/experiments/double-auction/lib/types";
+import type {
+  AuditEvent,
+  Participant,
+  Room,
+} from "../src/experiments/double-auction/server/model";
+import {
+  execute,
+  settleDeadline,
+  toView,
+} from "../src/experiments/double-auction/server/engine";
 import {
   newStudy,
   marketFor,
   marketRound,
   stageKey,
   unitLimits,
-} from "../src/lib/server/study";
-import { csv, exportData } from "../src/lib/server/export";
+} from "../src/experiments/double-auction/server/study";
+import {
+  csv,
+  exportData,
+} from "../src/experiments/double-auction/server/export";
 import {
   StudyViewCache,
   studyEquilibrium,
   studyMetrics,
   convergenceSlopes,
-} from "../src/lib/server/study-view";
+} from "../src/experiments/double-auction/server/study-view";
 
 function classroom(
   count = 1,

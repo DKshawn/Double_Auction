@@ -11,3 +11,11 @@ playwright-report/
 *.tsbuildinfo
 *.log
 .DS_Store
+
+.next-emh-platform/
+.next-emh-build/
+
+.next-*/
+next-env.d.ts
+
+.vercel

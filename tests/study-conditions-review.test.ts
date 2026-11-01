@@ -2,10 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StudyRoom } from "../src/components/study-room";
-import { DemoSession } from "../src/lib/demo";
-import { studyPeriodTransition } from "../src/lib/study-timing";
-import type { Institution } from "../src/lib/study-types";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import { studyPeriodTransition } from "../src/experiments/double-auction/lib/study-timing";
+import type { Institution } from "../src/experiments/double-auction/lib/study-types";
 
 function fixture(institutions: Institution[], lobby = false) {
   return new DemoSession(institutions[0], "buyer", 1000, {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
 import { Spinner } from "./shell";
@@ -10,6 +10,34 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
   const [code, setCode] = useState(initialCode);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [entry, setEntry] = useState<{
+    code: string;
+    experiment: string | null;
+  } | null>(null);
+  const judgment = entry?.code === code && entry.experiment === "judgment";
+  const identifying = /^[A-Z2-9]{6}$/.test(code) && entry?.code !== code;
+  useEffect(() => {
+    if (!/^[A-Z2-9]{6}$/.test(code)) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      api<{ experiment: string }>(
+        `/api/rooms/${code}/entry`,
+        undefined,
+        controller.signal,
+      )
+        .then((result) => {
+          if (!controller.signal.aborted)
+            setEntry({ code, experiment: result.experiment });
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setEntry({ code, experiment: null });
+        });
+    }, 150);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [code]);
   async function join(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -58,17 +86,21 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
         </span>
       </label>
       <label className="field">
-        ニックネーム
+        {judgment ? "学生証番号" : "ニックネーム"}
         <input
           name="nickname"
-          placeholder="例：学生01"
+          placeholder={judgment ? "7桁の数字" : "例：学生01"}
+          pattern={judgment ? "[0-9]{7}" : undefined}
+          inputMode={judgment ? "numeric" : "text"}
+          minLength={judgment ? 7 : undefined}
           required
           maxLength={MAX_NICKNAME_LENGTH}
-          autoComplete="nickname"
+          autoComplete={judgment ? "off" : "nickname"}
         />
         <span className="field-help">
-          実名を使う必要はありません。{MAX_NICKNAME_LENGTH}
-          文字以内で入力してください。
+          {judgment
+            ? "先頭の0も含めて入力してください。"
+            : `実名を使う必要はありません。${MAX_NICKNAME_LENGTH}文字以内で入力してください。`}
         </span>
       </label>
       <label className="field">
@@ -85,7 +117,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           autoComplete="new-password"
         />
         <span className="field-help">
-          再入室には同じ名前と暗証番号を使います。
+          再入室には同じ{judgment ? "学生証番号" : "名前"}と暗証番号を使います。
         </span>
       </label>
       {error && (
@@ -93,12 +125,12 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           {error}
         </p>
       )}
-      <button className="button primary full" disabled={pending}>
+      <button className="button primary full" disabled={pending || identifying}>
         {pending ? <Spinner /> : "入室する"}
       </button>
       <div className="form-footnote">
         <LockKeyhole size={14} />
-        あなたの価値・費用は、他の学生には非公開です。
+        あなたの条件は、他の学生には非公開です。
       </div>
     </form>
   );

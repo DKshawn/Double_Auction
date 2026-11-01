@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { inMarketQueue } from "../src/lib/server/market-queue";
+import { inMarketQueue } from "../src/experiments/double-auction/server/market-queue";
 import type { Database } from "../src/lib/server/database";
 
 test("same-market work waits without borrowing a connection; other markets and failures do not block it", async () => {

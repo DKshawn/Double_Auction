@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { diffViews, applyPatch } from "../src/lib/room-sync";
-import type { RoomView } from "../src/lib/types";
+import {
+  diffViews,
+  applyPatch,
+} from "../src/experiments/double-auction/lib/room-sync";
+import type { RoomView } from "../src/experiments/double-auction/lib/types";
 import { assertLocalDatabaseUrl } from "../src/lib/server/database";
 
 test("patches append history, replace live books and remove optional fields without mutating the base", () => {
@@ -80,28 +83,33 @@ test("applying nested patches copies changed paths only, including repeated spli
     },
   } as unknown as RoomView;
   const saved = structuredClone(before);
-  const patch: import("../src/lib/room-sync").RoomPatch = {
-    base: 1,
-    version: 2,
-    changes: [
-      { op: "set", path: ["version"], value: 2 },
-      { op: "set", path: ["study", "market", "orders", 0, "price"], value: 75 },
-      {
-        op: "splice",
-        path: ["study", "market", "orderHistory"],
-        start: 1,
-        deleteCount: 0,
-        items: [{ price: 61 }],
-      },
-      {
-        op: "splice",
-        path: ["study", "market", "orderHistory"],
-        start: 2,
-        deleteCount: 0,
-        items: [{ price: 62 }],
-      },
-    ],
-  };
+  const patch: import("../src/experiments/double-auction/lib/room-sync").RoomPatch =
+    {
+      base: 1,
+      version: 2,
+      changes: [
+        { op: "set", path: ["version"], value: 2 },
+        {
+          op: "set",
+          path: ["study", "market", "orders", 0, "price"],
+          value: 75,
+        },
+        {
+          op: "splice",
+          path: ["study", "market", "orderHistory"],
+          start: 1,
+          deleteCount: 0,
+          items: [{ price: 61 }],
+        },
+        {
+          op: "splice",
+          path: ["study", "market", "orderHistory"],
+          start: 2,
+          deleteCount: 0,
+          items: [{ price: 62 }],
+        },
+      ],
+    };
   const after = applyPatch(before, patch);
   assert.deepEqual(before, saved);
   assert.equal(after.trades, before.trades);

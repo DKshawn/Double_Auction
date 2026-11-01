@@ -8,7 +8,7 @@ import {
   migrate,
   type Database,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
 import {
   cookieName,
   loginResponse,
@@ -22,7 +22,7 @@ import { POST as join } from "../src/app/api/rooms/[code]/join/route";
 import { POST as teacherLogin } from "../src/app/api/rooms/[code]/teacher/route";
 import { GET as download } from "../src/app/api/rooms/[code]/export/route";
 import { GET as events } from "../src/app/api/rooms/[code]/events/route";
-import type { RoomView } from "../src/lib/types";
+import type { RoomView } from "../src/experiments/double-auction/lib/types";
 
 const pg = new PGlite();
 const db = localDatabase(pg);

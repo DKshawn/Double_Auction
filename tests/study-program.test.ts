@@ -3,11 +3,18 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { commandSchema, configSchema } from "../src/lib/server/http";
-import { DemoSession } from "../src/lib/demo";
-import type { Command, CommandRequest, RoomConfig } from "../src/lib/types";
-import { DEFAULT_STUDY_TIMING } from "../src/lib/study-timing";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import {
+  commandSchema,
+  configSchema,
+} from "@/experiments/double-auction/server/validation";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import type {
+  Command,
+  CommandRequest,
+  RoomConfig,
+} from "../src/experiments/double-auction/lib/types";
+import { DEFAULT_STUDY_TIMING } from "../src/experiments/double-auction/lib/study-timing";
 
 const config: RoomConfig = {
   title: "入室中の制度設定",

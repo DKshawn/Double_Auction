@@ -1,0 +1,315 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  act,
+  addParticipant,
+  advanceClock,
+  benchmarks,
+  newRoom,
+  phaseKey,
+  unitKey,
+  view,
+} from "../src/experiments/emh/engine";
+import { DEFAULT_CONFIG } from "../src/experiments/emh/server/default-config";
+import { csv, exportData } from "../src/experiments/emh/export";
+import type { Room } from "../src/experiments/emh/types";
+
+const teacher = { role: "teacher" } as const;
+const student = (n: number) =>
+  ({ role: "student", participantId: `p${n}` }) as const;
+const random = () => 0.999;
+function setup(overrides: Partial<typeof DEFAULT_CONFIG> = {}) {
+  const room = newRoom(
+    "ABC234",
+    { ...structuredClone(DEFAULT_CONFIG), ...overrides },
+    0,
+    "secret-pass",
+    "secret-token",
+  );
+  for (let i = 0; i < 9; i++)
+    addParticipant(
+      room,
+      {
+        id: `p${i}`,
+        name: `name${i}`,
+        studentId: `s${i}`,
+        pinHash: `secret-pin${i}`,
+        tokenHash: `secret-token${i}`,
+      },
+      0,
+    );
+  act(
+    room,
+    teacher,
+    { kind: "start", expectedPhase: phaseKey(room) },
+    0,
+    random,
+  );
+  return room;
+}
+function quote(
+  r: Room,
+  who: number,
+  side: "bid" | "ask",
+  price: number,
+  now = 1,
+) {
+  act(
+    r,
+    student(who),
+    { kind: "quote", side, price, unitKey: unitKey(r) },
+    now,
+    random,
+  );
+}
+function finish(r: Room, now: number) {
+  act(
+    r,
+    teacher,
+    { kind: "end-period", expectedPhase: phaseKey(r) },
+    now,
+    random,
+  );
+}
+
+test("PDF defaults, three private types, and theoretical prices", () => {
+  assert.deepEqual(benchmarks(DEFAULT_CONFIG), {
+    naiveA: 340,
+    perfectA: 367,
+    perfectB: 110,
+  });
+  const r = setup();
+  assert.equal(r.config.rounds, 6);
+  assert.equal(r.periodEndsAt, 240000);
+  assert.equal(r.unitEndsAt, 30000);
+  assert.deepEqual(
+    r.participants.map((p) => p.seat),
+    [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  );
+  assert.deepEqual(
+    r.participants.map((p) => p.type),
+    [1, 1, 1, 2, 2, 2, 3, 3, 3],
+  );
+  assert.equal(
+    r.participants.reduce((s, p) => s + p.holdings, 0),
+    18,
+  );
+});
+test("a crossed bid settles one unit at the standing ask; quotes clear; cash conserves", () => {
+  const r = setup();
+  quote(r, 0, "ask", 300);
+  quote(r, 6, "bid", 320, 2);
+  assert.equal(r.trades[0]!.price, 300);
+  assert.equal(r.trades.length, 1);
+  assert.equal(r.participants[0]!.holdings, 1);
+  assert.equal(r.participants[6]!.holdings, 3);
+  assert.equal(r.participants[6]!.cash, -300);
+  assert.equal(
+    r.participants.reduce((s, p) => s + p.cash, 0),
+    0,
+  );
+  assert.equal(r.ask, null);
+  assert.equal(r.bid, null);
+  assert.equal(r.unit, 2);
+  assert.equal(r.unitEndsAt, 30002);
+});
+test("standing bid execution, price improvement, cancellation ownership and stale quote checks", () => {
+  const r = setup();
+  quote(r, 0, "bid", 310);
+  assert.throws(() => quote(r, 1, "bid", 310), /高い/);
+  assert.throws(
+    () =>
+      act(
+        r,
+        student(1),
+        {
+          kind: "cancel",
+          side: "bid",
+          quoteId: r.bid!.id,
+          unitKey: unitKey(r),
+        },
+        2,
+      ),
+    /取り消せ/,
+  );
+  const oldId = r.bid!.id;
+  quote(r, 1, "bid", 320, 3);
+  assert.throws(
+    () =>
+      act(
+        r,
+        student(2),
+        { kind: "accept", side: "bid", quoteId: oldId, unitKey: unitKey(r) },
+        4,
+      ),
+    /更新/,
+  );
+  quote(r, 2, "ask", 300, 5);
+  assert.equal(r.trades[0]!.price, 320);
+});
+test("self trading and short selling are rejected; stale unit cannot trade", () => {
+  const r = setup();
+  quote(r, 0, "ask", 300);
+  assert.throws(() => quote(r, 0, "bid", 300, 2), /自分/);
+  const stale = unitKey(r);
+  quote(r, 1, "bid", 300, 3);
+  quote(r, 0, "ask", 300, 4);
+  quote(r, 1, "bid", 300, 5);
+  assert.equal(r.participants[0]!.holdings, 0);
+  assert.throws(() => quote(r, 0, "ask", 1, 6), /保有/);
+  assert.throws(
+    () =>
+      act(
+        r,
+        student(1),
+        { kind: "quote", side: "bid", price: 400, unitKey: stale },
+        7,
+      ),
+    /切り替わり/,
+  );
+});
+test("A dividend uses A closing holdings; B carries stock; B extinguishes stock; next year resets only year accounts", () => {
+  const r = setup();
+  quote(r, 0, "ask", 300);
+  quote(r, 6, "bid", 300, 2);
+  finish(r, 3);
+  assert.equal(r.period, "B");
+  assert.equal(r.participants[6]!.holdings, 3);
+  assert.equal(r.participants[6]!.dividend, 771);
+  assert.equal(
+    r.results[0]!.payouts.find((p) => p.participantId === "p0")!.dividend,
+    216,
+  );
+  quote(r, 6, "ask", 100, 4);
+  quote(r, 3, "bid", 100, 5);
+  finish(r, 6);
+  assert.equal(r.status, "break");
+  assert.ok(r.participants.every((p) => p.holdings === 0));
+  assert.equal(r.participants[6]!.totalProfit, -300 + 100 + 3 * 257 + 2 * 83);
+  assert.equal(r.participants[3]!.totalProfit, -100 + 2 * 200 + 3 * 110);
+  const total = r.participants[6]!.totalProfit;
+  act(r, teacher, { kind: "next-year", expectedPhase: phaseKey(r) }, 7, random);
+  assert.equal(r.year, 2);
+  assert.equal(r.period, "A");
+  assert.equal(r.participants[6]!.totalProfit, total);
+  assert.equal(r.participants[6]!.cash, 0);
+  assert.equal(r.participants[6]!.dividend, 0);
+  assert.ok(r.participants.every((p) => p.holdings === 2));
+});
+test("two empty units advance the period, including catch-up after all clients disconnect", () => {
+  const r = setup({ rounds: 2 });
+  advanceClock(r, 60000, random);
+  assert.equal(r.period, "B");
+  assert.equal(r.results.length, 1);
+  assert.equal(r.results[0]!.reason, "inactivity");
+  assert.equal(r.results[0]!.endedAt, 60000);
+  advanceClock(r, 300000, random);
+  assert.equal(r.status, "completed");
+  assert.equal(r.results.length, 4);
+  assert.equal(r.trades.length, 0);
+  assert.ok(
+    r.results.every(
+      (p) =>
+        p.meanPrice === null && p.priceRatio === null && p.gainEfficiency === 0,
+    ),
+  );
+});
+test("trade clears inactivity streak; hard period deadline wins over unit expiry", () => {
+  const r = setup({ periodSeconds: 45, unitSeconds: 30 });
+  advanceClock(r, 30000, random);
+  assert.equal(r.emptyUnits, 1);
+  quote(r, 0, "ask", 300, 31000);
+  quote(r, 1, "bid", 300, 32000);
+  assert.equal(r.emptyUnits, 0);
+  assert.equal(r.unitEndsAt, 45000);
+  advanceClock(r, 45000, random);
+  assert.equal(r.results[0]!.reason, "deadline");
+  assert.equal(r.period, "B");
+});
+test("pause freezes both deadlines and resume shifts by exact paused duration", () => {
+  const r = setup();
+  act(r, teacher, { kind: "pause", expectedPhase: phaseKey(r) }, 10000, random);
+  advanceClock(r, 999000, random);
+  assert.equal(r.period, "A");
+  assert.equal(r.results.length, 0);
+  assert.throws(() => quote(r, 1, "bid", 10, 1000000), /取引できません/);
+  act(
+    r,
+    teacher,
+    { kind: "resume", expectedPhase: phaseKey(r) },
+    1000000,
+    random,
+  );
+  assert.equal(r.unitEndsAt, 1020000);
+  assert.equal(r.periodEndsAt, 1230000);
+});
+test("student response never reveals other identities, payouts, credentials or benchmark before explicit reveal", () => {
+  const r = setup({ rounds: 1 });
+  finish(r, 1);
+  finish(r, 2);
+  const own = view(r, student(0), 3);
+  const serialized = JSON.stringify(own);
+  assert.equal(own.benchmarks, null);
+  assert.equal(own.conditions, null);
+  assert.equal(own.participants.length, 0);
+  for (let i = 1; i < 9; i++) assert.ok(!serialized.includes(`name${i}`));
+  assert.ok(!serialized.includes("secret"));
+  assert.ok(own.results.every((r) => r.payouts.length === 1));
+  act(r, teacher, { kind: "reveal", expectedPhase: phaseKey(r) }, 4, random);
+  const shown = view(r, student(0), 5);
+  assert.equal(shown.benchmarks!.perfectA, 367);
+  assert.equal(shown.conditions!.length, 3);
+  assert.equal(shown.participants.length, 0);
+});
+test("role and revision guards prevent teacher actions from students and stale double progression", () => {
+  const r = setup();
+  const revision = phaseKey(r);
+  assert.throws(
+    () =>
+      act(r, student(0), { kind: "end-period", expectedPhase: revision }, 1),
+    /教員/,
+  );
+  finish(r, 2);
+  assert.throws(
+    () => act(r, teacher, { kind: "end-period", expectedPhase: revision }, 3),
+    /更新/,
+  );
+  assert.equal(r.results.length, 1);
+  assert.throws(
+    () => act(r, teacher, { kind: "reveal", expectedPhase: phaseKey(r) }, 4),
+    /終了後/,
+  );
+});
+test("new quotes do not invalidate a teacher's confirmation for the same phase", () => {
+  const r = setup();
+  const phase = phaseKey(r);
+  quote(r, 0, "bid", 300, 1);
+  act(r, teacher, { kind: "end-period", expectedPhase: phase }, 2, random);
+  assert.equal(r.period, "B");
+  assert.equal(r.results.length, 1);
+  assert.throws(
+    () => act(r, teacher, { kind: "end-period", expectedPhase: phase }, 3),
+    /更新/,
+  );
+});
+test("normalized efficiency and price ratio are separate; no-trade baseline gain efficiency is zero", () => {
+  const r = setup();
+  finish(r, 1);
+  const a = r.results[0]!;
+  assert.equal(a.initialDividend, 4038);
+  assert.equal(a.maxDividend, 4626);
+  assert.equal(a.actualDividend, 4038);
+  assert.equal(a.gainEfficiency, 0);
+  assert.equal(a.priceRatio, null);
+  assert.ok(a.allocationEfficiency > 0);
+});
+test("CSV is Excel-safe, UTF-8, and personal export excludes others' trades", () => {
+  assert.equal(csv([["=2+3", 'a"b', -300]]), '\uFEFF"\'=2+3","a""b","-300"');
+  const r = setup();
+  quote(r, 2, "ask", 345);
+  quote(r, 3, "bid", 345, 2);
+  const output = exportData(r, student(0), "conditions");
+  assert.equal(output.extension, "csv");
+  assert.ok(!output.body.includes("345"));
+  assert.ok(!output.body.includes("secret"));
+});

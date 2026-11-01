@@ -1,3 +1,9 @@
+Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
+
+Do not add meaningless arrows. Use arrows only when they communicate a clear direction, relationship, or action.
+
+Keep the color palette consistent with DoubleAuction: blue-purple primary, cool gray backgrounds, teal for buying, and warm orange for selling. Reuse the shared color tokens in `src/app/globals.css`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

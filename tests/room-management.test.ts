@@ -7,17 +7,29 @@ import {
   migrate,
   type Database,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { RealtimeBroker } from "../src/lib/server/realtime";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { RealtimeBroker } from "../src/experiments/double-auction/server/realtime";
 import {
   assemble,
   lockBundle,
   saveBundle,
-} from "../src/lib/server/market-store";
-import { execute, settleDeadline } from "../src/lib/server/engine";
-import { marketRound, stageKey } from "../src/lib/server/study";
-import type { AuditEvent, Participant } from "../src/lib/server/model";
-import type { Command, RoomConfig } from "../src/lib/types";
+} from "../src/experiments/double-auction/server/market-store";
+import {
+  execute,
+  settleDeadline,
+} from "../src/experiments/double-auction/server/engine";
+import {
+  marketRound,
+  stageKey,
+} from "../src/experiments/double-auction/server/study";
+import type {
+  AuditEvent,
+  Participant,
+} from "../src/experiments/double-auction/server/model";
+import type {
+  Command,
+  RoomConfig,
+} from "../src/experiments/double-auction/lib/types";
 import { deleteRoomSchema } from "../src/lib/server/http";
 
 let pg: PGlite, db: Database, service: AuctionService;

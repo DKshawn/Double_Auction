@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { MAX_PRICE } from "@/lib/price";
+import { MAX_PRICE } from "@/experiments/double-auction/lib/price";
 import { ArrowLeft } from "lucide-react";
 import { Header, Footer } from "@/components/shell";
-import LegacyGuide from "@/components/legacy-guide";
+import LegacyGuide from "@/experiments/double-auction/components/legacy-guide";
 
 export default async function Guide({
   searchParams,

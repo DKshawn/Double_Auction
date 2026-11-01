@@ -1,7 +1,10 @@
+import { experimentFor } from "@/lib/server/experiment-registry";
+import { emhService } from "@/experiments/emh/server/service";
+import { judgmentService } from "@/experiments/judgment/server/service";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { body, codeFor, failure, loginResponse } from "@/lib/server/http";
-import { service } from "@/lib/server/service";
+import { service } from "@/experiments/double-auction/server/service";
 
 export const runtime = "nodejs";
 export async function POST(
@@ -14,6 +17,20 @@ export async function POST(
       request,
       z.object({ password: z.string().min(8).max(128) }).strict(),
     );
+    if ((await experimentFor(code)) === "judgment")
+      return loginResponse(
+        request,
+        await (
+          await judgmentService()
+        ).login(code, { role: "teacher", password }),
+        "teacher",
+      );
+    if ((await experimentFor(code)) === "emh")
+      return loginResponse(
+        request,
+        await (await emhService()).login(code, { role: "teacher", password }),
+        "teacher",
+      );
     return loginResponse(
       request,
       await (await service()).recoverTeacher(code, password),

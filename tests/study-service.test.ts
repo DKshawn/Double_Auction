@@ -2,7 +2,7 @@ import {
   lockBundle,
   saveBundle,
   readBundle,
-} from "../src/lib/server/market-store";
+} from "../src/experiments/double-auction/server/market-store";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -12,15 +12,27 @@ import {
   migrate,
   type Database,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { commandSchema, configSchema } from "../src/lib/server/http";
-import { exportData } from "../src/lib/server/export";
-import { RealtimeBroker } from "../src/lib/server/realtime";
-import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
-import type { Room } from "../src/lib/server/model";
-import type { Command, RoomView } from "../src/lib/types";
-import { DEFAULT_STUDY_TIMING } from "../src/lib/study-timing";
-import { execute, settleDeadline } from "../src/lib/server/engine";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import {
+  commandSchema,
+  configSchema,
+} from "@/experiments/double-auction/server/validation";
+import { exportData } from "../src/experiments/double-auction/server/export";
+import { RealtimeBroker } from "../src/experiments/double-auction/server/realtime";
+import {
+  applyPatch,
+  type RoomPatch,
+} from "../src/experiments/double-auction/lib/room-sync";
+import type { Room } from "../src/experiments/double-auction/server/model";
+import type {
+  Command,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
+import { DEFAULT_STUDY_TIMING } from "../src/experiments/double-auction/lib/study-timing";
+import {
+  execute,
+  settleDeadline,
+} from "../src/experiments/double-auction/server/engine";
 
 let pg: PGlite, db: Database, service: AuctionService;
 before(async () => {

@@ -2,16 +2,25 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { postgresDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { RealtimeBroker, type StreamEvent } from "../src/lib/server/realtime";
-import { applyPatch, type RoomPatch } from "../src/lib/room-sync";
-import type { RoomView, Command } from "../src/lib/types";
-import type { Room } from "../src/lib/auction-model";
-import { lockBundle } from "../src/lib/server/market-store";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import {
+  RealtimeBroker,
+  type StreamEvent,
+} from "../src/experiments/double-auction/server/realtime";
+import {
+  applyPatch,
+  type RoomPatch,
+} from "../src/experiments/double-auction/lib/room-sync";
+import type {
+  RoomView,
+  Command,
+} from "../src/experiments/double-auction/lib/types";
+import type { Room } from "../src/experiments/double-auction/lib/auction-model";
+import { lockBundle } from "../src/experiments/double-auction/server/market-store";
 import {
   cachedRoomRoot,
   readRoomRoot,
-} from "../src/lib/server/room-read-cache";
+} from "../src/experiments/double-auction/server/room-read-cache";
 
 const url = process.env.LOCAL_TEST_DATABASE_URL;
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

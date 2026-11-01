@@ -1,0 +1,116 @@
+{
+  "repository": "https://github.com/DKshawn/Exp-all-in-one",
+  "commit": "bd28b3460366671917b477d590c2be0a274f867b",
+  "files": [
+    {
+      "source": "README.en.md",
+      "destination": "docs/upstream/judgment/README.en.md",
+      "sha256": "3f8eb9c8157b3caf58b626027061e4424d2a1e6bed1212f8162482f20cbf7fd4"
+    },
+    {
+      "source": "README.md",
+      "destination": "docs/upstream/judgment/README.md",
+      "sha256": "939b168488e9448068ea155a8fb197afce39b1c93f0c5ec3a9b290d69bf21ae7"
+    },
+    {
+      "source": "README.zh-CN.md",
+      "destination": "docs/upstream/judgment/README.zh-CN.md",
+      "sha256": "48451c667ea71dfc08fce8c931533163d46fa52d18f6281e095db1744b3a5f52"
+    },
+    {
+      "source": "docs/audit-early.md",
+      "destination": "docs/upstream/judgment/docs/audit-early.md",
+      "sha256": "b15a88ed8310b1ce8ebc4e1004b2f78ed9aac4c1194c1851f2e6c1211fbedf9d"
+    },
+    {
+      "source": "docs/audit-late.md",
+      "destination": "docs/upstream/judgment/docs/audit-late.md",
+      "sha256": "2306475b2a5c08ea25c51e47617e5bfbdc00728c1249fc49c562c002b5ff24ed"
+    },
+    {
+      "source": "docs/audit-middle.md",
+      "destination": "docs/upstream/judgment/docs/audit-middle.md",
+      "sha256": "7dfa1ecc49b1577fcbfad84d9311ae38ea5f81672e1610bcfeaf37e61dac770f"
+    },
+    {
+      "source": "docs/design-audit.md",
+      "destination": "docs/upstream/judgment/docs/design-audit.md",
+      "sha256": "665e21ca2f0c28daf8cc6fd90bc5ea1811ef8a5987512d43977171b0bb4ea3bf"
+    },
+    {
+      "source": "docs/restoration-early.md",
+      "destination": "docs/upstream/judgment/docs/restoration-early.md",
+      "sha256": "c450cb46a1e9a7305ee3a30dd780d6ccbde90047d02ff166c1588497140de57d"
+    },
+    {
+      "source": "docs/restoration-late.md",
+      "destination": "docs/upstream/judgment/docs/restoration-late.md",
+      "sha256": "e4cf79cca692e10d53c4bd9c418567630573c11f61f253a672840ec17e7fd7ed"
+    },
+    {
+      "source": "docs/restoration-middle.md",
+      "destination": "docs/upstream/judgment/docs/restoration-middle.md",
+      "sha256": "36913f0780aa576f2f5a9cc1fe9387d4018c580bff1dc4850efd68b3b3acfa76"
+    },
+    {
+      "source": "docs/restoration-status.md",
+      "destination": "docs/upstream/judgment/docs/restoration-status.md",
+      "sha256": "17d7320f9c16d3988d17a7403185c3e44bc84343f420164c5d7a20a1ba410305"
+    },
+    {
+      "source": "docs/verification.md",
+      "destination": "docs/upstream/judgment/docs/verification.md",
+      "sha256": "a8ef5a07ec68c2c449decea8f0eef8ae8b34cbe5d8741d17ad3cb71a12098afb"
+    },
+    {
+      "source": "public/favicon.svg",
+      "destination": "docs/upstream/judgment/public/favicon.svg",
+      "sha256": "7956c31107ba7d6202c68ca0fc1d653d80a2b8e209eeb9d56ab88f30e4f65d36"
+    },
+    {
+      "source": "public/fonts/noto-sans-jp/LICENSE",
+      "destination": "docs/upstream/judgment/public/fonts/noto-sans-jp/LICENSE",
+      "sha256": "18aabf190848725e2576eefb5c29ba06aac1029d02132252a7f312eac2e50cf3"
+    },
+    {
+      "source": "tests/classroom.test.mjs",
+      "destination": "docs/upstream/judgment/tests/classroom.test.mjs",
+      "sha256": "981dcea5e4b846ac6d40982bb5a5b9dbd114eca3514317d2495180cbadc2d663"
+    },
+    {
+      "source": "tests/expanded.test.mjs",
+      "destination": "docs/upstream/judgment/tests/expanded.test.mjs",
+      "sha256": "6fa22a590efb6dc87a12620ffb6618e5455dc3648ad64e7d8e46268c1bee3679"
+    },
+    {
+      "source": "tests/experiments.test.mjs",
+      "destination": "docs/upstream/judgment/tests/experiments.test.mjs",
+      "sha256": "1bc0a56665c8db336605f5e1df5217aacfaeb13ab6db9bb416082ebff2aecc3b"
+    },
+    {
+      "source": "tests/i18n.test.mjs",
+      "destination": "docs/upstream/judgment/tests/i18n.test.mjs",
+      "sha256": "a4ae65e70cd78222f5953081e424a9f6aa8905497651795caf6523d687d3976b"
+    },
+    {
+      "source": "tests/preview.test.mjs",
+      "destination": "docs/upstream/judgment/tests/preview.test.mjs",
+      "sha256": "ec4044288e1f36906bdd34f8534b488e17ee03919e7a31de0230b97937704405"
+    },
+    {
+      "source": "tests/ranking.test.mjs",
+      "destination": "docs/upstream/judgment/tests/ranking.test.mjs",
+      "sha256": "c1c745315f28c45556176de3a1e9a3b5ef5276125457def969d67e8d65c086ac"
+    },
+    {
+      "source": "tests/runs.test.mjs",
+      "destination": "docs/upstream/judgment/tests/runs.test.mjs",
+      "sha256": "f0b2b8e8d54b3c39b886a829df0860c21c0621de87942b892453823a11a70c9d"
+    },
+    {
+      "source": "tests/timed-response.test.mjs",
+      "destination": "docs/upstream/judgment/tests/timed-response.test.mjs",
+      "sha256": "276c44716ed2d7404cb1abefcad221d006928f74b4bdd3c6778714e445ee15c5"
+    }
+  ]
+}

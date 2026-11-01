@@ -4,20 +4,29 @@ import { randomUUID } from "node:crypto";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PGlite } from "@electric-sql/pglite";
-import { studyUnits, studyUnitsPerSide } from "../src/lib/study-config";
+import {
+  studyUnits,
+  studyUnitsPerSide,
+} from "../src/experiments/double-auction/lib/study-config";
 import {
   presetStudyConditions,
   conditionSchedules,
-} from "../src/lib/study-conditions";
-import { studyAllocationConditions } from "../src/lib/study-allocation";
-import { commandSchema, createRoomSchema } from "../src/lib/server/http";
+} from "../src/experiments/double-auction/lib/study-conditions";
+import { studyAllocationConditions } from "../src/experiments/double-auction/lib/study-allocation";
+import {
+  commandSchema,
+  createRoomSchema,
+} from "@/experiments/double-auction/server/validation";
 import {
   generateStaircase,
   generatedStudySettings,
-} from "../src/lib/study-generator";
-import { studyRoomConfigSchema } from "../src/lib/study-room-config";
-import { studyCommissionError } from "../src/lib/study-commission";
-import { newStudy, pptStudySettings } from "../src/lib/server/study";
+} from "../src/experiments/double-auction/lib/study-generator";
+import { studyRoomConfigSchema } from "../src/experiments/double-auction/lib/study-room-config";
+import { studyCommissionError } from "../src/experiments/double-auction/lib/study-commission";
+import {
+  newStudy,
+  pptStudySettings,
+} from "../src/experiments/double-auction/server/study";
 import {
   executeStudy,
   marketFor,
@@ -25,23 +34,34 @@ import {
   settleStudy,
   stageKey,
   unitLimits,
-} from "../src/lib/study-core";
+} from "../src/experiments/double-auction/lib/study-core";
 import {
   studyView,
   studyEquilibrium,
   studyMetrics,
-} from "../src/lib/study-view";
-import { exportData } from "../src/lib/server/export";
+} from "../src/experiments/double-auction/lib/study-view";
+import { exportData } from "../src/experiments/double-auction/server/export";
 import { localDatabase, migrate } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { DemoSession } from "../src/lib/demo";
-import { TeacherForm } from "../src/components/teacher-form";
-import { StudyUnitFields } from "../src/components/study-unit-settings";
-import { StudyRoom } from "../src/components/study-room";
-import { StudySettingsEditor } from "../src/components/study-settings";
-import type { Command, RoomConfig, RoomView } from "../src/lib/types";
-import type { Room, Participant, AuditEvent } from "../src/lib/auction-model";
-import type { Institution, StudyGeneratorConfig } from "../src/lib/study-types";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import { TeacherForm } from "../src/experiments/double-auction/components/teacher-form";
+import { StudyUnitFields } from "../src/experiments/double-auction/components/study-unit-settings";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
+import { StudySettingsEditor } from "../src/experiments/double-auction/components/study-settings";
+import type {
+  Command,
+  RoomConfig,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
+import type {
+  Room,
+  Participant,
+  AuditEvent,
+} from "../src/experiments/double-auction/lib/auction-model";
+import type {
+  Institution,
+  StudyGeneratorConfig,
+} from "../src/experiments/double-auction/lib/study-types";
 
 const config: RoomConfig = {
   title: "CDAの単位数",

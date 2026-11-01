@@ -1,0 +1,1901 @@
+.emh-app {
+  /* Primary, neutral, buying and selling colors inherit the platform tokens. */
+  --surface: var(--paper);
+  --surface-soft: #fafbfe;
+  --surface-hover: #f7f7fd;
+  --faint: #939aae;
+  --placeholder: #a1a6b5;
+  --line-soft: #f0f1f6;
+  --input-line: #dfe2ed;
+  --accent-line: #e1e0f6;
+  --accent-border-hover: #ceceea;
+  --accent-ink: #4f518c;
+  --focus: #9998ed;
+  --buy-line: #cce7df;
+  --sell-line: #f3dbbd;
+  --success: var(--green);
+  --success-bg: #edf8f4;
+  --success-line: #d4eae1;
+  --danger: var(--red);
+  --danger-bg: #fff0f2;
+  --period-a: var(--accent);
+  --period-a-bg: var(--lavender);
+  --period-b: var(--buy);
+  --period-b-bg: var(--buy-bg);
+  --radius: 16px;
+  color-scheme: light;
+}
+.emh-app .confirmation-dialog {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 440px;
+  width: calc(100% - 36px);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 20px 100px #15154329;
+}
+.emh-app .confirmation-dialog::backdrop {
+  background: #24294366;
+  backdrop-filter: blur(2px);
+}
+.emh-app .confirmation-dialog p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--muted);
+  margin: 18px 0 24px;
+}
+.emh-app .confirmation-dialog > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.emh-app * {
+  box-sizing: border-box;
+}
+.emh-app {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Noto Sans JP", "Yu Gothic UI", "Meiryo", sans-serif;
+  font-size: 14px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+.emh-app button,
+.emh-app input,
+.emh-app select {
+  font: inherit;
+}
+.emh-app button,
+.emh-app a,
+.emh-app input,
+.emh-app select {
+  -webkit-tap-highlight-color: transparent;
+}
+.emh-app button {
+  cursor: pointer;
+}
+.emh-app button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+.emh-app a {
+  color: inherit;
+  text-decoration: none;
+}
+.emh-app input,
+.emh-app select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--input-line);
+  border-radius: 9px;
+  padding: 11px 13px;
+  background: var(--surface);
+  color: var(--ink);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.emh-app input:focus,
+.emh-app select:focus {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--lavender);
+}
+.emh-app button:focus-visible,
+.emh-app a:focus-visible,
+.emh-app summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+.emh-app h1,
+.emh-app h2,
+.emh-app h3,
+.emh-app p {
+  margin: 0;
+}
+.emh-app h1 {
+  font-size: 36px;
+  line-height: 1.45;
+  letter-spacing: -1.2px;
+  font-weight: 700;
+}
+.emh-app h2 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+.emh-app h3 {
+  font-size: 16px;
+}
+.emh-app strong {
+  font-weight: 600;
+}
+.emh-app svg {
+  flex-shrink: 0;
+}
+.emh-app table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.emh-app th {
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 13px 14px;
+  background: var(--surface-soft);
+  white-space: nowrap;
+}
+.emh-app td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.emh-app tbody tr:last-child td {
+  border-bottom: 0;
+}
+.emh-app label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.emh-app summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.emh-app summary:after {
+  content: "+";
+  font-size: 18px;
+  font-weight: 400;
+}
+.emh-app details[open] > summary:after {
+  content: "−";
+}
+.emh-app select {
+  appearance: auto;
+}
+.emh-app ::selection {
+  background: #e2e2fa;
+}
+.emh-app .site-header {
+  height: 83px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.emh-app .header-inner {
+  height: 100%;
+  max-width: 1240px;
+  margin: auto;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.emh-app .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+.emh-app .brand-mark {
+  width: 35px;
+  height: 35px;
+  background: var(--accent);
+  color: white;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+.emh-app .site-header nav {
+  display: flex;
+  gap: 30px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.emh-app .site-header nav a:hover {
+  color: var(--accent);
+}
+.emh-app .container {
+  max-width: 1160px;
+  padding: 60px 40px 30px;
+  margin: auto;
+  min-height: calc(100vh - 155px);
+}
+.emh-app .container.wide {
+  max-width: 1320px;
+  padding-top: 32px;
+}
+.emh-app .site-footer {
+  max-width: 1240px;
+  margin: auto;
+  padding: 20px 40px 27px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+.emh-app .panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px;
+}
+.emh-app .eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.emh-app .heading-dot {
+  color: var(--accent);
+}
+.emh-app .lead {
+  font-size: 16px;
+  line-height: 2.1;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+  margin-top: 23px;
+}
+.emh-app .muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+.emh-app .mono,
+.emh-app .timer {
+  font-variant-numeric: tabular-nums;
+}
+.emh-app .numeric {
+  font-variant-numeric: tabular-nums;
+}
+.emh-app .emphasis {
+  font-weight: 600;
+}
+.emh-app .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.emh-app .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
+  white-space: nowrap;
+}
+.emh-app .button:not(:disabled):active {
+  transform: translateY(1px);
+}
+.emh-app .button.primary {
+  background: var(--accent);
+  color: white;
+}
+.emh-app .button.primary:not(:disabled):hover {
+  background: var(--accent-hover);
+}
+.emh-app .button.secondary {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+.emh-app .button.secondary:not(:disabled):hover {
+  background: var(--surface-hover);
+  border-color: var(--accent-border-hover);
+}
+.emh-app .button.quiet {
+  color: var(--muted);
+}
+.emh-app .button.quiet:not(:disabled):hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+.emh-app .button.small {
+  min-height: 34px;
+  font-size: 11px;
+  padding: 7px 12px;
+  border-radius: 7px;
+}
+.emh-app .button.full {
+  width: 100%;
+  min-height: 48px;
+  justify-content: space-between;
+}
+.emh-app .spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.emh-app .landing-grid {
+  display: grid;
+  grid-template-columns: 1.07fr 1fr;
+  gap: 80px;
+  align-items: center;
+  min-height: 570px;
+  padding-bottom: 28px;
+}
+.emh-app .landing-intro h1 {
+  font-size: 43px;
+  letter-spacing: -1.8px;
+}
+.emh-app .join-panel {
+  padding: 34px 32px;
+  box-shadow: 0 12px 36px #29366505;
+}
+.emh-app .join-panel h2 {
+  font-size: 21px;
+  margin-bottom: 26px;
+}
+.emh-app .form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.emh-app .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.emh-app .code-input {
+  font-size: 22px;
+  letter-spacing: 5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  font-family: inherit;
+}
+.emh-app .code-input::placeholder {
+  color: var(--placeholder);
+}
+.emh-app .field-note {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.emh-app .form-stack > .field-note {
+  margin-top: -11px;
+}
+.emh-app .privacy-note {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 23px;
+}
+.emh-app .experiment-path {
+  max-width: 360px;
+  margin: 36px 0 30px;
+}
+.emh-app .path-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 15px;
+}
+.emh-app .path-node {
+  height: 7px;
+  width: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  margin-left: 3px;
+}
+.emh-app .period-pair {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 27px;
+  background: var(--lavender);
+  border-radius: 12px;
+  color: var(--accent);
+  border: 1px solid var(--accent-line);
+}
+.emh-app .period-pair > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.emh-app .period-letter {
+  font-size: 37px;
+  font-weight: 500;
+  line-height: 1;
+}
+.emh-app .period-pair p {
+  font-size: 11px;
+}
+.emh-app .period-pair > svg {
+  color: var(--faint);
+}
+.emh-app .path-end {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 15px;
+}
+.emh-app .text-link {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--accent);
+}
+.emh-app .text-link:hover {
+  color: var(--accent);
+}
+.emh-app .teacher-setup {
+  display: grid;
+  grid-template-columns: 0.9fr 1fr;
+  gap: 90px;
+  padding-top: 12px;
+  align-items: start;
+}
+.emh-app .teacher-setup > section:first-child {
+  padding-top: 18px;
+}
+.emh-app .teacher-setup h1 {
+  font-size: 37px;
+}
+.emh-app .setup-facts {
+  margin: 34px 0 26px;
+}
+.emh-app .setup-facts > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  max-width: 290px;
+  font-size: 12px;
+}
+.emh-app .setup-facts dt {
+  color: var(--muted);
+}
+.emh-app .setup-facts dd {
+  margin: 0;
+}
+.emh-app .settings {
+  background: var(--surface-soft);
+  padding: 14px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+}
+.emh-app .settings[open] > summary {
+  margin-bottom: 19px;
+}
+.emh-app .conditions-table th,
+.emh-app .conditions-table td {
+  padding: 8px 5px;
+}
+.emh-app .conditions-table td:first-child {
+  font-size: 11px;
+}
+.emh-app .conditions-table input {
+  padding: 7px 8px;
+}
+.emh-app .conditions-table th {
+  font-size: 10px;
+  background: none;
+}
+.emh-app .demo-link {
+  border-top: 1px solid var(--line);
+  margin-top: 25px;
+  padding-top: 19px;
+  text-align: center;
+}
+.emh-app .demo-link > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--accent);
+}
+.emh-app .tabs {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 25px;
+}
+.emh-app .tabs > button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 2px 13px;
+  position: relative;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.emh-app .tabs > button[aria-selected="true"] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.emh-app .tabs > button[aria-selected="true"]:after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.emh-app .error-message {
+  font-size: 12px;
+  color: var(--danger);
+  background: var(--danger-bg);
+  padding: 11px 13px;
+  border-radius: 8px;
+}
+.emh-app .guide {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.emh-app .guide > h1 {
+  font-size: 36px;
+}
+.emh-app .guide > section {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 18px;
+  padding: 32px 0;
+  border-bottom: 1px solid var(--line);
+}
+.emh-app .guide > section:first-of-type {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.emh-app .guide .step-number {
+  font-size: 13px;
+  color: var(--faint);
+  padding-top: 3px;
+}
+.emh-app .guide section p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 2.1;
+  margin-top: 14px;
+}
+.emh-app .guide .formula {
+  background: var(--lavender);
+  padding: 17px 20px;
+  border-radius: 9px;
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 17px;
+}
+.emh-app .guide > .button {
+  margin-top: 28px;
+}
+.emh-app .empty-page {
+  min-height: 55vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 25px;
+  color: var(--muted);
+}
+.emh-app .empty-page h1 {
+  font-size: 25px;
+}
+.emh-app .rejoin-panel {
+  max-width: 460px;
+  margin: 30px auto;
+}
+.emh-app .rejoin-panel h1 {
+  font-size: 25px;
+  margin-bottom: 28px;
+}
+.emh-app .room-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+.emh-app .room-heading h1 {
+  font-size: 25px;
+  letter-spacing: -0.7px;
+  margin-top: 5px;
+}
+.emh-app .room-context {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.emh-app .room-context strong {
+  letter-spacing: 1.5px;
+  color: var(--ink);
+}
+.emh-app .context-divider {
+  height: 10px;
+  width: 1px;
+  background: var(--line);
+  margin: 0 4px;
+}
+.emh-app .room-heading-right {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.emh-app .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--success);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.emh-app .status-dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.emh-app .status.amber {
+  color: var(--sell);
+}
+.emh-app .lobby-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 22px;
+  margin-bottom: 23px;
+}
+.emh-app .lobby-panel {
+  text-align: center;
+  padding: 36px 28px;
+}
+.emh-app .lobby-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--accent);
+}
+.emh-app .lobby-title h2 {
+  font-size: 18px;
+}
+.emh-app .arrival-count {
+  margin: 25px 0 28px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+}
+.emh-app .arrival-count strong {
+  font-size: 53px;
+  font-weight: 500;
+  line-height: 1;
+}
+.emh-app .arrival-count > span {
+  font-size: 15px;
+  color: var(--faint);
+}
+.emh-app .seats {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 8px;
+  margin-bottom: 25px;
+}
+.emh-app .seat {
+  padding: 15px 3px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  color: var(--faint);
+  min-width: 0;
+}
+.emh-app .seat.filled {
+  border: 1px solid var(--success-line);
+  background: var(--success-bg);
+  color: var(--success);
+}
+.emh-app .seat > span {
+  font-size: 9px;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.emh-app .lobby-panel > .button {
+  margin-top: 23px;
+  min-width: 220px;
+}
+.emh-app .lobby-settings h2 {
+  margin: 2px 0 17px;
+}
+.emh-app .lobby-settings dl {
+  margin: 0 0 22px;
+}
+.emh-app .lobby-settings dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px;
+}
+.emh-app .lobby-settings dt {
+  color: var(--muted);
+}
+.emh-app .lobby-settings dd {
+  margin: 0;
+  font-weight: 500;
+}
+.emh-app .round-strip {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow: auto;
+  padding: 2px 0;
+}
+.emh-app .round-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 66px;
+  color: var(--faint);
+}
+.emh-app .round-step > span {
+  font-size: 10px;
+  width: 12px;
+}
+.emh-app .round-step > div {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+}
+.emh-app .round-step i {
+  height: 22px;
+  flex: 1;
+  font-size: 9px;
+  font-style: normal;
+  background: var(--line);
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+}
+.emh-app .round-step i.done {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.emh-app .round-step i.active {
+  background: var(--accent);
+  color: white;
+}
+.emh-app .round-step.active > span {
+  color: var(--accent);
+  font-weight: 700;
+}
+.emh-app .round-step.done > span {
+  color: var(--success);
+}
+.emh-app .session-bar {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 19px 24px;
+  display: flex;
+  align-items: center;
+  gap: 35px;
+}
+.emh-app .session-phase {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 190px;
+}
+.emh-app .period-badge {
+  font-size: 24px;
+  background: var(--lavender);
+  color: var(--accent);
+  width: 49px;
+  height: 51px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+}
+.emh-app .session-phase > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.emh-app .session-phase strong {
+  font-size: 16px;
+}
+.emh-app .session-phase .muted {
+  font-size: 10px;
+}
+.emh-app .timers {
+  display: flex;
+  gap: 33px;
+  align-items: center;
+}
+.emh-app .timers > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 72px;
+}
+.emh-app .timers > div > span {
+  font-size: 9px;
+  color: var(--muted);
+  margin-bottom: 1px;
+}
+.emh-app .timer {
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -1px;
+}
+.emh-app .small-timer {
+  font-size: 25px;
+}
+.emh-app .timer small {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-left: 6px;
+}
+.emh-app .urgent .timer {
+  color: var(--danger);
+}
+.emh-app .control-buttons {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.emh-app .market-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 12px 3px 20px;
+  flex-wrap: wrap;
+}
+.emh-app .market-note svg {
+  color: var(--muted);
+}
+.emh-app .inactivity {
+  margin-left: auto;
+  color: var(--sell);
+}
+.emh-app .notice {
+  background: var(--lavender);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-ink);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 19px;
+  border-radius: 10px;
+  margin: 15px 0 20px;
+}
+.emh-app .notice.warning {
+  background: var(--sell-bg);
+  border-color: var(--sell-line);
+  color: var(--sell);
+}
+.emh-app .notice.completion {
+  background: var(--success-bg);
+  border-color: var(--success-line);
+  color: var(--success);
+}
+.emh-app .notice.completion > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.emh-app .notice.completion strong {
+  font-size: 20px;
+  margin: 0 6px;
+  color: var(--success);
+}
+.emh-app .stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  margin: 0 0 20px;
+  padding: 19px 0;
+}
+.emh-app .stat-grid > div {
+  padding: 0 25px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+}
+.emh-app .stat-grid > div:last-child {
+  border: 0;
+}
+.emh-app .stat-grid span {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.emh-app .stat-grid strong {
+  font-size: 27px;
+  font-weight: 500;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.emh-app .stat-grid small {
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.emh-app .room-tabs {
+  margin-top: 2px;
+  margin-bottom: 20px;
+  gap: 28px;
+}
+.emh-app .room-tabs > button {
+  padding: 0 4px 11px;
+}
+.emh-app .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.emh-app .section-heading h2 {
+  font-size: 14px;
+}
+.emh-app .section-heading > .muted {
+  font-size: 10px;
+}
+.emh-app .market-grid {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.emh-app .market-grid > aside {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.emh-app .market-grid .panel {
+  padding: 22px;
+}
+.emh-app .quote-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.emh-app .quote-card {
+  border-radius: 10px;
+  border: 1px solid var(--buy-line);
+  background: var(--buy-bg);
+  padding: 17px 12px;
+  text-align: center;
+  min-width: 0;
+}
+.emh-app .quote-card.ask {
+  background: var(--sell-bg);
+  border-color: var(--sell-line);
+}
+.emh-app .quote-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--buy);
+  font-size: 10px;
+}
+.emh-app .ask .quote-label {
+  color: var(--sell);
+}
+.emh-app .quote-card > strong {
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -1.2px;
+  line-height: 1.2;
+  display: block;
+  margin: 15px 0 9px;
+  font-variant-numeric: tabular-nums;
+}
+.emh-app .quote-owner {
+  font-size: 9px;
+  color: var(--muted);
+  min-height: 15px;
+}
+.emh-app .quote-card .button {
+  margin-top: 14px;
+  width: 100%;
+  font-size: 10px;
+  padding: 7px 4px;
+}
+.emh-app .button.buy {
+  background: var(--buy-bg);
+  color: var(--buy);
+}
+.emh-app .button.sell {
+  background: var(--sell-bg);
+  color: var(--sell);
+}
+.emh-app .button.buy:not(:disabled):hover {
+  background: var(--buy-line);
+}
+.emh-app .button.sell:not(:disabled):hover {
+  background: var(--sell-line);
+}
+.emh-app .quote-form {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.emh-app .segmented {
+  display: flex;
+  padding: 3px;
+  background: var(--bg);
+  border-radius: 8px;
+  gap: 3px;
+}
+.emh-app .segmented button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+.emh-app .segmented button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 4px #2425500a;
+}
+.emh-app .price-entry {
+  display: flex;
+  gap: 8px;
+  margin-top: 13px;
+}
+.emh-app .price-entry input {
+  font-size: 15px;
+  min-width: 0;
+}
+.emh-app .price-entry input::placeholder {
+  font-size: 11px;
+  color: var(--placeholder);
+}
+.emh-app .price-entry .button {
+  padding: 9px 14px;
+}
+.emh-app .quote-form > .field-note {
+  margin-top: 11px;
+  font-size: 9px;
+}
+.emh-app .private-panel .section-heading {
+  margin-bottom: 14px;
+  color: var(--muted);
+}
+.emh-app .dividend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+}
+.emh-app .dividend-grid > div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.emh-app .dividend-grid > div.current {
+  background: var(--lavender);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+.emh-app .dividend-grid span {
+  font-size: 10px;
+}
+.emh-app .dividend-grid strong {
+  font-size: 23px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.emh-app .private-panel > .field-note {
+  margin-top: 10px;
+  font-size: 9px;
+}
+.emh-app .personal-lines {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.emh-app .personal-lines > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  margin-top: 10px;
+  color: var(--muted);
+}
+.emh-app .personal-lines strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+.emh-app .history-panel {
+  min-height: 480px;
+}
+.emh-app .round-select select {
+  font-size: 10px;
+  padding: 5px 8px;
+  min-height: 30px;
+  border-color: var(--line);
+  color: var(--muted);
+  border-radius: 6px;
+}
+.emh-app .chart-wrap {
+  margin: 5px -8px 13px;
+}
+.emh-app .chart-wrap > svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.emh-app .chart-grid {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+}
+.emh-app .chart-axis {
+  fill: var(--muted);
+  font-size: 10px;
+}
+.emh-app .chart-empty {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.emh-app .chart-legend {
+  display: flex;
+  gap: 17px;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: -2px;
+}
+.emh-app .chart-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.emh-app .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.emh-app .dot.period-a {
+  background: var(--period-a);
+}
+.emh-app .dot.period-b {
+  background: var(--period-b);
+}
+.emh-app .table-scroll {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.emh-app .trade-table {
+  max-height: 340px;
+}
+.emh-app .trade-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.emh-app .trade-table td {
+  font-size: 11px;
+  padding: 12px;
+}
+.emh-app .trade-table th {
+  font-size: 9px;
+}
+.emh-app .period-chip {
+  display: inline-grid;
+  place-items: center;
+  background: var(--period-a-bg);
+  color: var(--period-a);
+  border-radius: 4px;
+  min-width: 22px;
+  height: 21px;
+  font-size: 10px;
+}
+.emh-app .period-chip.b {
+  background: var(--period-b-bg);
+  color: var(--period-b);
+}
+.emh-app .my-trade td {
+  background: var(--lavender);
+}
+.emh-app .empty-cell {
+  text-align: center !important;
+  padding: 35px !important;
+  color: var(--muted);
+  font-size: 11px !important;
+}
+.emh-app .results-panel {
+  margin-top: 20px;
+}
+.emh-app .results-panel .field-note {
+  margin-top: 15px;
+}
+.emh-app .metric-help {
+  margin-top: 17px;
+  background: var(--surface-soft);
+  padding: 13px 16px;
+  border-radius: 8px;
+  color: var(--muted);
+}
+.emh-app .metric-help summary {
+  font-size: 10px;
+}
+.emh-app .metric-help p {
+  font-size: 10px;
+  margin-top: 13px;
+}
+.emh-app .debrief {
+  border-top: 1px solid var(--line);
+  margin-top: 25px;
+  padding-top: 22px;
+}
+.emh-app .debrief-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  align-items: center;
+  margin: 20px 0;
+}
+.emh-app .debrief-grid > div p {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 8px 0;
+}
+.emh-app .debrief > p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.emh-app .export-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+.emh-app .filetype {
+  font-size: 8px;
+  color: var(--muted);
+  margin-left: 3px;
+}
+.emh-app .demo-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 15px;
+  margin-bottom: 10px;
+}
+.emh-app .demo-tag {
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--lavender);
+  padding: 4px 9px;
+  border-radius: 5px;
+}
+.emh-app .demo-toolbar .segmented {
+  min-width: 190px;
+}
+.emh-app .demo-controls {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.emh-app .demo-note {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 25px;
+}
+.emh-app .site-header.compact {
+  height: 58px;
+}
+.emh-app .container.wide {
+  padding-top: 22px;
+}
+.emh-app .wide .room-heading {
+  margin-bottom: 15px;
+}
+.emh-app .wide .room-heading h1 {
+  font-size: 23px;
+}
+.emh-app .wide .round-strip {
+  margin-bottom: 12px;
+}
+.emh-app .wide .round-step i {
+  height: 18px;
+}
+.emh-app .wide .session-bar {
+  padding: 12px 20px;
+}
+.emh-app .wide .period-badge {
+  height: 43px;
+  width: 43px;
+}
+.emh-app .wide .timer {
+  font-size: 27px;
+}
+.emh-app .wide .market-note {
+  padding: 9px 2px 12px;
+  font-size: 11px;
+}
+.emh-app .wide .stat-grid {
+  grid-template-columns: repeat(5, 1fr);
+  padding: 13px 0;
+  margin-bottom: 15px;
+}
+.emh-app .wide .stat-grid > div {
+  padding: 0 20px;
+}
+.emh-app .wide .stat-grid span {
+  font-size: 11px;
+}
+.emh-app .wide .stat-grid strong {
+  font-size: 24px;
+}
+.emh-app .private-stat {
+  color: var(--accent);
+}
+.emh-app .private-stat > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.emh-app .wide .room-tabs {
+  margin-bottom: 14px;
+}
+.emh-app .wide .room-tabs > button {
+  padding-bottom: 9px;
+}
+.emh-app .wide .order-panel {
+  padding: 20px;
+}
+.emh-app .order-panel .section-heading {
+  margin-bottom: 14px;
+}
+.emh-app .order-panel .quote-card {
+  padding: 12px 10px;
+}
+.emh-app .order-panel .quote-label {
+  font-size: 11px;
+}
+.emh-app .order-panel .quote-card > strong {
+  font-size: 31px;
+  margin: 10px 0 6px;
+}
+.emh-app .order-panel .quote-owner {
+  font-size: 10px;
+}
+.emh-app .order-panel .quote-card .button {
+  margin-top: 11px;
+  font-size: 11px;
+}
+.emh-app .order-panel .quote-form {
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.emh-app .order-panel .quote-form > .field-note {
+  font-size: 10px;
+}
+.emh-app .wide .history-panel {
+  min-height: 385px;
+}
+.emh-app .wide .trade-table {
+  max-height: 230px;
+}
+.emh-app .demo-note {
+  font-size: 11px;
+}
+.emh-app .metric-help p,
+.emh-app .metric-help summary {
+  font-size: 11px;
+}
+@media (min-width: 1450px) {
+  .emh-app .container.wide {
+    max-width: 1380px;
+  }
+  .emh-app .market-grid {
+    grid-template-columns: 365px minmax(0, 1fr);
+  }
+  .emh-app .market-grid .panel {
+    padding: 26px;
+  }
+  .emh-app .header-inner {
+    max-width: 1380px;
+  }
+}
+@media (max-width: 1000px) {
+  .emh-app .landing-grid {
+    gap: 35px;
+  }
+  .emh-app .teacher-setup {
+    gap: 45px;
+    grid-template-columns: 0.8fr 1fr;
+  }
+  .emh-app .landing-intro h1 {
+    font-size: 35px;
+  }
+  .emh-app .lobby-layout {
+    grid-template-columns: 1fr 260px;
+  }
+  .emh-app .seats {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .emh-app .market-grid {
+    grid-template-columns: 310px minmax(0, 1fr);
+    gap: 15px;
+  }
+  .emh-app .market-grid .panel {
+    padding: 17px;
+  }
+  .emh-app .session-bar {
+    gap: 20px;
+  }
+  .emh-app .timers {
+    gap: 18px;
+  }
+  .emh-app .session-phase {
+    min-width: 150px;
+  }
+  .emh-app .control-buttons .button {
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+  .emh-app .quote-card > strong {
+    font-size: 29px;
+  }
+  .emh-app .chart-wrap {
+    margin-left: -14px;
+    margin-right: -14px;
+  }
+}
+@media (max-width: 760px) {
+  .emh-app .header-inner {
+    padding: 0 22px;
+  }
+  .emh-app .site-header {
+    height: 68px;
+  }
+  .emh-app .site-header nav {
+    gap: 21px;
+    font-size: 11px;
+  }
+  .emh-app .brand {
+    font-size: 13px;
+    gap: 8px;
+  }
+  .emh-app .brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+  .emh-app .container,
+  .emh-app .container.wide {
+    padding: 30px 20px 20px;
+  }
+  .emh-app .landing-grid,
+  .emh-app .teacher-setup {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding-top: 4px;
+  }
+  .emh-app .landing-grid {
+    min-height: 0;
+  }
+  .emh-app .landing-intro h1,
+  .emh-app .teacher-setup h1 {
+    font-size: 34px;
+  }
+  .emh-app .landing-intro .lead {
+    font-size: 14px;
+    margin-top: 13px;
+  }
+  .emh-app .experiment-path {
+    margin: 25px 0;
+    max-width: none;
+  }
+  .emh-app .period-pair {
+    padding: 18px 30px;
+  }
+  .emh-app .landing-intro .text-link {
+    font-size: 11px;
+  }
+  .emh-app .join-panel {
+    padding: 25px;
+  }
+  .emh-app .eyebrow {
+    margin-bottom: 12px;
+  }
+  .emh-app .teacher-setup {
+    padding-top: 0;
+  }
+  .emh-app .teacher-setup > section:first-child {
+    padding-top: 0;
+  }
+  .emh-app .setup-facts {
+    display: flex;
+    gap: 22px;
+    margin: 22px 0 14px;
+  }
+  .emh-app .setup-facts > div {
+    flex-direction: column;
+    gap: 7px;
+    border: 0;
+    padding: 0;
+  }
+  .emh-app .teacher-setup .lead {
+    font-size: 14px;
+    margin-top: 14px;
+  }
+  .emh-app .teacher-setup > section:first-child > .muted {
+    display: none;
+  }
+  .emh-app .site-footer {
+    padding: 20px;
+    font-size: 9px;
+  }
+  .emh-app .room-heading {
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .emh-app .room-heading h1 {
+    font-size: 21px;
+    max-width: 220px;
+    overflow-wrap: anywhere;
+  }
+  .emh-app .room-heading-right {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .emh-app .room-context {
+    font-size: 10px;
+  }
+  .emh-app .lobby-layout {
+    grid-template-columns: 1fr;
+  }
+  .emh-app .lobby-panel {
+    padding: 25px 18px;
+  }
+  .emh-app .lobby-title h2 {
+    font-size: 15px;
+  }
+  .emh-app .lobby-settings {
+    padding: 22px;
+  }
+  .emh-app .lobby-settings dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 25px;
+  }
+  .emh-app .lobby-settings dl > div {
+    font-size: 11px;
+  }
+  .emh-app .seats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .emh-app .seat {
+    padding: 12px 5px;
+  }
+  .emh-app .arrival-count {
+    margin: 23px 0;
+  }
+  .emh-app .round-strip {
+    gap: 6px;
+  }
+  .emh-app .round-step {
+    gap: 5px;
+  }
+  .emh-app .session-bar {
+    padding: 15px;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .emh-app .session-phase {
+    min-width: 120px;
+    gap: 10px;
+  }
+  .emh-app .period-badge {
+    width: 39px;
+    height: 43px;
+    font-size: 20px;
+  }
+  .emh-app .session-phase strong {
+    font-size: 14px;
+  }
+  .emh-app .session-phase .muted {
+    font-size: 9px;
+  }
+  .emh-app .timers {
+    margin-left: auto;
+    gap: 18px;
+  }
+  .emh-app .timer {
+    font-size: 25px;
+  }
+  .emh-app .small-timer {
+    font-size: 23px;
+  }
+  .emh-app .timers > div {
+    min-width: 50px;
+  }
+  .emh-app .control-buttons {
+    width: 100%;
+    justify-content: flex-end;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+  .emh-app .market-note {
+    font-size: 9px;
+    align-items: flex-start;
+    padding-bottom: 15px;
+  }
+  .emh-app .market-note > span:nth-child(2) {
+    flex: 1;
+  }
+  .emh-app .inactivity {
+    margin-left: 22px;
+  }
+  .emh-app .stat-grid {
+    padding: 16px 0;
+    margin-bottom: 20px;
+  }
+  .emh-app .stat-grid > div {
+    padding: 0 13px;
+  }
+  .emh-app .stat-grid span {
+    font-size: 9px;
+  }
+  .emh-app .stat-grid strong {
+    font-size: 23px;
+  }
+  .emh-app .stat-grid small {
+    font-size: 9px;
+    margin-left: 4px;
+  }
+  .emh-app .market-grid {
+    grid-template-columns: 1fr;
+  }
+  .emh-app .market-grid > aside {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .emh-app .market-grid .panel {
+    padding: 22px;
+  }
+  .emh-app .quote-card {
+    padding: 18px 15px;
+  }
+  .emh-app .quote-card > strong {
+    font-size: 39px;
+  }
+  .emh-app .quote-card .button {
+    font-size: 11px;
+  }
+  .emh-app .quote-label {
+    font-size: 11px;
+  }
+  .emh-app .quote-owner {
+    font-size: 10px;
+  }
+  .emh-app .quote-form > .field-note {
+    font-size: 10px;
+  }
+  .emh-app .history-panel {
+    min-height: 360px;
+  }
+  .emh-app .chart-wrap {
+    margin: 10px -10px 20px;
+  }
+  .emh-app .notice {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 13px 15px;
+    font-size: 11px;
+  }
+  .emh-app .notice.completion > div {
+    align-items: flex-start;
+  }
+  .emh-app .panel {
+    padding: 22px;
+  }
+  .emh-app .room-tabs {
+    gap: 25px;
+  }
+  .emh-app .export-links {
+    gap: 7px;
+  }
+  .emh-app .export-links .button {
+    font-size: 10px;
+  }
+  .emh-app .debrief-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .emh-app .demo-toolbar {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .emh-app .demo-toolbar .segmented {
+    min-width: 155px;
+  }
+  .emh-app .demo-toolbar .segmented button {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+  .emh-app .demo-controls {
+    gap: 2px;
+  }
+  .emh-app .demo-controls .button {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+  .emh-app .demo-note {
+    font-size: 9px;
+    margin-bottom: 20px;
+  }
+  .emh-app .guide h1 {
+    font-size: 29px;
+  }
+  .emh-app .guide > .lead {
+    font-size: 14px;
+  }
+  .emh-app .guide > section {
+    grid-template-columns: 26px 1fr;
+    gap: 10px;
+    padding: 25px 0;
+  }
+  .emh-app .guide h2 {
+    font-size: 16px;
+  }
+  .emh-app .guide section p {
+    font-size: 12px;
+  }
+  .emh-app .guide .formula {
+    font-size: 11px;
+    padding: 13px;
+  }
+  .emh-app .rejoin-panel {
+    margin: 10px auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .emh-app *,
+  .emh-app *:before,
+  .emh-app *:after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (max-width: 760px) {
+  .emh-app .wide .stat-grid {
+    grid-template-columns: repeat(6, 1fr);
+    padding: 12px 0;
+    row-gap: 13px;
+  }
+  .emh-app .wide .stat-grid > div {
+    grid-column: span 2;
+    padding: 0 12px;
+  }
+  .emh-app .wide .stat-grid > div:nth-child(3) {
+    border: 0;
+  }
+  .emh-app .wide .stat-grid > .private-stat {
+    grid-column: span 3;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+  .emh-app .wide .stat-grid span {
+    font-size: 10px;
+  }
+  .emh-app .wide .stat-grid strong {
+    font-size: 22px;
+  }
+  .emh-app .wide .room-heading h1 {
+    font-size: 20px;
+  }
+  .emh-app .wide .session-bar {
+    padding: 12px 14px;
+  }
+  .emh-app .wide .market-note {
+    font-size: 10px;
+  }
+  .emh-app .wide .order-panel {
+    padding: 22px;
+  }
+  .emh-app .wide .order-panel .quote-card > strong {
+    font-size: 36px;
+  }
+  .emh-app .wide .trade-table {
+    max-height: 300px;
+  }
+  .emh-app .wide .stat-grid > .private-stat {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .emh-app .wide .private-stat > span {
+    margin: 0;
+  }
+}

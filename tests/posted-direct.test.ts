@@ -3,15 +3,27 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StudyRoom } from "../src/components/study-room";
-import { newStudy, stageKey, marketRound } from "../src/lib/server/study";
-import { execute, settleDeadline, toView } from "../src/lib/server/engine";
-import { exportData } from "../src/lib/server/export";
-import { commandSchema } from "../src/lib/server/http";
-import type { Room, Participant, AuditEvent } from "../src/lib/server/model";
-import type { Command } from "../src/lib/types";
-import { DEFAULT_STUDY_TIMING } from "../src/lib/study-timing";
-import { DemoSession } from "../src/lib/demo";
+import { StudyRoom } from "../src/experiments/double-auction/components/study-room";
+import {
+  newStudy,
+  stageKey,
+  marketRound,
+} from "../src/experiments/double-auction/server/study";
+import {
+  execute,
+  settleDeadline,
+  toView,
+} from "../src/experiments/double-auction/server/engine";
+import { exportData } from "../src/experiments/double-auction/server/export";
+import { commandSchema } from "@/experiments/double-auction/server/validation";
+import type {
+  Room,
+  Participant,
+  AuditEvent,
+} from "../src/experiments/double-auction/server/model";
+import type { Command } from "../src/experiments/double-auction/lib/types";
+import { DEFAULT_STUDY_TIMING } from "../src/experiments/double-auction/lib/study-timing";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 
 function fixture(singleUnit = false) {
   const study = newStudy(1, 6);

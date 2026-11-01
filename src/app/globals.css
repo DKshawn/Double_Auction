@@ -1,4 +1,8 @@
 @import url("../styles/room.css");
+@import url("../styles/emh.css");
+@import url("../styles/platform.css");
+@import url("../styles/judgment-tasks.css");
+@import url("../styles/judgment.css");
 @import url("../styles/study.css");
 
 :root {

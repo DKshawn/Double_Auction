@@ -2,16 +2,26 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { GOODS } from "../src/lib/catalog";
-import type { Command, CommandRequest, RoomView } from "../src/lib/types";
+import { GOODS } from "../src/experiments/double-auction/lib/catalog";
+import type {
+  Command,
+  CommandRequest,
+  RoomView,
+} from "../src/experiments/double-auction/lib/types";
 import {
   localDatabase,
   migrate,
   type Database,
 } from "../src/lib/server/database";
-import { AuctionService } from "../src/lib/server/service";
-import { equilibrium, schedules } from "../src/lib/server/experiment";
-import { csv, exportData } from "../src/lib/server/export";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import {
+  equilibrium,
+  schedules,
+} from "../src/experiments/double-auction/server/experiment";
+import {
+  csv,
+  exportData,
+} from "../src/experiments/double-auction/server/export";
 
 let pg: PGlite, db: Database, service: AuctionService;
 before(async () => {

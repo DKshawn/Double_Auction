@@ -1,7 +1,8 @@
-import type { Phase } from "./types";
-import type { Institution } from "./study-types";
+import type { Phase } from "../experiments/double-auction/lib/types";
+import type { Institution } from "../experiments/double-auction/lib/study-types";
 
 export type RoomSummary = {
+  experiment?: "institutions" | "emh" | "judgment";
   code: string;
   title: string;
   createdAt: number;

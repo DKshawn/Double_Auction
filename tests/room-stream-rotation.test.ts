@@ -1,16 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DemoSession } from "../src/lib/demo";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 import {
   RoomStreamRotation,
   STREAM_HANDOFF_GRACE_MS,
   STREAM_LATEST_ROTATE_MS,
-} from "../src/lib/room-stream-rotation";
+} from "../src/experiments/double-auction/lib/room-stream-rotation";
 import {
   studyTimingError,
   DEFAULT_STUDY_TIMING,
   studyPeriodTransition,
-} from "../src/lib/study-timing";
+} from "../src/experiments/double-auction/lib/study-timing";
 
 async function fixture(seconds = 240) {
   const demo = new DemoSession("cda", "buyer", 1000, {

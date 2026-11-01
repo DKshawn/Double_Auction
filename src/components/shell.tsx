@@ -27,7 +27,6 @@ export function Brand({
       </span>
       <span>
         <b>市場実験室</b>
-        <small>ダブルオークション</small>
       </span>
     </Link>
   );

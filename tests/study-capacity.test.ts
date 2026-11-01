@@ -9,26 +9,28 @@ import {
   MAX_STUDY_PROFILES,
   MAX_STUDY_TEMPLATE_SIZE,
   studyMarketSettings,
-} from "../src/lib/study-config";
-import { studyAllocationPlan } from "../src/lib/study-allocation";
-import { studyRoomConfigSchema } from "../src/lib/study-room-config";
-import { studySettingsSchema } from "../src/lib/study-core";
-import { generatedStudySettings } from "../src/lib/study-generator";
+} from "../src/experiments/double-auction/lib/study-config";
+import { studyAllocationPlan } from "../src/experiments/double-auction/lib/study-allocation";
+import { studyRoomConfigSchema } from "../src/experiments/double-auction/lib/study-room-config";
+import { studySettingsSchema } from "../src/experiments/double-auction/lib/study-core";
+import { generatedStudySettings } from "../src/experiments/double-auction/lib/study-generator";
+import { body, MAX_JSON_BODY_BYTES } from "../src/lib/server/http";
 import {
-  body,
   commandSchema,
   createRoomSchema,
-  MAX_JSON_BODY_BYTES,
-} from "../src/lib/server/http";
+} from "@/experiments/double-auction/server/validation";
 import { localDatabase, migrate } from "../src/lib/server/database";
 import {
   assemble,
   lockBundle,
   saveBundle,
-} from "../src/lib/server/market-store";
-import { AuctionService } from "../src/lib/server/service";
-import { DemoSession } from "../src/lib/demo";
-import type { RoomConfig, Command } from "../src/lib/types";
+} from "../src/experiments/double-auction/server/market-store";
+import { AuctionService } from "../src/experiments/double-auction/server/service";
+import { DemoSession } from "../src/experiments/double-auction/lib/demo";
+import type {
+  RoomConfig,
+  Command,
+} from "../src/experiments/double-auction/lib/types";
 
 function config(
   attendance: number,

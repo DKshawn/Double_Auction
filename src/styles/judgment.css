@@ -1,0 +1,236 @@
+.judgment-create,
+.judgment-teacher {
+  max-width: 1120px;
+  margin: 28px auto 64px;
+}
+.judgment-create {
+  display: grid;
+  gap: 24px;
+  background: var(--paper);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.judgment-teacher {
+  padding: 0 24px;
+}
+.judgment-teacher h1 {
+  font-size: 26px;
+}
+.judgment-teacher h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.judgment-section-heading {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.judgment-settings {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.judgment-settings legend {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.judgment-settings .text-button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  padding: 8px;
+  cursor: pointer;
+}
+.judgment-study-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.judgment-study-grid label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  cursor: pointer;
+}
+.judgment-study-grid label.selected {
+  border-color: var(--accent);
+  background: var(--lavender);
+}
+.judgment-settings input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+}
+.judgment-randomization {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+.judgment-randomization label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.judgment-room-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.judgment-panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 26px;
+  margin-top: 24px;
+}
+.judgment-overview,
+.judgment-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+}
+.judgment-overview {
+  border-block: 1px solid var(--line);
+  padding: 18px 0;
+}
+.judgment-overview a {
+  margin-left: auto;
+}
+.judgment-panel > .judgment-actions {
+  margin-top: 24px;
+}
+.judgment-room-code {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+.judgment-active-studies {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 32px;
+  margin: 20px 0 0;
+  padding-left: 20px;
+}
+.judgment-table-scroll {
+  overflow-x: auto;
+}
+.judgment-teacher table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.judgment-teacher th,
+.judgment-teacher td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.judgment-teacher th {
+  color: var(--muted);
+  font-size: 12px;
+}
+.judgment-history {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+.judgment-history li {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.judgment-history time {
+  margin-left: auto;
+  color: var(--muted);
+}
+.judgment-preview {
+  max-width: 1440px;
+  width: calc(100% - 32px);
+  height: calc(100svh - 32px);
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.judgment-preview::backdrop {
+  background: #22283d80;
+}
+.judgment-preview-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+.judgment-preview-toolbar span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.judgment-preview-toolbar > div {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+.judgment-preview .judgment-app {
+  min-height: 0;
+}
+.judgment-app .participant-main {
+  max-width: 1600px;
+  margin-inline: auto;
+}
+@media (max-width: 700px) {
+  .judgment-create,
+  .judgment-panel {
+    padding: 20px;
+  }
+  .judgment-study-grid,
+  .judgment-room-fields,
+  .judgment-active-studies {
+    grid-template-columns: 1fr;
+  }
+  .judgment-teacher {
+    padding: 0 16px;
+  }
+  .judgment-preview {
+    width: 100%;
+    height: 100svh;
+    border: 0;
+    border-radius: 0;
+  }
+  .judgment-preview-toolbar {
+    padding: 12px;
+    gap: 8px;
+  }
+  .judgment-preview-toolbar > div {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .judgment-preview-toolbar .button {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}

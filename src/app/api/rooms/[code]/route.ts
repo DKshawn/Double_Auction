@@ -1,3 +1,6 @@
+import { experimentFor } from "@/lib/server/experiment-registry";
+import { emhService } from "@/experiments/emh/server/service";
+import { judgmentService } from "@/experiments/judgment/server/service";
 import type { NextRequest } from "next/server";
 import {
   body,
@@ -9,7 +12,7 @@ import {
   sessionFor,
   tokenFor,
 } from "@/lib/server/http";
-import { service } from "@/lib/server/service";
+import { service } from "@/experiments/double-auction/server/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +40,11 @@ export async function DELETE(
   try {
     const code = codeFor((await ctx.params).code);
     const { accessKey } = await body(request, deleteRoomSchema);
-    await (await service()).deleteRoom(code, accessKey);
+    if ((await experimentFor(code)) === "judgment")
+      await (await judgmentService()).deleteRoom(code, accessKey);
+    else if ((await experimentFor(code)) === "emh")
+      await (await emhService()).deleteRoom(code, accessKey);
+    else await (await service()).deleteRoom(code, accessKey);
     return json({ deleted: code });
   } catch (error) {
     return failure(error);

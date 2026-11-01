@@ -546,14 +546,18 @@ summary.disclosure-button {
   margin-bottom: 8px;
 }
 .teacher-rooms-unlock {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
-  gap: 12px;
+  gap: 8px 12px;
   margin: 18px 0;
 }
 .teacher-rooms-unlock .field {
-  flex: 1;
+  min-width: 0;
   margin: 0;
+}
+.teacher-rooms-unlock > .field-help {
+  grid-column: 1 / -1;
 }
 .teacher-room-filters {
   display: grid;
@@ -564,7 +568,6 @@ summary.disclosure-button {
 .teacher-room-filters .field {
   min-width: 0;
   margin: 0;
-  font-size: 11px;
 }
 .teacher-room-filters input,
 .teacher-room-filters select {
@@ -683,10 +686,14 @@ summary.disclosure-button {
     grid-column: 1 / -1;
   }
   .teacher-rooms-unlock {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
   }
-  .teacher-rooms-unlock .field {
-    flex-basis: 100%;
+  .teacher-rooms-unlock > .field-help {
+    grid-row: 2;
+  }
+  .teacher-rooms-unlock > button {
+    grid-row: 3;
+    justify-self: start;
   }
 }
 .segmented {

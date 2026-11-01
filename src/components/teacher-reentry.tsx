@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, errorMessage } from "@/lib/client";
 import { teacherRoomHref } from "@/lib/room-navigation";
+import { TeacherPasswordHelp } from "./teacher-password-help";
 
 export function TeacherReentry({ initialCode }: { initialCode: string }) {
   const router = useRouter();
@@ -30,8 +31,10 @@ export function TeacherReentry({ initialCode }: { initialCode: string }) {
       <label className="field">
         ルームコード
         <input
+          className="code-input"
           value={code}
           onChange={(e) => setCode(e.target.value.trim().toUpperCase())}
+          placeholder="例：K7M4PX"
           minLength={6}
           maxLength={6}
           pattern="[A-Z2-9]{6}"
@@ -45,11 +48,13 @@ export function TeacherReentry({ initialCode }: { initialCode: string }) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          placeholder="作成時に設定したパスワード"
           minLength={8}
           maxLength={128}
           autoComplete="current-password"
           required
         />
+        <TeacherPasswordHelp />
       </label>
       {error && (
         <p className="error-message" role="alert">

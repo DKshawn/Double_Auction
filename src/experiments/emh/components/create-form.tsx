@@ -3,6 +3,8 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { ServerStatus } from "@/lib/server/config";
 import { api, errorMessage } from "@/lib/client";
+import { TeacherKeyHelp } from "@/components/teacher-key-help";
+import { TeacherPasswordHelp } from "@/components/teacher-password-help";
 
 export function EmhCreateForm({ status }: { status: ServerStatus }) {
   const router = useRouter();
@@ -59,14 +61,13 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          placeholder="8文字以上で設定"
           minLength={8}
           maxLength={128}
           autoComplete="new-password"
           required
         />
-        <span className="muted small">
-          再入室に使います。8文字以上で設定してください。
-        </span>
+        <TeacherPasswordHelp />
       </label>
       {status.keyRequired && (
         <label className="field">
@@ -79,6 +80,7 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
             maxLength={256}
             autoComplete="off"
           />
+          <TeacherKeyHelp />
         </label>
       )}
       {!status.ready && (

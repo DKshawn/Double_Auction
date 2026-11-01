@@ -17,6 +17,8 @@ Windows 上可使用 `pwsh -NoProfile -File scripts/dev-local.ps1` 启动隔离�
 
 普通开发服务器的教师入口为 `http://localhost:3000/teacher`。学生入口 `/` 和共用页眉不显示教师及 Demo 链接。未配置 Neon 时使用嵌入式 PostgreSQL（PGlite），默认保存在 `.data/auction`；不要让多个服务器同时打开同一保存目录。生产环境使用 Neon。
 
+如需本地也要求教师密钥，在不提交到 Git 的 `.env.local` 中设置 `TEACHER_ACCESS_KEY` 并重启服务。未设置时，本地不要求密钥。
+
 ## Vercel + Neon
 
 | 环境变量             | 用途                                                              |

@@ -35,6 +35,8 @@ flowchart LR
 
 The teacher creates and shares a room, and students join with its code, using a nickname or student ID as instructed by the teacher. The teacher chooses the experiment, explains the rules, and downloads the results after the session.
 
+After a teacher key opens the room management list, its input is hidden; refresh and deletion on the same page reuse the entered key.
+
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 
 ## Experiments

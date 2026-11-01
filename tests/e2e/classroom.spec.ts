@@ -51,7 +51,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
   await teacherPage.getByLabel("ラウンド数", { exact: true }).fill("2");
   await teacherPage.getByLabel("1ラウンドの取引時間").selectOption("300");
   await teacherPage
-    .getByLabel("この実験の教員パスワード", { exact: false })
+    .getByLabel("教員パスワード", { exact: false })
     .fill("Classroom-test-only");
   await teacherPage.getByRole("button", { name: "ルーム作成" }).click();
   await expect(teacherPage).toHaveURL(/\/room\/[A-Z2-9]{6}\?entry=teacher$/);

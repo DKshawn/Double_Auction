@@ -78,9 +78,14 @@
   padding: 0;
   border-radius: 50%;
   color: var(--accent);
+  border-color: currentColor;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 18px;
   line-height: 1;
+}
+.judgment-study-info.button:not(:disabled):hover {
+  color: var(--accent);
+  border-color: currentColor;
 }
 .judgment-study-dialog {
   width: min(600px, calc(100vw - 32px));

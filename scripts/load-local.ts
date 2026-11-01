@@ -54,6 +54,7 @@ const stats = {
   commands: 0,
   successfulCommands: 0,
   commandTypes: {} as Record<string, number>,
+  successfulCommandTypes: {} as Record<string, number>,
   conflictReasons: {} as Record<string, number>,
   rejected: 0,
   errors: [] as string[],
@@ -186,7 +187,27 @@ function choice(view: RoomView, tick: number): Command | undefined {
     return { type: "call-submit", prices: s.unitLimits!.slice(s.unitsUsed) };
   if (m.stage === "offer" && view.me.role === "seller" && !m.myOffer)
     return { type: "posted-offer", price: 80, quantity: 2 };
-  if (m.stage === "purchase" && view.me.role === "buyer" && m.posted) {
+  if (
+    m.stage === "purchase" &&
+    view.me.role === "buyer" &&
+    m.posted &&
+    view.config.studyPostedMechanism === "direct-purchase-v1"
+  ) {
+    const offer = m.offers.find((item) => item.remaining > 0);
+    return offer
+      ? {
+          type: "posted-buy",
+          offerId: offer.id,
+          quantity: Math.min(2 - s.unitsUsed, offer.remaining),
+        }
+      : undefined;
+  }
+  if (
+    m.stage === "purchase" &&
+    view.me.role === "buyer" &&
+    m.posted &&
+    view.config.studyPostedMechanism === "batch-bids-v1"
+  ) {
     const reserved = m.posted.bids
       .filter((bid) => bid.alias === view.me.alias)
       .reduce((sum, bid) => sum + bid.remaining, 0);
@@ -311,7 +332,11 @@ async function main() {
       stats.errors.push(`HTTP ${result.response.status}: ${result.body.error}`);
       return;
     }
-    if (measure) stats.successfulCommands++;
+    if (measure) {
+      stats.successfulCommands++;
+      stats.successfulCommandTypes[action.type] =
+        (stats.successfulCommandTypes[action.type] ?? 0) + 1;
+    }
     if (!client.view || client.view.version <= result.body.version)
       client.view = result.body;
     if (measure && before.me.role !== "teacher") {
@@ -450,6 +475,7 @@ async function main() {
     commands: stats.commands,
     successfulCommands: stats.successfulCommands,
     commandTypes: stats.commandTypes,
+    successfulCommandTypes: stats.successfulCommandTypes,
     conflictRejections: stats.rejected,
     conflictReasons: stats.conflictReasons,
     errors: stats.errors,
@@ -495,6 +521,11 @@ async function main() {
   for (const c of clients) c.abort.abort();
   await Promise.all(streams);
   assert.equal(stats.errors.length, 0, "Local load test encountered failures");
+  if (scenario === "mixed" && seconds >= 240)
+    assert.ok(
+      stats.successfulCommandTypes["posted-buy"] > 0,
+      "Mixed load test did not exercise any successful Posted Offer purchases",
+    );
 }
 main().catch((error) => {
   clientLoop.disable();

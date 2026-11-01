@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, FlaskConical, Info } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
+import { TeacherKeyHelp } from "@/components/teacher-key-help";
+import { TeacherPasswordHelp } from "@/components/teacher-password-help";
 import {
   MAX_STUDY_MARKETS,
   MAX_STUDY_PARTICIPANTS,
@@ -656,7 +658,7 @@ export function TeacherForm({
               >
                 {studyCreation && <h2>教員アクセス</h2>}
                 <label className="field">
-                  この実験の教員パスワード
+                  教員パスワード
                   <input
                     type="password"
                     name="password"
@@ -672,9 +674,7 @@ export function TeacherForm({
                       tab === "create" ? "new-password" : "current-password"
                     }
                   />
-                  <span className="field-help">
-                    別の端末から管理画面に戻る際に必要です。学生には共有しないでください。
-                  </span>
+                  <TeacherPasswordHelp />
                 </label>
                 {tab === "create" && status.keyRequired && (
                   <label className="field">
@@ -685,9 +685,7 @@ export function TeacherForm({
                       required
                       autoComplete="off"
                     />
-                    <span className="field-help">
-                      アプリの管理者から共有されたキーを入力します。
-                    </span>
+                    <TeacherKeyHelp />
                   </label>
                 )}
               </section>

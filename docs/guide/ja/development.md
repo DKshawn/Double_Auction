@@ -17,6 +17,8 @@ Windows の隔離したローカル検証環境は、`pwsh -NoProfile -File scri
 
 `http://localhost:3000/teacher` を開き、ルームを作成します。学生の入室画面 `/` と共通ヘッダーには、教員ページ・デモへのリンクを表示しません。Neonの設定がなければ組み込みPostgreSQL（PGlite）の `.data/auction` に保存されます。同じ保存先を複数サーバーから開かないでください。本番はNeonを使用します。
 
+ローカルでも教員用キーを必須にするには、Gitに含めない `.env.local` に `TEACHER_ACCESS_KEY` を設定し、サーバーを再起動します。未設定の場合、ローカルではキー不要です。
+
 ## Vercel + Neon
 
 | 環境変数             | 用途                                                                       |

@@ -1,7 +1,7 @@
 "use client";
 import { JUDGMENT_NAME } from "@/experiments/judgment/constants";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { FlaskConical, RefreshCw, Search, Trash2 } from "lucide-react";
 import { api, ApiError, errorMessage } from "@/lib/client";
 import type { RoomSummary } from "@/lib/room-management";
@@ -9,6 +9,7 @@ import type { ServerStatus } from "@/lib/server/config";
 import type { Phase } from "@/experiments/double-auction/lib/types";
 import { INSTITUTIONS } from "@/experiments/double-auction/lib/study-rules";
 import { Spinner } from "./shell";
+import { TeacherKeyHelp } from "./teacher-key-help";
 
 const PHASE_LABELS: Record<Phase, string> = {
   waiting: "入室待ち",
@@ -44,6 +45,7 @@ export function TeacherRooms({
   const [phase, setPhase] = useState("");
   const [limit, setLimit] = useState(20);
   const [deleting, setDeleting] = useState<RoomSummary | null>(null);
+  const keyHelpId = useId();
 
   useEffect(() => {
     if (!status.ready || status.keyRequired) return;
@@ -72,6 +74,10 @@ export function TeacherRooms({
       });
       setRooms(result.rooms);
     } catch (e) {
+      if (e instanceof ApiError && e.status === 403 && rooms !== null) {
+        setRooms(null);
+        setAccessKey("");
+      }
       setError(errorMessage(e));
     } finally {
       setPending(false);
@@ -124,7 +130,7 @@ export function TeacherRooms({
           更新
         </button>
       </div>
-      {status.keyRequired && (
+      {status.keyRequired && rooms === null && (
         <form
           className="teacher-rooms-unlock"
           onSubmit={(event) => {
@@ -140,6 +146,7 @@ export function TeacherRooms({
               onChange={(event) => setAccessKey(event.target.value)}
               maxLength={256}
               autoComplete="off"
+              aria-describedby={keyHelpId}
               required
             />
           </label>
@@ -149,6 +156,7 @@ export function TeacherRooms({
           >
             ルームを表示
           </button>
+          <TeacherKeyHelp id={keyHelpId} />
         </form>
       )}
       {!status.ready && (

@@ -25,7 +25,7 @@ export function TeacherHub({ status }: { status: ServerStatus }) {
           <span>CDA / Call Market / Posted Offer</span>
         </Link>
         <Link className="experiment-card" href="/teacher?experiment=emh">
-          <h2>EMH</h2>
+          <h2>Efficient Market Hypothesis</h2>
           <p>配当の異なる証券を取引し、情報と資産価格の関係を観察する。</p>
           <span>資産市場実験</span>
         </Link>

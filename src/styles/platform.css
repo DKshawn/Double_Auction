@@ -7,6 +7,15 @@
   font-size: 26px;
   margin-bottom: 24px;
 }
+.teacher-hub-main.teacher-entry-content {
+  max-width: 912px;
+  margin: 0 auto 72px;
+  padding: 0;
+}
+.teacher-entry-content > .emh-create,
+.teacher-entry-content > .judgment-create {
+  margin-top: 0;
+}
 .experiment-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

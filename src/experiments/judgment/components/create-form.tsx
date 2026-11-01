@@ -3,6 +3,8 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { ServerStatus } from "@/lib/server/config";
 import { api, errorMessage } from "@/lib/client";
+import { TeacherKeyHelp } from "@/components/teacher-key-help";
+import { TeacherPasswordHelp } from "@/components/teacher-password-help";
 import type { Settings, Study } from "../types";
 import { SettingsFields } from "./settings-fields";
 import { JUDGMENT_NAME } from "../constants";
@@ -67,14 +69,13 @@ export function JudgmentCreateForm({
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="8文字以上で設定"
               minLength={8}
               maxLength={128}
               required
               autoComplete="new-password"
             />
-            <span className="field-help">
-              再入室用に8文字以上で設定してください。
-            </span>
+            <TeacherPasswordHelp />
           </label>
           {status.keyRequired && (
             <label className="field">
@@ -87,6 +88,7 @@ export function JudgmentCreateForm({
                 autoComplete="off"
                 required
               />
+              <TeacherKeyHelp />
             </label>
           )}
         </div>

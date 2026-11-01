@@ -182,6 +182,10 @@ test("all button activations, validation, distinct commands and rejections are a
       .toBe(1);
     expect(buyerRequests[0].command.type).toBe("study-accept");
     expect(buyerRequests[0].interaction?.button).toBe("quote.accept-best");
+    // Wait for the seller's form to advance before entering the next price.
+    await expect(
+      room.seller.page.getByLabel("2単位目の売りたい価格", { exact: false }),
+    ).toBeVisible();
     await room.seller.page.locator(".study-price-input input").fill("90");
     await room.seller.page
       .locator('[data-audit-button="quote.submit"]')

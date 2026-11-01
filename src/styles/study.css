@@ -785,6 +785,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 24px;
 }
 .teacher-entry-heading {
   margin: 24px 0;

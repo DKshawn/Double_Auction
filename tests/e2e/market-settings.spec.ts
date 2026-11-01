@@ -39,7 +39,7 @@ test("teacher edits private market conditions, students receive them, and starti
     await expect(studentPage.locator(".private-value")).toBeVisible();
 
     await page.setViewportSize({ width: 1440, height: 1080 });
-    await page.goto(`/room/${code}`);
+    await page.goto(`/room/${code}?entry=teacher`);
     await page.getByRole("button", { name: "設定を変更", exact: true }).click();
     const settingsPanel = page.getByRole("region", {
       name: "価値・費用の設定",

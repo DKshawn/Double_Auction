@@ -5,12 +5,21 @@ import { EmhCreateForm } from "@/experiments/emh/components/create-form";
 import { JudgmentCreateForm } from "@/experiments/judgment/components/create-form";
 import { studies } from "@/experiments/judgment/server/core";
 import Link from "next/link";
-import { ArrowLeft, GraduationCap } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Header } from "@/components/shell";
 import { TeacherForm } from "@/experiments/double-auction/components/teacher-form";
 import { getServerStatus } from "@/lib/server/config";
 import { pptStudySettings } from "@/experiments/double-auction/server/study";
 import { teacherRoomHref } from "@/lib/room-navigation";
+
+function TeacherSelectionLink() {
+  return (
+    <Link className="button secondary small-button" href="/teacher">
+      <ArrowLeft size={15} />
+      実験を選び直す
+    </Link>
+  );
+}
 
 export default async function Teacher({
   searchParams,
@@ -32,11 +41,13 @@ export default async function Teacher({
             学生の入室画面
           </Link>
         </Header>
-        <main className="teacher-hub-main">
-          <Link className="button secondary small-button" href="/teacher">
-            実験を選び直す
-          </Link>
-          <TeacherReentry key={code} initialCode={code} />
+        <main className="narrow-main teacher-setup-main">
+          <div className="teacher-entry-navigation">
+            <TeacherSelectionLink />
+          </div>
+          <div className="teacher-hub-main teacher-entry-content">
+            <TeacherReentry key={code} initialCode={code} />
+          </div>
         </main>
       </>
     );
@@ -59,23 +70,26 @@ export default async function Teacher({
             </Link>
           )}
         </Header>
-        <main className="teacher-hub-main">
-          {experiment === "judgment" ? (
+        <main
+          className={
+            demoHref ? "narrow-main teacher-setup-main" : "teacher-hub-main"
+          }
+        >
+          {demoHref ? (
             <>
-              <Link className="button secondary small-button" href="/teacher">
-                実験を選び直す
-              </Link>
-              <JudgmentCreateForm
-                status={getServerStatus()}
-                studies={studies}
-              />
-            </>
-          ) : experiment === "emh" ? (
-            <>
-              <Link className="button secondary small-button" href="/teacher">
-                実験を選び直す
-              </Link>
-              <EmhCreateForm status={getServerStatus()} />
+              <div className="teacher-entry-navigation">
+                <TeacherSelectionLink />
+              </div>
+              <div className="teacher-hub-main teacher-entry-content">
+                {experiment === "judgment" ? (
+                  <JudgmentCreateForm
+                    status={getServerStatus()}
+                    studies={studies}
+                  />
+                ) : (
+                  <EmhCreateForm status={getServerStatus()} />
+                )}
+              </div>
             </>
           ) : (
             <TeacherHub status={getServerStatus()} />
@@ -95,10 +109,7 @@ export default async function Teacher({
         }
       >
         <div className="teacher-entry-navigation">
-          <Link className="button secondary small-button" href="/teacher">
-            <ArrowLeft size={15} />
-            実験を選び直す
-          </Link>
+          <TeacherSelectionLink />
           {returnRoom && (
             <Link
               className="button secondary small-button"
@@ -108,10 +119,6 @@ export default async function Teacher({
             </Link>
           )}
         </div>
-        <h1 className="eyebrow teacher-entry-heading">
-          <GraduationCap size={18} />
-          教員用ページ
-        </h1>
         <TeacherForm
           initialCode={code}
           initialTab={returnRoom ? "manage" : undefined}

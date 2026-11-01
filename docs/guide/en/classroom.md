@@ -64,6 +64,8 @@ Login state is scoped by room and role. Ordinary tabs in one browser can show th
 
 Rooms appear newest first, with experiment name, code, creation time, status, market count, attendance, progress, and periods per institution. Load another 20 entries at a time. There are no personal teacher accounts: online creation and management use a shared teacher key. Locally, the list shows rooms in the database selected on that computer.
 
+After a teacher key opens the list, its input is hidden; refresh and deletion on the same page reuse the entered key. Reloading the page requires the key again.
+
 To delete a room, click **このルームを削除** in its confirmation dialog. The room teacher password is not requested again, but the server still checks the management list's teacher key, except in local environments without a configured key. Deletion also removes participants, markets, trading history, audit logs, and results; active students can no longer use that room. Deletion cannot be undone.
 
 ## Try it before class

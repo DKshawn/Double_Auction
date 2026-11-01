@@ -17,6 +17,8 @@ On Windows, `pwsh -NoProfile -File scripts/dev-local.ps1` starts an isolated loc
 
 The ordinary development server's teacher entry is `http://localhost:3000/teacher`. The student entry `/` and shared header do not display teacher or demo links. Without Neon configured, the app uses embedded PostgreSQL through PGlite at `.data/auction`. Do not open the same data directory from multiple servers. Production uses Neon.
 
+To require a teacher key locally, set `TEACHER_ACCESS_KEY` in the Git-ignored `.env.local` file and restart the server. Without a configured key, local access does not require one.
+
 ## Vercel + Neon
 
 | Environment variable | Purpose                                                                                                         |

@@ -7,6 +7,7 @@ DoubleAuction・EMH・判断と認知バイアス実験を一つの教員入口�
 - Vercel プロジェクト: [exp-all-in-one](https://vercel.com/dkshawns-projects/exp-all-in-one)
 - 開発・問い合わせ: https://github.com/DKshawn/Exp-all-in-one
 - [構成と開発手順](docs/architecture.md)
+- [実験資料](material/README.md)
 - [Judgment 移行記録](docs/releases/unified-platform-migration.md)
 - [Judgment の原典・実施条件・制約](docs/upstream/judgment/README.md)
 
@@ -40,7 +41,7 @@ DoubleAuction を基盤に、商品市場の制度比較、EMH 資産市場実�
 
 ## EMH 資産市場実験
 
-実装は `src/experiments/emh/`、ルールは `/emh/guide`、仮想参加者8人との練習は `/emh/demo` です。出典は EMH プロジェクトの `materials/Session5-1（Exp1解説あり）.pdf` の実験1です。
+実装は `src/experiments/emh/`、ルールは `/emh/guide`、仮想参加者8人との練習は `/emh/demo` です。出典は [Session5-1（Exp1解説あり）.pdf](material/emh/Session5-1（Exp1解説あり）.pdf) の実験1です。[実施条件と原資料との対応](docs/experiments/emh.md) を参照してください。Session6-1 の実験2は参考資料として保存し、未実装です。
 
 1. 実験名と教員パスワードを設定して作成し、コードをクラス全員に共有します。
 2. 3人以上が入室したら「受付を終了して自動分け」。入室者全員をランダムに割り当てます。市場数は人数÷9を四捨五入した数を基本とし、1市場3〜12人、人数差は最大1人です。各市場とクラス全体で3タイプの人数をできるだけ均等にします。例：30人は10人×3市場、100人は10人×1市場と9人×10市場です。受付中は予定人数を表示し、開始前だけ受付を再開できます。上限は1ルーム999人です。
@@ -190,6 +191,8 @@ Node.js 24.xを使用します（`.nvmrc`・CI・Vercel の設定と共通）。
 npm ci
 npm run dev
 ```
+
+Windows の隔離したローカル検証環境は、`pwsh -NoProfile -File scripts/dev-local.ps1` で起動できます。ポートは3200、保存先は `.data/platform-verification` です。旧 EMH フォルダーは不要です。[整理記録](docs/releases/emh-folder-consolidation.md)を参照してください。
 
 `http://localhost:3000/teacher` を開き、ルームを作成します。学生の入室画面 `/` と共通ヘッダーには、教員ページ・デモへのリンクを表示しません。Neonの設定がなければ組み込みPostgreSQL（PGlite）の `.data/auction` に保存されます。同じ保存先を複数サーバーから開かないでください。本番はNeonを使用します。
 

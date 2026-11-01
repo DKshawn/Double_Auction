@@ -44,3 +44,9 @@ created. Preserve existing classroom rooms.
 Judgment migration provenance and protocol differences are in
 `src/experiments/judgment/UPSTREAM.md`; original methods, citations and notices
 are in `docs/upstream/judgment`.
+
+EMH course materials are in `material/emh`; protocol notes and original-document
+provenance are in `docs/experiments/emh.md` and `docs/upstream/emh`. Local-only
+legacy files and database backups are under ignored `work/archives`; current
+verification data are in `.data/platform-verification`. The standalone sibling
+EMH app is retired.

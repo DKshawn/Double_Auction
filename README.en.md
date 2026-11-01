@@ -21,9 +21,9 @@ config:
 ---
 flowchart LR
     accTitle: Classroom workflow
-    accDescr: The teacher creates a room and shares the entry and code. Students join with their name or ID and PIN. The teacher starts the experiment, students participate, and the teacher downloads results.
+    accDescr: The teacher creates a room and shares the entry and code. Students join with their nickname or student ID and PIN. The teacher starts the experiment, students participate, and the teacher downloads results.
     A["1 · Teacher<br/>Select experiment<br/>Create and share room"]
-    B["2 · Students<br/>Code, name/ID, PIN<br/>Join and wait"]
+    B["2 · Students<br/>Code, nickname/ID, PIN<br/>Join and wait"]
     C["3 · Session<br/>Teacher starts<br/>Students participate"]
     D["4 · Teacher<br/>Download results<br/>Discuss in class"]
     A --> B --> C --> D

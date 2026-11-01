@@ -31,7 +31,7 @@ Share the six-character room code shown in the teacher view and the student entr
 
 ![Teacher controls example: room code, attendance, copy participation link, and Dashboard](../images/share-room.png)
 
-Students open the link, check the code, enter a nickname and their own four-digit PIN, and click **入室する**. The nickname field accepts up to seven characters; your teacher may ask you to enter your student ID. For Judgement under Uncertainty, the identity field is **学生証番号**: enter a seven-digit student ID, including leading zeros. Students do not select an experiment; the room code identifies it.
+Students open the link, check the code, enter a nickname and their own four-digit PIN, and click **入室する**. The nickname field accepts up to seven characters; your teacher may ask you to enter your student ID. For Judgement under Uncertainty, the nickname field becomes **学生証番号**: enter a seven-digit student ID, including leading zeros. Students do not select an experiment; the room code identifies it.
 
 ![Student entry example: room code, nickname, four-digit PIN, and join button](../images/student-join.png)
 

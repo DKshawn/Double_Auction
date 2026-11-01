@@ -117,7 +117,8 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           autoComplete="new-password"
         />
         <span className="field-help">
-          再入室には同じ{judgment ? "学生証番号" : "名前"}と暗証番号を使います。
+          再入室には同じ{judgment ? "学生証番号" : "ニックネーム"}
+          と暗証番号を使います。
         </span>
       </label>
       {error && (

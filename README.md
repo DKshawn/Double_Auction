@@ -231,4 +231,4 @@ npm run build
 
 `tests/e2e` はPlaywrightのブラウザーテストです。`npm run test:e2e` でテスト専用ローカルDBを使用します。既存環境を指定する `E2E_BASE_URL` は本番に向けないでください。旧12人CDAの回帰テストと、新規教員フォームの実験1作成テストを含みます。
 
-主要な実装は `src/lib/server/study.ts`（ルール）、`study-view.ts`（表示・統計）、`study-export.ts`（出力）、`src/components/study-room.tsx`（画面）、`study-settings.tsx`（設定）です。写真の出典は [public/fruits/CREDITS.md](public/fruits/CREDITS.md) に記載しています。
+主要な実装は `src/experiments/double-auction/lib/study-core.ts`（ルール）、`study-view.ts`（表示・統計）、`study-export.ts`（出力）、`src/experiments/double-auction/components/study-room.tsx`（画面）、`study-settings.tsx`（設定）です。写真の出典は [public/fruits/CREDITS.md](public/fruits/CREDITS.md) に記載しています。

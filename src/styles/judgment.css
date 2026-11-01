@@ -29,6 +29,11 @@
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
+.judgment-settings .judgment-section-heading > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .judgment-settings {
   border: 0;
   margin: 0;
@@ -39,13 +44,6 @@
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 12px;
-}
-.judgment-settings .text-button {
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  padding: 8px;
-  cursor: pointer;
 }
 .judgment-study-grid {
   display: grid;
@@ -192,6 +190,7 @@
 }
 .judgment-preview-toolbar > div {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-left: auto;
 }

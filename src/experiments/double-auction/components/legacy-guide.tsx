@@ -7,7 +7,7 @@ export default function Guide() {
     <>
       <Header />
       <main className="guide-main">
-        <Link className="back-link" href="/">
+        <Link className="button secondary small-button" href="/">
           <ArrowLeft size={15} />
           ホームへ
         </Link>

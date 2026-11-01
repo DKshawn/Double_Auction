@@ -93,7 +93,10 @@ export function Room({ code, entry }: { code: string; entry?: string }) {
             <RefreshCw size={15} />
             再接続
           </button>
-          <Link href={navigation.homeHref}>
+          <Link
+            className="button secondary small-button"
+            href={navigation.homeHref}
+          >
             {navigation.teacher
               ? "教員の管理・設定へ戻る"
               : "学生の入室画面へ戻る"}
@@ -260,7 +263,11 @@ export function Room({ code, entry }: { code: string; entry?: string }) {
         )}
         <div className="room-bottom-note">
           <span>注文・約定は自動で同期されます。</span>
-          <Link href="/guide?legacy=1" target="_blank">
+          <Link
+            className="button secondary small-button"
+            href="/guide?legacy=1"
+            target="_blank"
+          >
             <CircleHelp size={15} />
             実験のルール
           </Link>

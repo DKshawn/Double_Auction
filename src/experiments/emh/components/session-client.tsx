@@ -142,8 +142,16 @@ export function SessionClient({
   return (
     <>
       <Header>
-        {teacher && <Link href="/teacher">ルーム管理</Link>}
-        <Link href="/emh/guide" target="_blank">
+        {teacher && (
+          <Link className="button secondary small-button" href="/teacher">
+            ルーム管理
+          </Link>
+        )}
+        <Link
+          className="button secondary small-button"
+          href="/emh/guide"
+          target="_blank"
+        >
           EMH のルール
         </Link>
       </Header>
@@ -163,7 +171,7 @@ export function SessionClient({
               )}
               <button
                 aria-label="通知を閉じる"
-                className="emh-dismiss"
+                className="button secondary small emh-dismiss"
                 onClick={() => setError("")}
               >
                 閉じる
@@ -259,7 +267,9 @@ export function SessionClient({
                         ))}
                       </div>
                       <details className="emh-all-exports">
-                        <summary>全市場のデータを保存</summary>
+                        <summary className="button secondary small-button disclosure-button">
+                          全市場のデータを保存
+                        </summary>
                         <div className="emh-actions">
                           {[
                             ["trades", "取引"],

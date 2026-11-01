@@ -41,7 +41,7 @@ export function DemoEntry() {
         <span className="demo-header-tag">ひとりデモ</span>
       </Header>
       <main className="narrow-main teacher-setup-main">
-        <Link className="back-link" href="/teacher">
+        <Link className="button secondary small-button" href="/teacher">
           <ArrowLeft size={15} />
           教員用ページへ
         </Link>

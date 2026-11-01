@@ -121,7 +121,9 @@ export function StudyAllocationPreview({
             </table>
           </div>
           <details>
-            <summary>各市場の供需図・全単位の数値</summary>
+            <summary className="button secondary small-button disclosure-button">
+              各市場の供需図・全単位の数値
+            </summary>
             {rows
               .filter((row) => row.eq)
               .map((row) => (

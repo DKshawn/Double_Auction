@@ -11,7 +11,9 @@ export function TeacherHub({ status }: { status: ServerStatus }) {
     <>
       <div className="teacher-rooms-heading">
         <h1>実験を選ぶ</h1>
-        <Link href="/teacher?code=">教員として再入室</Link>
+        <Link className="button secondary small-button" href="/teacher?code=">
+          教員として再入室
+        </Link>
       </div>
       <div className="experiment-grid">
         <Link

@@ -23,11 +23,19 @@ export function Shell({
           <nav aria-label="メインナビゲーション">
             {!room && (
               <>
-                <Link href="/">参加する</Link>
-                <Link href="/teacher">教員</Link>
+                <Link className="button secondary small-button" href="/">
+                  参加する
+                </Link>
+                <Link className="button secondary small-button" href="/teacher">
+                  教員
+                </Link>
               </>
             )}
-            <Link href="/emh/guide" target={room ? "_blank" : undefined}>
+            <Link
+              className="button secondary small-button"
+              href="/emh/guide"
+              target={room ? "_blank" : undefined}
+            >
               ルール{room && <span className="sr-only">（新しいタブ）</span>}
             </Link>
           </nav>

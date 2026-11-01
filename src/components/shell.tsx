@@ -53,7 +53,9 @@ export function Header({
 export function Footer() {
   return (
     <footer className="site-footer">
-      <Link href="/guide">実験のルール</Link>
+      <Link className="button secondary small-button" href="/guide">
+        実験のルール
+      </Link>
     </footer>
   );
 }

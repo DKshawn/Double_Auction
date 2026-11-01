@@ -122,7 +122,10 @@ svg {
 .danger-text {
   color: var(--red);
 }
-.button {
+.button,
+.text-button,
+.judgment-app .ranking-return {
+  min-height: 36px;
   border: 1px solid transparent;
   border-radius: 9px;
   display: inline-flex;
@@ -162,32 +165,48 @@ svg {
   background: #a53346;
   color: #fff;
 }
-.secondary {
+.secondary,
+.text-button,
+.judgment-app .ranking-return {
   background: #fff;
   border-color: var(--line);
   color: var(--ink);
 }
-.secondary:not(:disabled):hover {
+.secondary:not(:disabled):hover,
+.text-button:not(:disabled):hover,
+.judgment-app .ranking-return:not(:disabled):hover {
   background: #f7f7fd;
   border-color: #ceceea;
   color: var(--ink);
 }
-.small-button {
+.small-button,
+.text-button,
+.judgment-app .ranking-return {
   font-size: 12px;
   padding: 8px 12px;
 }
-.text-button {
-  padding: 5px 0;
-  border: 0;
-  background: none;
-  font-size: 12px;
+.text-button.danger-text {
+  color: var(--red);
 }
-.text-button:not(.danger-text) {
-  color: var(--accent);
+a.button {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+summary.disclosure-button {
+  display: list-item;
+  list-style-position: inside;
+  width: fit-content;
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+  cursor: pointer;
 }
 .icon-button {
-  background: none;
-  border: 0;
+  min-width: 32px;
+  min-height: 32px;
+  background: var(--paper);
+  border: 1px solid var(--line);
   display: grid;
   place-items: center;
   padding: 6px;
@@ -260,8 +279,10 @@ svg {
 }
 .header-right {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  justify-content: flex-end;
+  gap: 10px;
   font-size: 12px;
 }
 .quiet-link {
@@ -277,14 +298,12 @@ svg {
   padding: 22px 0 27px;
   border-top: 1px solid var(--line);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 20px;
   color: var(--muted);
   font-size: 11px;
-}
-.site-footer a {
-  color: var(--muted);
 }
 .home-main {
   max-width: 1160px;
@@ -520,13 +539,6 @@ svg {
   max-width: 720px;
   margin: auto;
   padding: 40px 24px 0;
-}
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  color: var(--muted);
 }
 .page-intro {
   margin: 33px 0 26px;
@@ -953,10 +965,13 @@ svg {
 }
 @media (max-width: 760px) {
   .site-header {
-    height: 69px;
+    height: auto;
   }
   .header-inner {
-    padding: 0 20px;
+    height: auto;
+    min-height: 69px;
+    padding: 14px 20px;
+    flex-wrap: wrap;
   }
   .home-main {
     padding: 35px 24px 0;
@@ -1044,7 +1059,7 @@ svg {
 }
 @media (max-width: 390px) {
   .header-inner {
-    padding: 0 14px;
+    padding-inline: 14px;
   }
   .brand {
     gap: 8px;

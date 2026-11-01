@@ -116,7 +116,9 @@ export function JudgmentTeacherRoom({
   return (
     <>
       <Header homeHref="/teacher">
-        <Link href="/teacher">ルーム管理</Link>
+        <Link className="button secondary small-button" href="/teacher">
+          ルーム管理
+        </Link>
       </Header>
       <main className="judgment-teacher">
         <div className="judgment-section-heading">
@@ -150,7 +152,11 @@ export function JudgmentTeacherRoom({
               <span>
                 回答完了 <b>{completed}</b> 人
               </span>
-              <Link href={`/?code=${code}`} target="_blank">
+              <Link
+                className="button secondary small-button"
+                href={`/?code=${code}`}
+                target="_blank"
+              >
                 学生の入室画面
               </Link>
             </div>

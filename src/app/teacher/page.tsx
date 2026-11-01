@@ -28,10 +28,14 @@ export default async function Teacher({
     return (
       <>
         <Header>
-          <Link href="/">学生の入室画面</Link>
+          <Link className="button secondary small-button" href="/">
+            学生の入室画面
+          </Link>
         </Header>
         <main className="teacher-hub-main">
-          <Link href="/teacher">実験を選び直す</Link>
+          <Link className="button secondary small-button" href="/teacher">
+            実験を選び直す
+          </Link>
           <TeacherReentry key={code} initialCode={code} />
         </main>
       </>
@@ -50,13 +54,17 @@ export default async function Teacher({
           {demoHref ? (
             <DemoEntryLink href={demoHref} />
           ) : (
-            <Link href="/">学生の入室画面</Link>
+            <Link className="button secondary small-button" href="/">
+              学生の入室画面
+            </Link>
           )}
         </Header>
         <main className="teacher-hub-main">
           {experiment === "judgment" ? (
             <>
-              <Link href="/teacher">実験を選び直す</Link>
+              <Link className="button secondary small-button" href="/teacher">
+                実験を選び直す
+              </Link>
               <JudgmentCreateForm
                 status={getServerStatus()}
                 studies={studies}
@@ -64,7 +72,9 @@ export default async function Teacher({
             </>
           ) : experiment === "emh" ? (
             <>
-              <Link href="/teacher">実験を選び直す</Link>
+              <Link className="button secondary small-button" href="/teacher">
+                実験を選び直す
+              </Link>
               <EmhCreateForm status={getServerStatus()} />
             </>
           ) : (
@@ -84,15 +94,20 @@ export default async function Teacher({
           legacy === "1" ? "narrow-main" : "narrow-main teacher-setup-main"
         }
       >
-        <Link className="back-link" href="/teacher">
-          <ArrowLeft size={15} />
-          実験を選び直す
-        </Link>
-        {returnRoom && (
-          <Link className="back-link" href={teacherRoomHref(returnRoom)}>
-            ルーム {returnRoom} に戻る
+        <div className="teacher-entry-navigation">
+          <Link className="button secondary small-button" href="/teacher">
+            <ArrowLeft size={15} />
+            実験を選び直す
           </Link>
-        )}
+          {returnRoom && (
+            <Link
+              className="button secondary small-button"
+              href={teacherRoomHref(returnRoom)}
+            >
+              ルーム {returnRoom} に戻る
+            </Link>
+          )}
+        </div>
         <h1 className="eyebrow teacher-entry-heading">
           <GraduationCap size={18} />
           教員用ページ

@@ -73,7 +73,14 @@
 }
 .platform-guide-links {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.teacher-hub-main > .teacher-rooms-heading {
+  flex-wrap: wrap;
+}
+.teacher-hub-main > .teacher-rooms-heading h1 {
+  margin-bottom: 0;
 }
 .emh-app .emh-session {
   padding-block: 28px 50px;
@@ -168,11 +175,7 @@
   color: var(--muted);
 }
 .emh-app .emh-dismiss {
-  background: none;
-  border: 0;
-  text-decoration: underline;
   margin-left: auto;
-  font-size: 12px;
 }
 @media (max-width: 640px) {
   .experiment-grid {

@@ -35,7 +35,7 @@ Students open the link, check the code, enter a nickname and their own four-digi
 
 ![Student entry example: room code, nickname, four-digit PIN, and join button](../images/student-join.png)
 
-After joining, keep the page open and wait for the teacher to start. Students follow the conditions and tasks on their own screens, using the student entry rather than the teacher entry.
+The student homepage is for joining a classroom with its room code. The teacher chooses the experiment and explains its rules. After joining, keep the page open, wait for the start, and follow the teacher’s explanation and the prompts on your own screen.
 
 ## 3. Check attendance and run the experiment
 

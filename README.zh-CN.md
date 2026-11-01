@@ -33,7 +33,7 @@ flowchart LR
     class B,C shared
 ```
 
-教师创建房间，学生凭分享的代码加入。开始后按各自的屏幕提示参加，最后由教师下载结果。
+教师创建并分享房间，学生凭代码加入。实验由教师安排并讲解规则，结束后由教师下载结果。
 
 [图解操作、重新进入与房间管理](docs/guide/zh-CN/classroom.md) · [Demo Model 使用说明](docs/guide/zh-CN/demo.md)
 

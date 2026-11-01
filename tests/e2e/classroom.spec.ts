@@ -5,28 +5,17 @@ import type {
   RoomView,
 } from "../../src/experiments/double-auction/lib/types";
 
-test("Japanese home, photographs, navigation and mobile layout", async ({
+test("Japanese student entry, teacher navigation and mobile layout", async ({
   page,
 }, info) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto("/?code=k7m4px");
   await expect(page.locator("html")).toHaveAttribute("lang", "ja");
   await expect(
     page.getByRole("form", { name: "実験に参加する" }),
   ).toBeVisible();
-  await expect
-    .poll(() =>
-      page
-        .locator("img")
-        .evaluateAll((imgs) =>
-          imgs.every(
-            (i) =>
-              i instanceof HTMLImageElement && i.complete && i.naturalWidth > 0,
-          ),
-        ),
-    )
-    .toBe(true);
+  await expect(page.locator('input[name="code"]')).toHaveValue("K7M4PX");
   for (const width of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 960 });
     expect(
@@ -40,9 +29,9 @@ test("Japanese home, photographs, navigation and mobile layout", async ({
     path: info.outputPath("home-mobile.png"),
     fullPage: true,
   });
-  await page.getByRole("link", { name: "実験のルール", exact: true }).click();
+  await page.getByRole("link", { name: "教員用ページ", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "取引を始める前に" }),
+    page.getByRole("heading", { name: "実験を選ぶ", exact: true }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });

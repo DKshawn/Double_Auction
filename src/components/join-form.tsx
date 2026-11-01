@@ -100,7 +100,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
         <span className="field-help">
           {judgment
             ? "先頭の0も含めて入力してください。"
-            : `実名を使う必要はありません。${MAX_NICKNAME_LENGTH}文字以内で入力してください。`}
+            : `教員の指示により、学生証番号を入力する場合があります。${MAX_NICKNAME_LENGTH}文字以内で入力してください。`}
         </span>
       </label>
       <label className="field">

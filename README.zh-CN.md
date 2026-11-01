@@ -26,6 +26,8 @@
 
 技术栈为 Next.js / React / TypeScript，部署使用 Vercel + Neon PostgreSQL，运行环境为 Node.js 24.x。正式实验以独立模块共同维护在 `main` 分支。
 
+PR 中的 **Documentation sync** 检查会提醒日中英 README 及相关指南中遗漏的更新。
+
 - [本地启动、环境变量、部署与验证](docs/guide/zh-CN/development.md)
 - [架构与开发约定（英文）](docs/architecture.md)
 - [实验材料目录（日文及原始材料）](material/README.md)

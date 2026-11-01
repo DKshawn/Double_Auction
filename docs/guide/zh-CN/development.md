@@ -59,6 +59,28 @@ npm run build
 
 Double Auction 的主要实现包括 `src/experiments/double-auction/lib/study-core.ts`（规则）、同目录的 `study-view.ts`（视图与统计）、`study-export.ts`（导出），以及 `src/experiments/double-auction/components/study-room.tsx`（页面）和同目录的 `study-settings.tsx`（设置）。照片来源见 [public/fruits/CREDITS.md](../../../public/fruits/CREDITS.md)。
 
+## 三语文档同步检查
+
+PR 中的 **Documentation sync** 从共同分支点比较整个 PR 已提交的改动，检查 README 和相关指南是否遗漏日中英更新，不只检查最后一次提交。在检查警告和运行摘要中列出未更新或不存在的语言文件，以及触发检查的改动。文档提醒不会自动阻止合并；如果无法完成 Git 比较，检查会失败，避免把未执行检查误报为通过。
+
+| 改动                                     | 检查的指南                                            |
+| ---------------------------------------- | ----------------------------------------------------- |
+| 实验模块及路径含实验名的路由或样式       | 对应的 `double-auction.md`、`emh.md` 或 `judgment.md` |
+| Demo 代码                                | `demo.md`，以及对应实验或共用指南                     |
+| 共用界面、加入与房间相关代码             | `classroom.md`                                        |
+| 共用服务端代码                           | `classroom.md` 和 `development.md`                    |
+| 脚本、Actions 工作流、依赖与运行环境配置 | `development.md`                                      |
+
+以上改动也会检查三个 README。只修改 README 或 `docs/guide/{ja,zh-CN,en}/` 中某个语言的指南时，会核对同一文档的其他语言，新指南名称也适用。只删除或重命名一个语言版本会提醒；仅涉及文档的改动中，同时废弃或重命名三种语言的指南可以通过。仅测试、`AGENTS.md` 以及 `docs/upstream` 历史原材料的修改不视为功能变更。
+
+本地提交后也可执行同样的比较，未提交的编辑不在检查范围内：
+
+```sh
+npm run docs:check -- --base origin/main --head HEAD
+```
+
+这是基于文件改动的提醒，不能判断翻译语义是否准确，也不能自动判断重构是否需要文档变更。出现提醒时，应核对对应三版的内容和链接，将必要修改放在同一个 PR；确实无需修改时在评审中说明理由，不要为消除警告而制造无意义改动。
+
 ---
 
 [首页](../../../README.zh-CN.md) · [课堂使用流程](classroom.md) · [Double Auction](double-auction.md) · [Demo Model](demo.md) · [EMH 资产市场实验](emh.md) · [Judgement under Uncertainty](judgment.md)

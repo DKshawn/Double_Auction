@@ -6,6 +6,37 @@
 
 [教师入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)
 
+## 开始使用
+
+```mermaid
+---
+config:
+  theme: base
+  look: classic
+  layout: dagre
+  htmlLabels: true
+  flowchart:
+    rankSpacing: 24
+    wrappingWidth: 180
+---
+flowchart LR
+    accTitle: 课堂使用流程
+    accDescr: 教师创建房间，学生凭代码加入；教师开始实验，学生按提示参加，最后由教师下载结果。
+    A["1 · 教师<br/>选择实验<br/>建房并分享代码"]
+    B["2 · 学生<br/>填写代码、身份、PIN<br/>加入并等待"]
+    C["3 · 开展实验<br/>教师开始<br/>学生参加"]
+    D["4 · 教师<br/>下载结果<br/>用于课堂讨论"]
+    A --> B --> C --> D
+    classDef teacher fill:#eeeefd,stroke:#5456c7,color:#22283d
+    classDef shared fill:#f6f7fb,stroke:#6a7287,color:#22283d
+    class A,D teacher
+    class B,C shared
+```
+
+教师创建房间，学生凭分享的代码加入。开始后按各自的屏幕提示参加，最后由教师下载结果。
+
+[图解操作、重新进入与房间管理](docs/guide/zh-CN/classroom.md) · [Demo Model 使用说明](docs/guide/zh-CN/demo.md)
+
 ## 实验
 
 | 实验                        | 内容                                                                     | 指南                                             | 演示                                                          |
@@ -13,14 +44,6 @@
 | Double Auction              | 比较 CDA、Call Market、Posted Offer 三种制度，按实际人数分配市场与角色   | [流程与规则](docs/guide/zh-CN/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
 | EMH                         | 不同分红类型的资产市场，将所有参加者按每组约9人自动分组，使用默认6轮设置 | [流程与规则](docs/guide/zh-CN/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
 | Judgement under Uncertainty | 14项判断与认知偏差任务，支持条件分配、任务与选项顺序、计时及日中英显示   | [流程与数据](docs/guide/zh-CN/judgment.md)       | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
-
-## 开始使用
-
-1. 教师在教师入口选择实验，完成设置并创建房间。
-2. 将统一的学生入口和房间代码分享给学生。
-3. 教师开始和管理实验，结束后导出数据。
-
-[加入、重新进入与房间管理](docs/guide/zh-CN/classroom.md) · [Demo Model 使用说明](docs/guide/zh-CN/demo.md)
 
 ## 开发与资料
 

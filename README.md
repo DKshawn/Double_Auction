@@ -4,6 +4,7 @@ DoubleAuction・EMH・判断と認知バイアス実験を一つの教員入口�
 
 - 教員入口: https://doubleauction.vercel.app/teacher
 - 学生入口: https://doubleauction.vercel.app
+- Vercel プロジェクト: [exp-all-in-one](https://vercel.com/dkshawns-projects/exp-all-in-one)
 - 開発・問い合わせ: https://github.com/DKshawn/Exp-all-in-one
 - [構成と開発手順](docs/architecture.md)
 - [Judgment 移行記録](docs/releases/unified-platform-migration.md)

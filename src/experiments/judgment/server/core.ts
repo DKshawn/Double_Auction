@@ -79,7 +79,13 @@ const analyze = originalAnalyze as (
 ) => unknown;
 export const studies: Study[] = catalog.studies
   .filter((s) => s.classroomEnabled)
-  .map((s) => ({ id: s.id, names: s.names, description: s.original }));
+  .map((s) => ({
+    id: s.id,
+    names: s.names,
+    description: s.original,
+    minutes: s.minutes,
+    conditions: s.restoration?.conditions ?? { ja: [], zh: [], en: [] },
+  }));
 const seed = () => randomInt(0, 2 ** 32);
 export function validateSettings(settings: Settings) {
   if (

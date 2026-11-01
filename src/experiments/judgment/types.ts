@@ -8,6 +8,8 @@ export type Study = {
   id: string;
   names: Record<Language, string>;
   description: Record<Language, string>;
+  minutes: number;
+  conditions: Record<Language, string[]>;
 };
 export type Field = {
   id: string;

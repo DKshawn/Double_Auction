@@ -1,5 +1,6 @@
 "use client";
 import type { Settings, Study } from "../types";
+import { StudyInformation } from "./study-information";
 export function SettingsFields({
   settings,
   studies,
@@ -36,24 +37,27 @@ export function SettingsFields({
       </div>
       <div className="judgment-study-grid">
         {studies.map((study) => (
-          <label
+          <div
             key={study.id}
-            className={settings.studyIds.includes(study.id) ? "selected" : ""}
+            className={`judgment-study-option${settings.studyIds.includes(study.id) ? " selected" : ""}`}
           >
-            <input
-              type="checkbox"
-              checked={settings.studyIds.includes(study.id)}
-              onChange={(e) =>
-                onChange({
-                  ...settings,
-                  studyIds: e.target.checked
-                    ? [...settings.studyIds, study.id]
-                    : settings.studyIds.filter((id) => id !== study.id),
-                })
-              }
-            />
-            <span>{study.names.ja}</span>
-          </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.studyIds.includes(study.id)}
+                onChange={(e) =>
+                  onChange({
+                    ...settings,
+                    studyIds: e.target.checked
+                      ? [...settings.studyIds, study.id]
+                      : settings.studyIds.filter((id) => id !== study.id),
+                  })
+                }
+              />
+              <span>{study.names.ja}</span>
+            </label>
+            <StudyInformation study={study} />
+          </div>
         ))}
       </div>
       <div className="judgment-randomization">

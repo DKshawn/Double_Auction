@@ -13,6 +13,7 @@ import {
   tokenFor,
 } from "@/lib/server/http";
 import { service } from "@/experiments/double-auction/server/service";
+import { teacherAccessKey } from "@/lib/server/teacher-session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,7 +40,8 @@ export async function DELETE(
 ) {
   try {
     const code = codeFor((await ctx.params).code);
-    const { accessKey } = await body(request, deleteRoomSchema);
+    const data = await body(request, deleteRoomSchema);
+    const accessKey = teacherAccessKey(request, data.accessKey);
     if ((await experimentFor(code)) === "judgment")
       await (await judgmentService()).deleteRoom(code, accessKey);
     else if ((await experimentFor(code)) === "emh")

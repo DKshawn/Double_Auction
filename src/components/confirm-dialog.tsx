@@ -6,11 +6,13 @@ export function ConfirmDialog({
   message,
   onCancel,
   onConfirm,
+  confirmLabel = "終了する",
 }: {
   title: string;
   message: string;
   onCancel: () => void;
   onConfirm: () => Promise<void>;
+  confirmLabel?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [pending, setPending] = useState(false);
@@ -46,7 +48,7 @@ export function ConfirmDialog({
             await onConfirm();
           }}
         >
-          {pending ? "処理中…" : "終了する"}
+          {pending ? "処理中…" : confirmLabel}
         </button>
       </div>
     </dialog>

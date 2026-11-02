@@ -3,19 +3,31 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { ServerStatus } from "@/lib/server/config";
 import { api, errorMessage } from "@/lib/client";
-import { TeacherKeyHelp } from "@/components/teacher-key-help";
 import { TeacherPasswordHelp } from "@/components/teacher-password-help";
-import { DEFAULT_SETTINGS, type EmhSettings } from "../settings";
+import {
+  DEFAULT_SETTINGS,
+  settingsSchema,
+  type EmhSettings,
+} from "../settings";
 import { SettingsFields } from "./settings-fields";
 
-export function EmhCreateForm({ status }: { status: ServerStatus }) {
+export function EmhCreateForm({
+  status,
+  initialTitle,
+  initialSettings,
+  onCreateDemo,
+}: {
+  status: ServerStatus;
+  initialTitle?: string;
+  initialSettings?: EmhSettings;
+  onCreateDemo?: (title: string, settings: EmhSettings) => void;
+}) {
   const router = useRouter();
-  const [title, setTitle] = useState("資産市場実験");
+  const [title, setTitle] = useState(initialTitle ?? "資産市場実験");
   const [settings, setSettings] = useState<EmhSettings>(() =>
-    structuredClone(DEFAULT_SETTINGS),
+    structuredClone(initialSettings ?? DEFAULT_SETTINGS),
   );
   const [password, setPassword] = useState("");
-  const [accessKey, setAccessKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: FormEvent) {
@@ -23,10 +35,18 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
     setBusy(true);
     setError("");
     try {
+      if (onCreateDemo) {
+        const parsed = settingsSchema.safeParse(settings);
+        if (!parsed.success || !title.trim() || title.trim().length > 60)
+          throw new Error(
+            "実験名・人数・比率・証券数・時間を確認してください。",
+          );
+        onCreateDemo(title.trim(), parsed.data);
+        return;
+      }
       const result = await api<{ code: string }>("/api/emh/rooms", {
         title,
         password,
-        accessKey,
         settings,
       });
       router.push(`/room/${result.code}?entry=teacher`);
@@ -63,35 +83,23 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
         onChange={setSettings}
         disabled={busy}
       />
-      <label className="field">
-        教員パスワード
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="8文字以上で設定"
-          minLength={8}
-          maxLength={128}
-          autoComplete="new-password"
-          required
-        />
-        <TeacherPasswordHelp />
-      </label>
-      {status.keyRequired && (
+      {!onCreateDemo && (
         <label className="field">
-          教員用キー
+          教員パスワード
           <input
             type="password"
-            value={accessKey}
-            onChange={(e) => setAccessKey(e.target.value)}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="8文字以上で設定"
+            minLength={8}
+            maxLength={128}
+            autoComplete="new-password"
             required
-            maxLength={256}
-            autoComplete="off"
           />
-          <TeacherKeyHelp />
+          <TeacherPasswordHelp />
         </label>
       )}
-      {!status.ready && (
+      {!onCreateDemo && !status.ready && (
         <p role="alert" className="error-message">
           管理者が接続設定を完了してから作成してください。
         </p>
@@ -101,8 +109,11 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
           {error}
         </p>
       )}
-      <button className="button primary full" disabled={busy || !status.ready}>
-        {busy ? "作成中…" : "ルームを作成"}
+      <button
+        className="button primary full"
+        disabled={busy || (!onCreateDemo && !status.ready)}
+      >
+        {busy ? "作成中…" : onCreateDemo ? "デモルームを作成" : "ルームを作成"}
       </button>
     </form>
   );

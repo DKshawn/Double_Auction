@@ -15,17 +15,19 @@ npm run dev
 
 Windows の隔離したローカル検証環境は、`pwsh -NoProfile -File scripts/dev-local.ps1` で起動できます。ポートは3200、保存先は `.data/platform-verification` です。旧 EMH フォルダーは不要です。[整理記録](../../../docs/releases/emh-folder-consolidation.md)を参照してください。
 
-`http://localhost:3000/teacher` を開き、ルームを作成します。学生の入室画面 `/` と共通ヘッダーには、教員ページ・デモへのリンクを表示しません。Neonの設定がなければ組み込みPostgreSQL（PGlite）の `.data/auction` に保存されます。同じ保存先を複数サーバーから開かないでください。本番はNeonを使用します。
+教員入口は `http://localhost:3000/teacher` です。学生の入室画面 `/` の「教員用ページ」からも開けます。キー設定時は、実験選択の前にログインします。Neonの設定がなければ組み込みPostgreSQL（PGlite）の `.data/auction` に保存されます。同じ保存先を複数サーバーから開かないでください。本番はNeonを使用します。
 
 ローカルでも教員用キーを必須にするには、Gitに含めない `.env.local` に `TEACHER_ACCESS_KEY` を設定し、サーバーを再起動します。未設定の場合、ローカルではキー不要です。
 
+教員入口と `?entry=teacher` のルームページはサーバーで認証します。`POST /api/teacher/session` はキーを検証して8時間の署名付きHttpOnly・SameSite=Lax Cookieを発行し、HTTPSではSecure属性を付けます。キー自体はCookieやブラウザーストレージに保存しません。`DELETE` はログアウトし、キー変更は既存セッションを無効にします。作成・管理・削除・Judgmentの教員用プレビューAPIはセッションを検証し、既存の認証済みスクリプト向け `accessKey` も受け付けます。追加の環境変数やDB移行は不要です。
+
 ## Vercel + Neon
 
-| 環境変数             | 用途                                                                       |
-| -------------------- | -------------------------------------------------------------------------- |
-| `DATABASE_URL`       | Neonのpooled PostgreSQL接続文字列。Vercelで必須                            |
-| `TEACHER_ACCESS_KEY` | ルーム作成・管理一覧・削除の教員用共通キー。Vercelで必須。学生に共有しない |
-| `PGLITE_DATA_DIR`    | ローカルの任意のデータ保存先                                               |
+| 環境変数             | 用途                                                                         |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `DATABASE_URL`       | Neonのpooled PostgreSQL接続文字列。Vercelで必須                              |
+| `TEACHER_ACCESS_KEY` | 教員入口の認証・セッション署名に使う共通キー。Vercelで必須。学生に共有しない |
+| `PGLITE_DATA_DIR`    | ローカルの任意のデータ保存先                                                 |
 
 GitHubからVercelにデプロイします。関数リージョンは `vercel.json` の `sin1` で、Neon Singaporeと合わせています。テーブルは初回接続で初期化します。手動の場合は `npm run db:migrate`。本番でローカルDBへはフォールバックしません。
 

@@ -11,6 +11,8 @@ import { TeacherForm } from "@/experiments/double-auction/components/teacher-for
 import { getServerStatus } from "@/lib/server/config";
 import { pptStudySettings } from "@/experiments/double-auction/server/study";
 import { teacherRoomHref } from "@/lib/room-navigation";
+import { requireTeacherPage } from "@/lib/server/teacher-page-access";
+import { TeacherLogout } from "@/components/teacher-login";
 
 function TeacherSelectionLink() {
   return (
@@ -32,6 +34,11 @@ export default async function Teacher({
   }>;
 }) {
   const { code, legacy, room, experiment } = await searchParams;
+  const status = getServerStatus();
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries({ code, legacy, room, experiment }))
+    if (value !== undefined) query.set(key, value);
+  await requireTeacherPage(`/teacher${query.size ? `?${query}` : ""}`);
   const returnRoom = room && /^[A-Z2-9]{6}$/.test(room) ? room : undefined;
   if (code !== undefined && !returnRoom) {
     return (
@@ -40,6 +47,7 @@ export default async function Teacher({
           <Link className="button secondary small-button" href="/">
             学生の入室画面
           </Link>
+          {status.keyRequired && <TeacherLogout />}
         </Header>
         <main className="narrow-main teacher-setup-main">
           <div className="teacher-entry-navigation">
@@ -69,6 +77,7 @@ export default async function Teacher({
               学生の入室画面
             </Link>
           )}
+          {status.keyRequired && <TeacherLogout />}
         </Header>
         <main
           className={
@@ -82,17 +91,14 @@ export default async function Teacher({
               </div>
               <div className="teacher-hub-main teacher-entry-content">
                 {experiment === "judgment" ? (
-                  <JudgmentCreateForm
-                    status={getServerStatus()}
-                    studies={studies}
-                  />
+                  <JudgmentCreateForm status={status} studies={studies} />
                 ) : (
-                  <EmhCreateForm status={getServerStatus()} />
+                  <EmhCreateForm status={status} />
                 )}
               </div>
             </>
           ) : (
-            <TeacherHub status={getServerStatus()} />
+            <TeacherHub status={status} />
           )}
         </main>
       </>
@@ -102,6 +108,7 @@ export default async function Teacher({
     <>
       <Header homeHref="/teacher">
         <DemoEntryLink href="/demo" />
+        {status.keyRequired && <TeacherLogout />}
       </Header>
       <main
         className={
@@ -122,7 +129,7 @@ export default async function Teacher({
         <TeacherForm
           initialCode={code}
           initialTab={returnRoom ? "manage" : undefined}
-          status={getServerStatus()}
+          status={status}
           legacy={legacy === "1"}
           conditionPreset={{
             label: "Default",

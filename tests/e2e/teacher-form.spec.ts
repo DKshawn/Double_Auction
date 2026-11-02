@@ -1,11 +1,11 @@
 import { expect, test, type Locator } from "@playwright/test";
+import { enterTeacherPage } from "./helpers/teacher-login";
 
 test("teacher form guidance is consistent across experiments and reentry", async ({
   page,
 }) => {
   const expectedHelp = "再入室に使います。学生には共有しないでください。";
   let passwordStyle: { label: string; input: string; help: string } | undefined;
-  let keyStyle: { label: string; input: string; help: string } | undefined;
   const style = (locator: Locator) =>
     locator.evaluate((input) => {
       const label = input.closest("label");
@@ -24,6 +24,7 @@ test("teacher form guidance is consistent across experiments and reentry", async
 
   for (const experiment of ["institutions", "emh", "judgment"]) {
     await page.goto(`/teacher?experiment=${experiment}`);
+    await enterTeacherPage(page);
     const password = page.getByLabel("教員パスワード", { exact: false });
     await expect(password).toHaveAttribute("placeholder", "8文字以上で設定");
     await expect(page.getByText(expectedHelp, { exact: true })).toBeVisible();
@@ -31,17 +32,9 @@ test("teacher form guidance is consistent across experiments and reentry", async
     if (passwordStyle) expect(currentPasswordStyle).toEqual(passwordStyle);
     else passwordStyle = currentPasswordStyle;
 
-    const key = page.getByLabel("教員用キー", { exact: false });
-    if (await key.count()) {
-      const currentKeyStyle = await style(key);
-      await expect(
-        page.getByText("アプリの管理者から共有されたキーを入力します。", {
-          exact: true,
-        }),
-      ).toBeVisible();
-      if (keyStyle) expect(currentKeyStyle).toEqual(keyStyle);
-      else keyStyle = currentKeyStyle;
-    }
+    await expect(page.getByLabel("教員用キー", { exact: false })).toHaveCount(
+      0,
+    );
   }
 
   await page.goto("/teacher?code=");
@@ -65,6 +58,7 @@ test("teacher can create and reenter a room with an eight-digit password without
   // A separate configuration request must not leave this form disabled.
   await page.route("**/api/status", (route) => route.abort("failed"));
   await page.goto("/teacher?experiment=institutions");
+  await enterTeacherPage(page);
   await page.getByRole("button", { name: "教員として再入室" }).click();
   await expect(page.getByLabel("ルームコード", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "新しい実験" }).click();
@@ -91,6 +85,7 @@ test("teacher can create and reenter a room with an eight-digit password without
   try {
     const reentry = await returningTeacher.newPage();
     await reentry.goto(`/teacher?code=${code}`);
+    await enterTeacherPage(reentry);
     await reentry.waitForLoadState("networkidle");
     await reentry
       .getByLabel("教員パスワード", { exact: false })

@@ -2,7 +2,7 @@
 
 [日本語](../ja/demo.md) · [中文](../zh-CN/demo.md) · [English](../en/demo.md)
 
-Open **Demo Model** at the top right of each experiment's teacher page. No teacher key or production room is required.
+After signing in, open **Demo Model** at the top right of the teacher page. Opening the public demo URLs below directly requires no login and creates no production room.
 
 ## Double Auction
 
@@ -29,7 +29,11 @@ The preview also starts with the teacher settings form. After creation, start, p
 
 ## EMH
 
-[EMH Demo Model](https://exp-all-in-one.vercel.app/emh/demo) provides trading practice with eight virtual participants. See the [implementation conditions](emh.md).
+[EMH Demo Model](https://exp-all-in-one.vercel.app/emh/demo) uses the same settings form, validation limits and defaults as the formal experiment. Set initial securities, target size, type ratios and A/B period duration, then choose **デモルームを作成**. It creates one market of 3–12 participants; everyone except you is virtual, with eight virtual participants by default.
+
+Saving settings during admission, confirming and locking allocation, and explicitly releasing it before starting follow the formal workflow. Starting does not redraw confirmed types. There are six rounds, trade attempts of at most 30 seconds and 60-second breaks. Securities, timing, payouts and efficiency use the shared engine. Practice A/B dividends for types 1–3 are 120/40, 100/60 and 150/30; private classroom dividends are not used.
+
+**設定を見直す** restores the currently saved settings to the form and resets progress when another demo room is created. Reloading returns to the default settings page. State remains in browser memory, with no production room or Neon writes. See the [formal experiment conditions](emh.md).
 
 ## Judgement under Uncertainty
 

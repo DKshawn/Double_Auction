@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { enterTeacherPage } from "./helpers/teacher-login";
 
 test("pre-creation settings use a separate dialog with save and close", async ({
   page,
 }) => {
   await page.goto("/teacher?experiment=institutions");
+  await enterTeacherPage(page);
   const open = page.getByRole("button", {
     name: "作成前に詳細を設定",
     exact: true,
@@ -218,6 +220,7 @@ test("Custom keeps its candidate and manual parameters without automatically cha
   page,
 }) => {
   await page.goto("/teacher?experiment=institutions");
+  await enterTeacherPage(page);
   const open = page.getByRole("button", {
     name: "作成前に詳細を設定",
     exact: true,
@@ -394,6 +397,7 @@ test("teacher entry tabs keep the same navigation geometry", async ({
   page,
 }) => {
   await page.goto("/teacher?experiment=institutions");
+  await enterTeacherPage(page);
   const positions = [];
   for (const name of ["教員として再入室", "新しい実験", "ルーム管理"]) {
     await page.getByRole("button", { name, exact: true }).click();

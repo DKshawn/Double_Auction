@@ -15,17 +15,19 @@ npm run dev
 
 Windows 上可使用 `pwsh -NoProfile -File scripts/dev-local.ps1` 启动隔离的本地验证环境，端口为3200，数据目录为 `.data/platform-verification`。不再需要旧 EMH 文件夹，见[整理记录（英文）](../../releases/emh-folder-consolidation.md)。
 
-普通开发服务器的教师入口为 `http://localhost:3000/teacher`。学生入口 `/` 和共用页眉不显示教师及 Demo 链接。未配置 Neon 时使用嵌入式 PostgreSQL（PGlite），默认保存在 `.data/auction`；不要让多个服务器同时打开同一保存目录。生产环境使用 Neon。
+普通开发服务器的教师入口为 `http://localhost:3000/teacher`，也可从学生入口 `/` 的「教員用ページ」打开。配置密钥后，需先登录才能选择实验。未配置 Neon 时使用嵌入式 PostgreSQL（PGlite），默认保存在 `.data/auction`；不要让多个服务器同时打开同一保存目录。生产环境使用 Neon。
 
 如需本地也要求教师密钥，在不提交到 Git 的 `.env.local` 中设置 `TEACHER_ACCESS_KEY` 并重启服务。未设置时，本地不要求密钥。
 
+教师入口及 `?entry=teacher` 的房间页面在服务器端验证登录。`POST /api/teacher/session` 验证密钥后签发8小时有效的签名HttpOnly、SameSite=Lax Cookie，HTTPS下启用Secure；不会把密钥本身存入Cookie或浏览器存储。`DELETE` 用于退出，更换密钥使已有会话失效。创建、管理、删除及Judgment教师预览API验证会话，同时兼容现有已认证脚本的 `accessKey`。无需新增环境变量或数据库迁移。
+
 ## Vercel + Neon
 
-| 环境变量             | 用途                                                              |
-| -------------------- | ----------------------------------------------------------------- |
-| `DATABASE_URL`       | Neon pooled PostgreSQL 连接字符串，Vercel 必需                    |
-| `TEACHER_ACCESS_KEY` | 创建房间、管理列表和删除的共用教师密钥，Vercel 必需，不分享给学生 |
-| `PGLITE_DATA_DIR`    | 可选的本地数据保存目录                                            |
+| 环境变量             | 用途                                                            |
+| -------------------- | --------------------------------------------------------------- |
+| `DATABASE_URL`       | Neon pooled PostgreSQL 连接字符串，Vercel 必需                  |
+| `TEACHER_ACCESS_KEY` | 用于教师入口认证及会话签名的共用密钥，Vercel 必需，不分享给学生 |
+| `PGLITE_DATA_DIR`    | 可选的本地数据保存目录                                          |
 
 通过 GitHub 部署到 Vercel。`vercel.json` 的函数区域为 `sin1`，与 Neon Singapore 一致。首次连接自动初始化表，也可手动运行 `npm run db:migrate`。生产环境不会回退到本地数据库。
 

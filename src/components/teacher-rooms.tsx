@@ -1,7 +1,7 @@
 "use client";
 import { JUDGMENT_NAME } from "@/experiments/judgment/constants";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FlaskConical, RefreshCw, Search, Trash2 } from "lucide-react";
 import { api, ApiError, errorMessage } from "@/lib/client";
 import type { RoomSummary } from "@/lib/room-management";
@@ -9,7 +9,6 @@ import type { ServerStatus } from "@/lib/server/config";
 import type { Phase } from "@/experiments/double-auction/lib/types";
 import { INSTITUTIONS } from "@/experiments/double-auction/lib/study-rules";
 import { Spinner } from "./shell";
-import { TeacherKeyHelp } from "./teacher-key-help";
 
 const PHASE_LABELS: Record<Phase, string> = {
   waiting: "入室待ち",
@@ -36,8 +35,7 @@ export function TeacherRooms({
   onEnter: (code: string) => void;
 }) {
   const [rooms, setRooms] = useState<RoomSummary[] | null>(null);
-  const [accessKey, setAccessKey] = useState("");
-  const [pending, setPending] = useState(status.ready && !status.keyRequired);
+  const [pending, setPending] = useState(status.ready);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
@@ -45,16 +43,11 @@ export function TeacherRooms({
   const [phase, setPhase] = useState("");
   const [limit, setLimit] = useState(20);
   const [deleting, setDeleting] = useState<RoomSummary | null>(null);
-  const keyHelpId = useId();
 
   useEffect(() => {
-    if (!status.ready || status.keyRequired) return;
+    if (!status.ready) return;
     const controller = new AbortController();
-    api<{ rooms: RoomSummary[] }>(
-      "/api/rooms/manage",
-      { accessKey: "" },
-      controller.signal,
-    )
+    api<{ rooms: RoomSummary[] }>("/api/rooms/manage", {}, controller.signal)
       .then((result) => setRooms(result.rooms))
       .catch((e) => {
         if (!controller.signal.aborted) setError(errorMessage(e));
@@ -63,20 +56,20 @@ export function TeacherRooms({
         if (!controller.signal.aborted) setPending(false);
       });
     return () => controller.abort();
-  }, [status.ready, status.keyRequired]);
+  }, [status.ready]);
 
   async function load() {
     setPending(true);
     setError("");
     try {
-      const result = await api<{ rooms: RoomSummary[] }>("/api/rooms/manage", {
-        accessKey,
-      });
+      const result = await api<{ rooms: RoomSummary[] }>(
+        "/api/rooms/manage",
+        {},
+      );
       setRooms(result.rooms);
     } catch (e) {
-      if (e instanceof ApiError && e.status === 403 && rooms !== null) {
+      if (e instanceof ApiError && e.status === 401 && rooms !== null) {
         setRooms(null);
-        setAccessKey("");
       }
       setError(errorMessage(e));
     } finally {
@@ -87,7 +80,7 @@ export function TeacherRooms({
     const response = await fetch(`/api/rooms/${room.code}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmed: true, accessKey }),
+      body: JSON.stringify({ confirmed: true }),
       cache: "no-store",
     });
     const result = await response.json();
@@ -121,44 +114,14 @@ export function TeacherRooms({
         <h2 id="teacher-rooms-title">ルーム管理</h2>
         <button
           className="button secondary small-button"
-          disabled={
-            pending || !status.ready || (status.keyRequired && !accessKey)
-          }
+          disabled={pending || !status.ready}
           onClick={() => void load()}
         >
           <RefreshCw size={14} />
           更新
         </button>
       </div>
-      {status.keyRequired && rooms === null && (
-        <form
-          className="teacher-rooms-unlock"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void load();
-          }}
-        >
-          <label className="field">
-            教員用キー
-            <input
-              type="password"
-              value={accessKey}
-              onChange={(event) => setAccessKey(event.target.value)}
-              maxLength={256}
-              autoComplete="off"
-              aria-describedby={keyHelpId}
-              required
-            />
-          </label>
-          <button
-            className="button primary"
-            disabled={pending || !status.ready}
-          >
-            ルームを表示
-          </button>
-          <TeacherKeyHelp id={keyHelpId} />
-        </form>
-      )}
+
       {!status.ready && (
         <p className="error-message" role="alert">
           アプリの接続設定が完了していません。管理者がデータベースと教員用キーを設定してください。

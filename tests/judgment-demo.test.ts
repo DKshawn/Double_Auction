@@ -50,7 +50,7 @@ test("public demo generates the full catalog without a teacher login or session"
 
 test("demo access does not remove the existing teacher-preview protection", async () => {
   const response = await teacherPreview(request({ settings }));
-  assert.equal(response.status, 403);
+  assert.equal(response.status, 401);
 });
 
 test("demo rejects unsupported, duplicate or empty studies and room credentials", async () => {

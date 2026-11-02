@@ -246,6 +246,19 @@ summary.disclosure-button {
   justify-content: space-between;
   gap: 20px;
 }
+.header-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  min-width: 0;
+}
+.header-leading-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 .brand {
   color: var(--ink);
   display: flex;
@@ -996,6 +1009,12 @@ summary.disclosure-button {
     margin: 35px 24px 0;
     align-items: flex-start;
     font-size: 9px;
+  }
+  .header-left {
+    gap: 12px;
+  }
+  .header-leading-nav {
+    gap: 8px;
   }
   .header-right {
     gap: 10px;

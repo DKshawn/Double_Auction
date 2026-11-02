@@ -41,6 +41,8 @@ EMH Demo Model 也使用正式实验相同的设置表单和分组确认流程�
 
 [图解操作、重新进入与房间管理](docs/guide/zh-CN/classroom.md) · [Demo Model 使用说明](docs/guide/zh-CN/demo.md)
 
+「実験を選び直す」和 Demo 设置页的「教員用ページへ」返回按钮集中在页眉。
+
 ## 实验
 
 | 实验                        | 内容                                                                       | 指南                                             | 演示                                                          |

@@ -1545,7 +1545,8 @@
     flex-wrap: wrap;
     gap: 12px;
   }
-  .emh-app .site-header {
+  .emh-app .site-header,
+  .emh-app .site-header.compact {
     height: auto;
   }
   .emh-app .site-header nav {

@@ -34,17 +34,22 @@ export function Brand({
 
 export function Header({
   children,
+  leading,
   homeHref,
   onHome,
 }: {
   children?: React.ReactNode;
+  leading?: React.ReactNode;
   homeHref?: string;
   onHome?: () => void;
 }) {
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Brand homeHref={homeHref} onHome={onHome} />
+        <div className="header-left">
+          <Brand homeHref={homeHref} onHome={onHome} />
+          {leading}
+        </div>
         <div className="header-right">{children}</div>
       </div>
     </header>

@@ -41,6 +41,8 @@ EMHの Demo Model も正式実験と同じ設定フォームと分け方の確�
 
 [画面で見る使い方・再入室・ルーム管理](docs/guide/ja/classroom.md) · [Demo Model の使い方](docs/guide/ja/demo.md)
 
+「実験を選び直す」と Demo 設定画面の「教員用ページへ」は、ページ上部のヘッダーにあります。
+
 ## 実験
 
 | 実験                        | 内容                                                                                   | ガイド                                          | デモ                                                          |

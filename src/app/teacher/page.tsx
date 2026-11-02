@@ -14,12 +14,15 @@ import { teacherRoomHref } from "@/lib/room-navigation";
 import { requireTeacherPage } from "@/lib/server/teacher-page-access";
 import { TeacherLogout } from "@/components/teacher-login";
 
-function TeacherSelectionLink() {
+function TeacherSelectionNav({ children }: { children?: React.ReactNode }) {
   return (
-    <Link className="button secondary small-button" href="/teacher">
-      <ArrowLeft size={15} />
-      実験を選び直す
-    </Link>
+    <nav className="header-leading-nav" aria-label="教員の操作">
+      <Link className="button secondary small-button" href="/teacher">
+        <ArrowLeft size={15} />
+        実験を選び直す
+      </Link>
+      {children}
+    </nav>
   );
 }
 
@@ -43,16 +46,13 @@ export default async function Teacher({
   if (code !== undefined && !returnRoom) {
     return (
       <>
-        <Header>
+        <Header leading={<TeacherSelectionNav />}>
           <Link className="button secondary small-button" href="/">
             学生の入室画面
           </Link>
           {status.keyRequired && <TeacherLogout />}
         </Header>
         <main className="narrow-main teacher-setup-main">
-          <div className="teacher-entry-navigation">
-            <TeacherSelectionLink />
-          </div>
           <div className="teacher-hub-main teacher-entry-content">
             <TeacherReentry key={code} initialCode={code} />
           </div>
@@ -69,7 +69,7 @@ export default async function Teacher({
           : null;
     return (
       <>
-        <Header homeHref="/teacher">
+        <Header homeHref="/teacher" leading={<TeacherSelectionNav />}>
           {demoHref ? (
             <DemoEntryLink href={demoHref} />
           ) : (
@@ -85,18 +85,13 @@ export default async function Teacher({
           }
         >
           {demoHref ? (
-            <>
-              <div className="teacher-entry-navigation">
-                <TeacherSelectionLink />
-              </div>
-              <div className="teacher-hub-main teacher-entry-content">
-                {experiment === "judgment" ? (
-                  <JudgmentCreateForm status={status} studies={studies} />
-                ) : (
-                  <EmhCreateForm status={status} />
-                )}
-              </div>
-            </>
+            <div className="teacher-hub-main teacher-entry-content">
+              {experiment === "judgment" ? (
+                <JudgmentCreateForm status={status} studies={studies} />
+              ) : (
+                <EmhCreateForm status={status} />
+              )}
+            </div>
           ) : (
             <TeacherHub status={status} />
           )}
@@ -106,7 +101,21 @@ export default async function Teacher({
   }
   return (
     <>
-      <Header homeHref="/teacher">
+      <Header
+        homeHref="/teacher"
+        leading={
+          <TeacherSelectionNav>
+            {returnRoom && (
+              <Link
+                className="button secondary small-button"
+                href={teacherRoomHref(returnRoom)}
+              >
+                ルーム {returnRoom} に戻る
+              </Link>
+            )}
+          </TeacherSelectionNav>
+        }
+      >
         <DemoEntryLink href="/demo" />
         {status.keyRequired && <TeacherLogout />}
       </Header>
@@ -115,17 +124,6 @@ export default async function Teacher({
           legacy === "1" ? "narrow-main" : "narrow-main teacher-setup-main"
         }
       >
-        <div className="teacher-entry-navigation">
-          <TeacherSelectionLink />
-          {returnRoom && (
-            <Link
-              className="button secondary small-button"
-              href={teacherRoomHref(returnRoom)}
-            >
-              ルーム {returnRoom} に戻る
-            </Link>
-          )}
-        </div>
         <TeacherForm
           initialCode={code}
           initialTab={returnRoom ? "manage" : undefined}

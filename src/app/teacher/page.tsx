@@ -85,7 +85,9 @@ export default async function Teacher({
           }
         >
           {demoHref ? (
-            <div className="teacher-hub-main teacher-entry-content">
+            <div
+              className={`teacher-hub-main teacher-entry-content${experiment === "judgment" ? " judgment-entry-content" : ""}`}
+            >
               {experiment === "judgment" ? (
                 <JudgmentCreateForm status={status} studies={studies} />
               ) : (

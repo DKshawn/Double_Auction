@@ -1,4 +1,9 @@
 "use client";
+import {
+  TeacherLanguage,
+  useTeacherLanguage,
+  teacherText,
+} from "./teacher-language";
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -10,6 +15,9 @@ import { JudgmentPreview } from "./preview";
 import { SettingsFields } from "./settings-fields";
 
 export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
+  const [language, setLanguage] = useTeacherLanguage();
+  const t = (text: string, values: Record<string, string | number> = {}) =>
+    teacherText(text, language, values);
   const [settings, setSettings] = useState<Settings>({
     studyIds: [],
     randomizeExperiments: false,
@@ -52,30 +60,39 @@ export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
       >
         <span className="demo-header-tag">ひとりデモ</span>
       </Header>
-      <main className="teacher-hub-main">
+      <main
+        className="judgment-entry-main"
+        lang={language === "zh" ? "zh-CN" : language}
+      >
         <form className="judgment-create" onSubmit={start}>
-          <h1>{JUDGMENT_NAME}</h1>
+          <div className="judgment-section-heading">
+            <h1>{JUDGMENT_NAME}</h1>
+            <TeacherLanguage language={language} onChange={setLanguage} />
+          </div>
           <SettingsFields
             settings={settings}
             studies={studies}
             onChange={setSettings}
             disabled={busy}
-          />
-          {error && (
-            <p className="error-message" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            className="button primary"
-            disabled={busy || !settings.studyIds.length}
+            language={language}
           >
-            {busy ? "準備中…" : "デモを開始"}
-          </button>
+            {error && (
+              <p className="error-message" role="alert">
+                {error}
+              </p>
+            )}
+            <button
+              className="button primary"
+              disabled={busy || !settings.studyIds.length}
+            >
+              {t(busy ? "準備中…" : "デモを開始")}
+            </button>
+          </SettingsFields>
         </form>
         {protocols && (
           <JudgmentPreview
             demo
+            language={language}
             protocols={protocols}
             onClose={() => setProtocols(null)}
           />

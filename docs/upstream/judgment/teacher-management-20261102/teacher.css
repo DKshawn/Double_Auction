@@ -1,0 +1,117 @@
+.teacher-page {
+  --paper:#f6f7fb;
+  --white:#ffffff;
+  --ink:#22283d;
+  --muted:#6a7287;
+  --line:#e5e8f1;
+  --green:#5456c7;
+  --mint:#eeeefd;
+  --red:#ba4054;
+  --shadow:0 8px 36px #29366505;
+  min-height:100svh;
+  color:var(--ink);
+  background:var(--paper);
+}
+
+.teacher-page .student-topbar {
+  width:100%;max-width:none;height:64px;margin:0;padding:0 32px;gap:24px;
+}
+.teacher-page .header-tools{gap:24px;font-size:14px}
+.teacher-page .teacher-main{width:100%;max-width:none;margin:0;padding:24px 32px 48px}
+.teacher-page .teacher-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:0 0 24px}
+.teacher-page .teacher-heading h1,.teacher-page .teacher-heading h2{margin:0}
+.teacher-page #classroom-status{font-size:13px;white-space:nowrap}
+.teacher-page #classroom-status[data-active=true]{color:var(--green)}
+.teacher-page #teacher-error{margin:0 0 20px}
+.teacher-page #teacher-error:empty{display:none}
+
+.selection-workspace{display:grid;grid-template-columns:minmax(0,1fr) 288px;gap:24px;align-items:start}
+.teacher-page .experiment-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.teacher-page .experiment-block {
+  min-width:0;min-height:0;padding:0;
+  transition:border-color .15s,background-color .15s;
+}
+.teacher-page .experiment-block:hover{border-color:#ceceea}
+.teacher-page .experiment-block:has(input:checked){border-color:var(--green)}
+.teacher-page .experiment-block:has(input:focus-visible){outline:3px solid #b3b1f1;outline-offset:3px}
+.teacher-page .experiment-select{display:block;height:100%;padding:18px}
+.experiment-head{display:flex;align-items:flex-start;gap:10px}
+.experiment-head input{margin:4px 0 0}
+.teacher-page .experiment-title{font-size:16px;overflow-wrap:anywhere}
+.teacher-page .experiment-description{display:block;margin-top:12px;overflow-wrap:anywhere}
+.teacher-page .experiment-block:has(input:disabled) .experiment-select{cursor:default}
+
+.control-panel {
+  display:flex;flex-direction:column;position:sticky;top:24px;
+  max-height:calc(100svh - 48px);min-width:0;padding:22px;
+  border:1px solid var(--line);border-radius:16px;background:var(--white);box-shadow:var(--shadow);
+}
+.teacher-page #selection-count{flex-shrink:0;font-size:18px;font-weight:650;line-height:1.6;color:var(--ink);font-variant-numeric:tabular-nums}
+.selected-experiments{min-height:0;overflow:auto;margin:16px 0 0;padding:0;list-style:none;scrollbar-width:thin}
+.selected-experiments:empty{display:none}
+.selected-experiments li{padding:12px 0;border-top:1px solid var(--line);font-size:14px;font-weight:500;line-height:1.7;overflow-wrap:anywhere}
+.teacher-page .lesson-settings{flex-shrink:0;flex-direction:column;flex-wrap:nowrap;gap:16px;margin-top:20px;padding:20px 0 0;border-top:1px solid var(--line)}
+.teacher-page .lesson-settings label{align-items:flex-start;gap:10px;font-size:13px;line-height:1.8;cursor:pointer}
+.teacher-page .lesson-settings input{margin:3px 0 0}
+.teacher-page .lesson-buttons{flex-shrink:0;flex-direction:column;flex-wrap:nowrap;gap:10px;margin-top:24px}
+.teacher-page .lesson-buttons .button{width:100%;min-height:48px}
+.teacher-page .lesson-buttons .primary{order:-1}
+
+.teacher-page .button{padding:12px 20px}
+.teacher-page .button.primary{color:#ffffff;box-shadow:none}
+.teacher-page .button.primary:hover:not(:disabled),.teacher-page .button.primary:active:not(:disabled){background:#4345b2;border-color:#4345b2}
+.teacher-page .button.secondary{border-color:var(--line)}
+.teacher-page .button.secondary:hover:not(:disabled){background:#f7f7fd;border-color:#ceceea}
+.teacher-page a:focus-visible,.teacher-page button:focus-visible{outline-color:#9998ed}
+.teacher-page input:focus-visible,.teacher-page select:focus-visible{outline-color:#b3b1f1}
+.teacher-page dialog{box-shadow:var(--shadow)}
+.teacher-page dialog::backdrop{background:#22283d59}
+
+.teacher-students{margin-top:36px}
+.teacher-students .teacher-heading{gap:20px;margin-bottom:18px}
+.teacher-page .teacher-actions{margin:0}
+.teacher-page .teacher-actions .button{padding:10px 18px;font-size:13px}
+.teacher-page .table-scroll{border-radius:14px}
+.teacher-page .session-table{line-height:1.7}
+.teacher-page .session-table th{padding:14px 18px;font-weight:500;background:var(--paper)}
+.teacher-page .session-table td{padding:16px 18px;font-variant-numeric:tabular-nums}
+.teacher-page .session-table td:nth-child(2),.teacher-page .session-table td:nth-child(3){color:var(--muted)}
+.teacher-page .empty-state{border-color:var(--line);border-radius:14px;background:var(--white)}
+
+@media(max-width:1120px){
+  .selection-workspace{grid-template-columns:minmax(0,1fr) 272px;gap:20px}
+  .teacher-page .experiment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .control-panel{padding:20px}
+}
+@media(max-width:800px){
+  .selection-workspace{display:flex;flex-direction:column}
+  .control-panel{position:static;max-height:none;width:100%;order:-1}
+  .selected-experiments{display:none}
+  .teacher-page .lesson-settings{border:0;margin:16px 0 0;padding:0}
+  .teacher-page .lesson-buttons{flex-direction:row;margin-top:20px}
+  .teacher-page .lesson-buttons .button{flex:1;min-width:0}
+  .teacher-page .lesson-buttons .primary{order:0}
+  .teacher-page .experiment-grid{width:100%}
+}
+@media(max-width:700px){
+  .teacher-page .student-topbar{padding:0 20px;gap:12px}
+  .teacher-page .student-brand{font-size:15px;letter-spacing:.04em}
+  .teacher-page .header-tools{gap:12px;font-size:13px}
+  .teacher-page .language-select{min-width:90px}
+  .teacher-page .teacher-main{padding:20px}
+  .teacher-page .teacher-heading{gap:12px;margin-bottom:20px}
+  .teacher-page h1{font-size:24px}
+  .teacher-page h2{font-size:20px}
+  .teacher-page .teacher-actions .button{padding:10px 14px}
+  .teacher-page .session-table th,.teacher-page .session-table td{padding:14px}
+}
+@media(max-width:560px){
+  .teacher-page .experiment-grid{grid-template-columns:1fr}
+  .teacher-page .experiment-description{margin-top:10px}
+}
+@media(max-width:430px){
+  .teacher-page .student-topbar{height:auto;min-height:64px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}
+  .teacher-page .header-tools{margin-left:auto}
+  .teacher-page .experiment-title{font-size:15px}
+  .teacher-page .button{padding:12px 16px}
+}

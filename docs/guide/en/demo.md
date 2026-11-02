@@ -39,6 +39,8 @@ Saving settings during admission, confirming and locking allocation, and explici
 
 ## Judgement under Uncertainty
 
+Task cards, selected count/list and randomization settings are shared with formal experiments. Use **デモを開始** in the right control panel; on narrow screens the panel moves above the cards. Setup supports Japanese, Chinese and English, and closing the preview retains the current selection. The preview opens in the teacher's selected language and also allows switching within the student view.
+
 [Judgement Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) previews the student screens after task selection. Circular **i** buttons open task details. The preview does not save answers and pauses time limits. Use the isolated local verification flow to check production timing and answer persistence.
 
 ---

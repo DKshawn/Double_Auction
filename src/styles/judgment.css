@@ -1,15 +1,11 @@
 .judgment-create,
 .judgment-teacher {
-  max-width: 1120px;
+  max-width: 1440px;
   margin: 28px auto 64px;
 }
 .judgment-create {
   display: grid;
   gap: 24px;
-  background: var(--paper);
-  padding: 28px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
 }
 .judgment-teacher {
   padding: 0 24px;
@@ -47,34 +43,60 @@
 }
 .judgment-study-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
 }
 .judgment-study-option {
+  position: relative;
   display: flex;
-  align-items: center;
+  min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 14px;
+  background: var(--paper);
 }
 .judgment-study-option > label {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   flex: 1;
   min-width: 0;
   gap: 12px;
-  padding: 16px;
+  padding: 20px;
   cursor: pointer;
+}
+.judgment-study-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-right: 32px;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.judgment-study-description {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.judgment-study-option:has(input:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.judgment-study-option:has(input:disabled) > label {
+  cursor: default;
 }
 .judgment-study-option.selected {
   border-color: var(--accent);
   background: var(--lavender);
 }
 .judgment-study-info.button {
+  position: absolute;
+  top: 16px;
+  right: 12px;
   flex-shrink: 0;
   width: 32px;
   height: 32px;
   min-height: 32px;
-  margin-right: 12px;
+  margin-right: 0;
   padding: 0;
   border-radius: 50%;
   color: var(--accent);
@@ -138,7 +160,7 @@
 .judgment-study-conditions p + p {
   margin-top: 8px;
 }
-.judgment-settings input[type="checkbox"] {
+.judgment-workspace input[type="checkbox"] {
   accent-color: var(--accent);
   width: 18px;
   height: 18px;
@@ -152,13 +174,16 @@
 }
 .judgment-randomization label {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.8;
 }
 .judgment-room-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 20px;
   border-top: 1px solid var(--line);
   padding-top: 24px;
 }
@@ -191,13 +216,6 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--accent);
-}
-.judgment-active-studies {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 32px;
-  margin: 20px 0 0;
-  padding-left: 20px;
 }
 .judgment-table-scroll {
   overflow-x: auto;
@@ -277,14 +295,8 @@
   margin-inline: auto;
 }
 @media (max-width: 700px) {
-  .judgment-create,
   .judgment-panel {
     padding: 20px;
-  }
-  .judgment-study-grid,
-  .judgment-room-fields,
-  .judgment-active-studies {
-    grid-template-columns: 1fr;
   }
   .judgment-teacher {
     padding: 0 16px;
@@ -306,5 +318,149 @@
   .judgment-preview-toolbar .button {
     font-size: 12px;
     padding: 8px 12px;
+  }
+}
+
+.teacher-hub-main.teacher-entry-content.judgment-entry-content {
+  max-width: 1440px;
+}
+.judgment-entry-main {
+  max-width: 1488px;
+  margin: 40px auto 72px;
+  padding: 0 24px;
+}
+.judgment-create h1 {
+  margin: 0;
+  font-size: 26px;
+}
+.judgment-create > .judgment-section-heading {
+  margin-bottom: 0;
+}
+.judgment-language {
+  min-height: 40px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--paper);
+}
+.judgment-selection-panel {
+  margin-top: 24px;
+}
+.judgment-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 24px;
+}
+.judgment-control-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: sticky;
+  top: 24px;
+  max-height: calc(100svh - 48px);
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+.judgment-control-panel > :not(.judgment-selected-studies) {
+  flex-shrink: 0;
+}
+.judgment-control-panel > strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.judgment-selected-studies {
+  min-height: 0;
+  overflow: auto;
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  scrollbar-width: thin;
+}
+.judgment-selected-studies:empty {
+  display: none;
+}
+.judgment-selected-studies li {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.judgment-control-panel .judgment-randomization {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+.judgment-control-panel > .button,
+.judgment-control-panel > .judgment-actions {
+  margin-top: 24px;
+}
+.judgment-control-panel .judgment-actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.judgment-control-panel .judgment-actions .primary {
+  order: -1;
+}
+.judgment-control-panel .error-message {
+  margin-top: 16px;
+}
+.judgment-teacher th {
+  background: var(--bg);
+}
+@media (max-width: 1200px) {
+  .judgment-study-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 850px) {
+  .judgment-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+  .judgment-settings {
+    width: 100%;
+  }
+  .judgment-control-panel {
+    position: static;
+    max-height: none;
+    width: 100%;
+    order: -1;
+  }
+  .judgment-selected-studies {
+    display: none;
+  }
+  .judgment-control-panel .judgment-actions {
+    flex-direction: row;
+  }
+  .judgment-control-panel .judgment-actions .button {
+    flex: 1;
+    min-width: 0;
+  }
+}
+@media (max-width: 560px) {
+  .judgment-study-grid {
+    grid-template-columns: 1fr;
+  }
+  .judgment-entry-main {
+    padding: 0 16px;
+  }
+  .judgment-control-panel {
+    padding: 20px;
+  }
+}
+@media (max-height: 700px) and (min-width: 851px) {
+  .judgment-control-panel {
+    position: static;
+    max-height: none;
+  }
+  .judgment-selected-studies {
+    max-height: 180px;
   }
 }

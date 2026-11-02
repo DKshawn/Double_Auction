@@ -1,10 +1,21 @@
 "use client";
+import {
+  TeacherLanguage,
+  useTeacherLanguage,
+  teacherText,
+} from "./teacher-language";
 import { JUDGMENT_NAME } from "../constants";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Header } from "@/components/shell";
 import { api, ApiError, errorMessage } from "@/lib/client";
-import type { PreviewProtocol, Settings, Study, TeacherView } from "../types";
+import type {
+  Language,
+  PreviewProtocol,
+  Settings,
+  Study,
+  TeacherView,
+} from "../types";
 import type { Command } from "../server/validation";
 import { SettingsFields } from "./settings-fields";
 import { JudgmentPreview } from "./preview";
@@ -16,6 +27,9 @@ export function JudgmentTeacherRoom({
   code: string;
   studies: Study[];
 }) {
+  const [language, setLanguage] = useTeacherLanguage();
+  const t = (text: string, values: Record<string, string | number> = {}) =>
+    teacherText(text, language, values);
   const [data, setData] = useState<TeacherView | null>(null),
     [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState(""),
@@ -59,7 +73,7 @@ export function JudgmentTeacherRoom({
     };
   }, [base]);
   async function command(kind: "start" | "end") {
-    if (!data || !settings) return;
+    if (!data || !settings || busyRef.current) return;
     const payload =
       (commandPending.current?.kind === kind ? commandPending.current : null) ??
       (kind === "start"
@@ -95,7 +109,8 @@ export function JudgmentTeacherRoom({
     }
   }
   async function showPreview() {
-    if (!settings) return;
+    if (!settings || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     try {
@@ -108,6 +123,7 @@ export function JudgmentTeacherRoom({
       setError(errorMessage(e));
     } finally {
       setBusy(false);
+      busyRef.current = false;
     }
   }
   const running = data?.lesson?.status === "active",
@@ -117,13 +133,19 @@ export function JudgmentTeacherRoom({
     <>
       <Header homeHref="/teacher">
         <Link className="button secondary small-button" href="/teacher">
-          ルーム管理
+          {t("ルーム管理")}
         </Link>
       </Header>
-      <main className="judgment-teacher">
+      <main
+        className="judgment-teacher"
+        lang={language === "zh" ? "zh-CN" : language}
+      >
         <div className="judgment-section-heading">
           <h1>{data?.title ?? JUDGMENT_NAME}</h1>
-          <span className="judgment-room-code">{code}</span>
+          <div className="judgment-actions">
+            <span className="judgment-room-code">{code}</span>
+            <TeacherLanguage language={language} onChange={setLanguage} />
+          </div>
         </div>
         {connectionError && (
           <p role="alert" className="error-message">
@@ -132,96 +154,85 @@ export function JudgmentTeacherRoom({
         )}
         {needsLogin && (
           <Link className="button primary" href={`/teacher?code=${code}`}>
-            教員として再入室
+            {t("教員として再入室")}
           </Link>
         )}
-        {!data && !connectionError && <p role="status">読み込み中…</p>}
+        {!data && !connectionError && <p role="status">{t("読み込み中…")}</p>}
         {data && settings && (
           <>
             <div className="judgment-overview">
               <span>
                 {running
-                  ? `第${data.lesson!.number}回 実施中`
+                  ? t("第{number}回 実施中", { number: data.lesson!.number })
                   : data.lesson
-                    ? "実施終了"
-                    : "開始前"}
+                    ? t("実施終了")
+                    : t("開始前")}
               </span>
               <span>
-                参加者 <b>{data.students.length}</b> 人
+                {t("参加者 {count} 人", { count: data.students.length })}
               </span>
-              <span>
-                回答完了 <b>{completed}</b> 人
-              </span>
+              <span>{t("回答完了 {count} 人", { count: completed })}</span>
               <Link
                 className="button secondary small-button"
                 href={`/?code=${code}`}
                 target="_blank"
               >
-                学生の入室画面
+                {t("学生の入室画面")}
               </Link>
             </div>
-            <section className="judgment-panel">
-              {running ? (
-                <>
-                  <h2>実施中の課題</h2>
-                  <ul className="judgment-active-studies">
-                    {data.lesson!.settings.studyIds.map((id) => (
-                      <li key={id}>
-                        {studies.find((s) => s.id === id)?.names.ja}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <SettingsFields
-                  studies={studies}
-                  settings={settings}
-                  disabled={busy}
-                  onChange={(value) => {
-                    commandPending.current = null;
-                    setSettings(value);
-                  }}
-                />
-              )}
-              <div className="judgment-actions">
-                <button
-                  className="button secondary"
-                  disabled={busy || !settings.studyIds.length}
-                  onClick={() => void showPreview()}
-                >
-                  学生画面をプレビュー
-                </button>
-                {running ? (
+            <section className="judgment-selection-panel">
+              <SettingsFields
+                studies={studies}
+                settings={running ? data.lesson!.settings : settings}
+                disabled={busy || running}
+                language={language}
+                onChange={(value) => {
+                  commandPending.current = null;
+                  setSettings(value);
+                }}
+              >
+                <div className="judgment-actions">
                   <button
-                    className="button primary"
-                    disabled={busy}
-                    onClick={() => setEnding(true)}
-                  >
-                    今回の実施を終了
-                  </button>
-                ) : (
-                  <button
-                    className="button primary"
+                    className="button secondary"
                     disabled={busy || !settings.studyIds.length}
-                    onClick={() => void command("start")}
+                    onClick={() => void showPreview()}
                   >
-                    {busy
-                      ? "開始中…"
-                      : data.lesson
-                        ? "次の実施を開始"
-                        : "実施を開始"}
+                    {t("学生画面をプレビュー")}
                   </button>
+                  {running ? (
+                    <button
+                      className="button primary"
+                      disabled={busy}
+                      onClick={() => setEnding(true)}
+                    >
+                      {t("今回の実施を終了")}
+                    </button>
+                  ) : (
+                    <button
+                      className="button primary"
+                      disabled={busy || !settings.studyIds.length}
+                      onClick={() => void command("start")}
+                    >
+                      {t(
+                        busy
+                          ? "開始中…"
+                          : data.lesson
+                            ? "次の実施を開始"
+                            : "実施を開始",
+                      )}
+                    </button>
+                  )}
+                </div>
+                {error && (
+                  <p role="alert" className="error-message">
+                    {error}
+                  </p>
                 )}
-              </div>
-              {error && (
-                <p role="alert" className="error-message">
-                  {error}
-                </p>
-              )}
+              </SettingsFields>
             </section>
             <section className="judgment-panel">
               <div className="judgment-section-heading">
-                <h2>参加状況</h2>
+                <h2>{t("参加状況")}</h2>
                 <div className="judgment-actions">
                   <a
                     className="button secondary small-button"
@@ -233,7 +244,7 @@ export function JudgmentTeacherRoom({
                     className="button secondary small-button"
                     href={base + "/export?format=json&session=teacher"}
                   >
-                    全記録 JSON
+                    {t("全記録 JSON")}
                   </a>
                 </div>
               </div>
@@ -242,16 +253,16 @@ export function JudgmentTeacherRoom({
                   <table>
                     <thead>
                       <tr>
-                        <th>学生証番号</th>
-                        <th>状態</th>
-                        <th>回答ページ</th>
+                        <th scope="col">{t("学生証番号")}</th>
+                        <th scope="col">{t("状態")}</th>
+                        <th scope="col">{t("回答ページ")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.students.map((s) => (
                         <tr key={s.studentId}>
                           <td>{s.studentId}</td>
-                          <td>{s.status ? statuses[s.status] : "待機中"}</td>
+                          <td>{t(s.status ? statuses[s.status] : "待機中")}</td>
                           <td>
                             {s.totalTrials
                               ? `${s.answered} / ${s.totalTrials}`
@@ -263,24 +274,31 @@ export function JudgmentTeacherRoom({
                   </table>
                 </div>
               ) : (
-                <p className="muted">学生の入室を待っています。</p>
+                <p className="muted">{t("学生の入室を待っています。")}</p>
               )}
             </section>
             {data.history.length > 0 && (
               <section className="judgment-panel">
-                <h2>実施履歴</h2>
+                <h2>{t("実施履歴")}</h2>
                 <ol className="judgment-history">
                   {data.history.map((lesson) => (
                     <li key={lesson.id}>
-                      <strong>第{lesson.number}回</strong>
+                      <strong>
+                        {t("第{number}回", { number: lesson.number })}
+                      </strong>
                       <span>
-                        {lesson.settings.studyIds.length}課題 ·{" "}
-                        {lesson.status === "active" ? "実施中" : "終了"}
+                        {t("{count}課題", {
+                          count: lesson.settings.studyIds.length,
+                        })}{" "}
+                        · {t(lesson.status === "active" ? "実施中" : "終了")}
                       </span>
                       <time>
-                        {new Date(lesson.createdAt).toLocaleString("ja-JP", {
-                          timeZone: "Asia/Tokyo",
-                        })}
+                        {new Date(lesson.createdAt).toLocaleString(
+                          language === "zh" ? "zh-CN" : language,
+                          {
+                            timeZone: "Asia/Tokyo",
+                          },
+                        )}
                       </time>
                     </li>
                   ))}
@@ -291,10 +309,15 @@ export function JudgmentTeacherRoom({
         )}
       </main>
       {preview && (
-        <JudgmentPreview protocols={preview} onClose={() => setPreview(null)} />
+        <JudgmentPreview
+          language={language}
+          protocols={preview}
+          onClose={() => setPreview(null)}
+        />
       )}
       {ending && (
         <EndDialog
+          language={language}
           busy={busy}
           error={error}
           onCancel={() => setEnding(false)}
@@ -305,16 +328,19 @@ export function JudgmentTeacherRoom({
   );
 }
 function EndDialog({
+  language,
   busy,
   error,
   onCancel,
   onConfirm,
 }: {
+  language: Language;
   busy: boolean;
   error: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = (text: string) => teacherText(text, language);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const el = dialog.current;
@@ -325,14 +351,15 @@ function EndDialog({
     <dialog
       ref={dialog}
       className="confirm-dialog"
+      lang={language === "zh" ? "zh-CN" : language}
       aria-labelledby="judgment-end-title"
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) onCancel();
       }}
     >
-      <h2 id="judgment-end-title">今回の実施を終了しますか？</h2>
-      <p>回答中の学生も終了します。保存済みの回答は残ります。</p>
+      <h2 id="judgment-end-title">{t("今回の実施を終了しますか？")}</h2>
+      <p>{t("回答中の学生も終了します。保存済みの回答は残ります。")}</p>
       {error && (
         <p role="alert" className="error-message">
           {error}
@@ -340,10 +367,10 @@ function EndDialog({
       )}
       <div className="dialog-actions">
         <button className="button secondary" disabled={busy} onClick={onCancel}>
-          戻る
+          {t("戻る")}
         </button>
         <button className="button primary" disabled={busy} onClick={onConfirm}>
-          {busy ? "終了中…" : "終了する"}
+          {t(busy ? "終了中…" : "終了する")}
         </button>
       </div>
     </dialog>

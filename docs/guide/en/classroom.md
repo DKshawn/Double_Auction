@@ -8,6 +8,8 @@ Create a room, bring students in, run the experiment, and download the results. 
 
 On experiment setup and re-entry pages, use **実験を選び直す** in the header to return to experiment selection. When opening settings from a Double Auction room, **ルーム … に戻る** in the same header returns to that room.
 
+Judgement room creation places task cards beside the selection and create controls; on narrow screens controls appear above the cards. See the [Judgement guide](judgment.md) for language switching and controls during a run.
+
 ## 1. Choose an experiment and create a room
 
 Open the teacher entry, enter the administrator-provided **教員用キー**, and click **ログイン**. After authentication, select an experiment or manage saved rooms from the same entry.

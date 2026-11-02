@@ -4,7 +4,7 @@ import { createTimedAttempt, captureTimedInput, finishTimedAttempt } from './tim
 import { rankingHTML, mountRanking, RANKING_CONTROL } from './ranking.js';
 import { createPreviewState, previewRun } from './preview-state.js';
 
-export function mountJudgment(app,{code='',isPreview=false,protocols=[],onPreviewState=()=>{}}={}) {
+export function mountJudgment(app,{code='',isPreview=false,protocols=[],onPreviewState=()=>{},initialLanguage='ja'}={}) {
 let disposed=false;const controller=new AbortController();
 app.innerHTML='<p class="loading">読み込み中…</p>';
 const $=(selector,root=app)=>root.querySelector(selector);
@@ -16,7 +16,7 @@ const storage={
   set(key,value){if(isPreview)previewMemory.set(key,value);else localStorage.setItem(prefix+key,JSON.stringify(value));},
   remove(key){if(isPreview)previewMemory.delete(key);else localStorage.removeItem(prefix+key);}
 };
-let language=normalizeLanguage(storage.get('language','ja'));
+let language=normalizeLanguage(storage.get('language',isPreview?initialLanguage:'ja'));
 let cleanup=()=>{};
 let studentToken=code,studentId='',currentRun=null,view='entry',sending=false,polling=false;
 let preview=null;

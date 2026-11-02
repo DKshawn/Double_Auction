@@ -112,10 +112,14 @@ export function exportData(room: Room, actor: Actor, kind: string) {
             [1, 2, 3].map(
               (type) => room.participants.filter((p) => p.type === type).length,
             ),
-          benchmarks: benchmarks(room.config),
+          benchmarks:
+            room.config.experiment === "exp2" ? null : benchmarks(room.config),
           assignment: room.participants.map((p) => ({
             subjectNo: p.seat,
             type: p.type,
+            ...(room.config.experiment === "exp2"
+              ? { insider: p.insider }
+              : {}),
             studentId: p.studentId,
             name: p.name,
           })),
@@ -140,6 +144,41 @@ export function exportData(room: Room, actor: Actor, kind: string) {
   }
   let rows: Cell[][];
   if (kind === "participants") {
+    if (room.config.experiment === "exp2") {
+      rows = [
+        [
+          "room",
+          "student_id",
+          "name",
+          "subject_no",
+          "type",
+          "dividend_state_1",
+          "dividend_state_2",
+          "dividend_state_3",
+          "insider_rounds_3_to_6",
+          "completed_years_profit",
+        ],
+      ];
+      rows.push(
+        ...room.participants.map((p) => [
+          room.code,
+          p.studentId,
+          p.name,
+          p.seat,
+          p.type,
+          ...(p.type
+            ? room.config.states!.dividends[p.type - 1]!
+            : [null, null, null]),
+          p.insider ? 1 : 0,
+          p.totalProfit,
+        ]),
+      );
+      return {
+        body: csv(rows),
+        extension: "csv",
+        contentType: "text/csv; charset=utf-8",
+      };
+    }
     rows = [
       [
         "room",
@@ -174,7 +213,9 @@ export function exportData(room: Room, actor: Actor, kind: string) {
         "reason",
         "volume",
         "mean_price",
-        "mean_price_over_PF",
+        room.config.experiment === "exp2"
+          ? "mean_price_over_RE"
+          : "mean_price_over_PF",
         "actual_dividend",
         "max_dividend",
         "initial_dividend",
@@ -184,6 +225,9 @@ export function exportData(room: Room, actor: Actor, kind: string) {
         "initial_units",
         "total_units",
         "period_seconds",
+        ...(room.config.experiment === "exp2"
+          ? ["state", "PI_price", "RE_price"]
+          : []),
       ],
     ];
     rows.push(
@@ -205,6 +249,9 @@ export function exportData(room: Room, actor: Actor, kind: string) {
         initialUnitsFor(room.config),
         room.participants.length * initialUnitsFor(room.config),
         room.config.periodSeconds,
+        ...(room.config.experiment === "exp2"
+          ? [r.state, r.piPrice, r.rePrice]
+          : []),
       ]),
     );
   } else if (kind === "payouts") {

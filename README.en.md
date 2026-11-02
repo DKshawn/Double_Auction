@@ -37,7 +37,7 @@ The teacher creates and shares a room, and students join with its code, using a 
 
 Enter the teacher key once at the teacher entry. The same browser stays signed in for eight hours across reloads, experiment changes, room creation and management. Sign in again after logout, expiry or a key change; each room keeps its separate teacher password.
 
-EMH Demo Model uses the same settings form and allocation-confirmation workflow as the formal experiment.
+EMH Demo Model supports both experiments. Experiment 2 uses fixed rules and separate practice dividends and states. Students see state conditions, separate bid and ask inputs, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 
@@ -50,7 +50,7 @@ Judgement teacher pages and the demo share task cards, the selection list and co
 | Experiment                  | Scope                                                                                                                              | Guide                                             | Demo                                                          |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
 | Double Auction              | Compare CDA, Call Market, and Posted Offer; allocate markets and roles using actual attendance                                     | [Flow and rules](docs/guide/en/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
-| EMH                         | Configure initial securities, target group size, type ratios and period duration; allocate everyone and lock confirmed conditions  | [Flow and rules](docs/guide/en/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
+| EMH                         | Configure Experiment 1 or run Experiment 2 with fixed 12-person markets                                                            | [Flow and rules](docs/guide/en/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
 | Judgement under Uncertainty | 14 judgment and cognitive bias tasks, condition assignment, task and option ordering, timing, and Japanese/Chinese/English display | [Flow and data](docs/guide/en/judgment.md)        | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
 
 ## Development and materials

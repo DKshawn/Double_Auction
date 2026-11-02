@@ -1,6 +1,12 @@
 import type { EmhSettings } from "../settings";
 
-export function SettingsSummary({ settings }: { settings: EmhSettings }) {
+export function SettingsSummary({
+  settings,
+  experiment = "exp1",
+}: {
+  settings: EmhSettings;
+  experiment?: "exp1" | "exp2";
+}) {
   return (
     <>
       <h2>確定した実験条件</h2>
@@ -18,7 +24,7 @@ export function SettingsSummary({ settings }: { settings: EmhSettings }) {
           <dd>{settings.typeRatios.join(" : ")}</dd>
         </div>
         <div>
-          <dt>A・B各期</dt>
+          <dt>{experiment === "exp2" ? "各ラウンド" : "A・B各期"}</dt>
           <dd>{settings.periodSeconds}秒</dd>
         </div>
       </dl>

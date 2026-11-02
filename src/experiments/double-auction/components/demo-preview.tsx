@@ -50,15 +50,37 @@ const PRESETS = [
   },
 ] as const;
 
-export function DemoPreview() {
+const MOBILE_PRESETS = [
+  {
+    screen: "スマートフォン",
+    width: 390,
+    height: 844,
+    description: "390 × 844",
+  },
+  {
+    screen: "小さいスマートフォン",
+    width: 320,
+    height: 700,
+    description: "320 × 700",
+  },
+] as const;
+
+export function DemoPreview({
+  experiment = "double-auction",
+}: {
+  experiment?: "double-auction" | "emh";
+}) {
+  const isEmh = experiment === "emh";
+  const presets = isEmh ? [...PRESETS, ...MOBILE_PRESETS] : PRESETS;
+  const demoPath = isEmh ? "/emh/demo" : "/demo";
   const controlsId = useId();
-  const [selected, setSelected] = useState(1);
+  const [selected, setSelected] = useState(isEmh ? 0 : 1);
   const [reserveChrome, setReserveChrome] = useState(true);
   const [fit, setFit] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [available, setAvailable] = useState({ width: 0, height: 0 });
   const stage = useRef<HTMLDivElement>(null);
-  const preset = PRESETS[selected];
+  const preset = presets[selected]!;
   const height = preset.height - (reserveChrome ? 120 : 0);
   const scale =
     fit && available.width > 0 && available.height > 0
@@ -86,14 +108,16 @@ export function DemoPreview() {
           <div>
             <h1>
               <Laptop size={22} aria-hidden="true" />
-              画面サイズ別デモ
+              {isEmh ? "EMH · 画面サイズ別デモ" : "画面サイズ別デモ"}
             </h1>
             <p>
-              デモ操作は枠の外、設定・実験画面は枠の中。サイズを切り替えても進行状況は保持されます。
+              {isEmh
+                ? "枠の中でデモを操作できます。サイズを切り替えても進行状況は保持されます。"
+                : "デモ操作は枠の外、設定・実験画面は枠の中。サイズを切り替えても進行状況は保持されます。"}
             </p>
           </div>
           <Link
-            href="/demo"
+            href={demoPath}
             target="_blank"
             rel="noopener noreferrer"
             className="button secondary small-button"
@@ -107,7 +131,7 @@ export function DemoPreview() {
             role="group"
             aria-label="画面サイズと表示倍率"
           >
-            {PRESETS.map((item, index) => (
+            {presets.map((item, index) => (
               <button
                 key={`${item.width}-${item.height}`}
                 type="button"
@@ -119,6 +143,19 @@ export function DemoPreview() {
               </button>
             ))}
           </div>
+          <label className={styles.mobilePresets}>
+            画面サイズ
+            <select
+              value={selected}
+              onChange={(event) => setSelected(Number(event.target.value))}
+            >
+              {presets.map((item, index) => (
+                <option key={`${item.width}-${item.height}`} value={index}>
+                  {item.screen} · {item.description}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className={styles.display}>
             プレビュー表示
             <select
@@ -165,8 +202,8 @@ export function DemoPreview() {
           <iframe
             className={styles.frame}
             title="操作できるひとりデモ"
-            data-demo-controls={controlsId}
-            src="/demo"
+            data-demo-controls={isEmh ? undefined : controlsId}
+            src={demoPath}
             width={preset.width}
             height={height}
             style={{ transform: `scale(${scale})` }}

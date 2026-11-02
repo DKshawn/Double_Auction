@@ -25,6 +25,12 @@ export const DEFAULT_SETTINGS: EmhSettings = {
   typeRatios: [1, 1, 1],
   periodSeconds: 240,
 };
+export const EXP2_SETTINGS: EmhSettings = {
+  initialUnits: 2,
+  targetMarketSize: 12,
+  typeRatios: [1, 1, 1],
+  periodSeconds: 300,
+};
 
 // Rooms saved before configurable conditions retain the original protocol.
 export function initialUnitsFor(config: { initialUnits?: number }) {

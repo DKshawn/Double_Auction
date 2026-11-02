@@ -23,17 +23,23 @@ State exists only in browser memory, with no writes to APIs, cookies, or Neon. R
 
 ### Screen-size preview
 
-Open [`/demo/preview`](https://exp-all-in-one.vercel.app/demo/preview), or the link under **デモについて**, for an interactive laptop-size preview. Five presets cover 1366×768 at 100%, 1920×1080 at 125%, 150%, and 100%, and a 14-inch MacBook Pro at 1512×982 with Retina 2×. Optionally subtract 120 CSS px for browser and operating-system bars.
+Open [`/demo/preview`](https://exp-all-in-one.vercel.app/demo/preview), or the link under **デモについて**, for an interactive laptop-size preview. Seven presets cover 1366×768 at 100%, 1920×1080 at 125%, 150%, and 100%, a 14-inch MacBook Pro at 1512×982 with Retina 2×, and 11- and 13-inch iPad Pro displays. Optionally subtract 120 CSS px for browser and operating-system bars.
 
-The MacBook Pro preset converts 3024×1964 physical pixels to logical dimensions at 2×, giving 1512×862 CSS px after the reserved height. Actual browser and system overhead varies. A single fixed-size iframe displays `/demo`, so changing dimensions does not reload the demo or discard trading or teacher-view state. **全体に合わせる** scales only the outer display; **原寸** displays at 100%. The viewport dimensions and preview scale are both shown. Only same-origin `/demo` embedding is allowed; teacher and production experiment pages remain protected against embedding.
+The MacBook Pro preset converts 3024×1964 physical pixels to logical dimensions at 2×, giving 1512×862 CSS px after the reserved height. Actual browser and system overhead varies. A single fixed-size iframe displays `/demo`, so changing dimensions does not reload the demo or discard trading or teacher-view state. **全体に合わせる** scales only the outer display; **原寸** displays at 100%. The viewport dimensions and preview scale are both shown. Only same-origin `/demo` and `/emh/demo` embedding is allowed; teacher and production experiment pages remain protected against embedding.
 
 The preview also starts with the teacher settings form. After creation, start, pause, reset, role selection, and return-to-settings controls sit outside the frame, preserving the experiment's display height. A same-origin React Portal controls the same demo session. Ordinary `/demo` keeps its control panel inside the page.
 
 ## EMH
 
-[EMH Demo Model](https://exp-all-in-one.vercel.app/emh/demo) uses the same settings form, validation limits and defaults as the formal experiment. Set initial securities, target size, type ratios and A/B period duration, then choose **デモルームを作成**. It creates one market of 3–12 participants; everyone except you is virtual, with eight virtual participants by default.
+[EMH Demo Model](https://exp-all-in-one.vercel.app/emh/demo) offers Experiment 1 and Experiment 2. Experiment 1 uses the same settings form, validation limits and defaults as the formal experiment. Set initial securities, target size, type ratios and A/B period duration, then choose **デモルームを作成**. It creates one market of 3–12 participants; everyone except you is virtual, with eight virtual participants by default.
 
 Saving settings during admission, confirming and locking allocation, and explicitly releasing it before starting follow the formal workflow. Starting does not redraw confirmed types. There are six rounds, trade attempts of at most 30 seconds and 60-second breaks. Securities, timing, payouts and efficiency use the shared engine. Practice A/B dividends for types 1–3 are 120/40, 100/60 and 150/30; private classroom dividends are not used.
+
+Experiment 2 uses fixed conditions for one market with you and 11 virtual participants over six rounds. Each type has four members; no one receives a clue in rounds 1–2, and two per type receive one in rounds 3–6. Each round lasts up to five minutes and starts with two securities per participant. Practice dividends are 80/110/170, 60/180/100 and 140/120/90, with realized states 3/3/3/3/2/2. Virtual participants trade using their own information.
+
+In Experiment 2, the student view pairs each state’s dividend with its probability, provides separate bid and ask inputs, and shows market prices and personal round records together. During Experiment 2, the teacher view’s **実験条件** button expands or collapses the fixed conditions.
+
+Open the EMH screen-size preview at `/emh/demo/preview` or with **画面サイズ別プレビュー** on the demo setup page. Choose desktop, iPad or phone dimensions; the interactive demo and progress inside the frame remain intact when switching sizes. You can reserve 120px for browser and system bars and choose fit-to-window or actual size.
 
 **設定を見直す** restores the currently saved settings to the form and resets progress when another demo room is created. Reloading returns to the default settings page. State remains in browser memory, with no production room or Neon writes. See the [formal experiment conditions](emh.md).
 

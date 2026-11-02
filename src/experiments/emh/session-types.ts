@@ -11,6 +11,7 @@ export type Member = {
   marketId: number | null;
 };
 export type Session = {
+  experiment?: "exp1" | "exp2";
   settings?: EmhSettings;
   settingsLockedAt?: number | null;
   code: string;
@@ -51,6 +52,7 @@ export type MarketSummary = Allocation & {
   meanPrice: number | null;
 };
 export type SessionView = {
+  experiment?: "exp1" | "exp2";
   settings: EmhSettings | null;
   settingsLockedAt: number | null;
   code: string;

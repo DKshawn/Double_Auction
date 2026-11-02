@@ -35,9 +35,10 @@ import type {
   Session,
   SessionView,
 } from "../session-types";
-import { DEFAULT_CONFIG } from "./default-config";
+import { DEFAULT_CONFIG, EXP2_CONFIG } from "./default-config";
 import {
   DEFAULT_SETTINGS,
+  EXP2_SETTINGS,
   settingsSchema,
   type EmhSettings,
 } from "../settings";
@@ -119,6 +120,7 @@ function projection(
     markets.length > 0 &&
     markets.every((m) => m.state.status === "completed");
   return {
+    experiment: session.experiment ?? "exp1",
     settings: teacher
       ? structuredClone(session.settings ?? DEFAULT_SETTINGS)
       : null,
@@ -134,7 +136,9 @@ function projection(
     allocation: teacher
       ? session.allocation.length
         ? session.allocation
-        : allocationPlan(session.members.length, session.settings)
+        : session.experiment === "exp2" && session.members.length % 12 !== 0
+          ? []
+          : allocationPlan(session.members.length, session.settings)
       : [],
     participants: teacher
       ? session.members.map((p) => ({
@@ -176,9 +180,13 @@ export class EmhService {
     password: string,
     accessKey: string,
     input: EmhSettings = DEFAULT_SETTINGS,
+    experiment: "exp1" | "exp2" = "exp1",
   ) {
     assertTeacherAccess(accessKey);
-    const settings = settingsSchema.parse(input);
+    const settings =
+      experiment === "exp2"
+        ? structuredClone(EXP2_SETTINGS)
+        : settingsSchema.parse(input);
     const token = newToken();
     const hash = passwordHash(password);
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -193,6 +201,7 @@ export class EmhService {
         const session: Session = {
           code,
           protocol: "emh-v1",
+          experiment,
           settings: structuredClone(settings),
           settingsLockedAt: null,
           title,
@@ -350,11 +359,21 @@ export class EmhService {
               const kind = input.command.kind;
               if (input.command.kind === "update-settings") {
                 check(
+                  session.experiment !== "exp2",
+                  "実験2の条件は固定されています。",
+                );
+                check(
                   session.status === "open" && session.settingsLockedAt == null,
                   "割り当て確定後は条件を変更できません。開始前に割り当てを解除してください。",
                 );
                 session.settings = settingsSchema.parse(input.command.settings);
               } else if (kind === "assign") {
+                if (session.experiment === "exp2")
+                  check(
+                    session.members.length >= 12 &&
+                      session.members.length % 12 === 0,
+                    "実験2は1市場12人です。12人単位で参加してください。",
+                  );
                 check(
                   session.status === "open" && session.members.length >= 3,
                   "受付中に3人以上がそろってから割り当ててください。",
@@ -374,7 +393,9 @@ export class EmhService {
                   const room = newRoom(
                     code,
                     {
-                      ...DEFAULT_CONFIG,
+                      ...(session.experiment === "exp2"
+                        ? EXP2_CONFIG
+                        : DEFAULT_CONFIG),
                       title: session.title,
                       initialUnits: session.settings!.initialUnits,
                       periodSeconds: session.settings!.periodSeconds,
@@ -615,13 +636,15 @@ export class EmhService {
           contentType: "application/json; charset=utf-8",
           body: JSON.stringify(
             {
-              experiment: "emh-v1",
+              experiment: session.experiment === "exp2" ? "emh-exp2" : "emh-v1",
               code,
               title: session.title,
               settings: session.settings,
               settingsLockedAt: session.settingsLockedAt,
               config: result.rows[0]?.state.config ?? {
-                ...DEFAULT_CONFIG,
+                ...(session.experiment === "exp2"
+                  ? EXP2_CONFIG
+                  : DEFAULT_CONFIG),
                 title: session.title,
                 initialUnits: session.settings!.initialUnits,
                 periodSeconds: session.settings!.periodSeconds,

@@ -214,48 +214,52 @@ export function RoomDashboard({
         </div>
       ) : (
         <>
-          <div className="round-strip">
+          <div className={`round-strip ${room.exp2 ? "exp2-rounds" : ""}`}>
             {Array.from({ length: room.rounds }, (_, i) => (
               <div
                 key={i}
                 className={`round-step ${i + 1 < room.year || room.status === "completed" ? "done" : i + 1 === room.year ? "active" : ""}`}
               >
                 <span>{i + 1}</span>
-                <div>
-                  <i
-                    className={
-                      i + 1 < room.year ||
-                      (i + 1 === room.year &&
-                        (room.period === "B" || room.status === "completed"))
-                        ? "done"
-                        : i + 1 === room.year
-                          ? "active"
-                          : ""
-                    }
-                  >
-                    A
-                  </i>
-                  <i
-                    className={
-                      i + 1 < room.year ||
-                      (i + 1 === room.year &&
-                        (room.status === "break" ||
-                          room.status === "completed"))
-                        ? "done"
-                        : i + 1 === room.year && room.period === "B"
-                          ? "active"
-                          : ""
-                    }
-                  >
-                    B
-                  </i>
-                </div>
+                {room.experiment !== "exp2" && (
+                  <div>
+                    <i
+                      className={
+                        i + 1 < room.year ||
+                        (i + 1 === room.year &&
+                          (room.period === "B" || room.status === "completed"))
+                          ? "done"
+                          : i + 1 === room.year
+                            ? "active"
+                            : ""
+                      }
+                    >
+                      A
+                    </i>
+                    <i
+                      className={
+                        i + 1 < room.year ||
+                        (i + 1 === room.year &&
+                          (room.status === "break" ||
+                            room.status === "completed"))
+                          ? "done"
+                          : i + 1 === room.year && room.period === "B"
+                            ? "active"
+                            : ""
+                      }
+                    >
+                      B
+                    </i>
+                  </div>
+                )}
               </div>
             ))}
           </div>
           <div className="session-bar">
             <div className="session-phase">
-              <span className="period-badge">{room.period}</span>
+              <span className="period-badge">
+                {room.experiment === "exp2" ? room.year : room.period}
+              </span>
               <div>
                 <span className="muted">第{room.year}ラウンド</span>
                 <strong>
@@ -263,7 +267,9 @@ export function RoomDashboard({
                     ? "すべての取引が終了"
                     : room.status === "break"
                       ? "次のラウンドまで"
-                      : `Period ${room.period}`}
+                      : room.experiment === "exp2"
+                        ? "取引中"
+                        : `Period ${room.period}`}
                 </strong>
               </div>
             </div>
@@ -394,7 +400,7 @@ export function RoomDashboard({
             </div>
           )}
           {!teacher && (
-            <div className="stat-grid">
+            <div className={`stat-grid ${room.exp2 ? "exp2-stats" : ""}`}>
               <div>
                 <span>保有証券</span>
                 <strong>
@@ -412,60 +418,129 @@ export function RoomDashboard({
                   {fmt((room.me?.cash ?? 0) + (room.me?.dividend ?? 0))}
                 </strong>
               </div>
-              <div className="private-stat">
-                <span>
-                  <LockKeyhole size={11} />
-                  A期配当 / 単位
-                </span>
-                <strong>{fmt(room.me?.dividends?.a)}</strong>
-              </div>
-              <div className="private-stat">
-                <span>
-                  <LockKeyhole size={11} />
-                  B期配当 / 単位
-                </span>
-                <strong>{fmt(room.me?.dividends?.b)}</strong>
-              </div>
+              {room.exp2 ? (
+                <>
+                  <div className="private-stat exp2-state-info">
+                    <span>
+                      <LockKeyhole size={11} /> 状態別の配当 / 確率
+                    </span>
+                    <div className="exp2-state-values">
+                      {room.exp2.prior.map((probability, index) => (
+                        <div key={index}>
+                          <span>状態 {index + 1}</span>
+                          <strong>
+                            <span className="sr-only">配当 </span>
+                            {fmt(room.exp2!.dividends?.[index])}
+                          </strong>
+                          <small>
+                            <span className="sr-only">確率 </span>
+                            {fmt(probability * 100)}%
+                          </small>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="private-stat exp2-clue">
+                    <span>
+                      <LockKeyhole size={11} /> Clue カード
+                    </span>
+                    <strong>
+                      {room.exp2.clue ? `状態 ${room.exp2.clue}` : "情報なし"}
+                    </strong>
+                  </div>
+                  {room.exp2.state !== null && (
+                    <div className="exp2-realized">
+                      <span>実現した状態</span>
+                      <strong>{room.exp2.state}</strong>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="private-stat">
+                    <span>
+                      <LockKeyhole size={11} />
+                      A期配当 / 単位
+                    </span>
+                    <strong>{fmt(room.me?.dividends?.a)}</strong>
+                  </div>
+                  <div className="private-stat">
+                    <span>
+                      <LockKeyhole size={11} />
+                      B期配当 / 単位
+                    </span>
+                    <strong>{fmt(room.me?.dividends?.b)}</strong>
+                  </div>
+                </>
+              )}
             </div>
           )}
-          <div className="tabs room-tabs" role="tablist" aria-label="表示内容">
-            <button
-              role="tab"
-              aria-selected={tab === "market"}
-              onClick={() => setTab("market")}
+          {!(room.exp2 && !teacher) && (
+            <div
+              className="tabs room-tabs"
+              role="tablist"
+              aria-label="表示内容"
             >
-              市場
-            </button>
-            <button
-              role="tab"
-              aria-selected={tab === "results"}
-              onClick={() => setTab("results")}
-            >
-              {teacher ? "結果" : "自分の記録"}
-            </button>
-            {teacher && (
               <button
                 role="tab"
-                aria-selected={tab === "people"}
-                onClick={() => setTab("people")}
+                aria-selected={tab === "market"}
+                onClick={() => setTab("market")}
               >
-                参加者
+                市場
               </button>
-            )}
-          </div>
-          {tab === "market" && (
-            <div className="market-grid">
-              <aside>
-                <OrderPanel room={room} act={act} disabled={disabled} />
-              </aside>
-              <HistoryPanel room={room} />
+              <button
+                role="tab"
+                aria-selected={tab === "results"}
+                onClick={() => setTab("results")}
+              >
+                {teacher ? "結果" : "自分の記録"}
+              </button>
+              {teacher && (
+                <button
+                  role="tab"
+                  aria-selected={tab === "people"}
+                  onClick={() => setTab("people")}
+                >
+                  参加者
+                </button>
+              )}
             </div>
           )}
-          {tab === "results" && <ResultsPanel room={room} />}
-          {tab === "people" && teacher && <ParticipantsPanel room={room} />}
-          {room.status === "completed" && tab === "market" && (
+          {room.exp2 && !teacher ? (
+            <div className="market-grid exp2-student-market">
+              <aside>
+                <OrderPanel
+                  room={room}
+                  act={act}
+                  disabled={disabled}
+                  compact={!!demo}
+                />
+              </aside>
+              <HistoryPanel room={room} compact />
+              <ResultsPanel room={room} />
+            </div>
+          ) : (
+            tab === "market" && (
+              <div className="market-grid">
+                <aside>
+                  <OrderPanel
+                    room={room}
+                    act={act}
+                    disabled={disabled}
+                    compact={!!demo && !!room.exp2}
+                  />
+                </aside>
+                <HistoryPanel room={room} compact={!!demo && !!room.exp2} />
+              </div>
+            )
+          )}
+          {!(room.exp2 && !teacher) && tab === "results" && (
             <ResultsPanel room={room} />
           )}
+          {tab === "people" && teacher && <ParticipantsPanel room={room} />}
+          {room.status === "completed" &&
+            tab === "market" &&
+            !(room.exp2 && !teacher) && <ResultsPanel room={room} />}
           <ExportPanel room={room} demo={demo} />
         </>
       )}
@@ -485,7 +560,7 @@ export function RoomDashboard({
           </h2>
           <p id="confirm-description">
             {confirmation.kind === "end-period"
-              ? `第${confirmation.year}ラウンド ${confirmation.period}期を終了し、現在の保有量で配当を確定します。`
+              ? `第${confirmation.year}ラウンド${room.experiment === "exp2" ? "" : ` ${confirmation.period}期`}を終了し、現在の保有量で配当を確定します。`
               : "全参加者に、全タイプの配当条件と理論価格を公開します。"}
           </p>
           <div>

@@ -212,7 +212,7 @@ export function SessionClient({
             <p role="status">ルームを読み込み中…</p>
           ) : (
             <>
-              {teacher && state.settings && (
+              {teacher && state.settings && state.experiment !== "exp2" && (
                 <section className="panel emh-session-settings">
                   {state.status === "open" ? (
                     <form
@@ -429,7 +429,10 @@ export function SessionClient({
                               disabled={
                                 disabled ||
                                 settingsDirty ||
-                                state.participantCount < 3
+                                (state.experiment === "exp2"
+                                  ? state.participantCount < 12 ||
+                                    state.participantCount % 12 !== 0
+                                  : state.participantCount < 3)
                               }
                               onClick={() => command("assign")}
                             >
@@ -459,8 +462,15 @@ export function SessionClient({
                             </>
                           )}
                         </div>
-                        {state.participantCount < 3 && (
-                          <p className="muted">開始には3人以上必要です。</p>
+                        {(state.experiment === "exp2"
+                          ? state.participantCount < 12 ||
+                            state.participantCount % 12 !== 0
+                          : state.participantCount < 3) && (
+                          <p className="muted">
+                            {state.experiment === "exp2"
+                              ? "実験2は1市場12人です。12人単位で参加してください。"
+                              : "開始には3人以上必要です。"}
+                          </p>
                         )}
                       </>
                     ) : (

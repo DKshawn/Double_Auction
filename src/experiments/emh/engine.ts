@@ -36,6 +36,17 @@ export function benchmarks(config: Config) {
     perfectB: Math.max(...config.dividends.map((d) => d.b)),
   };
 }
+function exp2Prices(room: Room) {
+  const states = room.config.states!;
+  const state = states.outcomes[room.year - 1]!;
+  const expected = states.dividends.map((values) =>
+    values.reduce((sum, value, i) => sum + value * states.prior[i]!, 0),
+  );
+  const informed = states.dividends.map((values) => values[state - 1]!);
+  const pi = Math.max(...expected, ...(room.year > 2 ? informed : []));
+  const re = room.year > 2 ? Math.max(...informed) : Math.max(...expected);
+  return { state, pi, re };
+}
 export function newRoom(
   code: string,
   config: Config,
@@ -171,11 +182,19 @@ export function endPeriod(
     (t) => t.year === room.year && t.period === period,
   );
   const payouts = room.participants.map((p) => {
-    const d = room.config.dividends[p.type! - 1]!;
-    const perUnit = period === "A" ? d.a : d.b;
+    const d = room.config.dividends[p.type! - 1];
+    const perUnit =
+      room.config.experiment === "exp2"
+        ? room.config.states!.dividends[p.type! - 1]![
+            exp2Prices(room).state - 1
+          ]!
+        : period === "A"
+          ? d!.a
+          : d!.b;
     const dividend = p.holdings * perUnit;
     p.dividend += dividend;
-    if (period === "B") p.totalProfit += p.cash + p.dividend;
+    if (period === "B" || room.config.experiment === "exp2")
+      p.totalProfit += p.cash + p.dividend;
     return {
       participantId: p.id,
       seat: p.seat!,
@@ -195,16 +214,25 @@ export function endPeriod(
     (s, p) =>
       s +
       initialUnitsFor(room.config) *
-        (period === "A"
-          ? room.config.dividends[p.type! - 1]!.a
-          : room.config.dividends[p.type! - 1]!.b),
+        (room.config.experiment === "exp2"
+          ? room.config.states!.dividends[p.type! - 1]![
+              exp2Prices(room).state - 1
+            ]!
+          : period === "A"
+            ? room.config.dividends[p.type! - 1]!.a
+            : room.config.dividends[p.type! - 1]!.b),
     0,
   );
   const meanPrice = trades.length
     ? trades.reduce((s, t) => s + t.price, 0) / trades.length
     : null;
-  const ref = benchmarks(room.config);
+  const ref =
+    room.config.experiment === "exp2" ? null : benchmarks(room.config);
+  const prices = room.config.experiment === "exp2" ? exp2Prices(room) : null;
   room.results.push({
+    ...(prices
+      ? { state: prices.state, piPrice: prices.pi, rePrice: prices.re }
+      : {}),
     year: room.year,
     period,
     endedAt: now,
@@ -215,7 +243,8 @@ export function endPeriod(
     priceRatio:
       meanPrice === null
         ? null
-        : meanPrice / (period === "A" ? ref.perfectA : ref.perfectB),
+        : meanPrice /
+          (prices ? prices.re : period === "A" ? ref!.perfectA : ref!.perfectB),
     actualDividend,
     maxDividend,
     initialDividend,
@@ -236,7 +265,7 @@ export function endPeriod(
     reason,
     actualDividend,
   });
-  if (period === "A") {
+  if (period === "A" && room.config.experiment !== "exp2") {
     room.period = "B";
     beginPeriod(room, now, random);
   } else {
@@ -362,6 +391,29 @@ export function assignParticipants(
     p.type =
       p.seat <= counts[0]! ? 1 : p.seat <= counts[0]! + counts[1]! ? 2 : 3;
   });
+  if (room.config.experiment === "exp2") {
+    // Seats are public, so type assignments must not be derivable from them.
+    const types = counts.flatMap(
+      (count, index) => Array(count).fill(index + 1) as number[],
+    );
+    for (let i = types.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [types[i], types[j]] = [types[j]!, types[i]!];
+    }
+    room.participants.forEach((p, i) => {
+      p.type = types[i]!;
+    });
+    for (const type of [1, 2, 3]) {
+      const group = room.participants.filter((p) => p.type === type);
+      for (let i = group.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [group[i], group[j]] = [group[j]!, group[i]!];
+      }
+      group.forEach((p, i) => {
+        p.insider = i < 2;
+      });
+    }
+  }
 }
 export function act(
   room: Room,
@@ -566,7 +618,8 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
     cash: p.cash,
     dividend: p.dividend,
     totalProfit: p.totalProfit,
-    dividends: p.type === null ? null : room.config.dividends[p.type - 1]!,
+    dividends:
+      p.type === null ? null : (room.config.dividends[p.type - 1] ?? null),
   });
   const visibleResults = room.results.map((result) => {
     if (teacher || room.reveal)
@@ -578,6 +631,8 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
       };
     return {
       ...result,
+      piPrice: undefined,
+      rePrice: undefined,
       payouts: result.payouts.filter((p) => p.participantId === me?.id),
       priceRatio: null,
       actualDividend: 0,
@@ -588,6 +643,25 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
     };
   });
   return {
+    experiment: room.config.experiment ?? "exp1",
+    ...(room.config.experiment === "exp2"
+      ? {
+          exp2: {
+            prior: room.config.states!.prior,
+            dividends: me?.type
+              ? room.config.states!.dividends[me.type - 1]!
+              : null,
+            clue:
+              me?.insider && room.year > 2 && room.status === "trading"
+                ? exp2Prices(room).state
+                : null,
+            state:
+              room.results.find((r) => r.year === room.year)?.state ?? null,
+            allDividends:
+              teacher || room.reveal ? room.config.states!.dividends : null,
+          },
+        }
+      : {}),
     code: room.code,
     title: room.config.title,
     revision: room.revision,
@@ -618,7 +692,13 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
     participants: teacher ? room.participants.map(person) : [],
     results: visibleResults,
     reveal: room.reveal,
-    benchmarks: teacher || room.reveal ? benchmarks(room.config) : null,
-    conditions: teacher || room.reveal ? room.config.dividends : null,
+    benchmarks:
+      room.config.experiment !== "exp2" && (teacher || room.reveal)
+        ? benchmarks(room.config)
+        : null,
+    conditions:
+      room.config.experiment !== "exp2" && (teacher || room.reveal)
+        ? room.config.dividends
+        : null,
   };
 }

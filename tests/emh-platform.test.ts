@@ -39,8 +39,18 @@ after(async () => {
   await pg.close();
 });
 const password = "Integration-Teacher-2026";
-async function classroom(n: number, settings = DEFAULT_SETTINGS) {
-  const teacher = await emh.create("EMH classroom", password, "", settings);
+async function classroom(
+  n: number,
+  settings = DEFAULT_SETTINGS,
+  experiment: "exp1" | "exp2" = "exp1",
+) {
+  const teacher = await emh.create(
+    "EMH classroom",
+    password,
+    "",
+    settings,
+    experiment,
+  );
   const students = [];
   for (let i = 0; i < n; i++)
     students.push({
@@ -94,6 +104,74 @@ async function classroom(n: number, settings = DEFAULT_SETTINGS) {
   }
   return { teacher, students, get, command, act };
 }
+
+test("Exp2 locks its conditions and admits complete 12-person markets", async () => {
+  const c = await classroom(
+    11,
+    { ...DEFAULT_SETTINGS, initialUnits: 9 },
+    "exp2",
+  );
+  let current = (await c.get()).state;
+  assert.equal(current.experiment, "exp2");
+  assert.equal(current.settings!.initialUnits, 2);
+  assert.equal(current.settings!.periodSeconds, 300);
+  assert.deepEqual(current.allocation, []);
+  const request = async (command: SessionCommand) =>
+    emh.request(c.teacher.code, c.teacher.token, "teacher", undefined, {
+      scope: "session",
+      requestId: randomUUID(),
+      command,
+    });
+  const invalid = await request({
+    kind: "assign",
+    expectedRevision: current.revision,
+  });
+  assert.ok(invalid.error);
+  const update = await request({
+    kind: "update-settings",
+    settings: DEFAULT_SETTINGS,
+    expectedRevision: current.revision,
+  });
+  assert.ok(update.error);
+  const last = await emh.login(c.teacher.code, {
+    role: "student",
+    nickname: "s11",
+    pin: "1234",
+  });
+  current = (await c.get()).state;
+  assert.deepEqual(
+    current.allocation.map((a) => [a.size, ...a.typeCounts]),
+    [[12, 4, 4, 4]],
+  );
+  assert.equal(
+    (await request({ kind: "assign", expectedRevision: current.revision }))
+      .error,
+    undefined,
+  );
+  current = (await c.get()).state;
+  assert.equal(
+    (await request({ kind: "start", expectedRevision: current.revision }))
+      .error,
+    undefined,
+  );
+  const studentView = (await c.get(last.token, "student")).state.market!;
+  assert.equal(studentView.experiment, "exp2");
+  assert.equal(studentView.exp2!.clue, null);
+  assert.equal(studentView.exp2!.allDividends, null);
+  assert.equal(studentView.periodSeconds, 300);
+  assert.equal(studentView.participants.length, 0);
+  const conditions = JSON.parse(
+    (await emh.export(c.teacher.code, c.teacher.token, "teacher", "conditions"))
+      .body,
+  );
+  assert.equal(conditions.experiment, "emh-exp2");
+  assert.equal(
+    conditions.markets[0].conditions.assignment.filter(
+      (p: { insider: boolean }) => p.insider,
+    ).length,
+    6,
+  );
+});
 
 test("every attendance 3–999 includes everyone, balances groups and types locally and across the class", () => {
   assert.deepEqual(allocationPlan(0), []);

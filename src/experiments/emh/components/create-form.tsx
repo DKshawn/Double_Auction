@@ -6,6 +6,7 @@ import { api, errorMessage } from "@/lib/client";
 import { TeacherPasswordHelp } from "@/components/teacher-password-help";
 import {
   DEFAULT_SETTINGS,
+  EXP2_SETTINGS,
   settingsSchema,
   type EmhSettings,
 } from "../settings";
@@ -15,12 +16,18 @@ export function EmhCreateForm({
   status,
   initialTitle,
   initialSettings,
+  initialExperiment,
   onCreateDemo,
 }: {
   status: ServerStatus;
   initialTitle?: string;
   initialSettings?: EmhSettings;
-  onCreateDemo?: (title: string, settings: EmhSettings) => void;
+  initialExperiment?: "exp1" | "exp2";
+  onCreateDemo?: (
+    title: string,
+    settings: EmhSettings,
+    experiment: "exp1" | "exp2",
+  ) => void;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle ?? "資産市場実験");
@@ -28,6 +35,9 @@ export function EmhCreateForm({
     structuredClone(initialSettings ?? DEFAULT_SETTINGS),
   );
   const [password, setPassword] = useState("");
+  const [experiment, setExperiment] = useState<"exp1" | "exp2">(
+    initialExperiment ?? "exp1",
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: FormEvent) {
@@ -36,18 +46,21 @@ export function EmhCreateForm({
     setError("");
     try {
       if (onCreateDemo) {
-        const parsed = settingsSchema.safeParse(settings);
+        const parsed = settingsSchema.safeParse(
+          experiment === "exp2" ? EXP2_SETTINGS : settings,
+        );
         if (!parsed.success || !title.trim() || title.trim().length > 60)
           throw new Error(
             "実験名・人数・比率・証券数・時間を確認してください。",
           );
-        onCreateDemo(title.trim(), parsed.data);
+        onCreateDemo(title.trim(), parsed.data, experiment);
         return;
       }
       const result = await api<{ code: string }>("/api/emh/rooms", {
         title,
         password,
         settings,
+        experiment,
       });
       router.push(`/room/${result.code}?entry=teacher`);
     } catch (e) {
@@ -78,11 +91,27 @@ export function EmhCreateForm({
           maxLength={60}
         />
       </label>
-      <SettingsFields
-        settings={settings}
-        onChange={setSettings}
-        disabled={busy}
-      />
+      <label className="field">
+        実験
+        <select
+          value={experiment}
+          onChange={(event) =>
+            setExperiment(event.target.value as "exp1" | "exp2")
+          }
+        >
+          <option value="exp1">実験1</option>
+          <option value="exp2">実験2</option>
+        </select>
+      </label>
+      {experiment === "exp1" ? (
+        <SettingsFields
+          settings={settings}
+          onChange={setSettings}
+          disabled={busy}
+        />
+      ) : (
+        <p>1市場12人 · 各ラウンド5分 · 初期保有2単位</p>
+      )}
       {!onCreateDemo && (
         <label className="field">
           教員パスワード

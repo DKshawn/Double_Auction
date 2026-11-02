@@ -9,6 +9,7 @@ export const createSchema = z
     title: z.string().trim().min(1).max(60),
     password: z.string().min(8).max(128),
     accessKey: z.string().max(256).default(""),
+    experiment: z.enum(["exp1", "exp2"]).default("exp1"),
     settings: settingsSchema.default(() => structuredClone(DEFAULT_SETTINGS)),
   })
   .strict();

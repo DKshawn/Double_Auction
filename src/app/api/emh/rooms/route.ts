@@ -6,7 +6,7 @@ import { createSchema } from "@/experiments/emh/server/validation";
 export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
-    const { title, password, accessKey, settings } = await body(
+    const { title, password, accessKey, settings, experiment } = await body(
       request,
       createSchema,
     );
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       request,
       await (
         await emhService()
-      ).create(title, password, authenticatedKey, settings),
+      ).create(title, password, authenticatedKey, settings, experiment),
       "teacher",
     );
   } catch (error) {

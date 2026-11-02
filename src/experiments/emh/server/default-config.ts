@@ -15,3 +15,23 @@ export const DEFAULT_CONFIG: Config = {
     { a: 257, b: 83 },
   ],
 };
+
+export const EXP2_CONFIG: Config = {
+  title: "資産市場実験 2",
+  experiment: "exp2",
+  initialUnits: 2,
+  rounds: 6,
+  periodSeconds: 300,
+  unitSeconds: 30,
+  breakSeconds: 60,
+  dividends: [],
+  states: {
+    prior: [0.35, 0.42, 0.23],
+    outcomes: [1, 1, 1, 1, 2, 2],
+    dividends: [
+      [90, 95, 214],
+      [52, 232, 115],
+      [136, 140, 124],
+    ],
+  },
+};

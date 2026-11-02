@@ -1852,6 +1852,7 @@
     margin: 10px auto;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .emh-app *,
   .emh-app *:before,
@@ -1911,5 +1912,286 @@
   }
   .emh-app .wide .private-stat > span {
     margin: 0;
+  }
+}
+
+.emh-app .wide .exp2-rounds .round-step {
+  min-width: 0;
+}
+.emh-app .wide .exp2-rounds .round-step > span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.emh-app .wide .exp2-rounds .round-step.active > span {
+  border-color: var(--accent);
+}
+.emh-app .wide .exp2-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  row-gap: 16px;
+}
+.emh-app .wide .exp2-stats > div {
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .emh-app .wide .exp2-stats > .private-stat {
+    grid-column: span 3;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    border-right: 0;
+  }
+  .emh-app .wide .exp2-stats > div:not(.private-stat) {
+    grid-column: span 1;
+  }
+  .emh-app .wide .exp2-stats > .private-stat strong {
+    font-size: 20px;
+  }
+}
+
+/* Keep the Exp2 demo's live trading controls together on smaller screens. */
+.emh-app .container.wide:has(.emh-demo-exp2-active) {
+  padding-top: 8px;
+  padding-bottom: 10px;
+}
+.emh-app .emh-demo-exp2-active .demo-toolbar {
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  gap: 12px;
+}
+.emh-app .emh-demo-exp2-active .room-heading {
+  margin-bottom: 8px;
+}
+.emh-app .emh-demo-exp2-active .room-heading h1 {
+  font-size: 19px;
+  margin-top: 2px;
+  line-height: 1.2;
+}
+.emh-app .emh-demo-exp2-active .room-context {
+  line-height: 1.2;
+}
+.emh-app .emh-demo-exp2-active .round-strip {
+  margin-bottom: 6px;
+}
+.emh-app .emh-demo-exp2-active .session-bar {
+  padding: 8px 14px;
+}
+.emh-app .emh-demo-exp2-active .period-badge {
+  width: 38px;
+  height: 38px;
+}
+.emh-app .emh-demo-exp2-active .market-note {
+  padding: 6px 2px;
+}
+.emh-app .emh-demo-exp2-active .exp2-stats {
+  grid-template-columns: repeat(3, minmax(70px, 0.7fr)) repeat(
+      3,
+      minmax(140px, 1.3fr)
+    );
+  row-gap: 8px;
+  padding: 10px 0;
+  margin-bottom: 8px;
+}
+.emh-app .emh-demo-exp2-active .exp2-stats > div {
+  padding: 0 12px;
+}
+.emh-app .emh-demo-exp2-active .exp2-stats strong {
+  font-size: 19px;
+}
+.emh-app .emh-demo-exp2-active .room-tabs {
+  margin-bottom: 8px;
+}
+.emh-app .emh-demo-exp2-active .market-grid {
+  gap: 14px;
+}
+.emh-app .emh-demo-exp2-active .market-grid .panel {
+  padding: 14px;
+}
+.emh-app .emh-demo-exp2-active .history-panel {
+  min-height: 0;
+  margin-top: 0;
+}
+.emh-app .emh-demo-exp2-active .history-panel .section-heading {
+  margin: 0 0 6px;
+}
+.emh-app .emh-demo-exp2-active .order-panel .section-heading {
+  margin: 0 0 8px;
+}
+.emh-app .emh-demo-exp2-active .chart-wrap {
+  margin: 0 0 8px;
+}
+.emh-app .emh-demo-exp2-active .chart-wrap > svg {
+  max-height: clamp(135px, 23vh, 200px);
+}
+.emh-app .emh-demo-exp2-active .trade-table {
+  max-height: 115px;
+}
+.emh-app .emh-demo-exp2-active .trade-table .empty-cell {
+  padding: 12px !important;
+}
+.emh-app .emh-demo-exp2-active .order-panel .quote-card {
+  padding: 8px;
+}
+.emh-app .emh-demo-exp2-active .order-panel .quote-card > strong {
+  font-size: 26px;
+  margin: 5px 0;
+}
+.emh-app .emh-demo-exp2-active .order-panel .quote-card .button {
+  margin-top: 6px;
+}
+.emh-app .emh-demo-exp2-active .order-panel .quote-form {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.emh-app .emh-demo-exp2-active .price-entry {
+  margin-top: 8px;
+}
+.emh-app .emh-demo-exp2-active .order-panel .quote-form > .field-note {
+  margin-top: 6px;
+  line-height: 1.4;
+}
+.emh-app .container.wide:has(.emh-demo-exp2-active) + .site-footer {
+  padding-top: 8px;
+  padding-bottom: 10px;
+}
+@media (max-width: 760px) {
+  .emh-app .emh-demo-exp2-active .demo-toolbar {
+    gap: 8px;
+  }
+  .emh-app .emh-demo-exp2-active .exp2-stats {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    row-gap: 8px;
+  }
+  .emh-app .emh-demo-exp2-active .exp2-stats > div:not(.private-stat) {
+    grid-column: span 2;
+  }
+  .emh-app .emh-demo-exp2-active .exp2-stats > .private-stat {
+    grid-column: span 3;
+    padding: 8px 12px 0;
+  }
+  .emh-app .emh-demo-exp2-active .exp2-stats > .private-stat:last-child {
+    grid-column: span 6;
+  }
+  .emh-app .emh-demo-exp2-active .exp2-stats > .private-stat strong {
+    font-size: 16px;
+  }
+}
+
+/* Exp2 keeps each state's dividend beside its probability and shows records
+   alongside the market, so neither task requires a view switch. */
+.emh-app .wide .exp2-stats,
+.emh-app .emh-demo-exp2-active .exp2-stats {
+  grid-template-columns:
+    repeat(3, minmax(70px, 0.8fr)) minmax(300px, 3fr)
+    minmax(110px, 1fr);
+}
+.emh-app .wide .exp2-state-info > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.emh-app .wide .exp2-state-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.emh-app .wide .exp2-state-values > div {
+  min-width: 0;
+  white-space: nowrap;
+}
+.emh-app .wide .exp2-state-values > div > span {
+  display: block;
+  margin: 0;
+}
+.emh-app .wide .exp2-state-values strong {
+  font-size: 17px;
+}
+.emh-app .wide .exp2-state-values small {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 5px;
+}
+.emh-app .exp2-quote-forms .price-entry {
+  margin-top: 8px;
+}
+.emh-app .exp2-quote-forms .price-entry:first-child {
+  margin-top: 0;
+}
+.emh-app .exp2-quote-forms .price-entry .button {
+  min-width: 104px;
+  white-space: nowrap;
+}
+.emh-app .exp2-student-market .results-panel {
+  margin-top: 0;
+  min-width: 0;
+}
+.emh-app .exp2-student-market .results-panel .section-heading {
+  margin: 0 0 10px;
+}
+.emh-app .exp2-student-market .results-panel table,
+.emh-app .exp2-student-market .trade-table table {
+  min-width: 0;
+}
+.emh-app .exp2-student-market .trade-table th,
+.emh-app .exp2-student-market .trade-table td {
+  padding: 8px 5px;
+}
+.emh-app .exp2-student-market .compact-chart .chart-axis {
+  font-size: 14px;
+}
+.emh-app .exp2-student-market .compact-chart .chart-empty {
+  font-size: 14px;
+}
+.emh-app .exp2-student-market .results-panel th,
+.emh-app .exp2-student-market .results-panel td {
+  padding: 8px 5px;
+  white-space: nowrap;
+}
+@media (min-width: 1100px) {
+  .emh-app .market-grid.exp2-student-market {
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+@media (min-width: 761px) and (max-width: 1099px) {
+  .emh-app .exp2-student-market .results-panel {
+    grid-column: 2;
+  }
+}
+@media (max-width: 760px) {
+  .emh-app .wide .exp2-stats,
+  .emh-app .emh-demo-exp2-active .exp2-stats {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .emh-app .wide .exp2-stats > div:not(.private-stat),
+  .emh-app .emh-demo-exp2-active .exp2-stats > div:not(.private-stat) {
+    grid-column: span 2;
+  }
+  .emh-app .wide .exp2-stats > .exp2-state-info,
+  .emh-app .emh-demo-exp2-active .exp2-stats > .exp2-state-info {
+    grid-column: span 6;
+    display: block;
+    padding-top: 8px;
+  }
+  .emh-app .wide .exp2-stats > .exp2-clue,
+  .emh-app .emh-demo-exp2-active .exp2-stats > .exp2-clue {
+    grid-column: span 6;
+    padding-top: 8px;
+  }
+  .emh-app .wide .exp2-state-values strong,
+  .emh-app .emh-demo-exp2-active .exp2-state-values strong {
+    font-size: 16px;
+  }
+}
+@media (max-width: 400px) {
+  .emh-app .exp2-student-market .results-panel th,
+  .emh-app .exp2-student-market .results-panel td {
+    padding-left: 3px;
+    padding-right: 3px;
   }
 }

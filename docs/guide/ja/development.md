@@ -23,6 +23,8 @@ Windows の隔離したローカル検証環境は、`pwsh -NoProfile -File scri
 
 教員入口と `?entry=teacher` のルームページはサーバーで認証します。`POST /api/teacher/session` はキーを検証して8時間の署名付きHttpOnly・SameSite=Lax Cookieを発行し、HTTPSではSecure属性を付けます。キー自体はCookieやブラウザーストレージに保存しません。`DELETE` はログアウトし、キー変更は既存セッションを無効にします。作成・管理・削除・Judgmentの教員用プレビューAPIはセッションを検証し、既存の認証済みスクリプト向け `accessKey` も受け付けます。追加の環境変数やDB移行は不要です。
 
+サイズ別プレビューの埋め込みは同一オリジンの `/demo` と `/emh/demo` のみ許可し、教員・正式ルームは引き続き禁止します。
+
 ## Vercel + Neon
 
 | 環境変数             | 用途                                                                         |

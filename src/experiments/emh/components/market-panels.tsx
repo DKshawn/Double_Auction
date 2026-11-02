@@ -10,6 +10,22 @@ export const fmt = (n: number | null | undefined, digits = 0) =>
     : n.toLocaleString("ja-JP", { maximumFractionDigits: digits });
 export const pct = (n: number | null | undefined) =>
   n == null ? "—" : `${fmt(n * 100, 1)}%`;
+export function Yen({
+  value,
+  digits = 0,
+}: {
+  value: number | null | undefined;
+  digits?: number;
+}) {
+  return value == null ? (
+    "—"
+  ) : (
+    <>
+      {fmt(value, digits)}
+      <span className="yen-unit">円</span>
+    </>
+  );
+}
 export type RunAction = (action: Action) => Promise<void>;
 
 export function OrderPanel({
@@ -58,7 +74,9 @@ export function OrderPanel({
               <div className="quote-label">
                 {s === "bid" ? "最高買値" : "最低売値"}
               </div>
-              <strong>{fmt(q?.price)}</strong>
+              <strong>
+                <Yen value={q?.price} />
+              </strong>
               <div className="quote-owner">
                 {q ? `被験者 ${q.seat}${own ? "（あなた）" : ""}` : "提示なし"}
               </div>
@@ -115,23 +133,28 @@ export function OrderPanel({
                 className="price-entry"
               >
                 <label className="sr-only" htmlFor={`exp2-${quoteSide}-price`}>
-                  {label}
+                  {label}（円）
                 </label>
-                <input
-                  id={`exp2-${quoteSide}-price`}
-                  inputMode="numeric"
-                  type="number"
-                  placeholder={`${label}を入力`}
-                  min={1}
-                  max={100000}
-                  step={1}
-                  value={buying ? bidPrice : askPrice}
-                  onChange={(event) =>
-                    (buying ? setBidPrice : setAskPrice)(event.target.value)
-                  }
-                  disabled={!canTrade}
-                  required
-                />
+                <div className="price-input">
+                  <input
+                    id={`exp2-${quoteSide}-price`}
+                    inputMode="numeric"
+                    type="number"
+                    placeholder={`${label}を入力`}
+                    min={1}
+                    max={100000}
+                    step={1}
+                    value={buying ? bidPrice : askPrice}
+                    onChange={(event) =>
+                      (buying ? setBidPrice : setAskPrice)(event.target.value)
+                    }
+                    disabled={!canTrade}
+                    required
+                  />
+                  <span className="input-yen" aria-hidden="true">
+                    円
+                  </span>
+                </div>
                 <button
                   className={`button ${buying ? "buy" : "sell"}`}
                   disabled={!canTrade || (!buying && !room.me?.holdings)}
@@ -166,21 +189,26 @@ export function OrderPanel({
             </div>
             <div className="price-entry">
               <label className="sr-only" htmlFor="quote-price">
-                提示価格
+                提示価格（円）
               </label>
-              <input
-                id="quote-price"
-                inputMode="numeric"
-                type="number"
-                placeholder="価格を入力"
-                min={1}
-                max={100000}
-                step={1}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                disabled={!canTrade}
-                required
-              />
+              <div className="price-input">
+                <input
+                  id="quote-price"
+                  inputMode="numeric"
+                  type="number"
+                  placeholder="価格を入力"
+                  min={1}
+                  max={100000}
+                  step={1}
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  disabled={!canTrade}
+                  required
+                />
+                <span className="input-yen" aria-hidden="true">
+                  円
+                </span>
+              </div>
               <button
                 className="button primary"
                 disabled={!canTrade || (side === "ask" && !room.me?.holdings)}
@@ -218,26 +246,36 @@ export function PersonalPanel({ room }: { room: RoomView }) {
       <div className="dividend-grid">
         <div className={room.period === "A" ? "current" : ""}>
           <span>A期</span>
-          <strong>{fmt(me.dividends?.a)}</strong>
+          <strong>
+            <Yen value={me.dividends?.a} />
+          </strong>
         </div>
         <div className={room.period === "B" ? "current" : ""}>
           <span>B期</span>
-          <strong>{fmt(me.dividends?.b)}</strong>
+          <strong>
+            <Yen value={me.dividends?.b} />
+          </strong>
         </div>
       </div>
       <p className="field-note">期末の保有1単位につき受け取る得点</p>
       <div className="personal-lines">
         <div>
           <span>このラウンドの配当受取</span>
-          <strong>{fmt(me.dividend)}</strong>
+          <strong>
+            <Yen value={me.dividend} />
+          </strong>
         </div>
         <div>
           <span>このラウンドの得点</span>
-          <strong>{fmt(me.cash + me.dividend)}</strong>
+          <strong>
+            <Yen value={me.cash + me.dividend} />
+          </strong>
         </div>
         <div>
           <span>終了ラウンドの累計</span>
-          <strong>{fmt(me.totalProfit)}</strong>
+          <strong>
+            <Yen value={me.totalProfit} />
+          </strong>
         </div>
       </div>
     </section>
@@ -256,7 +294,7 @@ export function HistoryPanel({
   return (
     <section className="panel history-panel">
       <div className="section-heading">
-        <h2>取引価格</h2>
+        <h2>取引価格（円）</h2>
         <label className="round-select">
           <span className="sr-only">表示ラウンド</span>
           <select
@@ -288,7 +326,7 @@ export function HistoryPanel({
             <tr>
               <th>取引</th>
               {!room.exp2 && <th>期</th>}
-              <th>価格</th>
+              <th>価格（円）</th>
               <th>買い手</th>
               <th>売り手</th>
             </tr>
@@ -351,10 +389,12 @@ export function ParticipantsPanel({ room }: { room: RoomView }) {
               <th>番号</th>
               <th>名前</th>
               <th>参加者番号</th>
-              <th>{room.exp2 ? "状態 1 / 2 / 3 配当" : "A / B 配当"}</th>
+              <th>
+                {room.exp2 ? "状態 1 / 2 / 3 配当（円）" : "A / B 配当（円）"}
+              </th>
               <th>保有</th>
-              <th>売買収支</th>
-              <th>累計得点</th>
+              <th>売買収支（円）</th>
+              <th>累計得点（円）</th>
             </tr>
           </thead>
           <tbody>
@@ -400,7 +440,7 @@ export function ResultsPanel({ room }: { room: RoomView }) {
               {teacher ? (
                 <>
                   <th>成立数</th>
-                  <th>平均価格</th>
+                  <th>平均価格（円）</th>
                   <th>{room.exp2 ? "価格 / RE" : "価格 / PF"}</th>
                   <th>配当 / 最大配当</th>
                   <th>改善分の効率</th>
@@ -408,9 +448,15 @@ export function ResultsPanel({ room }: { room: RoomView }) {
               ) : (
                 <>
                   <th>期末保有</th>
-                  <th>配当</th>
-                  <th>売買収支</th>
-                  <th>得点</th>
+                  <th>
+                    配当<span className="table-unit">円</span>
+                  </th>
+                  <th>
+                    売買収支<span className="table-unit">円</span>
+                  </th>
+                  <th>
+                    得点<span className="table-unit">円</span>
+                  </th>
                 </>
               )}
             </tr>
@@ -496,9 +542,9 @@ export function ResultsPanel({ room }: { room: RoomView }) {
             <thead>
               <tr>
                 <th>タイプ</th>
-                <th>状態1</th>
-                <th>状態2</th>
-                <th>状態3</th>
+                <th>状態1（円）</th>
+                <th>状態2（円）</th>
+                <th>状態3（円）</th>
               </tr>
             </thead>
             <tbody>
@@ -517,8 +563,8 @@ export function ResultsPanel({ room }: { room: RoomView }) {
               <tr>
                 <th>ラウンド</th>
                 <th>状態</th>
-                <th>PI</th>
-                <th>RE</th>
+                <th>PI（円）</th>
+                <th>RE（円）</th>
               </tr>
             </thead>
             <tbody>
@@ -542,8 +588,8 @@ export function ResultsPanel({ room }: { room: RoomView }) {
               <thead>
                 <tr>
                   <th>タイプ</th>
-                  <th>A配当</th>
-                  <th>B配当</th>
+                  <th>A配当（円）</th>
+                  <th>B配当（円）</th>
                 </tr>
               </thead>
               <tbody>
@@ -558,13 +604,22 @@ export function ResultsPanel({ room }: { room: RoomView }) {
             </table>
             <div>
               <p>
-                A期の私的情報均衡 <strong>{room.benchmarks.naiveA}</strong>
+                A期の私的情報均衡{" "}
+                <strong>
+                  <Yen value={room.benchmarks.naiveA} />
+                </strong>
               </p>
               <p>
-                A期の完全予見均衡 <strong>{room.benchmarks.perfectA}</strong>
+                A期の完全予見均衡{" "}
+                <strong>
+                  <Yen value={room.benchmarks.perfectA} />
+                </strong>
               </p>
               <p>
-                B期の均衡 <strong>{room.benchmarks.perfectB}</strong>
+                B期の均衡{" "}
+                <strong>
+                  <Yen value={room.benchmarks.perfectB} />
+                </strong>
               </p>
             </div>
           </div>

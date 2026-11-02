@@ -20,6 +20,7 @@ import {
   OrderPanel,
   ParticipantsPanel,
   ResultsPanel,
+  Yen,
   type RunAction,
 } from "./market-panels";
 
@@ -355,7 +356,10 @@ export function RoomDashboard({
                   ) : (
                     <>
                       おつかれさまでした。あなたの累計得点は{" "}
-                      <strong>{fmt(room.me?.totalProfit)}</strong> です。
+                      <strong>
+                        <Yen value={room.me?.totalProfit} />
+                      </strong>{" "}
+                      です。
                     </>
                   )}
                 </span>
@@ -410,12 +414,16 @@ export function RoomDashboard({
               </div>
               <div>
                 <span>売買収支</span>
-                <strong>{fmt(room.me?.cash)}</strong>
+                <strong>
+                  <Yen value={room.me?.cash} />
+                </strong>
               </div>
               <div>
                 <span>ラウンド得点</span>
                 <strong>
-                  {fmt((room.me?.cash ?? 0) + (room.me?.dividend ?? 0))}
+                  <Yen
+                    value={(room.me?.cash ?? 0) + (room.me?.dividend ?? 0)}
+                  />
                 </strong>
               </div>
               {room.exp2 ? (
@@ -430,7 +438,7 @@ export function RoomDashboard({
                           <span>状態 {index + 1}</span>
                           <strong>
                             <span className="sr-only">配当 </span>
-                            {fmt(room.exp2!.dividends?.[index])}
+                            <Yen value={room.exp2!.dividends?.[index]} />
                           </strong>
                           <small>
                             <span className="sr-only">確率 </span>
@@ -462,14 +470,18 @@ export function RoomDashboard({
                       <LockKeyhole size={11} />
                       A期配当 / 単位
                     </span>
-                    <strong>{fmt(room.me?.dividends?.a)}</strong>
+                    <strong>
+                      <Yen value={room.me?.dividends?.a} />
+                    </strong>
                   </div>
                   <div className="private-stat">
                     <span>
                       <LockKeyhole size={11} />
                       B期配当 / 単位
                     </span>
-                    <strong>{fmt(room.me?.dividends?.b)}</strong>
+                    <strong>
+                      <Yen value={room.me?.dividends?.b} />
+                    </strong>
                   </div>
                 </>
               )}

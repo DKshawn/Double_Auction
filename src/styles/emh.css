@@ -2195,3 +2195,41 @@
     padding-right: 3px;
   }
 }
+
+.emh-app .yen-unit,
+.emh-app .stat-grid .yen-unit {
+  display: inline;
+  margin: 0 0 0 0.25em;
+  color: inherit;
+  font-size: 0.65em;
+  white-space: nowrap;
+}
+.emh-app .price-entry .price-input {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.emh-app .price-entry .price-input input {
+  width: 100%;
+  padding-right: 36px;
+  appearance: textfield;
+}
+.emh-app .price-entry .price-input input::-webkit-inner-spin-button,
+.emh-app .price-entry .price-input input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.emh-app .price-entry .input-yen {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+.emh-app .results-panel .table-unit {
+  display: block;
+  font-size: 9px;
+  line-height: 1.1;
+}

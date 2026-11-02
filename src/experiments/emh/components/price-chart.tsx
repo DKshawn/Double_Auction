@@ -47,8 +47,8 @@ export function PriceChart({
         role="img"
         aria-label={
           trades.length
-            ? `取引価格。${trades.length}件、最終価格${trades.at(-1)!.price}。${singlePeriod ? "" : "A期は紫、B期は青緑。"}`
-            : "取引価格。まだ取引はありません。"
+            ? `取引価格（円）。${trades.length}件、最終価格${trades.at(-1)!.price}円。${singlePeriod ? "" : "A期は紫、B期は青緑。"}`
+            : "取引価格（円）。まだ取引はありません。"
         }
       >
         {Array.from({ length: 5 }, (_, i) => low + ((high - low) * i) / 4).map(
@@ -77,17 +77,17 @@ export function PriceChart({
             {[
               {
                 value: benchmarks.perfectA,
-                label: `PF A ${benchmarks.perfectA}`,
+                label: `PF A ${benchmarks.perfectA} 円`,
                 color: "var(--period-a)",
               },
               {
                 value: benchmarks.naiveA,
-                label: `Naive A ${benchmarks.naiveA}`,
+                label: `Naive A ${benchmarks.naiveA} 円`,
                 color: "var(--sell)",
               },
               {
                 value: benchmarks.perfectB,
-                label: `PF B ${benchmarks.perfectB}`,
+                label: `PF B ${benchmarks.perfectB} 円`,
                 color: "var(--period-b)",
               },
             ].map((line, i) => (
@@ -146,7 +146,7 @@ export function PriceChart({
             stroke="var(--surface)"
             strokeWidth="1.5"
           >
-            <title>{`${singlePeriod ? "" : `${t.period}期 `}取引${i + 1}: ${t.price} / 買い手${t.buyerSeat}・売り手${t.sellerSeat}`}</title>
+            <title>{`${singlePeriod ? "" : `${t.period}期 `}取引${i + 1}: ${t.price} 円 / 買い手${t.buyerSeat}・売り手${t.sellerSeat}`}</title>
           </circle>
         ))}
         {!trades.length && (

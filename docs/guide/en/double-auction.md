@@ -4,6 +4,8 @@
 
 [Demo Model](https://exp-all-in-one.vercel.app/demo) · [Demo controls](demo.md)
 
+Open the screen-size demo at `/demo/preview`. On narrow screens, choose a size from the dropdown; demo progress is retained.
+
 Authenticate once with the key at the teacher entry, then set a teacher password of at least eight characters for each room. The creation form does not request the key again.
 
 The setup header contains **実験を選び直す** and, when opened from an existing room, **ルーム … に戻る**. Demo setup uses **教員用ページへ** in its header to return.

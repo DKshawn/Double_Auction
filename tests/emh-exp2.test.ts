@@ -13,6 +13,7 @@ import { exportData } from "../src/experiments/emh/export";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RoomDashboard } from "../src/experiments/emh/components/room-dashboard";
+import { Yen } from "../src/experiments/emh/components/market-panels";
 
 test("Exp2 settles one period per round and protects clue cards", () => {
   const room = newRoom("EXP234", EXP2_CONFIG, 0);
@@ -153,5 +154,22 @@ test("formal Exp2 student view presents state conditions, both quote forms and r
   assert.match(html, /売値を提示/);
   assert.match(html, /取引価格/);
   assert.match(html, /あなたの記録/);
+  assert.match(html, /class="yen-unit">円/);
   assert.doesNotMatch(html, /role="tablist"/);
+});
+
+test("yen amounts retain zero, negative amounts and decimals, while missing values remain empty", () => {
+  assert.match(
+    renderToStaticMarkup(createElement(Yen, { value: 0 })),
+    /0<span class="yen-unit">円<\/span>/,
+  );
+  assert.match(
+    renderToStaticMarkup(createElement(Yen, { value: -1200 })),
+    /-1,200<span class="yen-unit">円<\/span>/,
+  );
+  assert.match(
+    renderToStaticMarkup(createElement(Yen, { value: 142.09, digits: 2 })),
+    /142\.09<span class="yen-unit">円<\/span>/,
+  );
+  assert.equal(renderToStaticMarkup(createElement(Yen, { value: null })), "—");
 });

@@ -31,11 +31,13 @@ The preview also starts with the teacher settings form. After creation, start, p
 
 ## EMH
 
+The interface labels prices, dividends, trading balances and scores in yen.
+
 [EMH Demo Model](https://exp-all-in-one.vercel.app/emh/demo) offers Experiment 1 and Experiment 2. Experiment 1 uses the same settings form, validation limits and defaults as the formal experiment. Set initial securities, target size, type ratios and A/B period duration, then choose **デモルームを作成**. It creates one market of 3–12 participants; everyone except you is virtual, with eight virtual participants by default.
 
-Saving settings during admission, confirming and locking allocation, and explicitly releasing it before starting follow the formal workflow. Starting does not redraw confirmed types. There are six rounds, trade attempts of at most 30 seconds and 60-second breaks. Securities, timing, payouts and efficiency use the shared engine. Practice A/B dividends for types 1–3 are 120/40, 100/60 and 150/30; private classroom dividends are not used.
+Saving settings during admission, confirming and locking allocation, and explicitly releasing it before starting follow the formal workflow. Starting does not redraw confirmed types. There are six rounds, trade attempts of at most 30 seconds and 60-second breaks. Securities, timing, payouts and efficiency use the shared engine. Practice A/B dividends in yen for types 1–3 are 120/40, 100/60 and 150/30; private classroom dividends are not used.
 
-Experiment 2 uses fixed conditions for one market with you and 11 virtual participants over six rounds. Each type has four members; no one receives a clue in rounds 1–2, and two per type receive one in rounds 3–6. Each round lasts up to five minutes and starts with two securities per participant. Practice dividends are 80/110/170, 60/180/100 and 140/120/90, with realized states 3/3/3/3/2/2. Virtual participants trade using their own information.
+Experiment 2 uses fixed conditions for one market with you and 11 virtual participants over six rounds. Each type has four members; no one receives a clue in rounds 1–2, and two per type receive one in rounds 3–6. Each round lasts up to five minutes and starts with two securities per participant. Practice dividends in yen are 80/110/170, 60/180/100 and 140/120/90, with realized states 3/3/3/3/2/2. Virtual participants trade using their own information.
 
 In Experiment 2, the student view pairs each state’s dividend with its probability, provides separate bid and ask inputs, and shows market prices and personal round records together. During Experiment 2, the teacher view’s **実験条件** button expands or collapses the fixed conditions.
 

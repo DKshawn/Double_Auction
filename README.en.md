@@ -37,6 +37,8 @@ The teacher creates and shares a room, and students join with its code, using a 
 
 Enter the teacher key once at the teacher entry. The same browser stays signed in for eight hours across reloads, experiment changes, room creation and management. Sign in again after logout, expiry or a key change; each room keeps its separate teacher password.
 
+EMH labels prices, dividends, trading balances and scores in yen.
+
 EMH Demo Model supports both experiments. Experiment 2 uses fixed rules and separate practice dividends and states. Students see state conditions, separate bid and ask inputs, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)

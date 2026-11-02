@@ -90,6 +90,11 @@ test("EMH Demo shares formal settings and confirms or releases them before tradi
   ).toHaveCount(0);
   await page.getByRole("button", { name: "停止", exact: true }).click();
   await page.getByRole("button", { name: "学生画面", exact: true }).click();
+  await expect(page.locator(".stat-grid")).toContainText("円");
+  for (const dividend of await page.locator(".stat-grid .private-stat").all()) {
+    await expect(dividend).toContainText("円");
+  }
+  await expect(page.locator(".price-entry .input-yen")).toHaveText("円");
   await expect(
     page.getByText("一時停止中", { exact: true }).first(),
   ).toBeVisible();
@@ -142,19 +147,29 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   await expect(page.getByText("情報なし")).toBeVisible();
   await expect(page.getByText("状態別の配当 / 確率")).toBeVisible();
   await expect(page.locator(".exp2-state-values > div")).toHaveCount(3);
-  await expect(page.getByRole("heading", { name: "取引価格" })).toBeVisible();
+  for (const state of await page.locator(".exp2-state-values > div").all()) {
+    await expect(state).toContainText("円");
+    await expect(state).toContainText("%");
+  }
+  await expect(
+    page.getByRole("heading", { name: "取引価格（円）" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "あなたの記録" }),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: "市場" })).toHaveCount(0);
-  await page.getByLabel("買値", { exact: true }).fill("1");
-  await page.getByLabel("売値", { exact: true }).fill("99999");
+  await page.getByLabel("買値（円）", { exact: true }).fill("1");
+  await page.getByLabel("売値（円）", { exact: true }).fill("99999");
   await page.getByRole("button", { name: "買値を提示" }).click();
   await expect(page.locator(".quote-card.bid")).toContainText("（あなた）");
+  await expect(page.locator(".quote-card.bid strong")).toContainText("円");
   await page.getByRole("button", { name: "売値を提示" }).click();
   await expect(page.locator(".quote-card.ask")).toContainText("（あなた）");
-  await expect(page.getByLabel("買値", { exact: true })).toHaveValue("1");
-  await expect(page.getByLabel("売値", { exact: true })).toHaveValue("99999");
+  await expect(page.locator(".quote-card.ask strong")).toContainText("円");
+  await expect(page.getByLabel("買値（円）", { exact: true })).toHaveValue("1");
+  await expect(page.getByLabel("売値（円）", { exact: true })).toHaveValue(
+    "99999",
+  );
   await page.getByRole("button", { name: "教員画面" }).click();
   for (let round = 1; round <= 2; round++) {
     await page.getByRole("button", { name: "期を終了" }).click();
@@ -167,6 +182,7 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   await page.getByRole("button", { name: "学生画面" }).click();
   await expect(page.getByText("Clue カード")).toBeVisible();
   await expect(page.locator(".results-panel tbody tr")).toHaveCount(2);
+  await expect(page.locator(".results-panel thead")).toContainText("円");
   for (const width of [1366, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     expect(

@@ -4,6 +4,8 @@
 
 ## Local setup
 
+In Codex **Edit project**, keep only `C:\Users\dksha\Documents\project\Exp-all-in-one` under **Source folders** and choose **Make primary**. Do not attach the old `EMH` or `Judgment_under_Uncertainty` copies for development. Existing chats may retain their recorded working directory, so verify the command directory and `git rev-parse --show-toplevel` before work. The old teacher branch is documented in the [port record](../../upstream/judgment/teacher-management-20261102/README.md); make subsequent changes only in the unified repository.
+
 The local project folder is `Exp-all-in-one`. Run all commands from that repository root.
 
 Use Node.js 24.x, matching `.nvmrc`, CI, and Vercel. `package.json` also pins `engines.node` to `24.x` to prevent automatic changes to future major versions.

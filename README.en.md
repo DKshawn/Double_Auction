@@ -43,6 +43,8 @@ EMH Demo Model uses the same settings form and allocation-confirmation workflow 
 
 The **実験を選び直す** button and the demo setup pages’ **教員用ページへ** button are in the page header.
 
+Judgement teacher pages and the demo share task cards, the selection list and controls, with Japanese, Chinese and English switching and settings locked during a run.
+
 ## Experiments
 
 | Experiment                  | Scope                                                                                                                              | Guide                                             | Demo                                                          |

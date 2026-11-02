@@ -4,6 +4,8 @@
 
 ## ローカル起動
 
+Codex の「Edit project」では Source folders に `C:\Users\dksha\Documents\project\Exp-all-in-one` だけを登録し、Make primary に設定します。旧 `EMH` と `Judgment_under_Uncertainty` は開発用に追加しません。以前のチャットには旧作業ディレクトリが残る場合があるため、コマンドの作業ディレクトリと `git rev-parse --show-toplevel` を確認してください。教員UIの旧ブランチは [移植元の記録](../../upstream/judgment/teacher-management-20261102/README.md) を参照し、変更は統合リポジトリだけで行います。
+
 ローカルのプロジェクトフォルダーは `Exp-all-in-one` です。このフォルダーを開き、以下のコマンドをルートで実行します。
 
 Node.js 24.xを使用します（`.nvmrc`・CI・Vercel の設定と共通）。`package.json` の `engines.node` も `24.x` に固定し、将来のメジャーバージョンへの自動切り替えを防ぎます。

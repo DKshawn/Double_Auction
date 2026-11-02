@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import type { PreviewProtocol } from "../types";
+import type { Language, PreviewProtocol } from "../types";
 export type PreviewProgress = { index: number; total: number; status: string };
 export type AppHandle = {
   move: (direction: number, skip?: boolean) => void;
@@ -11,6 +11,7 @@ type Mount = (
   options: {
     code?: string;
     isPreview?: boolean;
+    initialLanguage?: Language;
     protocols?: PreviewProtocol[];
     onPreviewState?: (state: PreviewProgress) => void;
   },
@@ -20,11 +21,13 @@ export function StudentApp({
   protocols,
   onProgress,
   handle,
+  initialLanguage = "ja",
 }: {
   code?: string;
   protocols?: PreviewProtocol[];
   onProgress?: (state: PreviewProgress) => void;
   handle?: React.RefObject<AppHandle | null>;
+  initialLanguage?: Language;
 }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -37,6 +40,7 @@ export function StudentApp({
           code,
           isPreview: Boolean(protocols),
           protocols,
+          initialLanguage,
           onPreviewState: onProgress,
         });
         if (handle) handle.current = app;
@@ -51,7 +55,7 @@ export function StudentApp({
       app?.dispose();
       if (handle) handle.current = null;
     };
-  }, [code, protocols, onProgress, handle]);
+  }, [code, protocols, onProgress, handle, initialLanguage]);
   return (
     <div ref={host} className="judgment-app" lang="ja">
       <p className="loading" role="status">

@@ -1,0 +1,27 @@
+{
+  "sourceRepository": "https://github.com/DKshawn/Exp-all-in-one",
+  "sourceBranch": "legacy/teacher-management-update",
+  "sourceCommit": "1a90709c69e7f30f636a915568c3ba18ad2bf437",
+  "files": [
+    {
+      "sourcePath": "public/teacher.html",
+      "archivedPath": "teacher.html",
+      "sha256": "68cf030e59a176d2c2514648133e7560da56f5b0d158a03be3f0c00def7f5494"
+    },
+    {
+      "sourcePath": "public/teacher.css",
+      "archivedPath": "teacher.css",
+      "sha256": "9a677df22bbef7e570dbebc7930f20e64a4c594470de8871ddbc0f0d1f2110fd"
+    },
+    {
+      "sourcePath": "public/teacher.js",
+      "archivedPath": "teacher.js",
+      "sha256": "88a8409a24ec9dc8b2aeb9d3a07145ea4e2d57d91a3a872e1b2d8bfc7229f39a"
+    },
+    {
+      "sourcePath": ".superdesign/implementation-verification.md",
+      "archivedPath": "implementation-verification.md",
+      "sha256": "8069cfc6dc752c33383f095502e4488fdeba171bcac70ef7434082aaa724e20a"
+    }
+  ]
+}

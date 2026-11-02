@@ -54,3 +54,11 @@ The owner confirmed on 2026-11-01 that no legacy website or ongoing experiment
 requires a cutover and that old SQLite data need not be imported. Existing local
 source edits and SQLite files were backed up before release preparation. No
 participant data or credentials are committed to either repository.
+
+## Later teacher UI port
+
+The teacher management layout was separately ported from
+`legacy/teacher-management-update` at
+`1a90709c69e7f30f636a915568c3ba18ad2bf437` on 2026-11-02. See the
+[source copies, hashes and adaptation record](../../../docs/upstream/judgment/teacher-management-20261102/README.md).
+This changes the teacher workspace, not the pinned task protocol revision above.

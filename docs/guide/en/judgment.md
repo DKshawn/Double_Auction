@@ -6,6 +6,8 @@ This module comes from the former standalone Judgment application, previously na
 
 The teacher setup header has **実験を選び直す** to return to experiment selection. The demo task-selection header has **教員用ページへ** to return to teacher setup.
 
+Select tasks using cards with descriptions. The right panel groups the selected count, task list, randomization and create/start/end/preview controls, staying visible while scrolling on desktop and moving above the cards on narrow screens. Teacher pages support Japanese, Chinese and English and remember the language in this browser. Switching language does not change task selection or randomization. The preview opens in the teacher's selected language and also allows switching within the student view. Settings are locked during an active run, while the circular **i** buttons and preview remain usable. After ending, configure the next run in the same room.
+
 1. Select from 14 available tasks and configure task-order and option-order randomization separately. The circular **i** button shows the description, estimated duration, and implementation conditions without changing the selection. Tasks are not automatically selected in advance. The student preview does not save answers and pauses time limits.
 2. After authenticating at the teacher entry, set a room teacher password with at least eight characters and create a room, and share its code. Students join with a seven-digit student ID, preserving leading zeros, and a four-digit PIN, then wait for the teacher to start.
 3. Starting assigns a condition to each student. Students answer at their own pace, and late entry is allowed. Conditions and ordering are saved and remain unchanged on re-entry. The student interface supports Japanese, Chinese, and English.

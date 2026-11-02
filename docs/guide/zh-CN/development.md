@@ -4,6 +4,8 @@
 
 ## 本地启动
 
+在 Codex 的 Edit project 中，Source folders 只保留 `C:\Users\dksha\Documents\project\Exp-all-in-one`，并设为 Make primary。不要再把旧 `EMH` 或 `Judgment_under_Uncertainty` 添加为开发目录。已有聊天可能仍记录旧工作目录，因此执行命令前核对工作目录和 `git rev-parse --show-toplevel`。旧教师页面分支的来源见[迁移记录](../../upstream/judgment/teacher-management-20261102/README.md)，后续只修改统一仓库。
+
 本地项目文件夹为 `Exp-all-in-one`，所有命令都从该仓库根目录运行。
 
 使用 Node.js 24.x，与 `.nvmrc`、CI 和 Vercel 的设置一致。`package.json` 的 `engines.node` 固定为 `24.x`，避免自动切换到将来的主版本。

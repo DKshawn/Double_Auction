@@ -18,6 +18,11 @@ import type {
 } from "../src/experiments/emh/session-types";
 import { DEFAULT_CONFIG } from "../src/experiments/emh/server/default-config";
 import {
+  DEFAULT_SETTINGS,
+  settingsSchema,
+  type EmhSettings,
+} from "../src/experiments/emh/settings";
+import {
   createSchema,
   commandSchema,
 } from "../src/experiments/emh/server/validation";
@@ -34,8 +39,8 @@ after(async () => {
   await pg.close();
 });
 const password = "Integration-Teacher-2026";
-async function classroom(n: number) {
-  const teacher = await emh.create("EMH classroom", password, "");
+async function classroom(n: number, settings = DEFAULT_SETTINGS) {
+  const teacher = await emh.create("EMH classroom", password, "", settings);
   const students = [];
   for (let i = 0; i < n; i++)
     students.push({
@@ -51,7 +56,9 @@ async function classroom(n: number) {
     role: "teacher" | "student" = "teacher",
     market?: number,
   ) => emh.request(teacher.code, token, role, market);
-  async function command(kind: SessionCommand["kind"]) {
+  async function command(
+    kind: Exclude<SessionCommand["kind"], "update-settings">,
+  ) {
     const current = await get();
     const input: RequestCommand = {
       scope: "session",
@@ -471,7 +478,7 @@ test("clock changes survive a stale action and complete every default round befo
   assert.equal(revealed.me!.holdings, 0);
 });
 
-test("EMH API accepts only fixed defaults and validates command scope", () => {
+test("EMH API preserves fixed dividends and rounds and validates command scope", () => {
   assert.ok(createSchema.safeParse({ title: "EMH", password }).success);
   assert.ok(
     !createSchema.safeParse({ title: "EMH", password, rounds: 1 }).success,
@@ -483,5 +490,284 @@ test("EMH API accepts only fixed defaults and validates command scope", () => {
       marketId: 1,
       action: { kind: "start", expectedPhase: "x" },
     }).success,
+  );
+});
+
+test("weighted allocations include everyone and preserve all types across supported target sizes", () => {
+  for (const targetMarketSize of [3, 4, 6, 9, 12]) {
+    for (const typeRatios of [
+      [1, 1, 1],
+      [2, 1, 1],
+      [1, 5, 2],
+      [100, 1, 1],
+    ] as [number, number, number][]) {
+      for (let n = 3; n <= 999; n++) {
+        const groups = allocationPlan(n, {
+          ...DEFAULT_SETTINGS,
+          targetMarketSize,
+          typeRatios,
+        });
+        assert.equal(
+          groups.reduce((sum, g) => sum + g.size, 0),
+          n,
+        );
+        const sizes = groups.map((g) => g.size);
+        assert.ok(Math.max(...sizes) - Math.min(...sizes) <= 1);
+        for (const group of groups) {
+          assert.ok(group.size >= 3 && group.size <= 12);
+          assert.ok(
+            group.typeCounts.every((v) => Number.isInteger(v) && v >= 1),
+          );
+          assert.equal(
+            group.typeCounts.reduce((a, b) => a + b, 0),
+            group.size,
+          );
+        }
+      }
+    }
+  }
+  const settings: EmhSettings = {
+    ...DEFAULT_SETTINGS,
+    targetMarketSize: 8,
+    typeRatios: [2, 1, 1],
+  };
+  assert.deepEqual(
+    allocationPlan(16, settings).map((g) => g.typeCounts),
+    [
+      [4, 2, 2],
+      [4, 2, 2],
+    ],
+  );
+  assert.deepEqual(
+    allocationPlan(28).map((g) => g.size),
+    [10, 9, 9],
+  );
+  assert.deepEqual(allocationPlan(2), []);
+});
+
+test("custom settings persist, lock with assignments, reject stale edits, and survive retry and refresh", async () => {
+  const initial: EmhSettings = {
+    initialUnits: 5,
+    targetMarketSize: 8,
+    typeRatios: [2, 1, 1],
+    periodSeconds: 180,
+  };
+  const c = await classroom(8, initial);
+  const before = (await c.get()).state;
+  assert.deepEqual(before.settings, initial);
+  const changed: EmhSettings = {
+    ...initial,
+    initialUnits: 4,
+    periodSeconds: 120,
+  };
+  const update: RequestCommand = {
+    scope: "session",
+    requestId: randomUUID(),
+    command: {
+      kind: "update-settings",
+      settings: changed,
+      expectedRevision: before.revision,
+    },
+  };
+  const saved = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    update,
+  );
+  assert.equal(saved.error, undefined);
+  assert.deepEqual(saved.state.settings, changed);
+  const repeated = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    update,
+  );
+  assert.equal(repeated.state.revision, saved.state.revision);
+  assert.equal(repeated.error, undefined);
+  const stale = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    { ...update, requestId: randomUUID() },
+  );
+  assert.ok(stale.error);
+  const studentEdit = await emh.request(
+    c.teacher.code,
+    c.students[0].token,
+    "student",
+    undefined,
+    { ...update, requestId: randomUUID() },
+  );
+  assert.equal(studentEdit.error?.status, 403);
+  assert.equal(studentEdit.state.settings, null);
+  await c.command("assign");
+  const assigned = (await c.get()).state;
+  assert.ok(assigned.settingsLockedAt);
+  const snapshot = async () =>
+    (
+      await db.query<{ state: Room }>(
+        "SELECT state FROM emh_markets WHERE room_code=$1 ORDER BY market_id",
+        [c.teacher.code],
+      )
+    ).rows.map(({ state }) => state);
+  const frozen = (await snapshot())[0];
+  assert.deepEqual(frozen.typeCounts, [4, 2, 2]);
+  assert.ok(
+    frozen.participants.every((p) => p.type !== null && p.seat !== null),
+  );
+  const assignments = frozen.participants.map((p) => [p.id, p.seat, p.type]);
+  const denied = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    {
+      ...update,
+      requestId: randomUUID(),
+      command: {
+        kind: "update-settings",
+        settings: initial,
+        expectedRevision: assigned.revision,
+      },
+    },
+  );
+  assert.match(denied.error!.message, /確定後/);
+  await c.get();
+  await c.command("start");
+  const running = (await snapshot())[0];
+  assert.deepEqual(
+    running.participants.map((p) => [p.id, p.seat, p.type]),
+    assignments,
+  );
+  assert.equal(
+    running.participants.reduce((sum, p) => sum + p.holdings, 0),
+    32,
+  );
+  assert.equal(running.config.periodSeconds, 120);
+  const start = running.events.find((e) => e.kind === "period-started")!.at;
+  assert.equal(running.periodEndsAt! - start, 120000);
+  const teacherView = (await c.get()).state;
+  const locked = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    {
+      ...update,
+      requestId: randomUUID(),
+      command: {
+        kind: "update-settings",
+        settings: initial,
+        expectedRevision: teacherView.revision,
+      },
+    },
+  );
+  assert.ok(locked.error);
+  const student = (await c.get(c.students[0].token, "student")).state;
+  assert.equal(student.settings, null);
+  assert.equal(student.market!.initialUnits, 4);
+  assert.equal(student.market!.conditions, null);
+  const exported = JSON.parse(
+    (await emh.export(c.teacher.code, c.teacher.token, "teacher", "conditions"))
+      .body,
+  );
+  assert.deepEqual(exported.settings, changed);
+  assert.equal(exported.settingsLockedAt, assigned.settingsLockedAt);
+  assert.equal(exported.markets[0].conditions.rules.participants, 8);
+  assert.equal(exported.markets[0].conditions.rules.totalUnits, 32);
+  assert.deepEqual(exported.markets[0].conditions.typeCounts, [4, 2, 2]);
+  const market = (await c.get()).state.market!;
+  await c.act(
+    c.teacher.token,
+    1,
+    { kind: "end-period", expectedPhase: market.phaseKey },
+    "teacher",
+  );
+  const result = (await c.get()).state.market!.results[0];
+  assert.equal(result.initialDividend, 4 * (4 * 216 + 2 * 200 + 2 * 257));
+  assert.equal(result.actualDividend, result.initialDividend);
+  assert.equal(result.maxDividend, 32 * 257);
+  assert.equal(result.gainEfficiency, 0);
+  const results = (
+    await emh.export(c.teacher.code, c.teacher.token, "teacher", "results")
+  ).body;
+  assert.ok(results.includes('"initial_units","total_units","period_seconds"'));
+  assert.ok(results.endsWith('"8","4","32","120"'));
+});
+
+test("explicitly releasing an unstarted allocation unlocks settings; legacy rooms use defaults", async () => {
+  const c = await classroom(3);
+  await db.query(
+    "UPDATE emh_sessions SET state=state-'settings'-'settingsLockedAt' WHERE code=$1",
+    [c.teacher.code],
+  );
+  assert.deepEqual((await c.get()).state.settings, DEFAULT_SETTINGS);
+  await c.command("assign");
+  await c.command("reopen");
+  const open = (await c.get()).state;
+  assert.equal(open.settingsLockedAt, null);
+  const next = { ...DEFAULT_SETTINGS, initialUnits: 7 };
+  const saved = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    {
+      scope: "session",
+      requestId: randomUUID(),
+      command: {
+        kind: "update-settings",
+        settings: next,
+        expectedRevision: open.revision,
+      },
+    },
+  );
+  assert.equal(saved.error, undefined);
+  await c.command("assign");
+  await c.command("start");
+  assert.equal(
+    (await c.get(c.students[0].token, "student")).state.market!.me!.holdings,
+    7,
+  );
+});
+
+test("settings reject invalid ratios, supplies, group sizes and clocks at the API boundary", () => {
+  for (const patch of [
+    { initialUnits: 0 },
+    { initialUnits: 21 },
+    { initialUnits: 1.5 },
+    { targetMarketSize: 2 },
+    { targetMarketSize: 13 },
+    { typeRatios: [0, 1, 1] },
+    { typeRatios: [1, 1] },
+    { typeRatios: [1, 1, 101] },
+    { typeRatios: [1, 1, 1.5] },
+    { periodSeconds: 59 },
+    { periodSeconds: 1801 },
+    { periodSeconds: 90.5 },
+    { dividends: [] },
+  ]) {
+    const settings = { ...DEFAULT_SETTINGS, ...patch };
+    assert.equal(settingsSchema.safeParse(settings).success, false);
+    assert.equal(
+      createSchema.safeParse({ title: "EMH", password, settings }).success,
+      false,
+    );
+    assert.equal(
+      commandSchema.safeParse({
+        scope: "session",
+        requestId: randomUUID(),
+        command: { kind: "update-settings", settings, expectedRevision: 0 },
+      }).success,
+      false,
+    );
+  }
+  assert.deepEqual(
+    createSchema.parse({ title: "EMH", password }).settings,
+    DEFAULT_SETTINGS,
   );
 });

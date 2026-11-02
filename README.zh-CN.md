@@ -41,11 +41,11 @@ flowchart LR
 
 ## 实验
 
-| 实验                        | 内容                                                                     | 指南                                             | 演示                                                          |
-| --------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------------- |
-| Double Auction              | 比较 CDA、Call Market、Posted Offer 三种制度，按实际人数分配市场与角色   | [流程与规则](docs/guide/zh-CN/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
-| EMH                         | 不同分红类型的资产市场，将所有参加者按每组约9人自动分组，使用默认6轮设置 | [流程与规则](docs/guide/zh-CN/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
-| Judgement under Uncertainty | 14项判断与认知偏差任务，支持条件分配、任务与选项顺序、计时及日中英显示   | [流程与数据](docs/guide/zh-CN/judgment.md)       | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
+| 实验                        | 内容                                                                       | 指南                                             | 演示                                                          |
+| --------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
+| Double Auction              | 比较 CDA、Call Market、Posted Offer 三种制度，按实际人数分配市场与角色     | [流程与规则](docs/guide/zh-CN/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
+| EMH                         | 可设置初始证券、目标人数、类型比例及交易时间；全员自动分组，确认后锁定条件 | [流程与规则](docs/guide/zh-CN/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
+| Judgement under Uncertainty | 14项判断与认知偏差任务，支持条件分配、任务与选项顺序、计时及日中英显示     | [流程与数据](docs/guide/zh-CN/judgment.md)       | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
 
 ## 开发与资料
 

@@ -2,12 +2,14 @@ import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { AuctionError } from "@/lib/server/errors";
 import { sessionFor } from "@/lib/server/http";
+import { DEFAULT_SETTINGS, settingsSchema } from "../settings";
 
 export const createSchema = z
   .object({
     title: z.string().trim().min(1).max(60),
     password: z.string().min(8).max(128),
     accessKey: z.string().max(256).default(""),
+    settings: settingsSchema.default(() => structuredClone(DEFAULT_SETTINGS)),
   })
   .strict();
 const side = z.enum(["bid", "ask"]);
@@ -41,19 +43,28 @@ export const commandSchema = z.discriminatedUnion("scope", [
     .object({
       requestId: z.uuid(),
       scope: z.literal("session"),
-      command: z
-        .object({
-          kind: z.enum([
-            "assign",
-            "reopen",
-            "start",
-            "pause-all",
-            "resume-all",
-            "reveal-all",
-          ]),
-          expectedRevision: z.number().int().min(0),
-        })
-        .strict(),
+      command: z.discriminatedUnion("kind", [
+        z
+          .object({
+            kind: z.enum([
+              "assign",
+              "reopen",
+              "start",
+              "pause-all",
+              "resume-all",
+              "reveal-all",
+            ]),
+            expectedRevision: z.number().int().min(0),
+          })
+          .strict(),
+        z
+          .object({
+            kind: z.literal("update-settings"),
+            expectedRevision: z.number().int().min(0),
+            settings: settingsSchema,
+          })
+          .strict(),
+      ]),
     })
     .strict(),
   z

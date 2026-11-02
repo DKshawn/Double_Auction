@@ -1092,3 +1092,43 @@ summary.disclosure-button {
     scroll-behavior: auto !important;
   }
 }
+.emh-settings,
+.emh-type-ratios {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.emh-settings > legend,
+.emh-type-ratios > legend {
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+.emh-settings .form-grid {
+  margin-bottom: 20px;
+}
+.emh-ratio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.emh-session-settings {
+  margin-bottom: 20px;
+}
+.emh-session-settings form > button {
+  margin-top: 16px;
+}
+.emh-settings-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  margin-bottom: 0;
+}
+.emh-settings-summary dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.emh-settings-summary dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}

@@ -16,6 +16,8 @@ Enter an experiment name, review the settings, set a room teacher password of at
 
 ![Room creation example: experiment name, room teacher password, teacher key, and create button](../images/create-room.png)
 
+EMH supports initial securities, target market size, type ratios and period duration. Save settings while admission is open; confirming allocation locks the conditions. See [EMH settings](emh.md).
+
 | Item                                   | Used by                             | Purpose                                                                                   |
 | -------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------- |
 | Teacher key — 教員用キー               | Teachers                            | Provided by the administrator for online room creation and the management list            |

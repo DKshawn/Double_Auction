@@ -1,5 +1,6 @@
 import { benchmarks } from "./engine";
 import type { Actor, Room } from "./types";
+import { initialUnitsFor } from "./settings";
 
 type Cell = string | number | null | undefined;
 export function csv(rows: Cell[][]) {
@@ -102,7 +103,15 @@ export function exportData(room: Room, actor: Actor, kind: string) {
           schemaVersion: room.schemaVersion,
           code: room.code,
           createdAt: iso(room.createdAt),
-          config: room.config,
+          config: {
+            ...room.config,
+            initialUnits: initialUnitsFor(room.config),
+          },
+          typeCounts:
+            room.typeCounts ??
+            [1, 2, 3].map(
+              (type) => room.participants.filter((p) => p.type === type).length,
+            ),
           benchmarks: benchmarks(room.config),
           assignment: room.participants.map((p) => ({
             subjectNo: p.seat,
@@ -111,8 +120,9 @@ export function exportData(room: Room, actor: Actor, kind: string) {
             name: p.name,
           })),
           rules: {
-            participants: 9,
-            initialUnits: 2,
+            participants: room.participants.length,
+            initialUnits: initialUnitsFor(room.config),
+            totalUnits: room.participants.length * initialUnitsFor(room.config),
             unitsPerTrade: 1,
             maxEmptyUnits: 2,
             priceBounds: [1, 100000],
@@ -170,6 +180,10 @@ export function exportData(room: Room, actor: Actor, kind: string) {
         "initial_dividend",
         "allocation_efficiency",
         "gains_efficiency",
+        "participants",
+        "initial_units",
+        "total_units",
+        "period_seconds",
       ],
     ];
     rows.push(
@@ -187,6 +201,10 @@ export function exportData(room: Room, actor: Actor, kind: string) {
         r.initialDividend,
         r.allocationEfficiency,
         r.gainEfficiency,
+        room.participants.length,
+        initialUnitsFor(room.config),
+        room.participants.length * initialUnitsFor(room.config),
+        room.config.periodSeconds,
       ]),
     );
   } else if (kind === "payouts") {

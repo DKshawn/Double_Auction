@@ -1,4 +1,5 @@
 import type { Action, AuditEvent, RoomView } from "./types";
+import type { EmhSettings } from "./settings";
 
 export type Allocation = { id: number; size: number; typeCounts: number[] };
 export type Member = {
@@ -10,6 +11,8 @@ export type Member = {
   marketId: number | null;
 };
 export type Session = {
+  settings?: EmhSettings;
+  settingsLockedAt?: number | null;
   code: string;
   protocol: "emh-v1";
   title: string;
@@ -22,11 +25,18 @@ export type Session = {
   allocation: Allocation[];
   events: AuditEvent[];
 };
-export type SessionCommand = {
-  kind:
-    "assign" | "reopen" | "start" | "pause-all" | "resume-all" | "reveal-all";
-  expectedRevision: number;
-};
+export type SessionCommand = (
+  | {
+      kind:
+        | "assign"
+        | "reopen"
+        | "start"
+        | "pause-all"
+        | "resume-all"
+        | "reveal-all";
+    }
+  | { kind: "update-settings"; settings: EmhSettings }
+) & { expectedRevision: number };
 export type RequestCommand = { requestId: string } & (
   | { scope: "session"; command: SessionCommand }
   | { scope: "market"; marketId: number; action: Action }
@@ -41,6 +51,8 @@ export type MarketSummary = Allocation & {
   meanPrice: number | null;
 };
 export type SessionView = {
+  settings: EmhSettings | null;
+  settingsLockedAt: number | null;
   code: string;
   title: string;
   revision: number;

@@ -204,7 +204,7 @@ export function RoomDashboard({
               </div>
               <div>
                 <dt>初期保有</dt>
-                <dd>2単位</dd>
+                <dd>{room.initialUnits}単位</dd>
               </div>
             </dl>
             <p className="field-note">
@@ -376,7 +376,8 @@ export function RoomDashboard({
             <div className="notice">
               <span>
                 第{room.year}
-                ラウンドの得点が確定しました。次は証券を2単位ずつ受け取ります。
+                ラウンドの得点が確定しました。次は証券を{room.initialUnits}
+                単位ずつ受け取ります。
               </span>
             </div>
           ) : (

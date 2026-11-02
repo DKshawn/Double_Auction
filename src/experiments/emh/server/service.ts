@@ -19,6 +19,7 @@ import type { RoomSummary } from "@/lib/room-management";
 import {
   act,
   addParticipant,
+  assignParticipants,
   advanceClock,
   newRoom,
   phaseKey,
@@ -35,6 +36,11 @@ import type {
   SessionView,
 } from "../session-types";
 import { DEFAULT_CONFIG } from "./default-config";
+import {
+  DEFAULT_SETTINGS,
+  settingsSchema,
+  type EmhSettings,
+} from "../settings";
 
 const random = () => randomInt(0, 2 ** 30) / 2 ** 30;
 function check(ok: unknown, message: string, status = 409): asserts ok {
@@ -89,7 +95,14 @@ async function readSession(tx: Sql, code: string, exclusive: boolean) {
     [code],
   );
   check(result.rows[0], "ルームが見つかりません。", 404);
-  return result.rows[0].state;
+  const session = result.rows[0].state;
+  session.settings ??= structuredClone(DEFAULT_SETTINGS);
+  session.settingsLockedAt ??=
+    session.status === "open"
+      ? null
+      : (session.events.findLast((e) => e.kind === "assign")?.at ??
+        session.createdAt);
+  return session;
 }
 function projection(
   session: Session,
@@ -106,6 +119,10 @@ function projection(
     markets.length > 0 &&
     markets.every((m) => m.state.status === "completed");
   return {
+    settings: teacher
+      ? structuredClone(session.settings ?? DEFAULT_SETTINGS)
+      : null,
+    settingsLockedAt: teacher ? (session.settingsLockedAt ?? null) : null,
     code: session.code,
     title: session.title,
     revision: session.revision,
@@ -117,7 +134,7 @@ function projection(
     allocation: teacher
       ? session.allocation.length
         ? session.allocation
-        : allocationPlan(session.members.length)
+        : allocationPlan(session.members.length, session.settings)
       : [],
     participants: teacher
       ? session.members.map((p) => ({
@@ -154,8 +171,14 @@ function projection(
 
 export class EmhService {
   constructor(private db: Database) {}
-  async create(title: string, password: string, accessKey: string) {
+  async create(
+    title: string,
+    password: string,
+    accessKey: string,
+    input: EmhSettings = DEFAULT_SETTINGS,
+  ) {
     assertTeacherAccess(accessKey);
+    const settings = settingsSchema.parse(input);
     const token = newToken();
     const hash = passwordHash(password);
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -170,6 +193,8 @@ export class EmhService {
         const session: Session = {
           code,
           protocol: "emh-v1",
+          settings: structuredClone(settings),
+          settingsLockedAt: null,
           title,
           createdAt: now,
           revision: 0,
@@ -180,7 +205,10 @@ export class EmhService {
           allocation: [],
           events: [],
         };
-        event(session, now, "created", { protocol: session.protocol });
+        event(session, now, "created", {
+          protocol: session.protocol,
+          settings,
+        });
         await tx.query(
           "INSERT INTO emh_sessions (code, state) VALUES ($1, $2::jsonb)",
           [code, JSON.stringify(session)],
@@ -320,12 +348,22 @@ export class EmhService {
                 "名簿または進行が更新されました。確認してもう一度操作してください。",
               );
               const kind = input.command.kind;
-              if (kind === "assign") {
+              if (input.command.kind === "update-settings") {
+                check(
+                  session.status === "open" && session.settingsLockedAt == null,
+                  "割り当て確定後は条件を変更できません。開始前に割り当てを解除してください。",
+                );
+                session.settings = settingsSchema.parse(input.command.settings);
+              } else if (kind === "assign") {
                 check(
                   session.status === "open" && session.members.length >= 3,
                   "受付中に3人以上がそろってから割り当ててください。",
                 );
-                session.allocation = allocationPlan(session.members.length);
+                session.allocation = allocationPlan(
+                  session.members.length,
+                  session.settings,
+                );
+                session.settingsLockedAt = now;
                 const shuffled = [...session.members];
                 for (let i = shuffled.length - 1; i > 0; i--) {
                   const j = randomInt(i + 1);
@@ -335,7 +373,12 @@ export class EmhService {
                 for (const allocation of session.allocation) {
                   const room = newRoom(
                     code,
-                    { ...DEFAULT_CONFIG, title: session.title },
+                    {
+                      ...DEFAULT_CONFIG,
+                      title: session.title,
+                      initialUnits: session.settings!.initialUnits,
+                      periodSeconds: session.settings!.periodSeconds,
+                    },
                     now,
                     "",
                     "",
@@ -358,6 +401,7 @@ export class EmhService {
                       now,
                     );
                   }
+                  assignParticipants(room, random);
                   offset += allocation.size;
                   await tx.query(
                     "INSERT INTO emh_markets (room_code,market_id,state) VALUES ($1,$2,$3::jsonb)",
@@ -376,6 +420,7 @@ export class EmhService {
                 ]);
                 markets.length = 0;
                 session.allocation = [];
+                session.settingsLockedAt = null;
                 session.members.forEach((p) => (p.marketId = null));
                 session.status = "open";
               } else {
@@ -428,12 +473,16 @@ export class EmhService {
                 kind === "assign"
                   ? {
                       allocation: session.allocation,
+                      settings: session.settings,
+                      settingsLockedAt: session.settingsLockedAt,
                       assignments: session.members.map((p) => ({
                         id: p.id,
                         market: p.marketId,
                       })),
                     }
-                  : {},
+                  : kind === "update-settings"
+                    ? { settings: session.settings }
+                    : {},
               );
               await saveSession(tx, session);
             } else {
@@ -569,7 +618,14 @@ export class EmhService {
               experiment: "emh-v1",
               code,
               title: session.title,
-              config: { ...DEFAULT_CONFIG, title: session.title },
+              settings: session.settings,
+              settingsLockedAt: session.settingsLockedAt,
+              config: result.rows[0]?.state.config ?? {
+                ...DEFAULT_CONFIG,
+                title: session.title,
+                initialUnits: session.settings!.initialUnits,
+                periodSeconds: session.settings!.periodSeconds,
+              },
               allocation: session.allocation,
               members: session.members.map((p) => ({
                 id: p.id,

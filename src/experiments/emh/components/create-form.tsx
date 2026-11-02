@@ -5,10 +5,15 @@ import type { ServerStatus } from "@/lib/server/config";
 import { api, errorMessage } from "@/lib/client";
 import { TeacherKeyHelp } from "@/components/teacher-key-help";
 import { TeacherPasswordHelp } from "@/components/teacher-password-help";
+import { DEFAULT_SETTINGS, type EmhSettings } from "../settings";
+import { SettingsFields } from "./settings-fields";
 
 export function EmhCreateForm({ status }: { status: ServerStatus }) {
   const router = useRouter();
   const [title, setTitle] = useState("資産市場実験");
+  const [settings, setSettings] = useState<EmhSettings>(() =>
+    structuredClone(DEFAULT_SETTINGS),
+  );
   const [password, setPassword] = useState("");
   const [accessKey, setAccessKey] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,6 +27,7 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
         title,
         password,
         accessKey,
+        settings,
       });
       router.push(`/room/${result.code}?entry=teacher`);
     } catch (e) {
@@ -37,15 +43,12 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
           <b>6</b> ラウンド
         </span>
         <span>
-          A・B 期 <b>各4分</b>
+          1取引 <b>最大30秒</b>
         </span>
         <span>
-          <b>約9人</b> / 市場
+          休憩 <b>1分</b>
         </span>
       </div>
-      <p className="muted">
-        入室した全員を自動で分け、各市場に3タイプをできるだけ均等に割り当てます。配当条件は開始後、各自の画面に表示されます。
-      </p>
       <label className="field">
         実験名
         <input
@@ -55,6 +58,11 @@ export function EmhCreateForm({ status }: { status: ServerStatus }) {
           maxLength={60}
         />
       </label>
+      <SettingsFields
+        settings={settings}
+        onChange={setSettings}
+        disabled={busy}
+      />
       <label className="field">
         教員パスワード
         <input

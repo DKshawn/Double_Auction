@@ -3,6 +3,7 @@ export type Side = "bid" | "ask";
 export type Status = "lobby" | "trading" | "break" | "completed";
 
 export interface Config {
+  initialUnits?: number;
   title: string;
   rounds: number;
   periodSeconds: number;
@@ -127,6 +128,7 @@ export interface PersonView {
   dividends: { a: number; b: number } | null;
 }
 export interface RoomView {
+  initialUnits: number;
   marketId?: number;
   code: string;
   title: string;

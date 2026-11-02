@@ -313,3 +313,55 @@ test("CSV is Excel-safe, UTF-8, and personal export excludes others' trades", ()
   assert.ok(!output.body.includes("345"));
   assert.ok(!output.body.includes("secret"));
 });
+
+test("custom supply conserves assets and cash, carries A into B, and resets the next round", () => {
+  const r = setup({ initialUnits: 5, periodSeconds: 90 });
+  assert.equal(r.periodEndsAt, 90000);
+  assert.equal(
+    r.participants.reduce((s, p) => s + p.holdings, 0),
+    45,
+  );
+  quote(r, 0, "ask", 300);
+  quote(r, 6, "bid", 300, 2);
+  assert.equal(
+    r.participants.reduce((s, p) => s + p.cash, 0),
+    0,
+  );
+  finish(r, 3);
+  const a = r.results[0];
+  assert.equal(a.initialDividend, 10095);
+  assert.equal(a.maxDividend, 11565);
+  assert.equal(a.actualDividend, 10136);
+  assert.equal(a.gainEfficiency, 41 / 1470);
+  assert.equal(a.allocationEfficiency, 10136 / 11565);
+  assert.equal(r.participants[6].holdings, 6);
+  assert.equal(r.periodEndsAt, 90003);
+  finish(r, 4);
+  assert.equal(r.results[1].maxDividend, 4950);
+  assert.equal(r.results[1].initialDividend, 4470);
+  assert.ok(r.participants.every((p) => p.holdings === 0));
+  const profit = r.participants.map((p) => p.totalProfit);
+  act(r, teacher, { kind: "next-year", expectedPhase: phaseKey(r) }, 5, random);
+  assert.ok(
+    r.participants.every(
+      (p) => p.holdings === 5 && p.cash === 0 && p.dividend === 0,
+    ),
+  );
+  assert.deepEqual(
+    r.participants.map((p) => p.totalProfit),
+    profit,
+  );
+});
+
+test("legacy market snapshots retain two-unit resets and correct exported conditions", () => {
+  const r = setup();
+  delete r.config.initialUnits;
+  finish(r, 1);
+  finish(r, 2);
+  act(r, teacher, { kind: "next-year", expectedPhase: phaseKey(r) }, 3, random);
+  assert.ok(r.participants.every((p) => p.holdings === 2));
+  assert.equal(view(r, teacher, 3).initialUnits, 2);
+  const output = JSON.parse(exportData(r, teacher, "conditions").body);
+  assert.equal(output.config.initialUnits, 2);
+  assert.equal(output.rules.totalUnits, 18);
+});

@@ -9,6 +9,7 @@ import type {
   RoomView,
   Side,
 } from "./types";
+import { initialUnitsFor, MAX_MARKET_SIZE } from "./settings";
 
 export class RuleError extends Error {
   constructor(
@@ -97,7 +98,10 @@ export function addParticipant(
     room.status === "lobby",
     "受付は終了しました。登録済みの参加者は再入室できます。",
   );
-  requireRule(room.participants.length < 12, "この市場は定員に達しています。");
+  requireRule(
+    room.participants.length < MAX_MARKET_SIZE,
+    "この市場は定員に達しています。",
+  );
   requireRule(
     !room.participants.some((p) => p.studentId === person.studentId),
     "この参加者番号は登録済みです。PINを確認してください。",
@@ -146,7 +150,7 @@ function beginPeriod(room: Room, now: number, random: () => number) {
 function beginYear(room: Room, now: number, random: () => number) {
   room.period = "A";
   for (const p of room.participants) {
-    p.holdings = 2;
+    p.holdings = initialUnitsFor(room.config);
     p.cash = 0;
     p.dividend = 0;
   }
@@ -185,12 +189,12 @@ export function endPeriod(
   const actualDividend = payouts.reduce((s, p) => s + p.dividend, 0);
   const maxDividend =
     room.participants.length *
-    2 *
-    Math.max(...room.config.dividends.map((d) => (period === "A" ? d.a : d.b)));
+    initialUnitsFor(room.config) *
+    Math.max(...payouts.map((p) => p.perUnit));
   const initialDividend = room.participants.reduce(
     (s, p) =>
       s +
-      2 *
+      initialUnitsFor(room.config) *
         (period === "A"
           ? room.config.dividends[p.type! - 1]!.a
           : room.config.dividends[p.type! - 1]!.b),
@@ -326,6 +330,39 @@ function settle(
   room.emptyUnits = 0;
   beginUnit(room, now, random);
 }
+export function assignParticipants(
+  room: Room,
+  random: () => number = Math.random,
+) {
+  requireRule(room.status === "lobby", "開始後は割り当てを変更できません。");
+  const counts =
+    room.typeCounts ??
+    Array.from(
+      { length: 3 },
+      (_, i) =>
+        Math.floor(room.participants.length / 3) +
+        (i < room.participants.length % 3 ? 1 : 0),
+    );
+  requireRule(
+    counts.length === 3 &&
+      counts.every((n) => Number.isInteger(n) && n > 0) &&
+      counts.reduce((a, b) => a + b, 0) === room.participants.length,
+    "タイプの割り当てを確認してください。",
+  );
+  const seats = Array.from(
+    { length: room.participants.length },
+    (_, i) => i + 1,
+  );
+  for (let i = seats.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [seats[i], seats[j]] = [seats[j]!, seats[i]!];
+  }
+  room.participants.forEach((p, i) => {
+    p.seat = seats[i]!;
+    p.type =
+      p.seat <= counts[0]! ? 1 : p.seat <= counts[0]! + counts[1]! ? 2 : 3;
+  });
+}
 export function act(
   room: Room,
   actor: Actor,
@@ -452,33 +489,28 @@ export function act(
     case "start": {
       requireRule(room.status === "lobby", "この実験は開始済みです。");
       requireRule(room.participants.length >= 3, "3人以上の参加者が必要です。");
-      const counts =
-        room.typeCounts ??
-        Array.from(
-          { length: 3 },
-          (_, i) =>
-            Math.floor(room.participants.length / 3) +
-            (i < room.participants.length % 3 ? 1 : 0),
-        );
+      if (room.participants.every((p) => p.seat === null && p.type === null)) {
+        assignParticipants(room, random);
+      }
+      const assignedCounts = [1, 2, 3].map(
+        (type) => room.participants.filter((p) => p.type === type).length,
+      );
       requireRule(
-        counts.length === 3 &&
-          counts.every((n) => Number.isInteger(n) && n > 0) &&
-          counts.reduce((a, b) => a + b, 0) === room.participants.length,
+        assignedCounts.every(
+          (n, i) =>
+            n > 0 &&
+            (room.typeCounts === undefined || room.typeCounts[i] === n),
+        ) &&
+          room.participants.every(
+            (p) =>
+              Number.isInteger(p.seat) &&
+              p.seat! >= 1 &&
+              p.seat! <= room.participants.length,
+          ) &&
+          new Set(room.participants.map((p) => p.seat)).size ===
+            room.participants.length,
         "タイプの割り当てを確認してください。",
       );
-      const seats = Array.from(
-        { length: room.participants.length },
-        (_, i) => i + 1,
-      );
-      for (let i = seats.length - 1; i > 0; i--) {
-        const j = Math.floor(random() * (i + 1));
-        [seats[i], seats[j]] = [seats[j]!, seats[i]!];
-      }
-      room.participants.forEach((p, i) => {
-        p.seat = seats[i]!;
-        p.type =
-          p.seat <= counts[0]! ? 1 : p.seat <= counts[0]! + counts[1]! ? 2 : 3;
-      });
       beginYear(room, now, random);
       break;
     }
@@ -568,6 +600,7 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
     unitKey: unitKey(room),
     phaseKey: phaseKey(room),
     rounds: room.config.rounds,
+    initialUnits: initialUnitsFor(room.config),
     periodSeconds: room.config.periodSeconds,
     unitSeconds: room.config.unitSeconds,
     breakSeconds: room.config.breakSeconds,

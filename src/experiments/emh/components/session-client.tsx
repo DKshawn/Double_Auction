@@ -9,6 +9,8 @@ import type {
 } from "../session-types";
 import type { Action } from "../types";
 import { RoomDashboard } from "./room-dashboard";
+import { SettingsFields } from "./settings-fields";
+import type { EmhSettings } from "../settings";
 
 export function SessionClient({
   code,
@@ -27,6 +29,10 @@ export function SessionClient({
   const [unauthorized, setUnauthorized] = useState(false);
   const [retry, setRetry] = useState<RequestCommand | null>(null);
   const [reveal, setReveal] = useState<SessionCommand | null>(null);
+  const [draftSettings, setDraftSettings] = useState<EmhSettings | null>(null);
+  const [settingsBase, setSettingsBase] = useState<string | null>(null);
+  const [reopen, setReopen] = useState<SessionCommand | null>(null);
+  const reopenDialog = useRef<HTMLDialogElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const url = `/api/rooms/${code}/emh?session=${role}${selected ? `&market=${selected}` : ""}`;
   const accept = useCallback((next: SessionView) => {
@@ -91,6 +97,9 @@ export function SessionClient({
   useEffect(() => {
     if (reveal) dialog.current?.showModal();
   }, [reveal]);
+  useEffect(() => {
+    if (reopen) reopenDialog.current?.showModal();
+  }, [reopen]);
   async function send(input: RequestCommand) {
     if (pending.current) return;
     pending.current = true;
@@ -109,7 +118,10 @@ export function SessionClient({
         setError(result.error ?? "操作できませんでした。");
         if (response.status >= 500) setRetry(input);
         if (response.status === 401) setUnauthorized(true);
-      } else setOnline(true);
+      } else {
+        setOnline(true);
+        return true;
+      }
     } catch {
       setOnline(false);
       setError("通信が途切れました。接続後に同じ操作を再送できます。");
@@ -119,7 +131,7 @@ export function SessionClient({
       setBusy(false);
     }
   }
-  function command(kind: SessionCommand["kind"]) {
+  function command(kind: Exclude<SessionCommand["kind"], "update-settings">) {
     if (!state) return;
     void send({
       scope: "session",
@@ -139,6 +151,13 @@ export function SessionClient({
   const teacher = role === "teacher";
   const disabled =
     busy || !online || Boolean(selected && selected !== state?.marketId);
+  const settingsDirty = Boolean(
+    draftSettings &&
+    JSON.stringify(draftSettings) !== JSON.stringify(state?.settings),
+  );
+  const settingsChanged = Boolean(
+    draftSettings && settingsBase !== JSON.stringify(state?.settings),
+  );
   return (
     <>
       <Header>
@@ -192,6 +211,87 @@ export function SessionClient({
             <p role="status">ルームを読み込み中…</p>
           ) : (
             <>
+              {teacher && state.settings && (
+                <section className="panel emh-session-settings">
+                  {state.status === "open" ? (
+                    <form
+                      onSubmit={async (event) => {
+                        event.preventDefault();
+                        if (!draftSettings || settingsChanged) return;
+                        const saved = await send({
+                          scope: "session",
+                          requestId: crypto.randomUUID(),
+                          command: {
+                            kind: "update-settings",
+                            settings: draftSettings,
+                            expectedRevision: state.revision,
+                          },
+                        });
+                        if (saved) setDraftSettings(null);
+                      }}
+                    >
+                      <SettingsFields
+                        settings={draftSettings ?? state.settings}
+                        onChange={(value) => {
+                          if (!draftSettings)
+                            setSettingsBase(JSON.stringify(state.settings));
+                          setDraftSettings(value);
+                        }}
+                        disabled={disabled}
+                      />
+                      <button
+                        className="button secondary"
+                        disabled={disabled || !settingsDirty || settingsChanged}
+                      >
+                        設定を保存
+                      </button>
+                      {draftSettings && (
+                        <button
+                          type="button"
+                          className="button secondary"
+                          disabled={busy}
+                          onClick={() => setDraftSettings(null)}
+                        >
+                          変更を取り消す
+                        </button>
+                      )}
+                      {settingsChanged ? (
+                        <p className="error-message" role="alert">
+                          別の画面で設定が更新されました。変更を取り消して確認してください。
+                        </p>
+                      ) : (
+                        settingsDirty && (
+                          <p className="field-help">
+                            設定を保存すると、下の分け方に反映されます。
+                          </p>
+                        )
+                      )}
+                    </form>
+                  ) : (
+                    <>
+                      <h2>確定した実験条件</h2>
+                      <dl className="emh-settings-summary">
+                        <div>
+                          <dt>初期証券数</dt>
+                          <dd>1人 {state.settings.initialUnits}単位</dd>
+                        </div>
+                        <div>
+                          <dt>目標人数</dt>
+                          <dd>1市場 {state.settings.targetMarketSize}人</dd>
+                        </div>
+                        <div>
+                          <dt>人数比率</dt>
+                          <dd>{state.settings.typeRatios.join(" : ")}</dd>
+                        </div>
+                        <div>
+                          <dt>A・B各期</dt>
+                          <dd>{state.settings.periodSeconds}秒</dd>
+                        </div>
+                      </dl>
+                    </>
+                  )}
+                </section>
+              )}
               {state.market ? (
                 <>
                   {teacher && (
@@ -319,8 +419,8 @@ export function SessionClient({
                       <>
                         <p>
                           {state.status === "open"
-                            ? "全員が入室したら、受付を終了して市場を割り当ててください。"
-                            : "市場の割り当てが完了しました。全員同時に開始します。"}
+                            ? "全員が入室したら、下の分け方を確認して確定してください。"
+                            : "条件と割り当てを確定しました。全員同時に開始します。"}
                         </p>
                         <div className="emh-actions">
                           <button
@@ -345,19 +445,28 @@ export function SessionClient({
                           {state.status === "open" ? (
                             <button
                               className="button primary"
-                              disabled={disabled || state.participantCount < 3}
+                              disabled={
+                                disabled ||
+                                settingsDirty ||
+                                state.participantCount < 3
+                              }
                               onClick={() => command("assign")}
                             >
-                              受付を終了して自動分け
+                              分け方を確定して受付終了
                             </button>
                           ) : (
                             <>
                               <button
                                 className="button secondary"
                                 disabled={disabled}
-                                onClick={() => command("reopen")}
+                                onClick={() =>
+                                  setReopen({
+                                    kind: "reopen",
+                                    expectedRevision: state.revision,
+                                  })
+                                }
                               >
-                                受付を再開
+                                割り当てを解除
                               </button>
                               <button
                                 className="button primary"
@@ -395,6 +504,10 @@ export function SessionClient({
                               市場 {m.id} <span>{m.size}人</span>
                             </h3>
                             <p>タイプ別人数 {m.typeCounts.join(" / ")}</p>
+                            <p>
+                              総証券数 {m.size * state.settings!.initialUnits}
+                              単位
+                            </p>
                             {state.status === "assigned" && (
                               <p>
                                 {state.participants
@@ -417,6 +530,45 @@ export function SessionClient({
                 </>
               )}
             </>
+          )}
+          {reopen && (
+            <dialog
+              ref={reopenDialog}
+              className="confirmation-dialog"
+              onCancel={() => setReopen(null)}
+              aria-labelledby="emh-reopen-title"
+            >
+              <h2 id="emh-reopen-title">割り当てを解除</h2>
+              <p>
+                市場とタイプの割り当てを解除し、受付と条件の編集を再開します。再確定すると参加者を割り当て直します。
+              </p>
+              <div className="emh-actions">
+                <button
+                  className="button secondary"
+                  onClick={() => setReopen(null)}
+                >
+                  戻る
+                </button>
+                <button
+                  className="button primary"
+                  disabled={disabled}
+                  onClick={async () => {
+                    if (
+                      await send({
+                        scope: "session",
+                        requestId: crypto.randomUUID(),
+                        command: reopen,
+                      })
+                    ) {
+                      setDraftSettings(null);
+                      setReopen(null);
+                    }
+                  }}
+                >
+                  解除して受付再開
+                </button>
+              </div>
+            </dialog>
           )}
           {reveal && (
             <dialog

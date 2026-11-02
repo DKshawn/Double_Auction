@@ -77,6 +77,17 @@ function bot(room: Room, now: number) {
 }
 type Setup = { title: string; settings: EmhSettings };
 
+function TeacherPageLink() {
+  return (
+    <Link
+      className="button secondary small-button"
+      href="/teacher?experiment=emh"
+    >
+      教員用ページへ
+    </Link>
+  );
+}
+
 export function Demo() {
   const [setup, setSetup] = useState<Setup>({
     title: "資産市場実験 · デモ",
@@ -95,16 +106,10 @@ export function Demo() {
     );
   return (
     <>
-      <Header homeHref="/emh/demo">
+      <Header homeHref="/emh/demo" leading={<TeacherPageLink />}>
         <span className="demo-header-tag">ひとりデモ</span>
       </Header>
       <main className="narrow-main teacher-setup-main">
-        <Link
-          className="button secondary small-button"
-          href="/teacher?experiment=emh"
-        >
-          教員用ページへ
-        </Link>
         <div className="teacher-hub-main teacher-entry-content">
           <EmhCreateForm
             status={{ mode: "local", ready: true, keyRequired: false }}
@@ -201,13 +206,7 @@ function DemoRoom({
     }
   }
   return (
-    <Shell wide room>
-      <Link
-        className="button secondary small-button"
-        href="/teacher?experiment=emh"
-      >
-        教員用ページへ
-      </Link>
+    <Shell wide room leading={<TeacherPageLink />}>
       <div className="demo-toolbar">
         <span className="demo-tag">デモ</span>
         <div className="segmented">

@@ -41,6 +41,8 @@ EMH Demo Model uses the same settings form and allocation-confirmation workflow 
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 
+The **実験を選び直す** button and the demo setup pages’ **教員用ページへ** button are in the page header.
+
 ## Experiments
 
 | Experiment                  | Scope                                                                                                                              | Guide                                             | Demo                                                          |

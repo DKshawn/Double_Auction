@@ -37,14 +37,18 @@ export function DemoEntry() {
     );
   return (
     <>
-      <Header homeHref="/demo">
+      <Header
+        homeHref="/demo"
+        leading={
+          <Link className="button secondary small-button" href="/teacher">
+            <ArrowLeft size={15} />
+            教員用ページへ
+          </Link>
+        }
+      >
         <span className="demo-header-tag">ひとりデモ</span>
       </Header>
       <main className="narrow-main teacher-setup-main">
-        <Link className="button secondary small-button" href="/teacher">
-          <ArrowLeft size={15} />
-          教員用ページへ
-        </Link>
         <h1 className="eyebrow teacher-entry-heading">
           <GraduationCap size={18} />
           ひとりデモ · 教員の実験設定

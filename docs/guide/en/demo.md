@@ -4,6 +4,8 @@
 
 After signing in, open **Demo Model** at the top right of the teacher page. Opening the public demo URLs below directly requires no login and creates no production room.
 
+All three demo setup pages have **教員用ページへ** in the header to return to the teacher page. EMH retains this button inside the demo room as well.
+
 ## Double Auction
 
 Open [`/demo`](https://exp-all-in-one.vercel.app/demo) directly or choose **Demo Model** on the teacher page. No login is required. It starts with the same settings form used for production experiments. The defaults are one market and 16 participants; institutions, periods per institution, markets, participants, and timing are configurable using the same validation rules as room creation.

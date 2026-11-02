@@ -3,10 +3,12 @@ import { ChartNoAxesCombined } from "lucide-react";
 
 export function Shell({
   children,
+  leading,
   wide = false,
   room = false,
 }: {
   children: React.ReactNode;
+  leading?: React.ReactNode;
   wide?: boolean;
   room?: boolean;
 }) {
@@ -14,12 +16,15 @@ export function Shell({
     <div className="emh-app">
       <header className={`site-header ${room ? "compact" : ""}`}>
         <div className="header-inner">
-          <Link href="/" className="brand">
-            <span className="brand-mark">
-              <ChartNoAxesCombined size={22} strokeWidth={1.7} />
-            </span>
-            市場実験室
-          </Link>
+          <div className="header-left">
+            <Link href="/" className="brand">
+              <span className="brand-mark">
+                <ChartNoAxesCombined size={22} strokeWidth={1.7} />
+              </span>
+              市場実験室
+            </Link>
+            {leading}
+          </div>
           <nav aria-label="メインナビゲーション">
             {!room && (
               <>

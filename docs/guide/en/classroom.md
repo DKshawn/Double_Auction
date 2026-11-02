@@ -6,6 +6,8 @@
 
 Create a room, bring students in, run the experiment, and download the results. Screenshots show a local sample classroom in the default Japanese interface; use the online entry links above for class. The creation and download panels use Double Auction as the example.
 
+On experiment setup and re-entry pages, use **実験を選び直す** in the header to return to experiment selection. When opening settings from a Double Auction room, **ルーム … に戻る** in the same header returns to that room.
+
 ## 1. Choose an experiment and create a room
 
 Open the teacher entry, enter the administrator-provided **教員用キー**, and click **ログイン**. After authentication, select an experiment or manage saved rooms from the same entry.

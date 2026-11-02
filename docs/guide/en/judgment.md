@@ -4,6 +4,8 @@
 
 This module comes from the former standalone Judgment application, previously named `DKshawn/Exp-all-in-one`. Its implementation is in `src/experiments/judgment/`. See the [pinned source and change record](../../../src/experiments/judgment/UPSTREAM.md).
 
+The teacher setup header has **実験を選び直す** to return to experiment selection. The demo task-selection header has **教員用ページへ** to return to teacher setup.
+
 1. Select from 14 available tasks and configure task-order and option-order randomization separately. The circular **i** button shows the description, estimated duration, and implementation conditions without changing the selection. Tasks are not automatically selected in advance. The student preview does not save answers and pauses time limits.
 2. After authenticating at the teacher entry, set a room teacher password with at least eight characters and create a room, and share its code. Students join with a seven-digit student ID, preserving leading zeros, and a four-digit PIN, then wait for the teacher to start.
 3. Starting assigns a condition to each student. Students answer at their own pace, and late entry is allowed. Conditions and ordering are saved and remain unchanged on re-entry. The student interface supports Japanese, Chinese, and English.

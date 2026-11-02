@@ -22,7 +22,7 @@ config:
 flowchart LR
     accTitle: Classroom workflow
     accDescr: The teacher creates a room and shares the entry and code. Students join with their nickname or student ID and PIN. The teacher starts the experiment, students participate, and the teacher downloads results.
-    A["1 · Teacher<br/>Select experiment<br/>Create and share room"]
+    A["1 · Teacher<br/>Sign in and select<br/>Create and share room"]
     B["2 · Students<br/>Code, nickname/ID, PIN<br/>Join and wait"]
     C["3 · Session<br/>Teacher starts<br/>Students participate"]
     D["4 · Teacher<br/>Download results<br/>Discuss in class"]
@@ -35,7 +35,9 @@ flowchart LR
 
 The teacher creates and shares a room, and students join with its code, using a nickname or student ID as instructed by the teacher. The teacher chooses the experiment, explains the rules, and downloads the results after the session.
 
-After a teacher key opens the room management list, its input is hidden; refresh and deletion on the same page reuse the entered key.
+Enter the teacher key once at the teacher entry. The same browser stays signed in for eight hours across reloads, experiment changes, room creation and management. Sign in again after logout, expiry or a key change; each room keeps its separate teacher password.
+
+EMH Demo Model uses the same settings form and allocation-confirmation workflow as the formal experiment.
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 

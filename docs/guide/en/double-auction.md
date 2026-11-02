@@ -4,7 +4,7 @@
 
 [Demo Model](https://exp-all-in-one.vercel.app/demo) · [Demo controls](demo.md)
 
-When creating a room, set a teacher password with at least eight characters and enter the administrator-provided teacher key when required.
+Authenticate once with the key at the teacher entry, then set a teacher password of at least eight characters for each room. The creation form does not request the key again.
 
 ## Allocate using actual attendance
 

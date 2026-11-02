@@ -5,6 +5,7 @@ import { StudentApp } from "@/experiments/judgment/components/student-app";
 import { studies } from "@/experiments/judgment/server/core";
 import { notFound } from "next/navigation";
 import { Room } from "@/experiments/double-auction/components/room";
+import { requireTeacherPage } from "@/lib/server/teacher-page-access";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export default async function RoomPage({
   const { code } = await params;
   if (!/^[A-Za-z2-9]{6}$/.test(code)) notFound();
   const { entry } = await searchParams;
+  if (entry === "teacher")
+    await requireTeacherPage(`/room/${code.toUpperCase()}?entry=teacher`);
   if ((await experimentFor(code.toUpperCase())) === "judgment")
     return entry === "teacher" ? (
       <JudgmentTeacherRoom code={code.toUpperCase()} studies={studies} />

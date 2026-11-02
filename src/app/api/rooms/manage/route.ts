@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { body, failure, json } from "@/lib/server/http";
 import { service } from "@/experiments/double-auction/server/service";
+import { teacherAccessKey } from "@/lib/server/teacher-session";
 
 export const runtime = "nodejs";
 const schema = z
@@ -12,7 +13,8 @@ const schema = z
 
 export async function POST(request: NextRequest) {
   try {
-    const { accessKey } = await body(request, schema);
+    const data = await body(request, schema);
+    const accessKey = teacherAccessKey(request, data.accessKey);
     const rooms = [
       ...(await (await service()).listRooms(accessKey)),
       ...(await (await emhService()).listRooms(accessKey)),

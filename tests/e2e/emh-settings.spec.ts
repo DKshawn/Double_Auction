@@ -7,6 +7,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { verificationTarget } from "../../scripts/verification-target";
+import { enterTeacherPage } from "./helpers/teacher-login";
 import type {
   RequestCommand,
   SessionView,
@@ -32,6 +33,7 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
   };
   try {
     await page.goto("/teacher?experiment=emh");
+    await enterTeacherPage(page);
     await page.getByLabel("実験名", { exact: true }).fill("EMH 設定検証");
     await page.locator('[name="initialUnits"]').fill("5");
     await page.locator('[name="targetMarketSize"]').fill("8");
@@ -40,8 +42,9 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
     await page
       .getByLabel("教員パスワード", { exact: false })
       .fill("Emh-Settings-Verification");
-    const key = page.getByLabel("教員用キー", { exact: false });
-    if (await key.count()) await key.fill(accessKey);
+    await expect(page.getByLabel("教員用キー", { exact: false })).toHaveCount(
+      0,
+    );
     await page
       .getByRole("button", { name: "ルームを作成", exact: true })
       .click();

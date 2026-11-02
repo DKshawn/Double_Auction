@@ -10,6 +10,7 @@ import type {
 import type { Action } from "../types";
 import { RoomDashboard } from "./room-dashboard";
 import { SettingsFields } from "./settings-fields";
+import { SettingsSummary } from "./settings-summary";
 import type { EmhSettings } from "../settings";
 
 export function SessionClient({
@@ -268,27 +269,7 @@ export function SessionClient({
                       )}
                     </form>
                   ) : (
-                    <>
-                      <h2>確定した実験条件</h2>
-                      <dl className="emh-settings-summary">
-                        <div>
-                          <dt>初期証券数</dt>
-                          <dd>1人 {state.settings.initialUnits}単位</dd>
-                        </div>
-                        <div>
-                          <dt>目標人数</dt>
-                          <dd>1市場 {state.settings.targetMarketSize}人</dd>
-                        </div>
-                        <div>
-                          <dt>人数比率</dt>
-                          <dd>{state.settings.typeRatios.join(" : ")}</dd>
-                        </div>
-                        <div>
-                          <dt>A・B各期</dt>
-                          <dd>{state.settings.periodSeconds}秒</dd>
-                        </div>
-                      </dl>
-                    </>
+                    <SettingsSummary settings={state.settings} />
                   )}
                 </section>
               )}

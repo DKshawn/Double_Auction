@@ -1,5 +1,6 @@
 import { test, expect, type BrowserContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { enterTeacherPage } from "./helpers/teacher-login";
 import type {
   Command,
   RoomView,
@@ -31,6 +32,10 @@ test("Japanese student entry, teacher navigation and mobile layout", async ({
   });
   await page.getByRole("link", { name: "教員用ページ", exact: true }).click();
   await expect(
+    page.getByRole("heading", { name: /^(教員ログイン|実験を選ぶ)$/ }),
+  ).toBeVisible();
+  await enterTeacherPage(page);
+  await expect(
     page.getByRole("heading", { name: "実験を選ぶ", exact: true }),
   ).toBeVisible();
   expect(errors).toEqual([]);
@@ -45,6 +50,7 @@ test("12 independent students trade, recover, finish rounds and export with serv
   teacherPage.on("pageerror", (e) => errors.push(e.message));
   await teacherPage.setViewportSize({ width: 1440, height: 1080 });
   await teacherPage.goto("/teacher?legacy=1");
+  await enterTeacherPage(teacherPage);
   await teacherPage
     .getByLabel("実験名", { exact: true })
     .fill("市場と価格の実験");

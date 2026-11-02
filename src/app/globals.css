@@ -1132,3 +1132,10 @@ summary.disclosure-button {
   margin: 4px 0 0;
   font-weight: 700;
 }
+.teacher-login {
+  display: grid;
+  gap: 24px;
+  padding: 28px;
+  max-width: 480px;
+  margin: 40px auto;
+}

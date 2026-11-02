@@ -15,17 +15,19 @@ npm run dev
 
 On Windows, `pwsh -NoProfile -File scripts/dev-local.ps1` starts an isolated local verification environment on port 3200, using `.data/platform-verification`. The old EMH folder is no longer needed; see the [consolidation record](../../releases/emh-folder-consolidation.md).
 
-The ordinary development server's teacher entry is `http://localhost:3000/teacher`. The student entry `/` and shared header do not display teacher or demo links. Without Neon configured, the app uses embedded PostgreSQL through PGlite at `.data/auction`. Do not open the same data directory from multiple servers. Production uses Neon.
+The ordinary development server's teacher entry is `http://localhost:3000/teacher`, also reachable from **教員用ページ** on the student entry `/`. With a key configured, authentication is required before experiment selection. Without Neon configured, the app uses embedded PostgreSQL through PGlite at `.data/auction`. Do not open the same data directory from multiple servers. Production uses Neon.
 
 To require a teacher key locally, set `TEACHER_ACCESS_KEY` in the Git-ignored `.env.local` file and restart the server. Without a configured key, local access does not require one.
 
+Teacher entry and room pages with `?entry=teacher` validate authentication on the server. `POST /api/teacher/session` validates the key and issues an eight-hour signed HttpOnly, SameSite=Lax cookie, with Secure on HTTPS. The key itself is never stored in the cookie or browser storage. `DELETE` logs out; key rotation invalidates existing sessions. Creation, management, deletion and Judgment teacher-preview APIs validate the session while retaining `accessKey` support for existing authenticated scripts. No new environment variable or database migration is required.
+
 ## Vercel + Neon
 
-| Environment variable | Purpose                                                                                                         |
-| -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`       | Neon pooled PostgreSQL connection string; required on Vercel                                                    |
-| `TEACHER_ACCESS_KEY` | Shared teacher key for room creation, management, and deletion; required on Vercel and not shared with students |
-| `PGLITE_DATA_DIR`    | Optional local data directory                                                                                   |
+| Environment variable | Purpose                                                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`       | Neon pooled PostgreSQL connection string; required on Vercel                                                     |
+| `TEACHER_ACCESS_KEY` | Shared key for teacher-entry authentication and session signing; required on Vercel and not shared with students |
+| `PGLITE_DATA_DIR`    | Optional local data directory                                                                                    |
 
 Deploy from GitHub to Vercel. The function region in `vercel.json` is `sin1`, matching Neon Singapore. Tables initialize on first connection, or manually with `npm run db:migrate`. Production does not fall back to a local database.
 

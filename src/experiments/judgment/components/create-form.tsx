@@ -3,7 +3,6 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { ServerStatus } from "@/lib/server/config";
 import { api, errorMessage } from "@/lib/client";
-import { TeacherKeyHelp } from "@/components/teacher-key-help";
 import { TeacherPasswordHelp } from "@/components/teacher-password-help";
 import type { Settings, Study } from "../types";
 import { SettingsFields } from "./settings-fields";
@@ -22,8 +21,7 @@ export function JudgmentCreateForm({
     randomizeChoices: false,
   });
   const [title, setTitle] = useState(JUDGMENT_NAME),
-    [password, setPassword] = useState(""),
-    [accessKey, setAccessKey] = useState("");
+    [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   async function create(event: FormEvent) {
@@ -34,7 +32,6 @@ export function JudgmentCreateForm({
       const result = await api<{ code: string }>("/api/judgment/rooms", {
         title,
         password,
-        accessKey,
         settings,
       });
       router.push(`/room/${result.code}?entry=teacher`);
@@ -77,20 +74,6 @@ export function JudgmentCreateForm({
             />
             <TeacherPasswordHelp />
           </label>
-          {status.keyRequired && (
-            <label className="field">
-              教員用キー
-              <input
-                type="password"
-                value={accessKey}
-                onChange={(e) => setAccessKey(e.target.value)}
-                maxLength={256}
-                autoComplete="off"
-                required
-              />
-              <TeacherKeyHelp />
-            </label>
-          )}
         </div>
         {!status.ready && (
           <p className="error-message" role="alert">

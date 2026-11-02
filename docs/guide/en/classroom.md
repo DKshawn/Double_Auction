@@ -8,19 +8,21 @@ Create a room, bring students in, run the experiment, and download the results. 
 
 ## 1. Choose an experiment and create a room
 
-Open the teacher entry and select an experiment. All three experiments share this entry point and the saved-room list below it.
+Open the teacher entry, enter the administrator-provided **教員用キー**, and click **ログイン**. After authentication, select an experiment or manage saved rooms from the same entry.
 
-![Teacher entry: experiment cards above, teacher-key access to room management below](../images/teacher-entry.png)
+![Teacher login: enter the shared key once](../images/teacher-login.png)
 
-Enter an experiment name, review the settings, set a room teacher password of at least eight characters, and enter the administrator-provided **教員用キー**. Click **ルーム作成** to open the teacher view.
+![Authenticated teacher entry: experiment selection and room management](../images/teacher-entry.png)
 
-![Room creation example: experiment name, room teacher password, teacher key, and create button](../images/create-room.png)
+Enter the experiment name, review settings and set a room teacher password of at least eight characters. Click **ルーム作成** to open the teacher view; the teacher key is not requested again.
+
+![Create a room: experiment name, settings and room teacher password](../images/create-room.png)
 
 EMH supports initial securities, target market size, type ratios and period duration. Save settings while admission is open; confirming allocation locks the conditions. See [EMH settings](emh.md).
 
 | Item                                   | Used by                             | Purpose                                                                                   |
 | -------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------- |
-| Teacher key — 教員用キー               | Teachers                            | Provided by the administrator for online room creation and the management list            |
+| Teacher key — 教員用キー               | Teachers                            | Provided by the administrator for teacher-entry login                                     |
 | Room teacher password — 教員パスワード | Teacher                             | Set when creating a room; used to re-enter that room                                      |
 | Room code — ルームコード               | Shared by the teacher with students | Identifies the classroom; it is separate from the teacher password                        |
 | Four-digit PIN — 暗証番号              | Each student                        | Set by the student; restores their identity together with the same nickname or student ID |
@@ -55,24 +57,24 @@ In Double Auction, attempting to download records that do not exist yet shows a 
 
 ## Re-entry and room management
 
-| Task                                                       | Action                                                                                                                                           |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Teacher returns to a room                                  | Click **教員として再入室** and enter the room code and the teacher password set at creation                                                      |
-| Student returns after closing the page or changing devices | Open the student entry with the same code, nickname or student ID, and original PIN                                                              |
-| Find an earlier room                                       | Under **ルーム管理**, enter the teacher key and click **ルームを表示**; search by experiment name or code, or filter by creation year and status |
-| View saved results                                         | In the list, click **結果・ダウンロード / 再入室** or **再入室**, then enter that room's teacher password                                        |
+| Task                                                       | Action                                                                                                     |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Teacher returns to a room                                  | Click **教員として再入室** and enter the room code and the teacher password set at creation                |
+| Student returns after closing the page or changing devices | Open the student entry with the same code, nickname or student ID, and original PIN                        |
+| Find an earlier room                                       | After login, search by experiment name or code under **ルーム管理**, or filter by creation year and status |
+| View saved results                                         | In the list, click **結果・ダウンロード / 再入室** or **再入室**, then enter that room's teacher password  |
 
 Login state is scoped by room and role. Ordinary tabs in one browser can show the teacher and student views together. To simulate multiple students, use a separate device or browser profile for each.
 
 Rooms appear newest first, with experiment name, code, creation time, status, market count, attendance, progress, and periods per institution. Load another 20 entries at a time. There are no personal teacher accounts: online creation and management use a shared teacher key. Locally, the list shows rooms in the database selected on that computer.
 
-After a teacher key opens the list, its input is hidden; refresh and deletion on the same page reuse the entered key. Reloading the page requires the key again.
+Enter the teacher key once at the teacher entry. The same browser stays signed in for eight hours across reloads, experiment changes, room creation and management. Sign in again after logout, expiry or a key change; each room keeps its separate teacher password.
 
-To delete a room, click **このルームを削除** in its confirmation dialog. The room teacher password is not requested again, but the server still checks the management list's teacher key, except in local environments without a configured key. Deletion also removes participants, markets, trading history, audit logs, and results; active students can no longer use that room. Deletion cannot be undone.
+To delete a room, click **このルームを削除** in its confirmation dialog. The room teacher password is not requested again, but the server still checks the teacher login session, except in local environments without a configured key. Deletion also removes participants, markets, trading history, audit logs, and results; active students can no longer use that room. Deletion cannot be undone.
 
 ## Try it before class
 
-After selecting an experiment, use **Demo Model** at the top right of the teacher page without a teacher key or room creation. The entries are [Double Auction](https://exp-all-in-one.vercel.app/demo), [EMH](https://exp-all-in-one.vercel.app/emh/demo), and [Judgement under Uncertainty](https://exp-all-in-one.vercel.app/judgment/demo). The Judgement demo starts after selecting tasks; answers are not saved and time limits are paused. See [Using Demo Model](demo.md) for details.
+After selecting an experiment, use **Demo Model** at the top right of the teacher page to try the demo. The public URLs below also work directly without login. The entries are [Double Auction](https://exp-all-in-one.vercel.app/demo), [EMH](https://exp-all-in-one.vercel.app/emh/demo), and [Judgement under Uncertainty](https://exp-all-in-one.vercel.app/judgment/demo). The Judgement demo starts after selecting tasks; answers are not saved and time limits are paused. See [Using Demo Model](demo.md) for details.
 
 The old `doubleauction.vercel.app` address redirects to the new address while preserving the path and query. Anyone who previously joined through the old address needs to re-enter once at the new address.
 

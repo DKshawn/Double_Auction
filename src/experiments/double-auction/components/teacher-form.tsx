@@ -3,7 +3,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, FlaskConical, Info } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
-import { TeacherKeyHelp } from "@/components/teacher-key-help";
 import { TeacherPasswordHelp } from "@/components/teacher-password-help";
 import {
   MAX_STUDY_MARKETS,
@@ -403,7 +402,6 @@ export function TeacherForm({
           ? await api<{ code: string }>("/api/rooms", {
               config,
               password: form.get("password"),
-              accessKey: form.get("accessKey") || "",
               ...(!legacy && adoptedConditions?.generator
                 ? { generator: adoptedConditions.generator }
                 : {}),
@@ -676,18 +674,6 @@ export function TeacherForm({
                   />
                   <TeacherPasswordHelp />
                 </label>
-                {tab === "create" && status.keyRequired && (
-                  <label className="field">
-                    教員用キー
-                    <input
-                      type="password"
-                      name="accessKey"
-                      required
-                      autoComplete="off"
-                    />
-                    <TeacherKeyHelp />
-                  </label>
-                )}
               </section>
             )}
           </div>

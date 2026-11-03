@@ -52,7 +52,7 @@ Judgement 教师页面和 Demo 共用任务卡片、已选列表和操作区，�
 | 实验                        | 内容                                                                   | 指南                                             | 演示                                                          |
 | --------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
 | Double Auction              | 比较 CDA、Call Market、Posted Offer 三种制度，按实际人数分配市场与角色 | [流程与规则](docs/guide/zh-CN/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
-| EMH                         | 两种实验可设置轮数、每轮、单次交易和休息时间；实验2每市场12人                         | [流程与规则](docs/guide/zh-CN/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
+| EMH                         | 两种实验可设置轮数、每轮、单次交易和休息时间；实验2每市场12人          | [流程与规则](docs/guide/zh-CN/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
 | Judgement under Uncertainty | 14项判断与认知偏差任务，支持条件分配、任务与选项顺序、计时及日中英显示 | [流程与数据](docs/guide/zh-CN/judgment.md)       | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
 
 ## 开发与资料

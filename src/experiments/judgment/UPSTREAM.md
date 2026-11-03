@@ -23,7 +23,8 @@ Integration adaptations:
 - `app.js` mounts inside a React host, uses the platform's scoped HttpOnly session
   cookie, and disposes timers/listeners on unmount. Local storage is scoped by
   room. It stores language, reload/timer state and retry payloads, never auth
-  tokens. The original question renderer and response controls are retained.
+  tokens. The waiting screen shares the platform card style; language switching,
+  polling, and the original question renderer and response controls are retained.
 - `ranking.js` places the drag ghost inside its host so scoped styles and modal
   previews work. Ranking semantics are unchanged.
 - Task CSS is scoped to `.judgment-app` and uses the DoubleAuction color tokens.

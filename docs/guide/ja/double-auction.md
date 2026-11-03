@@ -2,6 +2,8 @@
 
 [日本語](../ja/double-auction.md) · [中文](../zh-CN/double-auction.md) · [English](../en/double-auction.md)
 
+学生の待機画面は共通のカードデザインを使い、実験ごとの情報を表示します。
+
 [Demo Model](https://exp-all-in-one.vercel.app/demo) · [デモの操作](demo.md)
 
 画面サイズ別デモは `/demo/preview` で開けます。狭い画面ではサイズを選択欄から切り替え、進行状況は保持されます。

@@ -12,6 +12,7 @@ import {
   Eye,
   LockKeyhole,
 } from "lucide-react";
+import { StudentWaitingCard } from "@/components/student-waiting-card";
 import type { RoomView, TeacherAction } from "@/experiments/emh/types";
 import {
   ExportPanel,
@@ -103,7 +104,7 @@ export function RoomDashboard({
     }
   }
   return (
-    <>
+    <div className={teacher ? "emh-teacher-view" : "emh-student-view"}>
       <div className="room-heading">
         <div>
           <div className="room-context">
@@ -134,7 +135,16 @@ export function RoomDashboard({
           通信を再接続しています。表示は最後に受信した状態です。取引は接続が戻るまで待ってください。
         </p>
       )}
-      {room.status === "lobby" ? (
+      {room.status === "lobby" && !teacher ? (
+        <StudentWaitingCard>
+          <p className="student-waiting-eyebrow">入室が完了しました</p>
+          <h1>教員が開始するまでお待ちください</h1>
+          <p>この画面を開いたままお待ちください。</p>
+          <div className="student-waiting-count">
+            参加者 <b>{room.participantCount}</b>人
+          </div>
+        </StudentWaitingCard>
+      ) : room.status === "lobby" ? (
         <div className="lobby-layout">
           <section className="panel lobby-panel">
             <div className="lobby-title">
@@ -436,14 +446,16 @@ export function RoomDashboard({
                       {room.exp2.prior.map((probability, index) => (
                         <div key={index}>
                           <span>状態 {index + 1}</span>
-                          <strong>
-                            <span className="sr-only">配当 </span>
-                            <Yen value={room.exp2!.dividends?.[index]} />
-                          </strong>
-                          <small>
-                            <span className="sr-only">確率 </span>
-                            {fmt(probability * 100)}%
-                          </small>
+                          <div className="exp2-state-line">
+                            <span>配当</span>
+                            <strong>
+                              <Yen value={room.exp2!.dividends?.[index]} />
+                            </strong>
+                          </div>
+                          <div className="exp2-state-line">
+                            <span>確率</span>
+                            <small>{fmt(probability * 100)}%</small>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -598,6 +610,6 @@ export function RoomDashboard({
           </div>
         </dialog>
       )}
-    </>
+    </div>
   );
 }

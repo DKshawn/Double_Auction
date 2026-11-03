@@ -39,7 +39,7 @@ Saving settings during admission, confirming and locking allocation, and explici
 
 Experiment 2 uses one market with you and 11 virtual participants. Configure 1–6 rounds, a round duration of 1–30 minutes, and trade-attempt and break durations of 1–1800 seconds. Each type has four members; no one receives a clue in rounds 1–2, and two per type receive one in rounds 3–6. Each round defaults to five minutes and starts with two securities per participant. Practice dividends in yen are 80/110/170, 60/180/100 and 140/120/90, with realized states 3/3/3/3/2/2. Virtual participants trade using their own information.
 
-In Experiment 2, the student view pairs each state’s dividend with its probability, provides separate bid and ask inputs, and shows market prices and personal round records together. During Experiment 2, the teacher view’s **実験条件** button expands or collapses the experiment conditions.
+In Experiment 2, the student view pairs each state’s dividend with its probability, groups buying on the left and selling on the right of the order book, each with the counterparty offer and its own quote input, and shows market prices and personal round records together. During Experiment 2, the teacher view’s **実験条件** button expands or collapses the experiment conditions.
 
 Open the EMH screen-size preview at `/emh/demo/preview` or with **画面サイズ別プレビュー** on the demo setup page. Choose desktop, iPad or phone dimensions; the interactive demo and progress inside the frame remain intact when switching sizes. You can reserve 120px for browser and system bars and choose fit-to-window or actual size.
 

@@ -4,6 +4,7 @@
 @import url("../styles/judgment-tasks.css");
 @import url("../styles/judgment.css");
 @import url("../styles/study.css");
+@import url("../styles/student-waiting.css");
 
 :root {
   --bg: #f6f7fb;

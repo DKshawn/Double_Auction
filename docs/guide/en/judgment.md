@@ -2,6 +2,8 @@
 
 [日本語](../ja/judgment.md) · [中文](../zh-CN/judgment.md) · [English](../en/judgment.md)
 
+Student waiting screens share a consistent card design while retaining experiment-specific information.
+
 This module comes from the former standalone Judgment application, previously named `DKshawn/Exp-all-in-one`. Its implementation is in `src/experiments/judgment/`. See the [pinned source and change record](../../../src/experiments/judgment/UPSTREAM.md).
 
 The teacher setup header has **実験を選び直す** to return to experiment selection. The demo task-selection header has **教員用ページへ** to return to teacher setup.

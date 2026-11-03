@@ -2,6 +2,8 @@
 
 [日本語](../ja/judgment.md) · [中文](../zh-CN/judgment.md) · [English](../en/judgment.md)
 
+学生の待機画面は共通のカードデザインを使い、実験ごとの情報を表示します。
+
 出典は旧 Judgment 単独版（旧名 `DKshawn/Exp-all-in-one`）、実装は `src/experiments/judgment/` です。[固定した出典と変更点](../../../src/experiments/judgment/UPSTREAM.md) を参照してください。
 
 教員の設定画面ではヘッダーの「実験を選び直す」、デモの課題選択画面では「教員用ページへ」で前の入口に戻れます。

@@ -2233,3 +2233,185 @@
   font-size: 9px;
   line-height: 1.1;
 }
+
+/* Student screens use one compact, consistent type scale in both experiments. */
+.emh-app .emh-student-view,
+.emh-app .emh-student-view *,
+.emh-app:has(.emh-student-view) .demo-toolbar,
+.emh-app:has(.emh-student-view) .demo-toolbar *,
+.emh-app:has(.emh-student-view) .site-header,
+.emh-app:has(.emh-student-view) .site-header *,
+.emh-app:has(.emh-student-view) .site-footer,
+.emh-app:has(.emh-student-view) .site-footer * {
+  font-size: 12px !important;
+}
+.emh-app
+  .emh-student-view
+  :is(
+    h1,
+    h2,
+    h3,
+    .session-phase strong,
+    .period-badge,
+    .stat-grid strong,
+    .exp2-state-values small,
+    .lobby-settings dd
+  ) {
+  font-size: 16px !important;
+}
+.emh-app
+  .emh-student-view
+  :is(.timer, .quote-card > strong, .arrival-count strong) {
+  font-size: 24px !important;
+}
+.emh-app .emh-student-view .exp2-state-values :is(strong, small) {
+  font-size: 16px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.emh-app .emh-student-view input::placeholder {
+  font-size: 12px !important;
+}
+
+/* Each trading column groups an action with the matching counterparty offer. */
+.emh-app .exp2-action-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.emh-app .exp2-action-column {
+  min-width: 0;
+}
+.emh-app .exp2-action-column h3 {
+  margin: 0 0 6px;
+}
+.emh-app .exp2-action-column.buy-side h3 {
+  color: var(--buy);
+}
+.emh-app .exp2-action-column.sell-side h3 {
+  color: var(--sell);
+}
+.emh-app .exp2-action-column.buy-side .quote-card {
+  background: var(--buy-bg);
+  border-color: var(--buy-line);
+}
+.emh-app .exp2-action-column.sell-side .quote-card {
+  background: var(--sell-bg);
+  border-color: var(--sell-line);
+}
+.emh-app .exp2-action-column.buy-side .quote-label {
+  color: var(--buy);
+}
+.emh-app .exp2-action-column.sell-side .quote-label {
+  color: var(--sell);
+}
+.emh-app .exp2-action-column .price-entry {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+.emh-app .exp2-action-column .price-entry .button,
+.emh-app .exp2-action-column .exp2-cancel-quote {
+  width: 100%;
+  min-height: 38px;
+  white-space: nowrap;
+}
+.emh-app .exp2-action-column .exp2-cancel-quote {
+  margin-top: 6px;
+}
+.emh-app .exp2-order-panel > .field-note {
+  margin-top: 8px;
+}
+.emh-app .wide .exp2-state-values > div {
+  border-radius: 6px;
+  background: var(--surface-soft);
+  padding: 4px 6px;
+}
+.emh-app .wide .exp2-state-values .exp2-state-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.emh-app .wide .exp2-state-values .exp2-state-line > span {
+  margin: 0;
+}
+.emh-app .wide .exp2-state-values .exp2-state-line > small {
+  margin: 0;
+}
+.emh-app .room-tabs > button {
+  min-width: 76px;
+  min-height: 36px;
+  padding: 8px 14px;
+}
+.emh-app .results-panel .table-unit {
+  display: inline;
+  white-space: nowrap;
+}
+.emh-app .exp2-student-market .results-panel th {
+  white-space: nowrap;
+}
+
+@media (min-width: 1100px) {
+  .emh-app .wide .exp2-state-values > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: start;
+    column-gap: 8px;
+  }
+  .emh-app .wide .exp2-state-values > div > span {
+    flex-basis: 100%;
+  }
+}
+.emh-app .exp2-action-column .quote-card {
+  padding: 6px;
+}
+.emh-app .exp2-action-column .quote-card .button {
+  min-height: 30px;
+  margin-top: 4px;
+  padding: 5px 2px;
+}
+.emh-app .exp2-action-column .price-entry {
+  margin-top: 6px;
+}
+.emh-app .exp2-action-column .price-entry input {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.emh-app .exp2-action-column .price-entry .button,
+.emh-app .exp2-action-column .exp2-cancel-quote {
+  min-height: 34px;
+}
+
+.emh-app .wide .exp2-state-values .exp2-state-line {
+  line-height: 1.3;
+}
+.emh-app .wide .exp2-state-values .exp2-state-line :is(strong, small) {
+  color: var(--accent);
+  line-height: 1.3;
+}
+@media (min-width: 1100px) {
+  .emh-app .wide .exp2-state-values > div {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    column-gap: 8px;
+    align-content: start;
+  }
+  .emh-app .wide .exp2-state-values > div > span {
+    grid-column: 1 / -1;
+  }
+  .emh-app .wide .exp2-state-values .exp2-state-line {
+    align-items: baseline;
+  }
+}
+
+@media (max-width: 1099px) {
+  .emh-app .wide .exp2-state-values {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .emh-app .wide .exp2-state-values > div {
+    display: grid;
+    grid-template-columns: minmax(45px, 1fr) max-content max-content;
+    align-items: baseline;
+    gap: 8px;
+  }
+}

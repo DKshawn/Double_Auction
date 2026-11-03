@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/shell";
+import { StudentWaitingCard } from "@/components/student-waiting-card";
 import type {
   SessionCommand,
   SessionView,
@@ -387,6 +388,22 @@ export function SessionClient({
                     online={online}
                   />
                 </>
+              ) : !teacher ? (
+                <StudentWaitingCard assigned={state.status === "assigned"}>
+                  <p className="student-waiting-eyebrow">入室が完了しました</p>
+                  <h1>教員が開始するまでお待ちください</h1>
+                  <p className="student-waiting-context">
+                    {state.title} · ルーム <b>{code}</b>
+                  </p>
+                  <p>
+                    {state.status === "open"
+                      ? "教員が受付を終了するまで、この画面を開いたままお待ちください。"
+                      : `市場 ${state.marketId} に参加します。開始後に自分の配当を確認してください。`}
+                  </p>
+                  <div className="student-waiting-count">
+                    参加者 <b>{state.participantCount}</b>人
+                  </div>
+                </StudentWaitingCard>
               ) : (
                 <>
                   <div className="room-heading">

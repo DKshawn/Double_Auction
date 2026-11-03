@@ -94,7 +94,7 @@ function previewMove(direction,skip=false){
 function showWaiting(message=''){
   if(disposed)return;
   reset();view='waiting';currentRun=null;
-  app.innerHTML=header(escape(studentId))+'<main id="main" class="waiting-main"><div class="waiting-mark" aria-hidden="true"><i></i><i></i><i></i></div><h1>'+escape(t('開始をお待ちください。'))+'</h1><p id="waiting-error" class="form-error" role="status"></p><button id="logout" class="text-button">'+escape(t('ログアウト'))+'</button></main>';
+  app.innerHTML=header(escape(studentId))+'<main id="main" class="waiting-main"><section class="panel student-waiting-card"><div class="student-waiting-icon" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg></div><p class="student-waiting-eyebrow">'+escape(t('待機中'))+'</p><h1>'+escape(t('開始をお待ちください。'))+'</h1><p id="waiting-error" class="form-error" role="status"></p><button id="logout" class="button secondary">'+escape(t('ログアウト'))+'</button></section></main>';
   reportError($('#waiting-error'),message);
   languageListener(next=>{setLanguage(next);showWaiting(message);$('#language-select').focus();});
   $('#logout').onclick=()=>{studentToken=null;storage.remove('studentToken');showEntry();};

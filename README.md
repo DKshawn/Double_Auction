@@ -4,6 +4,8 @@
 
 Double Auction、EMH、Judgement under Uncertainty を一つの入口から実施する授業用実験プラットフォームです。初期表示は日本語です。
 
+学生の待機画面は共通のカードデザインを使い、実験ごとの情報を表示します。
+
 [教員入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)
 
 ## 使い始める
@@ -39,7 +41,7 @@ flowchart LR
 
 EMHの価格・配当・売買収支・得点は円で表示します。
 
-EMHの Demo Model では実験1と実験2を選べます。実験2は12人市場と練習用の配当・状態を使い、学生は状態別条件・買売入力・市場と自分の記録を同時に確認できます。進行中の教員画面では条件を開閉できます。 画面サイズ別のプレビューは `/emh/demo/preview` で開けます。
+EMHの Demo Model では実験1と実験2を選べます。実験2は12人市場と練習用の配当・状態を使い、学生は状態別条件・左右に分けた買売操作・市場と自分の記録を同時に確認できます。進行中の教員画面では条件を開閉できます。 画面サイズ別のプレビューは `/emh/demo/preview` で開けます。
 
 [画面で見る使い方・再入室・ルーム管理](docs/guide/ja/classroom.md) · [Demo Model の使い方](docs/guide/ja/demo.md)
 

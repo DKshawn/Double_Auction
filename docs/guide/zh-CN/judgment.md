@@ -2,6 +2,8 @@
 
 [日本語](../ja/judgment.md) · [中文](../zh-CN/judgment.md) · [English](../en/judgment.md)
 
+学生等待画面使用统一的卡片设计，并保留各实验的信息。
+
 该模块来自旧 Judgment 独立版（旧仓库名为 `DKshawn/Exp-all-in-one`），实现位于 `src/experiments/judgment/`。源提交版本与修改记录见[迁移来源说明（英文）](../../../src/experiments/judgment/UPSTREAM.md)。
 
 教师设置页可通过页眉的「実験を選び直す」返回实验选择；Demo 的任务选择页通过页眉的「教員用ページへ」返回教师设置。

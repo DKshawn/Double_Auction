@@ -5,7 +5,6 @@ import {
   Shuffle,
   UsersRound,
   Check,
-  Clock3,
   Wifi,
   WifiOff,
   ChevronDown,
@@ -24,6 +23,7 @@ import { INSTITUTIONS } from "@/experiments/double-auction/lib/study-rules";
 import { studyCommission } from "@/experiments/double-auction/lib/study-commission";
 import { studyAllocationPlan } from "@/experiments/double-auction/lib/study-allocation";
 import { Header } from "../../../components/shell";
+import { StudentWaitingCard } from "@/components/student-waiting-card";
 import { StudyAdmission } from "./study-admission";
 import { ConfirmDialog } from "../../../components/confirm-dialog";
 
@@ -401,17 +401,17 @@ export function StudyWaitingRoom({
       </Header>
       <main className="study-main">
         {toolbar}
-        <section
-          className="panel study-waiting-card"
-          aria-label="学生の待機画面"
-        >
-          <div className="study-waiting-icon">
-            {assigned ? <Check size={32} /> : <Clock3 size={32} />}
-          </div>
+        <StudentWaitingCard assigned={assigned} className="study-waiting-card">
           <p className="eyebrow study-waiting-admission">
             {view.me.withdrawnAt ? "参加を終了しました" : "入室が完了しました"}
           </p>
-          {assigned && !view.me.withdrawnAt && <h1>割り当てが完了しました</h1>}
+          {!view.me.withdrawnAt && (
+            <h1>
+              {assigned
+                ? "割り当てが完了しました"
+                : "教員が開始するまでお待ちください"}
+            </h1>
+          )}
           <p className="study-waiting-message">
             {view.me.withdrawnAt
               ? "これまでの取引記録は保存されています。"
@@ -467,7 +467,7 @@ export function StudyWaitingRoom({
               {error}
             </p>
           )}
-        </section>
+        </StudentWaitingCard>
       </main>
     </div>
   );

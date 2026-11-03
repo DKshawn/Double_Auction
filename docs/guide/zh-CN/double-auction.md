@@ -2,6 +2,8 @@
 
 [日本語](../ja/double-auction.md) · [中文](../zh-CN/double-auction.md) · [English](../en/double-auction.md)
 
+学生等待画面使用统一的卡片设计，并保留各实验的信息。
+
 [Demo Model](https://exp-all-in-one.vercel.app/demo) · [演示操作](demo.md)
 
 屏幕尺寸演示可通过 `/demo/preview` 打开；窄屏使用下拉框切换尺寸，演示进度会保留。

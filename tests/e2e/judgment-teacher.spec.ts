@@ -136,6 +136,29 @@ test("Judgment teacher workspace runs a lesson, locks settings, recovers and exp
     await expect(
       page.getByRole("cell", { name: "0098701", exact: true }),
     ).toBeVisible();
+    await expect(student.locator(".student-waiting-card")).toBeVisible();
+    await expect(student.locator(".student-waiting-card h1")).toHaveText(
+      "開始をお待ちください。",
+    );
+    await student.locator("#language-select").selectOption("en");
+    await expect(student.locator(".student-waiting-card h1")).toHaveText(
+      "Please wait for the experiment to start.",
+    );
+    await student.locator("#language-select").selectOption("ja");
+    await expect(student.locator("#logout")).toHaveClass(/button secondary/);
+    for (const width of [1366, 390, 320]) {
+      await student.setViewportSize({ width, height: 900 });
+      expect(
+        await student.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      if (width === 1366)
+        await student
+          .locator(".student-waiting-card")
+          .screenshot({ path: info.outputPath("judgment-waiting.png") });
+    }
+
     await page.getByRole("button", { name: "実施を開始", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "今回の実施を終了", exact: true }),

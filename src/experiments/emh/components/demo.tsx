@@ -24,6 +24,7 @@ import { SettingsFields } from "./settings-fields";
 import { SettingsSummary } from "./settings-summary";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Header } from "@/components/shell";
+import { StudentWaitingCard } from "@/components/student-waiting-card";
 
 function bot(room: Room, now: number) {
   if (room.status !== "trading" || room.pausedAt !== null) return;
@@ -370,73 +371,96 @@ function DemoRoom({
             </section>
           )}
         {room.status === "lobby" ? (
-          <>
-            <div className="room-heading">
-              <h1>{room.config.title}</h1>
-              <span className="status">
-                {assigned ? "開始待ち" : "参加者を受付中"}
-              </span>
-            </div>
-            <section className="panel emh-waiting">
-              <h2>{room.participants.length}人が入室</h2>
-              {role === "teacher" ? (
-                <div className="emh-actions">
-                  {assigned ? (
-                    <>
-                      <button
-                        className="button secondary"
-                        onClick={() => setReopen(true)}
-                      >
-                        割り当てを解除
-                      </button>
+          role === "student" ? (
+            <StudentWaitingCard assigned={assigned}>
+              <p className="student-waiting-eyebrow">入室が完了しました</p>
+              <h1>教員が開始するまでお待ちください</h1>
+              <p className="student-waiting-context">
+                {room.config.title} · ルーム <b>{room.code}</b>
+              </p>
+              <p>
+                {assigned
+                  ? "市場 1 に参加します。開始後に自分の配当を確認してください。"
+                  : "教員が受付を終了するまで、この画面を開いたままお待ちください。"}
+              </p>
+              <div className="student-waiting-count">
+                参加者 <b>{room.participants.length}</b>人
+              </div>
+            </StudentWaitingCard>
+          ) : (
+            <>
+              <div className="room-heading">
+                <h1>{room.config.title}</h1>
+                <span className="status">
+                  {assigned ? "開始待ち" : "参加者を受付中"}
+                </span>
+              </div>
+              <section className="panel emh-waiting">
+                <h2>{room.participants.length}人が入室</h2>
+                {role === "teacher" ? (
+                  <div className="emh-actions">
+                    {assigned ? (
+                      <>
+                        <button
+                          className="button secondary"
+                          onClick={() => setReopen(true)}
+                        >
+                          割り当てを解除
+                        </button>
+                        <button
+                          className="button primary"
+                          onClick={() =>
+                            run({
+                              kind: "start",
+                              expectedPhase: phaseKey(room),
+                            })
+                          }
+                        >
+                          全市場で実験を開始
+                        </button>
+                      </>
+                    ) : (
                       <button
                         className="button primary"
-                        onClick={() =>
-                          run({ kind: "start", expectedPhase: phaseKey(room) })
-                        }
+                        disabled={dirty}
+                        onClick={() => {
+                          if (dirty) return;
+                          const next = structuredClone(current.current);
+                          assignParticipants(next);
+                          replace(next);
+                          setAssigned(true);
+                        }}
                       >
-                        全市場で実験を開始
+                        分け方を確定して受付終了
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      className="button primary"
-                      disabled={dirty}
-                      onClick={() => {
-                        if (dirty) return;
-                        const next = structuredClone(current.current);
-                        assignParticipants(next);
-                        replace(next);
-                        setAssigned(true);
-                      }}
-                    >
-                      分け方を確定して受付終了
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <p>教員が実験を開始するまで、この画面でお待ちください。</p>
-              )}
-            </section>
-            {role === "teacher" && (
-              <section className="panel emh-allocation">
-                <h2>{assigned ? "市場の割り当て" : "現在の人数での分け方"}</h2>
-                <div className="emh-allocation-grid">
-                  <article>
-                    <h3>
-                      市場 1 <span>{room.participants.length}人</span>
-                    </h3>
-                    <p>タイプ別人数 {room.typeCounts!.join(" / ")}</p>
-                    <p>
-                      総証券数{" "}
-                      {room.participants.length * settings.initialUnits}
-                      単位
-                    </p>
-                  </article>
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  <p>教員が実験を開始するまで、この画面でお待ちください。</p>
+                )}
               </section>
-            )}
-          </>
+              {role === "teacher" && (
+                <section className="panel emh-allocation">
+                  <h2>
+                    {assigned ? "市場の割り当て" : "現在の人数での分け方"}
+                  </h2>
+                  <div className="emh-allocation-grid">
+                    <article>
+                      <h3>
+                        市場 1 <span>{room.participants.length}人</span>
+                      </h3>
+                      <p>タイプ別人数 {room.typeCounts!.join(" / ")}</p>
+                      <p>
+                        総証券数{" "}
+                        {room.participants.length * settings.initialUnits}
+                        単位
+                      </p>
+                    </article>
+                  </div>
+                </section>
+              )}
+            </>
+          )
         ) : (
           <RoomDashboard
             room={view(

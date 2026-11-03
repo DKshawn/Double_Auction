@@ -1,0 +1,85 @@
+/* Common waiting card across classroom experiments. */
+.student-waiting-card,
+.emh-app .student-waiting-card,
+.judgment-app .student-waiting-card {
+  width: min(100%, 680px);
+  margin: 0 auto;
+  padding: 40px;
+  text-align: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.student-waiting-icon {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 24px;
+  border-radius: 22px;
+  color: var(--accent);
+  background: var(--lavender);
+}
+.student-waiting-card .student-waiting-eyebrow {
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 600;
+}
+.student-waiting-card h1,
+.emh-app .student-waiting-card h1,
+.judgment-app .student-waiting-card h1 {
+  margin: 10px 0 22px;
+  font-size: 24px;
+  line-height: 1.4;
+}
+.student-waiting-card
+  > p:not(.student-waiting-eyebrow):not(.study-waiting-admission) {
+  color: var(--muted);
+  line-height: 1.8;
+}
+.student-waiting-count {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+.student-waiting-count b {
+  margin-left: 8px;
+  color: var(--accent);
+  font-size: 22px;
+}
+.judgment-app .waiting-main {
+  min-height: calc(100svh - 64px);
+  padding: 40px 24px;
+  justify-content: flex-start;
+}
+.judgment-app .student-waiting-card .button {
+  margin-top: 24px;
+}
+@media (max-width: 600px) {
+  .student-waiting-card,
+  .emh-app .student-waiting-card,
+  .judgment-app .student-waiting-card {
+    padding: 28px 18px;
+  }
+}
+
+.emh-app .emh-student-view .student-waiting-card h1 {
+  font-size: 24px !important;
+}
+@media (max-width: 600px) {
+  .student-waiting-card h1,
+  .emh-app .student-waiting-card h1,
+  .judgment-app .student-waiting-card h1 {
+    font-size: 20px;
+  }
+  .emh-app .emh-student-view .student-waiting-card h1 {
+    font-size: 24px !important;
+  }
+}
+
+.student-waiting-card .student-waiting-context {
+  margin-bottom: 8px;
+  font-weight: 600;
+}

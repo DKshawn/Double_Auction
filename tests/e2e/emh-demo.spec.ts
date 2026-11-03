@@ -170,6 +170,16 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
     page.getByRole("heading", { name: "あなたの記録" }),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: "市場" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "注文板" })).toBeVisible();
+  const buyColumn = page.locator(".exp2-action-column.buy-side");
+  const sellColumn = page.locator(".exp2-action-column.sell-side");
+  await expect(buyColumn).toContainText("最低売値");
+  await expect(buyColumn.getByLabel("買値（円）")).toBeVisible();
+  await expect(sellColumn).toContainText("最高買値");
+  await expect(sellColumn.getByLabel("売値（円）")).toBeVisible();
+  expect((await buyColumn.boundingBox())!.x).toBeLessThan(
+    (await sellColumn.boundingBox())!.x,
+  );
   await page.getByLabel("買値（円）", { exact: true }).fill("1");
   await page.getByLabel("売値（円）", { exact: true }).fill("99999");
   await page.getByRole("button", { name: "買値を提示" }).click();
@@ -178,11 +188,34 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   await page.getByRole("button", { name: "売値を提示" }).click();
   await expect(page.locator(".quote-card.ask")).toContainText("（あなた）");
   await expect(page.locator(".quote-card.ask strong")).toContainText("円");
+  await expect(
+    buyColumn.getByRole("button", { name: "この価格で買う" }),
+  ).toBeDisabled();
+  await expect(
+    sellColumn.getByRole("button", { name: "この価格で売る" }),
+  ).toBeDisabled();
+  await buyColumn.getByRole("button", { name: "買値を取り消す" }).click();
+  await expect(
+    buyColumn.getByRole("button", { name: "買値を取り消す" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "買値を提示" }).click();
+  await sellColumn.getByRole("button", { name: "売値を取り消す" }).click();
+  await expect(
+    sellColumn.getByRole("button", { name: "売値を取り消す" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "売値を提示" }).click();
   await expect(page.getByLabel("買値（円）", { exact: true })).toHaveValue("1");
   await expect(page.getByLabel("売値（円）", { exact: true })).toHaveValue(
     "99999",
   );
   await page.getByRole("button", { name: "教員画面" }).click();
+  const tabWidths = await page
+    .getByRole("tablist", { name: "表示内容" })
+    .getByRole("tab")
+    .evaluateAll((tabs) =>
+      tabs.map((tab) => tab.getBoundingClientRect().width),
+    );
+  expect(new Set(tabWidths).size).toBe(1);
   for (let round = 1; round <= 2; round++) {
     await page.getByRole("button", { name: "期を終了" }).click();
     await page
@@ -202,9 +235,23 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    for (const heading of await page.locator(".results-panel thead th").all()) {
+      expect(
+        await heading.evaluate(
+          (element) => getComputedStyle(element).whiteSpace,
+        ),
+      ).toBe("nowrap");
+    }
     for (const table of await page
       .locator(".exp2-student-market .table-scroll")
       .all()) {
+      if (
+        width <= 760 &&
+        (await table.locator("xpath=..").getAttribute("class"))?.includes(
+          "results-panel",
+        )
+      )
+        continue;
       expect(
         await table.evaluate(
           (element) => element.scrollWidth <= element.clientWidth,
@@ -218,4 +265,80 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   );
   expect(errors).toEqual([]);
   expect(writes).toEqual([]);
+});
+
+test("student views use three font sizes and equal state dividend and probability sizes", async ({
+  page,
+}) => {
+  for (const experiment of ["exp1", "exp2"]) {
+    await page.goto("/emh/demo");
+    if (experiment === "exp2")
+      await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
+    await page.getByRole("button", { name: "デモルームを作成" }).click();
+    await page
+      .getByRole("button", { name: "分け方を確定して受付終了" })
+      .click();
+    await page.getByRole("button", { name: "全市場で実験を開始" }).click();
+    await page.getByRole("button", { name: "停止", exact: true }).click();
+    await page.getByRole("button", { name: "学生画面" }).click();
+    for (const width of [1366, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const sizes = await page.locator(".emh-student-view").evaluate((root) => {
+        const values = new Set<string>();
+        for (const element of [root, ...root.querySelectorAll("*")]) {
+          if (
+            element.getClientRects().length === 0 ||
+            getComputedStyle(element).visibility !== "visible"
+          )
+            continue;
+          if (
+            Array.from(element.childNodes).some(
+              (node) =>
+                node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+            )
+          ) {
+            values.add(getComputedStyle(element).fontSize);
+          }
+        }
+        return [...values].sort();
+      });
+      expect(sizes).toEqual(["12px", "16px", "24px"]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      if (experiment === "exp2") {
+        for (const state of await page
+          .locator(".exp2-state-values > div")
+          .all()) {
+          const dividend = await state
+            .locator("strong")
+            .evaluate((el) => getComputedStyle(el).fontSize);
+          const probability = await state
+            .locator("small")
+            .evaluate((el) => getComputedStyle(el).fontSize);
+          expect(dividend).toBe(probability);
+          const metrics = await state.evaluate((element) => {
+            const labels = [
+              ...element.querySelectorAll(".exp2-state-line > span"),
+            ];
+            const values = [
+              ...element.querySelectorAll(
+                ".exp2-state-line > strong, .exp2-state-line > small",
+              ),
+            ];
+            return {
+              tops: labels.map((label) => label.getBoundingClientRect().top),
+              colors: values.map((value) => getComputedStyle(value).color),
+            };
+          });
+          expect(
+            Math.abs(metrics.tops[0] - metrics.tops[1]),
+          ).toBeLessThanOrEqual(1);
+          expect(metrics.colors[0]).toBe(metrics.colors[1]);
+        }
+      }
+    }
+  }
 });

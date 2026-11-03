@@ -2,6 +2,8 @@
 
 [日本語](../ja/double-auction.md) · [中文](../zh-CN/double-auction.md) · [English](../en/double-auction.md)
 
+Student waiting screens share a consistent card design while retaining experiment-specific information.
+
 [Demo Model](https://exp-all-in-one.vercel.app/demo) · [Demo controls](demo.md)
 
 Open the screen-size demo at `/demo/preview`. On narrow screens, choose a size from the dropdown; demo progress is retained.

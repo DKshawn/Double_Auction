@@ -4,6 +4,8 @@
 
 A classroom experiment platform with one entry point for Double Auction, EMH, and Judgement under Uncertainty. The interface opens in Japanese by default.
 
+Student waiting screens share a consistent card design while retaining experiment-specific information.
+
 [Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app)
 
 ## Get started
@@ -39,7 +41,7 @@ Enter the teacher key once at the teacher entry. The same browser stays signed i
 
 EMH labels prices, dividends, trading balances and scores in yen.
 
-EMH Demo Model supports both experiments. Experiment 2 uses a 12-person market and separate practice dividends and states. Students see state conditions, separate bid and ask inputs, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
+EMH Demo Model supports both experiments. Experiment 2 uses a 12-person market and separate practice dividends and states. Students see state conditions, buy and sell controls in separate columns, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 

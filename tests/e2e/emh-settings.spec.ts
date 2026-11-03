@@ -92,6 +92,12 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
       .getByRole("button", { name: "入室する", exact: true })
       .click();
     await expect(studentPage).toHaveURL(new RegExp(`/room/${code}`));
+    await expect(studentPage.locator(".student-waiting-card")).toContainText(
+      "入室が完了しました",
+    );
+    await expect(studentPage.locator(".student-waiting-card")).toContainText(
+      "教員が受付を終了するまで",
+    );
     for (let i = 1; i < 8; i++) {
       const context = await browser.newContext({ baseURL });
       contexts.push(context);
@@ -161,6 +167,9 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
       .locator(".emh-session-settings")
       .screenshot({ path: info.outputPath("emh-settings.png") });
     await assign.click();
+    await expect(studentPage.locator(".student-waiting-card")).toContainText(
+      "市場 1 に参加します",
+    );
     await expect(
       page.getByRole("heading", { name: "確定した実験条件" }),
     ).toBeVisible();
@@ -210,6 +219,8 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
       .getByRole("button", { name: "全市場で実験を開始", exact: true })
       .click();
     await expect(page.locator(".emh-session-controls")).toBeVisible();
+    await expect(studentPage.locator(".student-waiting-card")).toHaveCount(0);
+    await expect(studentPage.locator(".emh-student-view")).toBeVisible();
     expect((await exported()).markets[0].conditions.assignment).toEqual(
       confirmed.markets[0].conditions.assignment,
     );

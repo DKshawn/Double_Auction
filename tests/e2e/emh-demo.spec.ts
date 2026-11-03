@@ -360,29 +360,71 @@ test("student views use three font sizes and equal state dividend and probabilit
 test("demo countdown displays private conditions before trading and can be paused", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("/emh/demo");
   await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
   await page.getByRole("button", { name: "デモルームを作成" }).click();
   await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
   await page.getByRole("button", { name: "全市場で実験を開始" }).click();
   await expect(page.getByText("開始まで", { exact: true })).toBeVisible();
+  await expect(page.locator(".emh-countdown-card")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "期を終了" })).toBeDisabled();
   await page
     .getByRole("region", { name: "ひとりデモの操作" })
     .getByRole("button", { name: "一時停止", exact: true })
     .click();
   await page.getByRole("button", { name: "学生画面を見る" }).click();
+  const countdownCard = page.locator(".emh-countdown-card");
+  await expect(countdownCard).toContainText("開始前に一時停止しています");
+  await expect(countdownCard).toContainText(
+    "教員が再開するまでお待ちください。",
+  );
+  const countdownValue = await countdownCard.locator("strong").textContent();
+  const bounds = await countdownCard.boundingBox();
+  expect(bounds).not.toBeNull();
+  const conditionsBounds = await page.locator(".exp2-state-info").boundingBox();
+  expect(conditionsBounds!.y + conditionsBounds!.height).toBeLessThanOrEqual(
+    bounds!.y + 4,
+  );
+  expect(
+    Math.abs(bounds!.x + bounds!.width / 2 - page.viewportSize()!.width / 2),
+  ).toBeLessThan(1);
+  expect(
+    Math.abs(bounds!.y + bounds!.height / 2 - page.viewportSize()!.height / 2),
+  ).toBeLessThan(1);
   await expect(page.getByText("状態別の配当 / 確率")).toBeVisible();
   await expect(page.getByLabel("買値（円）", { exact: true })).toBeDisabled();
   const clock = page.locator(".session-bar .timer");
   const pausedClock = await clock.textContent();
   await page.waitForTimeout(1100);
   await expect(clock).toHaveText(pausedClock!);
+  await expect(countdownCard.locator("strong")).toHaveText(countdownValue!);
   await page.getByRole("button", { name: "再開", exact: true }).click();
   await expect(page.getByLabel("買値（円）", { exact: true })).toBeEnabled({
     timeout: 12000,
   });
+  await expect(countdownCard).toHaveCount(0);
   await expect(page.getByText("期の残り", { exact: true })).toBeVisible();
+});
+
+test("Exp1 student countdown uses the centered DA card and clears when trading opens", async ({
+  page,
+}) => {
+  await page.goto("/emh/demo");
+  await page.getByRole("button", { name: "デモルームを作成" }).click();
+  await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
+  await page.getByRole("button", { name: "全市場で実験を開始" }).click();
+  await page.getByRole("button", { name: "学生画面を見る" }).click();
+  const card = page.locator(".emh-countdown-card");
+  await expect(card).toContainText("まもなく実験が始まります");
+  await expect(card.locator("strong")).toHaveText(/^[1-5]$/);
+  await expect(page.locator(".study-start-countdown")).toHaveCSS(
+    "pointer-events",
+    "none",
+  );
+  await expect(page.getByLabel("提示価格（円）")).toBeDisabled();
+  await expect(card).toHaveCount(0, { timeout: 12000 });
+  await expect(page.getByLabel("提示価格（円）")).toBeEnabled();
 });
 
 test("EMH demo controls preserve the session while switching views, advancing and resetting", async ({

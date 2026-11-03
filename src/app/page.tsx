@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Header } from "@/components/shell";
 import { JoinForm } from "@/components/join-form";
+import { DemoEntryLink } from "@/components/demo-entry-link";
 
 export default async function Home({
   searchParams,
@@ -10,7 +11,8 @@ export default async function Home({
   const { code } = await searchParams;
   return (
     <>
-      <Header>
+      <Header className="home-header">
+        <DemoEntryLink />
         <Link className="button secondary small-button" href="/teacher">
           教員用ページ
         </Link>

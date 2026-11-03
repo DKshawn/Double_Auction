@@ -2,7 +2,7 @@
 
 [日本語](../ja/classroom.md) · [中文](../zh-CN/classroom.md) · [English](../en/classroom.md)
 
-学生等待画面采用统一设计。EMH 在教师开始后先进行5秒准备倒计时，结束后才开始交易。
+学生等待画面采用统一设计。EMH 在教师开始后先在学生画面中央显示5秒准备倒计时，结束后才开始交易。
 
 [教师入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)
 
@@ -80,7 +80,7 @@ Double Auction 中尚未产生相应记录时，会提示暂无数据。保存�
 
 ## 上课前试用
 
-选择实验后，教师页面右上角的 **Demo Model** 可体验演示；下方公开演示地址也可直接打开，无需登录。演示入口分别是 [Double Auction](https://exp-all-in-one.vercel.app/demo)、[EMH](https://exp-all-in-one.vercel.app/emh/demo) 和 [Judgement under Uncertainty](https://exp-all-in-one.vercel.app/judgment/demo)。Judgement 演示需先选择任务，不保存回答，计时限制暂停。更多操作见 [Demo Model 使用说明](demo.md)。
+从首页或教师实验选择页的 **Demo Model** 打开统一列表并选择实验；下方公开演示地址也可直接打开，无需登录。演示入口分别是 [Double Auction](https://exp-all-in-one.vercel.app/demo)、[EMH](https://exp-all-in-one.vercel.app/emh/demo) 和 [Judgement under Uncertainty](https://exp-all-in-one.vercel.app/judgment/demo)。Judgement 演示需先选择任务，不保存回答，计时限制暂停。更多操作见 [Demo Model 使用说明](demo.md)。
 
 旧地址 `doubleauction.vercel.app` 保留路径和查询参数跳转至新地址；如果之前使用旧地址参加，需在新地址重新进入一次。
 

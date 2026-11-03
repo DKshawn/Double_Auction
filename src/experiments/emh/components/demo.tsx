@@ -38,6 +38,7 @@ import { SettingsSummary } from "./settings-summary";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Header } from "@/components/shell";
 import { StudentWaitingCard } from "@/components/student-waiting-card";
+import { DemoSelectionLink } from "@/components/demo-selection-link";
 
 function bot(room: Room, now: number) {
   if (room.status !== "trading" || room.pausedAt !== null) return;
@@ -96,12 +97,15 @@ type Setup = {
 
 function TeacherPageLink() {
   return (
-    <Link
-      className="button secondary small-button"
-      href="/teacher?experiment=emh"
-    >
-      教員用ページへ
-    </Link>
+    <>
+      <DemoSelectionLink />
+      <Link
+        className="button secondary small-button"
+        href="/teacher?experiment=emh"
+      >
+        教員用ページへ
+      </Link>
+    </>
   );
 }
 

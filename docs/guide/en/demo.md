@@ -2,13 +2,13 @@
 
 [日本語](../ja/demo.md) · [中文](../zh-CN/demo.md) · [English](../en/demo.md)
 
-After signing in, open **Demo Model** at the top right of the teacher page. Opening the public demo URLs below directly requires no login and creates no production room.
+Use **Demo Model** on the home page or teacher experiment selection page to open the list at `/demo/select`, then choose an experiment. No login is required and no production room is created; the individual demo URLs below also remain available.
 
-All three demo setup pages have **教員用ページへ** in the header to return to the teacher page. EMH retains this button inside the demo room as well.
+All three demo setup pages have **デモを選び直す** to return to the list and **教員用ページへ** to return to the teacher page. EMH retains this button inside the demo room as well.
 
 ## Double Auction
 
-Open [`/demo`](https://exp-all-in-one.vercel.app/demo) directly or choose **Demo Model** on the teacher page. No login is required. It starts with the same settings form used for production experiments. The defaults are one market and 16 participants; institutions, periods per institution, markets, participants, and timing are configurable using the same validation rules as room creation.
+Open [`/demo`](https://exp-all-in-one.vercel.app/demo) directly or choose Double Auction from the demo list. No login is required. It starts with the same settings form used for production experiments. The defaults are one market and 16 participants; institutions, periods per institution, markets, participants, and timing are configurable using the same validation rules as room creation.
 
 1. **デモルームを作成** opens a teacher view containing you and virtual participants. Use **作成前に詳細を設定** for detailed configuration before creation. Before starting, **実験設定を変更** can change institutions, periods, timing, values, and costs.
 2. Close admission with **入室を締め切って割り当て** or the admission timer to allocate actual participants to markets and buyer/seller roles. **実験を開始** begins a five-second countdown before trading. **学生画面を見る** shows the transition from waiting to trading.
@@ -33,7 +33,7 @@ The preview also starts with the teacher settings form. After creation, start, p
 
 The interface labels prices, dividends, trading balances and scores in yen.
 
-After starting, students can review their own conditions during a five-second countdown before trading. Pausing also freezes the countdown.
+After starting, a five-second countdown appears in the center of the student screen while students review their own conditions before trading. Pausing also freezes the countdown.
 
 [EMH Demo Model](https://exp-all-in-one.vercel.app/emh/demo) offers Experiment 1 and Experiment 2. Experiment 1 uses the same settings form, validation limits and defaults as the formal experiment. Set initial securities, target size, type ratios and A/B period duration, then choose **デモルームを作成**. It creates one market of 3–12 participants; everyone except you is virtual, with eight virtual participants by default.
 

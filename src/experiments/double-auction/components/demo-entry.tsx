@@ -9,6 +9,7 @@ import type { StudyGeneratorConfig } from "@/experiments/double-auction/lib/stud
 import { DEMO_SETTINGS } from "@/experiments/double-auction/lib/demo";
 import { Header, Footer } from "../../../components/shell";
 import { TeacherForm } from "./teacher-form";
+import { DemoSelectionLink } from "@/components/demo-selection-link";
 
 const DemoRoom = dynamic(() => import("./demo-room"), {
   ssr: false,
@@ -40,10 +41,13 @@ export function DemoEntry() {
       <Header
         homeHref="/demo"
         leading={
-          <Link className="button secondary small-button" href="/teacher">
-            <ArrowLeft size={15} />
-            教員用ページへ
-          </Link>
+          <>
+            <DemoSelectionLink />
+            <Link className="button secondary small-button" href="/teacher">
+              <ArrowLeft size={15} />
+              教員用ページへ
+            </Link>
+          </>
         }
       >
         <span className="demo-header-tag">ひとりデモ</span>

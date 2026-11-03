@@ -2,7 +2,7 @@
 
 [日本語](../ja/classroom.md) · [中文](../zh-CN/classroom.md) · [English](../en/classroom.md)
 
-学生の待機画面は共通デザインです。EMHでは教員の開始後に5秒間の準備カウントダウンがあり、その後に取引が始まります。
+学生の待機画面は共通デザインです。EMHでは教員の開始後に学生画面の中央へ5秒間の準備カウントダウンを表示し、その後に取引が始まります。
 
 [教員入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)
 
@@ -80,7 +80,7 @@ Double Auction で対象の記録がまだない場合は、その旨が画面�
 
 ## 授業の前に試す
 
-実験を選んだ後、教員ページ右上の **Demo Model** から試せます。下記の公開デモURLはログインなしでも開けます。入口は [Double Auction](https://exp-all-in-one.vercel.app/demo)、[EMH](https://exp-all-in-one.vercel.app/emh/demo)、[Judgement under Uncertainty](https://exp-all-in-one.vercel.app/judgment/demo) です。Judgement のデモは課題を選んで開始し、回答は保存せず、制限時間を停止した状態で確認します。詳しくは [Demo Model の使い方](demo.md) を参照してください。
+ホーム画面または教員の実験選択画面の **Demo Model** から一覧を開き、実験を選べます。下記の公開デモURLはログインなしでも開けます。入口は [Double Auction](https://exp-all-in-one.vercel.app/demo)、[EMH](https://exp-all-in-one.vercel.app/emh/demo)、[Judgement under Uncertainty](https://exp-all-in-one.vercel.app/judgment/demo) です。Judgement のデモは課題を選んで開始し、回答は保存せず、制限時間を停止した状態で確認します。詳しくは [Demo Model の使い方](demo.md) を参照してください。
 
 旧アドレス `doubleauction.vercel.app` はパスとクエリを保って新アドレスへ転送します。旧アドレスで参加していた場合は、新アドレスで一度再入室してください。
 

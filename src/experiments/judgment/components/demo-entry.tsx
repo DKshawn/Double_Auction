@@ -13,6 +13,7 @@ import { JUDGMENT_NAME } from "../constants";
 import type { PreviewProtocol, Settings, Study } from "../types";
 import { JudgmentPreview } from "./preview";
 import { SettingsFields } from "./settings-fields";
+import { DemoSelectionLink } from "@/components/demo-selection-link";
 
 export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
   const [language, setLanguage] = useTeacherLanguage();
@@ -50,12 +51,15 @@ export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
       <Header
         homeHref="/judgment/demo"
         leading={
-          <Link
-            className="button secondary small-button"
-            href="/teacher?experiment=judgment"
-          >
-            教員用ページへ
-          </Link>
+          <>
+            <DemoSelectionLink />
+            <Link
+              className="button secondary small-button"
+              href="/teacher?experiment=judgment"
+            >
+              教員用ページへ
+            </Link>
+          </>
         }
       >
         <span className="demo-header-tag">ひとりデモ</span>

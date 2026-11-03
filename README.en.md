@@ -41,7 +41,7 @@ Enter the teacher key once at the teacher entry. The same browser stays signed i
 
 EMH labels prices, dividends, trading balances and scores in yen.
 
-After the teacher starts EMH, students can review their conditions during a five-second countdown before trading opens.
+After the teacher starts EMH, a five-second countdown appears in the center of the student screen while students review their conditions; trading opens when it ends.
 
 EMH Demo Model supports both experiments. Experiment 2 defaults to a 12-person market and uses separate practice dividends and states. Students see state conditions, buy and sell controls in separate columns, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
 
@@ -51,7 +51,7 @@ The EMH demo control panel switches between teacher and student views, pauses, a
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 
-The **実験を選び直す** button and the demo setup pages’ **教員用ページへ** button are in the page header.
+Use **Demo Model** on the home page or teacher experiment selection page to choose a demo. Each demo setup offers **デモを選び直す** to return to the list and **教員用ページへ** to return to the teacher page.
 
 Judgement teacher pages and the demo share task cards, the selection list and controls, with Japanese, Chinese and English switching and settings locked during a run.
 

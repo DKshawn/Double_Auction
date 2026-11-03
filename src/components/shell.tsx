@@ -37,14 +37,16 @@ export function Header({
   leading,
   homeHref,
   onHome,
+  className,
 }: {
   children?: React.ReactNode;
   leading?: React.ReactNode;
   homeHref?: string;
   onHome?: () => void;
+  className?: string;
 }) {
   return (
-    <header className="site-header">
+    <header className={`site-header${className ? ` ${className}` : ""}`}>
       <div className="header-inner">
         <div className="header-left">
           <Brand homeHref={homeHref} onHome={onHome} />

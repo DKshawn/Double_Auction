@@ -2433,6 +2433,43 @@
 .emh-app .emh-demo-panel .demo-caption {
   gap: 10px;
 }
+.emh-app .emh-countdown-card {
+  padding: 30px 36px;
+  border-radius: 12px;
+}
+.emh-app .emh-countdown-card .eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+.emh-app .emh-countdown-card h2 {
+  margin: 14px 0 0;
+  font-size: 22px;
+}
+.emh-app .emh-countdown-card p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.emh-app .emh-countdown-view {
+  display: flex;
+  flex-direction: column;
+}
+.emh-app .emh-countdown-view .stat-grid {
+  position: relative;
+  z-index: 41;
+  order: -1;
+  margin-bottom: 8px;
+  padding-block: 4px;
+}
+@media (max-height: 700px) {
+  .emh-app .emh-countdown-card {
+    padding: 16px 24px;
+  }
+  .emh-app .emh-countdown-card h2 {
+    margin-top: 8px;
+  }
+}
 @media (max-width: 760px) {
   .emh-demo-panel {
     padding: 10px;

@@ -299,6 +299,9 @@ summary.disclosure-button {
   gap: 10px;
   font-size: 12px;
 }
+.home-header .header-right .button {
+  min-height: 40px;
+}
 .quiet-link {
   display: flex;
   align-items: center;
@@ -1046,6 +1049,33 @@ summary.disclosure-button {
   }
   .brand b {
     font-size: 15px;
+  }
+}
+@media (max-width: 400px) {
+  .home-header .header-inner {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-inline: 12px;
+  }
+  .home-header .brand {
+    gap: 6px;
+  }
+  .home-header .brand-mark {
+    width: 32px;
+    height: 32px;
+  }
+  .home-header .brand b {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .home-header .header-right {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .home-header .header-right .button {
+    padding: 8px;
+    font-size: 11px;
+    white-space: nowrap;
   }
 }
 @media (max-width: 390px) {

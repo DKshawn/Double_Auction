@@ -62,30 +62,25 @@ export default async function Teacher({
     );
   }
   if (!code && !returnRoom && legacy !== "1" && experiment !== "institutions") {
-    const demoHref =
-      experiment === "emh"
-        ? "/emh/demo"
-        : experiment === "judgment"
-          ? "/judgment/demo"
-          : null;
+    const selectedExperiment =
+      experiment === "emh" || experiment === "judgment";
     return (
       <>
         <Header homeHref="/teacher" leading={<TeacherSelectionNav />}>
-          {demoHref ? (
-            <DemoEntryLink href={demoHref} />
-          ) : (
-            <Link className="button secondary small-button" href="/">
-              学生の入室画面
-            </Link>
-          )}
+          {!selectedExperiment && <DemoEntryLink />}
+          <Link className="button secondary small-button" href="/">
+            学生の入室画面
+          </Link>
           {status.keyRequired && <TeacherLogout />}
         </Header>
         <main
           className={
-            demoHref ? "narrow-main teacher-setup-main" : "teacher-hub-main"
+            selectedExperiment
+              ? "narrow-main teacher-setup-main"
+              : "teacher-hub-main"
           }
         >
-          {demoHref ? (
+          {selectedExperiment ? (
             <div
               className={`teacher-hub-main teacher-entry-content${experiment === "judgment" ? " judgment-entry-content" : ""}`}
             >
@@ -122,7 +117,6 @@ export default async function Teacher({
           </TeacherSelectionNav>
         }
       >
-        <DemoEntryLink href="/demo" />
         {status.keyRequired && <TeacherLogout />}
       </Header>
       <main

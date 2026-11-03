@@ -2,7 +2,7 @@
 
 [日本語](../ja/classroom.md) · [中文](../zh-CN/classroom.md) · [English](../en/classroom.md)
 
-Student waiting screens use a consistent design. In EMH, a five-second preparation countdown follows the teacher’s start before trading begins.
+Student waiting screens use a consistent design. In EMH, a five-second preparation countdown appears in the center of the student screen after the teacher starts, before trading begins.
 
 [Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app)
 
@@ -80,7 +80,7 @@ To delete a room, click **このルームを削除** in its confirmation dialog.
 
 ## Try it before class
 
-After selecting an experiment, use **Demo Model** at the top right of the teacher page to try the demo. The public URLs below also work directly without login. The entries are [Double Auction](https://exp-all-in-one.vercel.app/demo), [EMH](https://exp-all-in-one.vercel.app/emh/demo), and [Judgement under Uncertainty](https://exp-all-in-one.vercel.app/judgment/demo). The Judgement demo starts after selecting tasks; answers are not saved and time limits are paused. See [Using Demo Model](demo.md) for details.
+Use **Demo Model** on the home page or teacher experiment selection page to choose a demo from the shared list. The public URLs below also work directly without login. The entries are [Double Auction](https://exp-all-in-one.vercel.app/demo), [EMH](https://exp-all-in-one.vercel.app/emh/demo), and [Judgement under Uncertainty](https://exp-all-in-one.vercel.app/judgment/demo). The Judgement demo starts after selecting tasks; answers are not saved and time limits are paused. See [Using Demo Model](demo.md) for details.
 
 The old `doubleauction.vercel.app` address redirects to the new address while preserving the path and query. Anyone who previously joined through the old address needs to re-enter once at the new address.
 

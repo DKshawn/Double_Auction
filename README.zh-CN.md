@@ -37,7 +37,9 @@ flowchart LR
 
 教师密钥只在教师入口输入一次。同一浏览器在8小时内，刷新、切换实验、创建和管理房间都无需再次输入。退出登录、会话到期或密钥更换后需重新验证；每个房间的教师密码仍单独保留。
 
-EMH Demo Model 也使用正式实验相同的设置表单和分组确认流程。
+EMH 的价格、分红、买卖收支与得分在界面上均以「円」标注。
+
+EMH Demo Model 支持实验1和实验2；实验2使用12人市场及单独的练习分红与状态，学生可同时查看各状态条件、独立的买卖输入、市场与个人记录；教师可展开或收起条件。 可在 `/emh/demo/preview` 切换屏幕尺寸查看演示。
 
 [图解操作、重新进入与房间管理](docs/guide/zh-CN/classroom.md) · [Demo Model 使用说明](docs/guide/zh-CN/demo.md)
 
@@ -47,11 +49,11 @@ Judgement 教师页面和 Demo 共用任务卡片、已选列表和操作区，�
 
 ## 实验
 
-| 实验                        | 内容                                                                       | 指南                                             | 演示                                                          |
-| --------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
-| Double Auction              | 比较 CDA、Call Market、Posted Offer 三种制度，按实际人数分配市场与角色     | [流程与规则](docs/guide/zh-CN/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
-| EMH                         | 可设置初始证券、目标人数、类型比例及交易时间；全员自动分组，确认后锁定条件 | [流程与规则](docs/guide/zh-CN/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
-| Judgement under Uncertainty | 14项判断与认知偏差任务，支持条件分配、任务与选项顺序、计时及日中英显示     | [流程与数据](docs/guide/zh-CN/judgment.md)       | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
+| 实验                        | 内容                                                                   | 指南                                             | 演示                                                          |
+| --------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
+| Double Auction              | 比较 CDA、Call Market、Posted Offer 三种制度，按实际人数分配市场与角色 | [流程与规则](docs/guide/zh-CN/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
+| EMH                         | 两种实验可设置轮数、每轮、单次交易和休息时间；实验2每市场12人          | [流程与规则](docs/guide/zh-CN/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
+| Judgement under Uncertainty | 14项判断与认知偏差任务，支持条件分配、任务与选项顺序、计时及日中英显示 | [流程与数据](docs/guide/zh-CN/judgment.md)       | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
 
 ## 开发与资料
 

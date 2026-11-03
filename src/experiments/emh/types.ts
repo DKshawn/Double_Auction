@@ -3,6 +3,8 @@ export type Side = "bid" | "ask";
 export type Status = "lobby" | "trading" | "break" | "completed";
 
 export interface Config {
+  experiment?: "exp1" | "exp2";
+  states?: { prior: number[]; outcomes: number[]; dividends: number[][] };
   initialUnits?: number;
   title: string;
   rounds: number;
@@ -12,6 +14,7 @@ export interface Config {
   dividends: { a: number; b: number }[];
 }
 export interface Participant {
+  insider?: boolean;
   id: string;
   name: string;
   studentId: string;
@@ -55,6 +58,9 @@ export interface Payout {
   yearProfit: number;
 }
 export interface PeriodResult {
+  state?: number;
+  piPrice?: number;
+  rePrice?: number;
   year: number;
   period: Period;
   endedAt: number;
@@ -128,6 +134,14 @@ export interface PersonView {
   dividends: { a: number; b: number } | null;
 }
 export interface RoomView {
+  experiment?: "exp1" | "exp2";
+  exp2?: {
+    prior: number[];
+    dividends: number[] | null;
+    clue: number | null;
+    state: number | null;
+    allDividends: number[][] | null;
+  };
   initialUnits: number;
   marketId?: number;
   code: string;

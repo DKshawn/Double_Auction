@@ -1120,8 +1120,12 @@ summary.disclosure-button {
 }
 .emh-settings > legend,
 .emh-type-ratios > legend {
-  margin-bottom: 16px;
+  padding: 0 0 10px;
   font-weight: 700;
+}
+.emh-create > .field,
+.emh-settings .field {
+  margin-top: 0;
 }
 .emh-settings .form-grid {
   margin-bottom: 20px;

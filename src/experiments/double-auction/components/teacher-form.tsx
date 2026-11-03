@@ -654,7 +654,6 @@ export function TeacherForm({
                   studyCreation ? "teacher-settings-section panel" : undefined
                 }
               >
-                {studyCreation && <h2>教員アクセス</h2>}
                 <label className="field">
                   教員パスワード
                   <input

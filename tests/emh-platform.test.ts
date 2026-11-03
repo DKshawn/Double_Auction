@@ -39,8 +39,18 @@ after(async () => {
   await pg.close();
 });
 const password = "Integration-Teacher-2026";
-async function classroom(n: number, settings = DEFAULT_SETTINGS) {
-  const teacher = await emh.create("EMH classroom", password, "", settings);
+async function classroom(
+  n: number,
+  settings = DEFAULT_SETTINGS,
+  experiment: "exp1" | "exp2" = "exp1",
+) {
+  const teacher = await emh.create(
+    "EMH classroom",
+    password,
+    "",
+    settings,
+    experiment,
+  );
   const students = [];
   for (let i = 0; i < n; i++)
     students.push({
@@ -94,6 +104,91 @@ async function classroom(n: number, settings = DEFAULT_SETTINGS) {
   }
   return { teacher, students, get, command, act };
 }
+
+test("Exp2 locks its conditions and admits complete 12-person markets", async () => {
+  const c = await classroom(
+    11,
+    { ...DEFAULT_SETTINGS, initialUnits: 9, periodSeconds: 300 },
+    "exp2",
+  );
+  let current = (await c.get()).state;
+  assert.equal(current.experiment, "exp2");
+  assert.equal(current.settings!.initialUnits, 2);
+  assert.equal(current.settings!.periodSeconds, 300);
+  assert.deepEqual(current.allocation, []);
+  const request = async (command: SessionCommand) =>
+    emh.request(c.teacher.code, c.teacher.token, "teacher", undefined, {
+      scope: "session",
+      requestId: randomUUID(),
+      command,
+    });
+  const invalid = await request({
+    kind: "assign",
+    expectedRevision: current.revision,
+  });
+  assert.ok(invalid.error);
+  const update = await request({
+    kind: "update-settings",
+    settings: DEFAULT_SETTINGS,
+    expectedRevision: current.revision,
+  });
+  assert.ok(update.error);
+  const validSettings = {
+    ...current.settings!,
+    periodSeconds: 180,
+    rounds: 3,
+    unitSeconds: 15,
+    breakSeconds: 45,
+  };
+  const updated = await request({
+    kind: "update-settings",
+    settings: validSettings,
+    expectedRevision: current.revision,
+  });
+  assert.equal(updated.error, undefined);
+  assert.deepEqual(updated.state.settings, validSettings);
+  const last = await emh.login(c.teacher.code, {
+    role: "student",
+    nickname: "s11",
+    pin: "1234",
+  });
+  current = (await c.get()).state;
+  assert.deepEqual(
+    current.allocation.map((a) => [a.size, ...a.typeCounts]),
+    [[12, 4, 4, 4]],
+  );
+  assert.equal(
+    (await request({ kind: "assign", expectedRevision: current.revision }))
+      .error,
+    undefined,
+  );
+  current = (await c.get()).state;
+  assert.equal(
+    (await request({ kind: "start", expectedRevision: current.revision }))
+      .error,
+    undefined,
+  );
+  const studentView = (await c.get(last.token, "student")).state.market!;
+  assert.equal(studentView.experiment, "exp2");
+  assert.equal(studentView.exp2!.clue, null);
+  assert.equal(studentView.exp2!.allDividends, null);
+  assert.equal(studentView.periodSeconds, 180);
+  assert.equal(studentView.rounds, 3);
+  assert.equal(studentView.unitSeconds, 15);
+  assert.equal(studentView.breakSeconds, 45);
+  assert.equal(studentView.participants.length, 0);
+  const conditions = JSON.parse(
+    (await emh.export(c.teacher.code, c.teacher.token, "teacher", "conditions"))
+      .body,
+  );
+  assert.equal(conditions.experiment, "emh-exp2");
+  assert.equal(
+    conditions.markets[0].conditions.assignment.filter(
+      (p: { insider: boolean }) => p.insider,
+    ).length,
+    6,
+  );
+});
 
 test("every attendance 3–999 includes everyone, balances groups and types locally and across the class", () => {
   assert.deepEqual(allocationPlan(0), []);
@@ -480,6 +575,11 @@ test("clock changes survive a stale action and complete every default round befo
 
 test("EMH API preserves fixed dividends and rounds and validates command scope", () => {
   assert.ok(createSchema.safeParse({ title: "EMH", password }).success);
+  assert.equal(
+    createSchema.parse({ title: "EMH", password, experiment: "exp2" }).settings
+      .periodSeconds,
+    300,
+  );
   assert.ok(
     !createSchema.safeParse({ title: "EMH", password, rounds: 1 }).success,
   );
@@ -551,6 +651,9 @@ test("custom settings persist, lock with assignments, reject stale edits, and su
     targetMarketSize: 8,
     typeRatios: [2, 1, 1],
     periodSeconds: 180,
+    rounds: 6,
+    unitSeconds: 30,
+    breakSeconds: 60,
   };
   const c = await classroom(8, initial);
   const before = (await c.get()).state;
@@ -559,6 +662,9 @@ test("custom settings persist, lock with assignments, reject stale edits, and su
     ...initial,
     initialUnits: 4,
     periodSeconds: 120,
+    rounds: 3,
+    unitSeconds: 17,
+    breakSeconds: 42,
   };
   const update: RequestCommand = {
     scope: "session",
@@ -648,6 +754,14 @@ test("custom settings persist, lock with assignments, reject stale edits, and su
     32,
   );
   assert.equal(running.config.periodSeconds, 120);
+  assert.equal(running.config.rounds, 3);
+  assert.equal(running.config.unitSeconds, 17);
+  assert.equal(running.config.breakSeconds, 42);
+  assert.equal(
+    running.unitEndsAt! -
+      running.events.find((e) => e.kind === "period-started")!.at,
+    17000,
+  );
   const start = running.events.find((e) => e.kind === "period-started")!.at;
   assert.equal(running.periodEndsAt! - start, 120000);
   const teacherView = (await c.get()).state;

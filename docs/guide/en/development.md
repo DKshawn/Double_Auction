@@ -23,6 +23,8 @@ To require a teacher key locally, set `TEACHER_ACCESS_KEY` in the Git-ignored `.
 
 Teacher entry and room pages with `?entry=teacher` validate authentication on the server. `POST /api/teacher/session` validates the key and issues an eight-hour signed HttpOnly, SameSite=Lax cookie, with Secure on HTTPS. The key itself is never stored in the cookie or browser storage. `DELETE` logs out; key rotation invalidates existing sessions. Creation, management, deletion and Judgment teacher-preview APIs validate the session while retaining `accessKey` support for existing authenticated scripts. No new environment variable or database migration is required.
 
+Screen-size previews allow same-origin embedding only for `/demo` and `/emh/demo`; teacher and formal-room pages remain protected against embedding.
+
 ## Vercel + Neon
 
 | Environment variable | Purpose                                                                                                          |

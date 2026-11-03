@@ -4,16 +4,20 @@ import type { RoomView, Trade } from "@/experiments/emh/types";
 export function PriceChart({
   trades,
   benchmarks,
+  singlePeriod = false,
+  compact = false,
 }: {
   trades: Trade[];
   benchmarks: RoomView["benchmarks"];
+  singlePeriod?: boolean;
+  compact?: boolean;
 }) {
-  const W = 700,
-    H = 240,
+  const W = compact ? 480 : 700,
+    H = compact ? 160 : 240,
     left = 46,
     right = 24,
-    top = 24,
-    bottom = 36;
+    top = compact ? 16 : 24,
+    bottom = compact ? 27 : 36;
   const values = trades.map((t) => t.price);
   if (benchmarks)
     values.push(benchmarks.naiveA, benchmarks.perfectA, benchmarks.perfectB);
@@ -37,14 +41,14 @@ export function PriceChart({
     points.map(({ t, i }) => `${x(i)},${y(t.price)}`).join(" ");
   const mid = a.length && b.length ? (x(a.at(-1)!.i) + x(b[0]!.i)) / 2 : null;
   return (
-    <div className="chart-wrap">
+    <div className={`chart-wrap ${compact ? "compact-chart" : ""}`}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label={
           trades.length
-            ? `取引価格。${trades.length}件、最終価格${trades.at(-1)!.price}。A期は紫、B期は青緑。`
-            : "取引価格。まだ取引はありません。"
+            ? `取引価格（円）。${trades.length}件、最終価格${trades.at(-1)!.price}円。${singlePeriod ? "" : "A期は紫、B期は青緑。"}`
+            : "取引価格（円）。まだ取引はありません。"
         }
       >
         {Array.from({ length: 5 }, (_, i) => low + ((high - low) * i) / 4).map(
@@ -73,17 +77,17 @@ export function PriceChart({
             {[
               {
                 value: benchmarks.perfectA,
-                label: `PF A ${benchmarks.perfectA}`,
+                label: `PF A ${benchmarks.perfectA} 円`,
                 color: "var(--period-a)",
               },
               {
                 value: benchmarks.naiveA,
-                label: `Naive A ${benchmarks.naiveA}`,
+                label: `Naive A ${benchmarks.naiveA} 円`,
                 color: "var(--sell)",
               },
               {
                 value: benchmarks.perfectB,
-                label: `PF B ${benchmarks.perfectB}`,
+                label: `PF B ${benchmarks.perfectB} 円`,
                 color: "var(--period-b)",
               },
             ].map((line, i) => (
@@ -142,7 +146,7 @@ export function PriceChart({
             stroke="var(--surface)"
             strokeWidth="1.5"
           >
-            <title>{`${t.period}期 取引${i + 1}: ${t.price} / 買い手${t.buyerSeat}・売り手${t.sellerSeat}`}</title>
+            <title>{`${singlePeriod ? "" : `${t.period}期 `}取引${i + 1}: ${t.price} 円 / 買い手${t.buyerSeat}・売り手${t.sellerSeat}`}</title>
           </circle>
         ))}
         {!trades.length && (
@@ -157,16 +161,18 @@ export function PriceChart({
           {trades.length ? `${trades.length} 件目` : "取引順"}
         </text>
       </svg>
-      <div className="chart-legend">
-        <span>
-          <i className="dot period-a" />
-          A期
-        </span>
-        <span>
-          <i className="dot period-b" />
-          B期
-        </span>
-      </div>
+      {!singlePeriod && (
+        <div className="chart-legend">
+          <span>
+            <i className="dot period-a" />
+            A期
+          </span>
+          <span>
+            <i className="dot period-b" />
+            B期
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -75,7 +75,7 @@ test("Judgment task cards, translated details and demo controls stay usable acro
   }
   await language.selectOption("en");
   await page.getByRole("button", { name: "Start demo", exact: true }).click();
-  const preview = page.getByRole("dialog", { name: "Solo demo", exact: true });
+  const preview = page.getByRole("dialog", { name: "Demo mode", exact: true });
   await expect(preview.locator(".judgment-app")).toHaveAttribute("lang", "en");
   await expect(preview.locator(".student-progress")).toHaveText("1 / 86");
   await preview.getByRole("button", { name: "Skip", exact: true }).click();

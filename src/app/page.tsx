@@ -20,10 +20,6 @@ export default async function Home({
       <main className="home-main">
         <section className="home-grid">
           <div className="home-story">
-            <div className="eyebrow">
-              <span />
-              体験する、実験経済学
-            </div>
             <h1>
               体験から、
               <br />

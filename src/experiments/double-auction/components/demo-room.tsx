@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { DemoModeBadge } from "@/components/demo-mode-badge";
 import {
   RotateCcw,
   SkipForward,
@@ -86,7 +87,7 @@ export default function DemoRoom({
       <div className="demo-controls">
         <div className="demo-options">
           <div className="demo-status">
-            <span className="demo-header-tag">ひとりデモ</span>
+            <DemoModeBadge />
             <span className={`role-tag ${teacher ? "teacher" : role}`}>
               {teacher ? "教員" : role === "buyer" ? "買い手" : "売り手"}
             </span>

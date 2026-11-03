@@ -2,6 +2,8 @@ Avoid unnecessary secondary labels and descriptions. Let the layout do the expla
 
 Give navigation and action text a visible button shape using the shared button styles. Preserve link semantics for navigation and button semantics for actions; do not rely on text color alone to signal that a control is clickable.
 
+When changing a shared feature or control, check every experiment and its demo and formal screens, and apply the same labels, colors, styles, accessibility, and behavior wherever the feature is shared. Prefer shared components and tokens, and verify the affected screens; preserve experiment-specific behavior where it differs.
+
 Do not add meaningless arrows. Use arrows only when they communicate a clear direction, relationship, or action.
 
 Keep the color palette consistent with DoubleAuction: blue-purple primary, cool gray backgrounds, teal for buying, and warm orange for selling. Reuse the shared color tokens in `src/app/globals.css`.

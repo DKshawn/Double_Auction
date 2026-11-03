@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Header } from "@/components/shell";
 import { ExperimentCards } from "@/components/experiment-cards";
+import { DemoModeBadge } from "@/components/demo-mode-badge";
 
 export default function DemoSelectionPage() {
   return (
     <>
       <Header>
+        <DemoModeBadge />
         <Link className="button secondary small-button" href="/">
           ホームへ
         </Link>

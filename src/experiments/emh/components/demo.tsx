@@ -39,6 +39,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Header } from "@/components/shell";
 import { StudentWaitingCard } from "@/components/student-waiting-card";
 import { DemoSelectionLink } from "@/components/demo-selection-link";
+import { DemoModeBadge } from "@/components/demo-mode-badge";
 
 function bot(room: Room, now: number) {
   if (room.status !== "trading" || room.pausedAt !== null) return;
@@ -129,7 +130,7 @@ export function Demo() {
   return (
     <>
       <Header homeHref="/emh/demo" leading={<TeacherPageLink />}>
-        <span className="demo-header-tag">ひとりデモ</span>
+        <DemoModeBadge />
         <Link
           className="button secondary small-button"
           href="/emh/demo/preview"
@@ -273,7 +274,7 @@ function DemoRoom({
       <div className="demo-controls emh-demo-controls">
         <div className="demo-options">
           <div className="demo-status">
-            <span className="demo-header-tag">ひとりデモ</span>
+            <DemoModeBadge />
             <span className={`role-tag ${teacher ? "teacher" : "student"}`}>
               {teacher ? "教員" : "学生"}
             </span>

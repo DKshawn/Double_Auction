@@ -10,12 +10,13 @@ import { DEMO_SETTINGS } from "@/experiments/double-auction/lib/demo";
 import { Header, Footer } from "../../../components/shell";
 import { TeacherForm } from "./teacher-form";
 import { DemoSelectionLink } from "@/components/demo-selection-link";
+import { DemoModeBadge } from "@/components/demo-mode-badge";
 
 const DemoRoom = dynamic(() => import("./demo-room"), {
   ssr: false,
   loading: () => (
     <main className="narrow-main">
-      <p role="status">ひとりデモを準備しています…</p>
+      <p role="status">DEMOモードを準備しています…</p>
     </main>
   ),
 });
@@ -50,12 +51,12 @@ export function DemoEntry() {
           </>
         }
       >
-        <span className="demo-header-tag">ひとりデモ</span>
+        <DemoModeBadge />
       </Header>
       <main className="narrow-main teacher-setup-main">
         <h1 className="eyebrow teacher-entry-heading">
           <GraduationCap size={18} />
-          ひとりデモ · 教員の実験設定
+          DEMOモード · 教員の実験設定
         </h1>
         <TeacherForm
           status={{ mode: "local", ready: true, keyRequired: false }}

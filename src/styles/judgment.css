@@ -281,6 +281,9 @@
   font-size: 12px;
   color: var(--muted);
 }
+.judgment-preview-toolbar .demo-header-tag {
+  color: var(--demo-ink);
+}
 .judgment-preview-toolbar > div {
   display: flex;
   flex-wrap: wrap;

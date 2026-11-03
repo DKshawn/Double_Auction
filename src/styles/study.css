@@ -745,10 +745,16 @@
 .demo-header-tag {
   border-radius: 20px;
   padding: 7px 12px;
-  background: #e8e1fb;
-  color: #5b408d;
   font-size: 12px;
   font-weight: 600;
+}
+.demo-count {
+  background: #e8e1fb;
+  color: #5b408d;
+}
+.demo-header-tag {
+  background: var(--demo-yellow);
+  color: var(--demo-ink);
 }
 .demo-caption .demo-count {
   padding: 3px 10px;
@@ -773,9 +779,9 @@
   margin-top: 16px;
 }
 .button.demo-entry-button {
-  background: #f4cb51;
+  background: var(--demo-yellow);
   border-color: #e4b830;
-  color: #40300a;
+  color: var(--demo-ink);
 }
 .button.demo-entry-button:hover {
   background: #e9bb35;

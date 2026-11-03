@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { teacherText } from "./teacher-language";
+import { DemoModeBadge } from "@/components/demo-mode-badge";
 import type { Language, PreviewProtocol } from "../types";
 import {
   StudentApp,
@@ -35,7 +36,7 @@ export function JudgmentPreview({
     <dialog
       ref={dialog}
       className="judgment-preview"
-      aria-label={t(demo ? "ひとりデモ" : "学生画面のプレビュー")}
+      aria-label={t(demo ? "DEMOモード" : "学生画面のプレビュー")}
       lang={language === "zh" ? "zh-CN" : language}
       onCancel={(e) => {
         e.preventDefault();
@@ -43,7 +44,11 @@ export function JudgmentPreview({
       }}
     >
       <div className="judgment-preview-toolbar">
-        <strong>{t(demo ? "ひとりデモ" : "プレビュー")}</strong>
+        {demo ? (
+          <DemoModeBadge label={t("DEMOモード")} />
+        ) : (
+          <strong>{t("プレビュー")}</strong>
+        )}
         <span>{t("回答は保存されません。制限時間は停止しています。")}</span>
         <div>
           <button

@@ -39,7 +39,7 @@ flowchart LR
 
 EMHの価格・配当・売買収支・得点は円で表示します。
 
-EMHの Demo Model では実験1と実験2を選べます。実験2は固定条件と練習用の配当・状態を使い、学生は状態別条件・買売入力・市場と自分の記録を同時に確認できます。進行中の教員画面では条件を開閉できます。 画面サイズ別のプレビューは `/emh/demo/preview` で開けます。
+EMHの Demo Model では実験1と実験2を選べます。実験2は12人市場と練習用の配当・状態を使い、学生は状態別条件・買売入力・市場と自分の記録を同時に確認できます。進行中の教員画面では条件を開閉できます。 画面サイズ別のプレビューは `/emh/demo/preview` で開けます。
 
 [画面で見る使い方・再入室・ルーム管理](docs/guide/ja/classroom.md) · [Demo Model の使い方](docs/guide/ja/demo.md)
 
@@ -52,7 +52,7 @@ Judgement の教員画面と Demo は課題カード・選択一覧・操作欄�
 | 実験                        | 内容                                                                          | ガイド                                          | デモ                                                          |
 | --------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------- |
 | Double Auction              | CDA・Call Market・Posted Offer の制度比較。実人数に応じた市場・役割の割り当て | [実施とルール](docs/guide/ja/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
-| EMH                         | 実験1は条件を設定し、実験2は12人市場の固定条件で実施                          | [実施とルール](docs/guide/ja/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
+| EMH                         | 両実験でラウンド数・各ラウンド、1取引と休憩の時間を設定可能。実験2は12人市場                          | [実施とルール](docs/guide/ja/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
 | Judgement under Uncertainty | 判断・認知バイアスの14課題。条件割り当て、課題順・選択肢順、計時、日中英表示  | [実施と記録](docs/guide/ja/judgment.md)         | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
 
 ## 開発と資料

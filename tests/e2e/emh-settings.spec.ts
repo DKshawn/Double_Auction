@@ -30,6 +30,9 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
     targetMarketSize: 8,
     typeRatios: [2, 1, 1],
     periodSeconds: 120,
+    rounds: 6,
+    unitSeconds: 30,
+    breakSeconds: 60,
   };
   try {
     await page.goto("/teacher?experiment=emh");

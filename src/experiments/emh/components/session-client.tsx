@@ -212,7 +212,7 @@ export function SessionClient({
             <p role="status">ルームを読み込み中…</p>
           ) : (
             <>
-              {teacher && state.settings && state.experiment !== "exp2" && (
+              {teacher && state.settings && (
                 <section className="panel emh-session-settings">
                   {state.status === "open" ? (
                     <form
@@ -232,6 +232,9 @@ export function SessionClient({
                       }}
                     >
                       <SettingsFields
+                        experiment={
+                          state.experiment === "exp2" ? "exp2" : "exp1"
+                        }
                         settings={draftSettings ?? state.settings}
                         onChange={(value) => {
                           if (!draftSettings)
@@ -269,7 +272,10 @@ export function SessionClient({
                       )}
                     </form>
                   ) : (
-                    <SettingsSummary settings={state.settings} />
+                    <SettingsSummary
+                      settings={state.settings}
+                      experiment={state.experiment === "exp2" ? "exp2" : "exp1"}
+                    />
                   )}
                 </section>
               )}

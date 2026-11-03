@@ -1,6 +1,6 @@
 import { addParticipant, newRoom } from "./engine";
 import { allocationPlan } from "./allocation";
-import { EXP2_SETTINGS, settingsSchema, type EmhSettings } from "./settings";
+import { settingsForExperiment, type EmhSettings } from "./settings";
 import type { Participant, Room } from "./types";
 
 export function makeDemo(
@@ -9,20 +9,17 @@ export function makeDemo(
   now: number,
   experiment: "exp1" | "exp2" = "exp1",
 ) {
-  const settings =
-    experiment === "exp2"
-      ? structuredClone(EXP2_SETTINGS)
-      : settingsSchema.parse(input);
+  const settings = settingsForExperiment(input, experiment);
   const allocation = allocationPlan(settings.targetMarketSize, settings)[0];
   const room = newRoom(
     "DEMO23",
     {
       title,
       initialUnits: settings.initialUnits,
-      rounds: 6,
+      rounds: settings.rounds,
       periodSeconds: settings.periodSeconds,
-      unitSeconds: 30,
-      breakSeconds: 60,
+      unitSeconds: settings.unitSeconds,
+      breakSeconds: settings.breakSeconds,
       ...(experiment === "exp2"
         ? {
             experiment: "exp2" as const,

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { AuctionError } from "@/lib/server/errors";
 import { sessionFor } from "@/lib/server/http";
-import { DEFAULT_SETTINGS, settingsSchema } from "../settings";
+import { DEFAULT_SETTINGS, EXP2_SETTINGS, settingsSchema } from "../settings";
 
 export const createSchema = z
   .object({
@@ -10,9 +10,17 @@ export const createSchema = z
     password: z.string().min(8).max(128),
     accessKey: z.string().max(256).default(""),
     experiment: z.enum(["exp1", "exp2"]).default("exp1"),
-    settings: settingsSchema.default(() => structuredClone(DEFAULT_SETTINGS)),
+    settings: settingsSchema.optional(),
   })
-  .strict();
+  .strict()
+  .transform((value) => ({
+    ...value,
+    settings:
+      value.settings ??
+      structuredClone(
+        value.experiment === "exp2" ? EXP2_SETTINGS : DEFAULT_SETTINGS,
+      ),
+  }));
 const side = z.enum(["bid", "ask"]);
 const unitKey = z.string().min(1).max(80);
 const action = z.union([

@@ -127,11 +127,23 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   await page.goto("/emh/demo");
   await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
   await expect(page.locator('[name="initialUnits"]')).toHaveCount(0);
+  await page.getByLabel("各ラウンドの時間（分）").fill("3");
+  await page.getByLabel("ラウンド数").fill("3");
+  await page.getByLabel("1取引の時間（秒）").fill("15");
+  await page.getByLabel("休憩時間（秒）").fill("45");
   await page.getByRole("button", { name: "デモルームを作成" }).click();
   await expect(page.getByRole("heading", { name: "12人が入室" })).toBeVisible();
   await expect(page.locator(".emh-allocation")).toContainText("4 / 4 / 4");
-  await expect(page.locator(".emh-settings-summary")).toContainText("300秒");
+  await expect(page.getByLabel("ラウンド数")).toHaveValue("3");
+  await expect(page.getByLabel("1取引の時間（秒）")).toHaveValue("15");
+  await expect(page.getByLabel("休憩時間（秒）")).toHaveValue("45");
+  await page.getByLabel("休憩時間（秒）").fill("40");
+  await page.getByRole("button", { name: "設定を保存" }).click();
   await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
+  await expect(page.locator(".emh-settings-summary")).toContainText("180秒");
+  await expect(page.locator(".emh-settings-summary")).toContainText("3回");
+  await expect(page.locator(".emh-settings-summary")).toContainText("15秒");
+  await expect(page.locator(".emh-settings-summary")).toContainText("40秒");
   await page.getByRole("button", { name: "全市場で実験を開始" }).click();
   const conditions = page.getByRole("button", {
     name: "実験条件",
@@ -139,7 +151,7 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   });
   await expect(conditions).toHaveAttribute("aria-expanded", "false");
   await conditions.click();
-  await expect(page.locator("#demo-conditions")).toContainText("300秒");
+  await expect(page.locator("#demo-conditions")).toContainText("180秒");
   await conditions.click();
   await expect(page.locator("#demo-conditions")).toHaveCount(0);
   await page.getByRole("button", { name: "学生画面" }).click();

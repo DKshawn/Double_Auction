@@ -316,7 +316,7 @@ function DemoRoom({
               id="demo-conditions"
               className="panel emh-session-settings"
             >
-              {locked || initial.experiment === "exp2" ? (
+              {locked ? (
                 <SettingsSummary
                   settings={settings}
                   experiment={initial.experiment}
@@ -334,11 +334,17 @@ function DemoRoom({
                     setSettings(parsed.data);
                     setDraft(null);
                     replace(
-                      makeDemo(room.config.title, parsed.data, Date.now()),
+                      makeDemo(
+                        room.config.title,
+                        parsed.data,
+                        Date.now(),
+                        initial.experiment,
+                      ),
                     );
                   }}
                 >
                   <SettingsFields
+                    experiment={initial.experiment}
                     settings={draft ?? settings}
                     onChange={setDraft}
                   />

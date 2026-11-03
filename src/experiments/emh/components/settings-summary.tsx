@@ -12,6 +12,18 @@ export function SettingsSummary({
       <h2>確定した実験条件</h2>
       <dl className="emh-settings-summary">
         <div>
+          <dt>ラウンド数</dt>
+          <dd>{settings.rounds}回</dd>
+        </div>
+        <div>
+          <dt>1取引</dt>
+          <dd>{settings.unitSeconds}秒</dd>
+        </div>
+        <div>
+          <dt>休憩</dt>
+          <dd>{settings.breakSeconds}秒</dd>
+        </div>
+        <div>
           <dt>初期証券数</dt>
           <dd>1人 {settings.initialUnits}単位</dd>
         </div>

@@ -8,7 +8,10 @@ import {
   phaseKey,
   view,
 } from "../src/experiments/emh/engine";
-import { DEFAULT_SETTINGS } from "../src/experiments/emh/settings";
+import {
+  DEFAULT_SETTINGS,
+  EXP2_SETTINGS,
+} from "../src/experiments/emh/settings";
 import { exportData } from "../src/experiments/emh/export";
 
 test("EMH demo uses formal settings limits, allocation, clocks, reset and settlement through six rounds", () => {
@@ -104,7 +107,7 @@ test("Exp2 demo keeps fixed rules, practice conditions, and private-information 
   let now = 1793580000000;
   const room = makeDemo(
     "Exp2 demo",
-    { ...DEFAULT_SETTINGS, initialUnits: 10 },
+    { ...EXP2_SETTINGS, initialUnits: 10 },
     now,
     "exp2",
   );
@@ -153,4 +156,39 @@ test("Exp2 demo keeps fixed rules, practice conditions, and private-information 
   }
   assert.equal(room.status, "completed");
   assert.equal(room.results.length, 6);
+});
+
+test("custom round, trade and break timing applies to both demo experiments", () => {
+  for (const experiment of ["exp1", "exp2"] as const) {
+    let now = 1793580000000;
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      rounds: 3,
+      unitSeconds: 13,
+      breakSeconds: 37,
+    };
+    const room = makeDemo("Timing", settings, now, experiment);
+    assert.equal(room.config.rounds, 3);
+    assert.equal(room.config.unitSeconds, 13);
+    assert.equal(room.config.breakSeconds, 37);
+    assignParticipants(room, () => 0.4);
+    const teacher = { role: "teacher" as const };
+    const command = (kind: "start" | "end-period" | "next-year") =>
+      act(room, teacher, { kind, expectedPhase: phaseKey(room) }, ++now);
+    command("start");
+    assert.equal(room.unitEndsAt, now + 13000);
+    for (let round = 1; round <= 3; round++) {
+      command("end-period");
+      if (experiment === "exp1") command("end-period");
+      if (round < 3) {
+        assert.equal(room.breakEndsAt, now + 37000);
+        command("next-year");
+      }
+    }
+    assert.equal(room.status, "completed");
+    assert.equal(room.results.length, experiment === "exp1" ? 6 : 3);
+  }
+  assert.throws(() =>
+    makeDemo("Timing", { ...DEFAULT_SETTINGS, rounds: 7 }, Date.now(), "exp2"),
+  );
 });

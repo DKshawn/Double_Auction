@@ -40,6 +40,7 @@ import {
   DEFAULT_SETTINGS,
   EXP2_SETTINGS,
   settingsSchema,
+  settingsForExperiment,
   type EmhSettings,
 } from "../settings";
 
@@ -97,7 +98,10 @@ async function readSession(tx: Sql, code: string, exclusive: boolean) {
   );
   check(result.rows[0], "ルームが見つかりません。", 404);
   const session = result.rows[0].state;
-  session.settings ??= structuredClone(DEFAULT_SETTINGS);
+  session.settings = settingsSchema.parse(
+    session.settings ??
+      (session.experiment === "exp2" ? EXP2_SETTINGS : DEFAULT_SETTINGS),
+  );
   session.settingsLockedAt ??=
     session.status === "open"
       ? null
@@ -179,14 +183,17 @@ export class EmhService {
     title: string,
     password: string,
     accessKey: string,
-    input: EmhSettings = DEFAULT_SETTINGS,
+    input: EmhSettings | undefined = undefined,
     experiment: "exp1" | "exp2" = "exp1",
   ) {
     assertTeacherAccess(accessKey);
-    const settings =
-      experiment === "exp2"
-        ? structuredClone(EXP2_SETTINGS)
-        : settingsSchema.parse(input);
+    input ??= experiment === "exp2" ? EXP2_SETTINGS : DEFAULT_SETTINGS;
+    check(
+      experiment !== "exp2" || input.rounds <= 6,
+      "実験2は1〜6ラウンドで設定してください。",
+      400,
+    );
+    const settings = settingsForExperiment(input, experiment);
     const token = newToken();
     const hash = passwordHash(password);
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -359,14 +366,31 @@ export class EmhService {
               const kind = input.command.kind;
               if (input.command.kind === "update-settings") {
                 check(
-                  session.experiment !== "exp2",
-                  "実験2の条件は固定されています。",
-                );
-                check(
                   session.status === "open" && session.settingsLockedAt == null,
                   "割り当て確定後は条件を変更できません。開始前に割り当てを解除してください。",
                 );
-                session.settings = settingsSchema.parse(input.command.settings);
+                if (session.experiment === "exp2") {
+                  const proposed = input.command.settings;
+                  check(
+                    proposed.rounds <= 6,
+                    "実験2は1〜6ラウンドで設定してください。",
+                    400,
+                  );
+                  check(
+                    proposed.initialUnits === EXP2_SETTINGS.initialUnits &&
+                      proposed.targetMarketSize ===
+                        EXP2_SETTINGS.targetMarketSize &&
+                      proposed.typeRatios.every(
+                        (n, i) => n === EXP2_SETTINGS.typeRatios[i],
+                      ),
+                    "実験2の人数・証券数・比率は固定されています。",
+                    400,
+                  );
+                }
+                session.settings = settingsForExperiment(
+                  input.command.settings,
+                  session.experiment === "exp2" ? "exp2" : "exp1",
+                );
               } else if (kind === "assign") {
                 if (session.experiment === "exp2")
                   check(
@@ -399,6 +423,9 @@ export class EmhService {
                       title: session.title,
                       initialUnits: session.settings!.initialUnits,
                       periodSeconds: session.settings!.periodSeconds,
+                      rounds: session.settings!.rounds,
+                      unitSeconds: session.settings!.unitSeconds,
+                      breakSeconds: session.settings!.breakSeconds,
                     },
                     now,
                     "",
@@ -648,6 +675,9 @@ export class EmhService {
                 title: session.title,
                 initialUnits: session.settings!.initialUnits,
                 periodSeconds: session.settings!.periodSeconds,
+                rounds: session.settings!.rounds,
+                unitSeconds: session.settings!.unitSeconds,
+                breakSeconds: session.settings!.breakSeconds,
               },
               allocation: session.allocation,
               members: session.members.map((p) => ({

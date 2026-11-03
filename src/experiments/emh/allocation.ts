@@ -2,6 +2,7 @@ import type { Allocation } from "./session-types";
 import {
   DEFAULT_SETTINGS,
   MAX_MARKET_SIZE,
+  MAX_EXP2_MARKET_SIZE,
   MIN_MARKET_SIZE,
   settingsSchema,
   type EmhSettings,
@@ -20,14 +21,23 @@ export function allocationPlan(
     throw new Error("参加者数を確認してください。");
   const settings = settingsSchema.parse(input);
   if (attendance < MIN_MARKET_SIZE) return [];
-  let count = Math.max(
-    1,
-    Math.min(
-      Math.round(attendance / settings.targetMarketSize),
-      Math.floor(attendance / MIN_MARKET_SIZE),
-    ),
-  );
-  if (Math.ceil(attendance / count) > MAX_MARKET_SIZE) count++;
+  const maxMarketSize = settings.exp2 ? MAX_EXP2_MARKET_SIZE : MAX_MARKET_SIZE;
+  let count =
+    settings.exp2?.marketCount ??
+    Math.max(
+      1,
+      Math.min(
+        Math.round(attendance / settings.targetMarketSize),
+        Math.floor(attendance / MIN_MARKET_SIZE),
+      ),
+    );
+  if (settings.exp2?.marketCount != null) {
+    if (
+      attendance < count * MIN_MARKET_SIZE ||
+      attendance > count * maxMarketSize
+    )
+      return [];
+  } else if (Math.ceil(attendance / count) > maxMarketSize) count++;
   const weights = settings.typeRatios;
   const weightSum = weights.reduce((a, b) => a + b, 0);
   const totals = [0, 0, 0];

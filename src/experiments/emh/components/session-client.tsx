@@ -12,7 +12,7 @@ import type { Action } from "../types";
 import { RoomDashboard } from "./room-dashboard";
 import { SettingsFields } from "./settings-fields";
 import { SettingsSummary } from "./settings-summary";
-import type { EmhSettings } from "../settings";
+import { settingsSchema, type EmhSettings } from "../settings";
 
 export function SessionClient({
   code,
@@ -79,14 +79,17 @@ export function SessionClient({
         if (!controller.signal.aborted)
           timer = setTimeout(
             poll,
-            role === "teacher"
-              ? 2000
-              : latest.current?.status === "completed"
-                ? 6000
-                : latest.current?.market?.status === "trading" &&
-                    latest.current.market.pausedAt === null
-                  ? 1200
-                  : 2000,
+            latest.current?.market?.status === "countdown" &&
+              latest.current.market.pausedAt === null
+              ? 300
+              : role === "teacher"
+                ? 2000
+                : latest.current?.status === "completed"
+                  ? 6000
+                  : latest.current?.market?.status === "trading" &&
+                      latest.current.market.pausedAt === null
+                    ? 1200
+                    : 2000,
           );
       }
     }
@@ -220,6 +223,14 @@ export function SessionClient({
                       onSubmit={async (event) => {
                         event.preventDefault();
                         if (!draftSettings || settingsChanged) return;
+                        const parsed = settingsSchema.safeParse(draftSettings);
+                        if (!parsed.success) {
+                          setError(
+                            parsed.error.issues[0]?.message ??
+                              "実験条件を確認してください。",
+                          );
+                          return;
+                        }
                         const saved = await send({
                           scope: "session",
                           requestId: crypto.randomUUID(),
@@ -452,10 +463,8 @@ export function SessionClient({
                               disabled={
                                 disabled ||
                                 settingsDirty ||
-                                (state.experiment === "exp2"
-                                  ? state.participantCount < 12 ||
-                                    state.participantCount % 12 !== 0
-                                  : state.participantCount < 3)
+                                state.participantCount < 3 ||
+                                state.allocation.length === 0
                               }
                               onClick={() => command("assign")}
                             >
@@ -485,14 +494,14 @@ export function SessionClient({
                             </>
                           )}
                         </div>
-                        {(state.experiment === "exp2"
-                          ? state.participantCount < 12 ||
-                            state.participantCount % 12 !== 0
-                          : state.participantCount < 3) && (
+                        {(state.participantCount < 3 ||
+                          state.allocation.length === 0) && (
                           <p className="muted">
-                            {state.experiment === "exp2"
-                              ? "実験2は1市場12人です。12人単位で参加してください。"
-                              : "開始には3人以上必要です。"}
+                            {state.participantCount < 3
+                              ? "開始には3人以上必要です。"
+                              : state.experiment === "exp2"
+                                ? "市場数を確認してください。各市場には3人以上必要です。"
+                                : "市場数を確認してください。各市場は3〜12人です。"}
                           </p>
                         )}
                       </>
@@ -518,6 +527,21 @@ export function SessionClient({
                               市場 {m.id} <span>{m.size}人</span>
                             </h3>
                             <p>タイプ別人数 {m.typeCounts.join(" / ")}</p>
+                            {state.experiment === "exp2" &&
+                              state.settings?.exp2 && (
+                                <p>
+                                  内部情報の人数{" "}
+                                  {m.typeCounts
+                                    .map((count) =>
+                                      Math.min(
+                                        count,
+                                        state.settings!.exp2!
+                                          .insiderCountPerType,
+                                      ),
+                                    )
+                                    .join(" / ")}
+                                </p>
+                              )}
                             <p>
                               総証券数 {m.size * state.settings!.initialUnits}
                               単位

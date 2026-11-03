@@ -2,6 +2,8 @@
 
 [日本語](../ja/classroom.md) · [中文](../zh-CN/classroom.md) · [English](../en/classroom.md)
 
+学生等待画面采用统一设计。EMH 在教师开始后先进行5秒准备倒计时，结束后才开始交易。
+
 [教师入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)
 
 先完成建房、加入、开展实验和下载结果。以下截图来自本地的虚构课堂，展示默认日语界面；实际授课请使用上方线上入口。建房及下载区域以 Double Auction 为例。

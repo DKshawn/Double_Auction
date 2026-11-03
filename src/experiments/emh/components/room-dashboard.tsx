@@ -79,6 +79,7 @@ export function RoomDashboard({
   const teacher = room.role === "teacher";
   const disabled = busy || !online;
   const active = room.status === "trading";
+  const countdown = room.status === "countdown";
   const paused = room.pausedAt !== null;
   const status =
     room.status === "lobby"
@@ -89,7 +90,9 @@ export function RoomDashboard({
           ? "一時停止中"
           : room.status === "break"
             ? "休憩中"
-            : "取引中";
+            : countdown
+              ? "開始準備中"
+              : "取引中";
   const control = (kind: TeacherAction["kind"]) =>
     act({ kind, expectedPhase: room.phaseKey });
   async function copy() {
@@ -219,7 +222,8 @@ export function RoomDashboard({
               </div>
             </dl>
             <p className="field-note">
-              2回続けて取引が成立しなければ、その期を終了します。
+              {room.emptyUnitsLimit}
+              回続けて取引が成立しなければ、その期を終了します。
             </p>
           </aside>
         </div>
@@ -278,9 +282,11 @@ export function RoomDashboard({
                     ? "すべての取引が終了"
                     : room.status === "break"
                       ? "次のラウンドまで"
-                      : room.experiment === "exp2"
-                        ? "取引中"
-                        : `Period ${room.period}`}
+                      : countdown
+                        ? "まもなく取引開始"
+                        : room.experiment === "exp2"
+                          ? "取引中"
+                          : `Period ${room.period}`}
                 </strong>
               </div>
             </div>
@@ -288,13 +294,21 @@ export function RoomDashboard({
               {room.status !== "completed" && (
                 <>
                   <div>
-                    <span>{room.status === "break" ? "休憩" : "期の残り"}</span>
+                    <span>
+                      {countdown
+                        ? "開始まで"
+                        : room.status === "break"
+                          ? "休憩"
+                          : "期の残り"}
+                    </span>
                     <strong className="timer">
                       {clock(
                         remaining(
-                          room.status === "break"
-                            ? room.breakEndsAt
-                            : room.periodEndsAt,
+                          countdown
+                            ? room.countdownEndsAt
+                            : room.status === "break"
+                              ? room.breakEndsAt
+                              : room.periodEndsAt,
                           reference,
                         ),
                       )}
@@ -340,7 +354,7 @@ export function RoomDashboard({
                 ) : (
                   <button
                     className="button quiet"
-                    disabled={disabled || paused}
+                    disabled={disabled || paused || countdown}
                     onClick={() =>
                       setConfirmation({
                         kind: "end-period",
@@ -406,7 +420,9 @@ export function RoomDashboard({
               <span>
                 {paused
                   ? "教員が再開するまでお待ちください。"
-                  : `被験者 #${room.nominatedSeat} さん、最初の提示をお願いします。全員が取引できます。`}
+                  : countdown
+                    ? "自分の条件を確認してください。カウントダウン後に取引できます。"
+                    : `被験者 #${room.nominatedSeat} さん、最初の提示をお願いします。全員が取引できます。`}
               </span>
               {room.emptyUnits > 0 && (
                 <span className="inactivity">前回は成立なし</span>

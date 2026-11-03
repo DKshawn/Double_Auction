@@ -1,5 +1,5 @@
 import type { Config } from "../types";
-import { DEFAULT_SETTINGS } from "../settings";
+import { DEFAULT_SETTINGS, type Exp2Options } from "../settings";
 
 // Keep real experimental conditions out of all public client bundles.
 export const DEFAULT_CONFIG: Config = {
@@ -16,15 +16,11 @@ export const DEFAULT_CONFIG: Config = {
   ],
 };
 
-export const EXP2_CONFIG: Config = {
-  title: "資産市場実験 2",
-  experiment: "exp2",
-  initialUnits: 2,
-  rounds: 6,
-  periodSeconds: 300,
-  unitSeconds: 30,
-  breakSeconds: 60,
-  dividends: [],
+export const FORMAL_EXP2_OPTIONS: Exp2Options = {
+  emptyUnitsLimit: 2,
+  insiderStartRound: 3,
+  insiderCountPerType: 2,
+  marketCount: null,
   states: {
     prior: [0.35, 0.42, 0.23],
     outcomes: [1, 1, 1, 1, 2, 2],
@@ -34,4 +30,16 @@ export const EXP2_CONFIG: Config = {
       [136, 140, 124],
     ],
   },
+};
+
+export const EXP2_CONFIG: Config = {
+  title: "資産市場実験 2",
+  experiment: "exp2",
+  initialUnits: 2,
+  rounds: 6,
+  periodSeconds: 300,
+  unitSeconds: 30,
+  breakSeconds: 60,
+  dividends: [],
+  states: FORMAL_EXP2_OPTIONS.states,
 };

@@ -2,6 +2,8 @@
 
 [日本語](../ja/classroom.md) · [中文](../zh-CN/classroom.md) · [English](../en/classroom.md)
 
+Student waiting screens use a consistent design. In EMH, a five-second preparation countdown follows the teacher’s start before trading begins.
+
 [Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app)
 
 Create a room, bring students in, run the experiment, and download the results. Screenshots show a local sample classroom in the default Japanese interface; use the online entry links above for class. The creation and download panels use Double Auction as the example.

@@ -221,6 +221,13 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
     await expect(page.locator(".emh-session-controls")).toBeVisible();
     await expect(studentPage.locator(".student-waiting-card")).toHaveCount(0);
     await expect(studentPage.locator(".emh-student-view")).toBeVisible();
+    await expect(
+      studentPage.getByText("開始まで", { exact: true }),
+    ).toBeVisible();
+    await expect(studentPage.getByLabel("提示価格（円）")).toBeDisabled();
+    await expect(studentPage.getByLabel("提示価格（円）")).toBeEnabled({
+      timeout: 12000,
+    });
     expect((await exported()).markets[0].conditions.assignment).toEqual(
       confirmed.markets[0].conditions.assignment,
     );

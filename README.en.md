@@ -41,7 +41,13 @@ Enter the teacher key once at the teacher entry. The same browser stays signed i
 
 EMH labels prices, dividends, trading balances and scores in yen.
 
-EMH Demo Model supports both experiments. Experiment 2 uses a 12-person market and separate practice dividends and states. Students see state conditions, buy and sell controls in separate columns, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
+After the teacher starts EMH, students can review their conditions during a five-second countdown before trading opens.
+
+EMH Demo Model supports both experiments. Experiment 2 defaults to a 12-person market and uses separate practice dividends and states. Students see state conditions, buy and sell controls in separate columns, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
+
+Experiment 2 configures initial securities, the unsuccessful-attempt limit, insider start round and number per type, state probabilities, dividends, realized states, market count, target size and type ratios. Market count may be automatic or specified; actual attendance is split into markets of 3–999. Defaults are a target of 12, two securities, two unsuccessful attempts and up to two insiders per type from round 3.
+
+The EMH demo control panel switches between teacher and student views, pauses, advances 30 seconds or to the next period, restarts, and returns to settings. Fast-forward processes virtual trades and deadlines in order; it is disabled during the countdown and while paused. **やり直す** keeps the settings and resets allocation and progress. The screen-size preview places the control panel outside the frame.
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 
@@ -54,7 +60,7 @@ Judgement teacher pages and the demo share task cards, the selection list and co
 | Experiment                  | Scope                                                                                                                              | Guide                                             | Demo                                                          |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
 | Double Auction              | Compare CDA, Call Market, and Posted Offer; allocate markets and roles using actual attendance                                     | [Flow and rules](docs/guide/en/double-auction.md) | [Demo Model](https://exp-all-in-one.vercel.app/demo)          |
-| EMH                         | Configure round count, round, trade and break durations in both experiments; Experiment 2 uses 12-person markets                   | [Flow and rules](docs/guide/en/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
+| EMH                         | Configure round count, round, trade and break durations in both experiments; Experiment 2 also configures participants, information and dividends                   | [Flow and rules](docs/guide/en/emh.md)            | [Demo Model](https://exp-all-in-one.vercel.app/emh/demo)      |
 | Judgement under Uncertainty | 14 judgment and cognitive bias tasks, condition assignment, task and option ordering, timing, and Japanese/Chinese/English display | [Flow and data](docs/guide/en/judgment.md)        | [Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) |
 
 ## Development and materials

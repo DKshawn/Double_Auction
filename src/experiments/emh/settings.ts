@@ -2,6 +2,56 @@ import { z } from "zod";
 
 export const MIN_MARKET_SIZE = 3;
 export const MAX_MARKET_SIZE = 12;
+export const MAX_EXP2_MARKET_SIZE = 999;
+export const exp2OptionsSchema = z
+  .object({
+    emptyUnitsLimit: z.number().int().min(1).max(100),
+    insiderStartRound: z.number().int().min(1).max(7),
+    insiderCountPerType: z.number().int().min(0).max(MAX_EXP2_MARKET_SIZE),
+    marketCount: z.number().int().min(1).max(333).nullable(),
+    states: z
+      .object({
+        prior: z
+          .tuple([
+            z.number().min(0).max(1),
+            z.number().min(0).max(1),
+            z.number().min(0).max(1),
+          ])
+          .refine(
+            (values) =>
+              Math.abs(values.reduce((sum, n) => sum + n, 0) - 1) < 0.000001,
+            "状態の確率の合計は100%にしてください。",
+          ),
+        dividends: z.tuple([
+          z.tuple([
+            z.number().int().min(0).max(100000),
+            z.number().int().min(0).max(100000),
+            z.number().int().min(0).max(100000),
+          ]),
+          z.tuple([
+            z.number().int().min(0).max(100000),
+            z.number().int().min(0).max(100000),
+            z.number().int().min(0).max(100000),
+          ]),
+          z.tuple([
+            z.number().int().min(0).max(100000),
+            z.number().int().min(0).max(100000),
+            z.number().int().min(0).max(100000),
+          ]),
+        ]),
+        outcomes: z.tuple([
+          z.number().int().min(1).max(3),
+          z.number().int().min(1).max(3),
+          z.number().int().min(1).max(3),
+          z.number().int().min(1).max(3),
+          z.number().int().min(1).max(3),
+          z.number().int().min(1).max(3),
+        ]),
+      })
+      .strict(),
+  })
+  .strict();
+export type Exp2Options = z.infer<typeof exp2OptionsSchema>;
 export const settingsSchema = z
   .object({
     initialUnits: z.number().int().min(1).max(20),
@@ -9,7 +59,7 @@ export const settingsSchema = z
       .number()
       .int()
       .min(MIN_MARKET_SIZE)
-      .max(MAX_MARKET_SIZE),
+      .max(MAX_EXP2_MARKET_SIZE),
     typeRatios: z.tuple([
       z.number().int().min(1).max(100),
       z.number().int().min(1).max(100),
@@ -19,8 +69,18 @@ export const settingsSchema = z
     rounds: z.number().int().min(1).max(12).default(6),
     unitSeconds: z.number().int().min(1).max(1800).default(30),
     breakSeconds: z.number().int().min(1).max(1800).default(60),
+    exp2: exp2OptionsSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (settings) =>
+      settings.exp2 !== undefined ||
+      settings.targetMarketSize <= MAX_MARKET_SIZE,
+    {
+      message: "実験1の1市場の目標人数は3〜12人です。",
+      path: ["targetMarketSize"],
+    },
+  );
 export type EmhSettings = z.infer<typeof settingsSchema>;
 export const DEFAULT_SETTINGS: EmhSettings = {
   initialUnits: 2,
@@ -54,13 +114,9 @@ export function settingsForExperiment(
   if (experiment === "exp2") {
     if (settings.rounds > 6)
       throw new Error("実験2は1〜6ラウンドで設定してください。");
-    return {
-      ...EXP2_SETTINGS,
-      rounds: settings.rounds,
-      periodSeconds: settings.periodSeconds,
-      unitSeconds: settings.unitSeconds,
-      breakSeconds: settings.breakSeconds,
-    };
+    return settings;
   }
-  return settings;
+  const exp1 = { ...settings };
+  delete exp1.exp2;
+  return settingsSchema.parse(exp1);
 }

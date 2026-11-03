@@ -128,7 +128,7 @@ export function exportData(room: Room, actor: Actor, kind: string) {
             initialUnits: initialUnitsFor(room.config),
             totalUnits: room.participants.length * initialUnitsFor(room.config),
             unitsPerTrade: 1,
-            maxEmptyUnits: 2,
+            maxEmptyUnits: room.config.emptyUnitsLimit ?? 2,
             priceBounds: [1, 100000],
             cashConstraint: false,
             tradePrice: "standing-quote",
@@ -155,7 +155,8 @@ export function exportData(room: Room, actor: Actor, kind: string) {
           "dividend_state_1",
           "dividend_state_2",
           "dividend_state_3",
-          "insider_rounds_3_to_6",
+          "insider",
+          "insider_start_round",
           "completed_years_profit",
         ],
       ];
@@ -170,6 +171,7 @@ export function exportData(room: Room, actor: Actor, kind: string) {
             ? room.config.states!.dividends[p.type - 1]!
             : [null, null, null]),
           p.insider ? 1 : 0,
+          room.config.insiderStartRound ?? 3,
           p.totalProfit,
         ]),
       );

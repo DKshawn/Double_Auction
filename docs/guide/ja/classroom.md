@@ -2,6 +2,8 @@
 
 [日本語](../ja/classroom.md) · [中文](../zh-CN/classroom.md) · [English](../en/classroom.md)
 
+学生の待機画面は共通デザインです。EMHでは教員の開始後に5秒間の準備カウントダウンがあり、その後に取引が始まります。
+
 [教員入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)
 
 ルーム作成、入室、実験の実施、結果のダウンロードまでの手順です。画面は日本語表示の操作例で、ローカル環境の説明用ルームを使っています。授業では上のオンライン入口をご利用ください。作成画面とダウンロード欄は Double Auction の例です。

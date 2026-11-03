@@ -23,7 +23,7 @@ test("Double Auction and EMH demos share the student waiting card", async ({
   await page.goto("/emh/demo");
   await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
   await page.getByRole("button", { name: "デモルームを作成" }).click();
-  await page.getByRole("button", { name: "学生画面" }).click();
+  await page.getByRole("button", { name: "学生画面を見る" }).click();
   await expect(card).toContainText("入室が完了しました");
   await expect(card).toContainText("教員が受付を終了するまで");
   await expect(card.locator(".student-waiting-icon")).toBeVisible();

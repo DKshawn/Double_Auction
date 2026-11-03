@@ -35,7 +35,11 @@ import type {
   Session,
   SessionView,
 } from "../session-types";
-import { DEFAULT_CONFIG, EXP2_CONFIG } from "./default-config";
+import {
+  DEFAULT_CONFIG,
+  EXP2_CONFIG,
+  FORMAL_EXP2_OPTIONS,
+} from "./default-config";
 import {
   DEFAULT_SETTINGS,
   EXP2_SETTINGS,
@@ -102,6 +106,8 @@ async function readSession(tx: Sql, code: string, exclusive: boolean) {
     session.settings ??
       (session.experiment === "exp2" ? EXP2_SETTINGS : DEFAULT_SETTINGS),
   );
+  if (session.experiment === "exp2" && !session.settings.exp2)
+    session.settings.exp2 = structuredClone(FORMAL_EXP2_OPTIONS);
   session.settingsLockedAt ??=
     session.status === "open"
       ? null
@@ -140,9 +146,7 @@ function projection(
     allocation: teacher
       ? session.allocation.length
         ? session.allocation
-        : session.experiment === "exp2" && session.members.length % 12 !== 0
-          ? []
-          : allocationPlan(session.members.length, session.settings)
+        : allocationPlan(session.members.length, session.settings)
       : [],
     participants: teacher
       ? session.members.map((p) => ({
@@ -193,7 +197,12 @@ export class EmhService {
       "実験2は1〜6ラウンドで設定してください。",
       400,
     );
-    const settings = settingsForExperiment(input, experiment);
+    const settings = settingsForExperiment(
+      experiment === "exp2"
+        ? { ...input, exp2: input.exp2 ?? structuredClone(FORMAL_EXP2_OPTIONS) }
+        : input,
+      experiment,
+    );
     const token = newToken();
     const hash = passwordHash(password);
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -376,28 +385,20 @@ export class EmhService {
                     "実験2は1〜6ラウンドで設定してください。",
                     400,
                   );
-                  check(
-                    proposed.initialUnits === EXP2_SETTINGS.initialUnits &&
-                      proposed.targetMarketSize ===
-                        EXP2_SETTINGS.targetMarketSize &&
-                      proposed.typeRatios.every(
-                        (n, i) => n === EXP2_SETTINGS.typeRatios[i],
-                      ),
-                    "実験2の人数・証券数・比率は固定されています。",
-                    400,
-                  );
                 }
                 session.settings = settingsForExperiment(
-                  input.command.settings,
+                  session.experiment === "exp2"
+                    ? {
+                        ...input.command.settings,
+                        exp2:
+                          input.command.settings.exp2 ??
+                          session.settings?.exp2 ??
+                          structuredClone(FORMAL_EXP2_OPTIONS),
+                      }
+                    : input.command.settings,
                   session.experiment === "exp2" ? "exp2" : "exp1",
                 );
               } else if (kind === "assign") {
-                if (session.experiment === "exp2")
-                  check(
-                    session.members.length >= 12 &&
-                      session.members.length % 12 === 0,
-                    "実験2は1市場12人です。12人単位で参加してください。",
-                  );
                 check(
                   session.status === "open" && session.members.length >= 3,
                   "受付中に3人以上がそろってから割り当ててください。",
@@ -405,6 +406,12 @@ export class EmhService {
                 session.allocation = allocationPlan(
                   session.members.length,
                   session.settings,
+                );
+                check(
+                  session.allocation.length > 0,
+                  session.experiment === "exp2"
+                    ? "市場数を確認してください。各市場には3人以上必要です。"
+                    : "市場数を確認してください。各市場は3〜12人です。",
                 );
                 session.settingsLockedAt = now;
                 const shuffled = [...session.members];
@@ -426,6 +433,19 @@ export class EmhService {
                       rounds: session.settings!.rounds,
                       unitSeconds: session.settings!.unitSeconds,
                       breakSeconds: session.settings!.breakSeconds,
+                      ...(session.experiment === "exp2"
+                        ? {
+                            states: structuredClone(
+                              session.settings!.exp2!.states,
+                            ),
+                            emptyUnitsLimit:
+                              session.settings!.exp2!.emptyUnitsLimit,
+                            insiderStartRound:
+                              session.settings!.exp2!.insiderStartRound,
+                            insiderCountPerType:
+                              session.settings!.exp2!.insiderCountPerType,
+                          }
+                        : {}),
                     },
                     now,
                     "",
@@ -678,6 +698,16 @@ export class EmhService {
                 rounds: session.settings!.rounds,
                 unitSeconds: session.settings!.unitSeconds,
                 breakSeconds: session.settings!.breakSeconds,
+                ...(session.experiment === "exp2"
+                  ? {
+                      states: structuredClone(session.settings!.exp2!.states),
+                      emptyUnitsLimit: session.settings!.exp2!.emptyUnitsLimit,
+                      insiderStartRound:
+                        session.settings!.exp2!.insiderStartRound,
+                      insiderCountPerType:
+                        session.settings!.exp2!.insiderCountPerType,
+                    }
+                  : {}),
               },
               allocation: session.allocation,
               members: session.members.map((p) => ({

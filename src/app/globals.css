@@ -1124,6 +1124,22 @@ summary.disclosure-button {
   padding: 0 0 10px;
   font-weight: 700;
 }
+.emh-exp2-conditions {
+  margin-top: 16px;
+}
+.emh-exp2-grid {
+  min-width: 0;
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+}
+.emh-exp2-grid > legend {
+  padding: 0 0 10px;
+  font-weight: 700;
+}
+.emh-exp2-grid .emh-ratio-grid + .emh-ratio-grid {
+  margin-top: 10px;
+}
 .emh-create > .field,
 .emh-settings .field {
   margin-top: 0;

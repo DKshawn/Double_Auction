@@ -2415,3 +2415,43 @@
     gap: 8px;
   }
 }
+
+.emh-app .emh-demo-panel {
+  margin: 0 0 12px;
+}
+.emh-app .emh-demo-panel .emh-demo-controls {
+  margin-left: 0;
+  gap: 10px;
+  justify-content: space-between;
+}
+.emh-app .emh-demo-panel .demo-actions {
+  margin-left: auto;
+}
+.emh-app .emh-demo-panel .button {
+  white-space: nowrap;
+}
+.emh-app .emh-demo-panel .demo-caption {
+  gap: 10px;
+}
+@media (max-width: 760px) {
+  .emh-demo-panel {
+    padding: 10px;
+  }
+  .emh-demo-panel .demo-options {
+    justify-content: space-between;
+  }
+  .emh-demo-panel .demo-options .button {
+    width: auto;
+  }
+  .emh-demo-panel .demo-controls,
+  .emh-demo-panel .demo-options,
+  .emh-demo-panel .demo-actions {
+    gap: 6px;
+  }
+  .emh-app .emh-demo-panel .demo-actions {
+    margin-left: 0;
+  }
+  .emh-demo-panel .demo-actions .button {
+    flex: 1 1 120px;
+  }
+}

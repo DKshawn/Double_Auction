@@ -111,9 +111,7 @@ export function DemoPreview({
               {isEmh ? "EMH · 画面サイズ別デモ" : "画面サイズ別デモ"}
             </h1>
             <p>
-              {isEmh
-                ? "枠の中でデモを操作できます。サイズを切り替えても進行状況は保持されます。"
-                : "デモ操作は枠の外、設定・実験画面は枠の中。サイズを切り替えても進行状況は保持されます。"}
+              デモ操作は枠の外、設定・実験画面は枠の中。サイズを切り替えても進行状況は保持されます。
             </p>
           </div>
           <Link
@@ -202,7 +200,7 @@ export function DemoPreview({
           <iframe
             className={styles.frame}
             title="操作できるひとりデモ"
-            data-demo-controls={isEmh ? undefined : controlsId}
+            data-demo-controls={controlsId}
             src={demoPath}
             width={preset.width}
             height={height}

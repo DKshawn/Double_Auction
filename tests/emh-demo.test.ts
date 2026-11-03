@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { demoTraderValue, makeDemo } from "../src/experiments/emh/demo-model";
+import {
+  advanceDemoTime,
+  demoTraderValue,
+  makeDemo,
+  PRACTICE_EXP2_OPTIONS,
+} from "../src/experiments/emh/demo-model";
 import { allocationPlan } from "../src/experiments/emh/allocation";
 import {
   act,
+  advanceClock,
   assignParticipants,
   phaseKey,
   view,
@@ -36,6 +42,8 @@ test("EMH demo uses formal settings limits, allocation, clocks, reset and settle
   const command = (kind: "start" | "end-period" | "next-year") =>
     act(room, teacher, { kind, expectedPhase: phaseKey(room) }, ++now);
   command("start");
+  now += 5000;
+  advanceClock(room, now);
   assert.deepEqual(
     room.participants.map((p) => [p.id, p.type, p.seat]),
     assignment,
@@ -103,7 +111,18 @@ test("EMH demo scales the virtual group and rejects settings rejected by the cla
     );
 });
 
-test("Exp2 demo keeps fixed rules, practice conditions, and private-information bot valuations", () => {
+test("Exp2 demo can use a market larger than twelve participants", () => {
+  const room = makeDemo(
+    "Large",
+    { ...EXP2_SETTINGS, targetMarketSize: 30, exp2: PRACTICE_EXP2_OPTIONS },
+    0,
+    "exp2",
+  );
+  assert.equal(room.participants.length, 30);
+  assert.deepEqual(room.typeCounts, [10, 10, 10]);
+});
+
+test("Exp2 demo uses adjustable securities, practice conditions, and private-information bot valuations", () => {
   let now = 1793580000000;
   const room = makeDemo(
     "Exp2 demo",
@@ -113,7 +132,7 @@ test("Exp2 demo keeps fixed rules, practice conditions, and private-information 
   );
   assert.equal(room.participants.length, 12);
   assert.deepEqual(room.typeCounts, [4, 4, 4]);
-  assert.equal(room.config.initialUnits, 2);
+  assert.equal(room.config.initialUnits, 10);
   assert.equal(room.config.periodSeconds, 300);
   assert.deepEqual(room.config.states!.outcomes, [3, 3, 3, 3, 2, 2]);
   assignParticipants(room, () => 0.999);
@@ -129,6 +148,8 @@ test("Exp2 demo keeps fixed rules, practice conditions, and private-information 
       () => 0.999,
     );
   command("start");
+  now += 5000;
+  advanceClock(room, now);
   const expected = 80 * 0.35 + 110 * 0.42 + 170 * 0.23;
   assert.ok(Math.abs(demoTraderValue(room, insider) - expected) < 1e-8);
   for (let round = 1; round <= 6; round++) {
@@ -176,6 +197,8 @@ test("custom round, trade and break timing applies to both demo experiments", ()
     const command = (kind: "start" | "end-period" | "next-year") =>
       act(room, teacher, { kind, expectedPhase: phaseKey(room) }, ++now);
     command("start");
+    now += 5000;
+    advanceClock(room, now);
     assert.equal(room.unitEndsAt, now + 13000);
     for (let round = 1; round <= 3; round++) {
       command("end-period");
@@ -191,4 +214,98 @@ test("custom round, trade and break timing applies to both demo experiments", ()
   assert.throws(() =>
     makeDemo("Timing", { ...DEFAULT_SETTINGS, rounds: 7 }, Date.now(), "exp2"),
   );
+});
+
+test("demo fast-forward processes clocks and virtual participants without skipping the next period", () => {
+  for (const experiment of ["exp1", "exp2"] as const) {
+    const start = 1793580000000;
+    const room = makeDemo(
+      "Demo",
+      {
+        ...DEFAULT_SETTINGS,
+        periodSeconds: 60,
+        unitSeconds: 100,
+        breakSeconds: 37,
+      },
+      start,
+      experiment,
+    );
+    assignParticipants(room, () => 0.4);
+    act(
+      room,
+      { role: "teacher" },
+      { kind: "start", expectedPhase: phaseKey(room) },
+      start,
+    );
+    const botTimes: number[] = [];
+    const bot = (_room: typeof room, at: number) => botTimes.push(at);
+    assert.equal(
+      advanceDemoTime(room, start, start, bot, "30-seconds").now,
+      start,
+    );
+    advanceClock(room, start + 5000);
+    const advanced = advanceDemoTime(
+      room,
+      start + 5000,
+      start,
+      bot,
+      "30-seconds",
+    );
+    assert.equal(advanced.now, start + 35000);
+    assert.ok(botTimes.length > 10);
+    assert.equal(room.year, 1);
+    assert.equal(room.period, "A");
+    const next = advanceDemoTime(
+      room,
+      advanced.now,
+      advanced.lastBotAt,
+      bot,
+      "next-period",
+    );
+    assert.equal(room.status, "trading");
+    if (experiment === "exp1") {
+      assert.equal(room.year, 1);
+      assert.equal(room.period, "B");
+      assert.equal(next.now, start + 65000);
+    } else {
+      assert.equal(room.year, 2);
+      assert.equal(next.now, start + 102000);
+    }
+    act(
+      room,
+      { role: "teacher" },
+      { kind: "pause", expectedPhase: phaseKey(room) },
+      next.now,
+    );
+    assert.equal(
+      advanceDemoTime(room, next.now, next.lastBotAt, bot, "30-seconds").now,
+      next.now,
+    );
+  }
+});
+
+test("demo can advance from a break to the next round", () => {
+  const now = 1793580000000;
+  const room = makeDemo("Demo", EXP2_SETTINGS, now, "exp2");
+  assignParticipants(room, () => 0.4);
+  const teacher = { role: "teacher" as const };
+  act(room, teacher, { kind: "start", expectedPhase: phaseKey(room) }, now);
+  advanceClock(room, now + 5000);
+  act(
+    room,
+    teacher,
+    { kind: "end-period", expectedPhase: phaseKey(room) },
+    now + 5001,
+  );
+  assert.equal(room.status, "break");
+  const result = advanceDemoTime(
+    room,
+    now + 5001,
+    now,
+    () => {},
+    "next-period",
+  );
+  assert.equal(result.now, now + 5001 + room.config.breakSeconds * 1000);
+  assert.equal(room.year, 2);
+  assert.equal(room.status, "trading");
 });

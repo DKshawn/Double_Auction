@@ -1,10 +1,13 @@
 export type Period = "A" | "B";
 export type Side = "bid" | "ask";
-export type Status = "lobby" | "trading" | "break" | "completed";
+export type Status = "lobby" | "countdown" | "trading" | "break" | "completed";
 
 export interface Config {
   experiment?: "exp1" | "exp2";
   states?: { prior: number[]; outcomes: number[]; dividends: number[][] };
+  emptyUnitsLimit?: number;
+  insiderStartRound?: number;
+  insiderCountPerType?: number;
   initialUnits?: number;
   title: string;
   rounds: number;
@@ -72,7 +75,7 @@ export interface PeriodResult {
   actualDividend: number;
   maxDividend: number;
   initialDividend: number;
-  allocationEfficiency: number;
+  allocationEfficiency: number | null;
   gainEfficiency: number | null;
 }
 export interface AuditEvent {
@@ -98,6 +101,7 @@ export interface Room {
   unit: number;
   emptyUnits: number;
   nominatedSeat: number | null;
+  countdownEndsAt?: number | null;
   periodEndsAt: number | null;
   unitEndsAt: number | null;
   breakEndsAt: number | null;
@@ -162,6 +166,8 @@ export interface RoomView {
   participantCount: number;
   nominatedSeat: number | null;
   emptyUnits: number;
+  emptyUnitsLimit: number;
+  countdownEndsAt: number | null;
   periodEndsAt: number | null;
   unitEndsAt: number | null;
   breakEndsAt: number | null;

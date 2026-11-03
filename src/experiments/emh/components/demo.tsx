@@ -1,7 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { RotateCcw, Play, Pause } from "lucide-react";
+import {
+  RotateCcw,
+  Play,
+  Pause,
+  SkipForward,
+  UserRound,
+  GraduationCap,
+} from "lucide-react";
+import { createPortal } from "react-dom";
 import {
   act,
   assignParticipants,
@@ -11,7 +19,12 @@ import {
   view,
 } from "../engine";
 import type { Action, Actor, Room } from "../types";
-import { demoTraderValue, makeDemo } from "../demo-model";
+import {
+  advanceDemoTime,
+  demoTraderValue,
+  makeDemo,
+  PRACTICE_EXP2_OPTIONS,
+} from "../demo-model";
 import {
   DEFAULT_SETTINGS,
   settingsSchema,
@@ -129,6 +142,7 @@ export function Demo() {
             initialTitle={setup.title}
             initialSettings={setup.settings}
             initialExperiment={setup.experiment}
+            exp2Defaults={PRACTICE_EXP2_OPTIONS}
             onCreateDemo={(title, settings, experiment) => {
               setSetup({ title, settings, experiment });
               setRunning(true);
@@ -159,6 +173,13 @@ function DemoRoom({
   const [role, setRole] = useState<Actor["role"]>("teacher");
   const [error, setError] = useState("");
   const [now, setNow] = useState(room.createdAt);
+  const offset = useRef(0);
+  const lastBot = useRef(room.createdAt);
+  const [controlsTarget] = useState<HTMLElement | null>(() => {
+    if (typeof window === "undefined") return null;
+    const id = window.frameElement?.getAttribute("data-demo-controls");
+    return id ? window.parent.document.getElementById(id) : null;
+  });
   const hiddenAt = useRef<number | null>(null);
   const dirty =
     draft !== null && JSON.stringify(draft) !== JSON.stringify(settings);
@@ -170,11 +191,10 @@ function DemoRoom({
     setError("");
   }
   useEffect(() => {
-    let lastBot = Date.now();
     const timer = setInterval(() => {
       const stored = current.current;
       if (stored.status === "lobby" || stored.status === "completed") return;
-      const at = Date.now();
+      const at = Date.now() + offset.current;
       if (document.hidden) {
         hiddenAt.current ??= at;
         return;
@@ -183,6 +203,7 @@ function DemoRoom({
       if (hiddenAt.current !== null) {
         const delta = at - hiddenAt.current;
         if (next.pausedAt === null) {
+          if (next.countdownEndsAt != null) next.countdownEndsAt += delta;
           if (next.periodEndsAt !== null) next.periodEndsAt += delta;
           if (next.unitEndsAt !== null) next.unitEndsAt += delta;
           if (next.breakEndsAt !== null) next.breakEndsAt += delta;
@@ -190,9 +211,9 @@ function DemoRoom({
         hiddenAt.current = null;
       }
       advanceClock(next, at);
-      if (at - lastBot >= 1800) {
+      if (at - lastBot.current >= 1800) {
         bot(next, at);
-        lastBot = at;
+        lastBot.current = at;
       }
       current.current = next;
       setRoom(next);
@@ -202,7 +223,7 @@ function DemoRoom({
   }, []);
   async function run(action: Action, as?: Actor) {
     const next = structuredClone(current.current);
-    const at = Date.now();
+    const at = Date.now() + offset.current;
     try {
       if (action.kind === "start" && !assigned)
         throw new Error("分け方を確定してください。");
@@ -220,6 +241,115 @@ function DemoRoom({
       setError(e instanceof Error ? e.message : "操作できませんでした。");
     }
   }
+  function advance(mode: "30-seconds" | "next-period") {
+    const next = structuredClone(current.current);
+    const at = Date.now() + offset.current;
+    const result = advanceDemoTime(next, at, lastBot.current, bot, mode);
+    offset.current += result.now - at;
+    lastBot.current = result.lastBotAt;
+    replace(next, result.now);
+  }
+  function resetDemo() {
+    const at = Date.now();
+    offset.current = 0;
+    lastBot.current = at;
+    hiddenAt.current = null;
+    setAssigned(false);
+    setDraft(null);
+    setConditionsOpen(false);
+    replace(makeDemo(room.config.title, settings, at, initial.experiment), at);
+  }
+  const active = room.status === "trading" || room.status === "break";
+  const teacher = role === "teacher";
+  const toolbar = (
+    <section
+      className="demo-panel emh-demo-panel"
+      aria-label="ひとりデモの操作"
+    >
+      <div className="demo-controls emh-demo-controls">
+        <div className="demo-options">
+          <div className="demo-status">
+            <span className="demo-header-tag">ひとりデモ</span>
+            <span className={`role-tag ${teacher ? "teacher" : "student"}`}>
+              {teacher ? "教員" : "学生"}
+            </span>
+          </div>
+          <button
+            className="button secondary"
+            onClick={() => setRole(teacher ? "student" : "teacher")}
+          >
+            {teacher ? <UserRound size={16} /> : <GraduationCap size={16} />}
+            {teacher ? "学生画面を見る" : "教員画面を見る"}
+          </button>
+        </div>
+        <div className="demo-actions">
+          <button
+            className="button primary"
+            disabled={!active && room.status !== "countdown"}
+            onClick={() =>
+              run(
+                {
+                  kind: room.pausedAt === null ? "pause" : "resume",
+                  expectedPhase: phaseKey(room),
+                },
+                { role: "teacher" },
+              )
+            }
+          >
+            {room.pausedAt === null ? <Pause size={16} /> : <Play size={16} />}
+            {room.pausedAt === null ? "一時停止" : "再開"}
+          </button>
+          <button
+            className="button secondary"
+            disabled={!active || room.pausedAt !== null}
+            onClick={() => advance("next-period")}
+          >
+            <SkipForward size={16} />
+            次の期へ
+          </button>
+          <button
+            className="button secondary"
+            disabled={!active || room.pausedAt !== null}
+            onClick={() => advance("30-seconds")}
+          >
+            <SkipForward size={16} />
+            30秒進める
+          </button>
+          {teacher && room.status !== "lobby" && (
+            <button
+              className="button secondary"
+              aria-expanded={conditionsOpen}
+              aria-controls="demo-conditions"
+              onClick={() => setConditionsOpen(!conditionsOpen)}
+            >
+              実験条件
+            </button>
+          )}
+          <button className="button secondary" onClick={resetDemo}>
+            <RotateCcw size={14} />
+            やり直す
+          </button>
+          <button
+            className="button secondary"
+            onClick={() =>
+              onConfigure({
+                title: room.config.title,
+                settings,
+                experiment: initial.experiment,
+              })
+            }
+          >
+            設定を見直す
+          </button>
+        </div>
+      </div>
+      <div className="demo-caption">
+        <span className="demo-count">
+          1市場・あなた1人 ＋ 仮想参加者{room.participants.length - 1}人
+        </span>
+      </div>
+    </section>
+  );
   return (
     <Shell wide room leading={<TeacherPageLink />}>
       <div
@@ -229,147 +359,71 @@ function DemoRoom({
             : ""
         }
       >
-        <div className="demo-toolbar">
-          <span className="demo-tag">
-            {initial.experiment === "exp2" ? "デモ · 練習用" : "デモ"}
-          </span>
-          <div className="segmented">
-            <button
-              aria-pressed={role === "teacher"}
-              onClick={() => setRole("teacher")}
-            >
-              教員画面
-            </button>
-            <button
-              aria-pressed={role === "student"}
-              onClick={() => setRole("student")}
-            >
-              学生画面
-            </button>
-          </div>
-          <div className="demo-controls">
-            {initial.experiment === "exp2" &&
-              room.status !== "lobby" &&
-              role === "teacher" && (
-                <button
-                  className="button small secondary"
-                  aria-expanded={conditionsOpen}
-                  aria-controls="demo-conditions"
-                  onClick={() => setConditionsOpen((open) => !open)}
-                >
-                  実験条件
-                </button>
-              )}
-            {(room.status === "trading" || room.status === "break") && (
-              <button
-                className="button small secondary"
-                onClick={() =>
-                  run(
-                    {
-                      kind: room.pausedAt === null ? "pause" : "resume",
-                      expectedPhase: phaseKey(room),
-                    },
-                    { role: "teacher" },
-                  )
-                }
-              >
-                {room.pausedAt === null ? (
-                  <Pause size={14} />
-                ) : (
-                  <Play size={14} />
-                )}
-                {room.pausedAt === null ? "停止" : "再開"}
-              </button>
-            )}
-            <button
-              className="button small secondary"
-              onClick={() =>
-                onConfigure({
-                  title: room.config.title,
-                  settings,
-                  experiment: initial.experiment,
-                })
-              }
-            >
-              <RotateCcw size={14} />
-              設定を見直す
-            </button>
-          </div>
-        </div>
-        {(room.status === "lobby" || initial.experiment !== "exp2") && (
-          <p className="demo-note">
-            仮想参加者{room.participants.length - 1}
-            人と操作を試せます。配当
-            {initial.experiment === "exp2" ? "・実現する状態" : ""}
-            はデモ用です。再読み込みすると設定画面に戻ります。
-          </p>
-        )}
+        {controlsTarget ? createPortal(toolbar, controlsTarget) : toolbar}
         {error && (
           <p className="notice warning" role="alert">
             {error}
           </p>
         )}
-        {role === "teacher" &&
-          (room.status === "lobby" ||
-            initial.experiment !== "exp2" ||
-            conditionsOpen) && (
-            <section
-              id="demo-conditions"
-              className="panel emh-session-settings"
-            >
-              {locked ? (
-                <SettingsSummary
-                  settings={settings}
-                  experiment={initial.experiment}
-                />
-              ) : (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    if (!draft || locked) return;
-                    const parsed = settingsSchema.safeParse(draft);
-                    if (!parsed.success) {
-                      setError("人数・比率・証券数・時間を確認してください。");
-                      return;
-                    }
-                    setSettings(parsed.data);
-                    setDraft(null);
-                    replace(
-                      makeDemo(
-                        room.config.title,
-                        parsed.data,
-                        Date.now(),
-                        initial.experiment,
-                      ),
+        {role === "teacher" && (room.status === "lobby" || conditionsOpen) && (
+          <section id="demo-conditions" className="panel emh-session-settings">
+            {locked ? (
+              <SettingsSummary
+                settings={settings}
+                experiment={initial.experiment}
+              />
+            ) : (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!draft || locked) return;
+                  const parsed = settingsSchema.safeParse(draft);
+                  if (!parsed.success) {
+                    setError(
+                      parsed.error.issues[0]?.message ??
+                        "実験条件を確認してください。",
                     );
-                  }}
-                >
-                  <SettingsFields
-                    experiment={initial.experiment}
-                    settings={draft ?? settings}
-                    onChange={setDraft}
-                  />
-                  <button className="button secondary" disabled={!dirty}>
-                    設定を保存
+                    return;
+                  }
+                  setSettings(parsed.data);
+                  setDraft(null);
+                  replace(
+                    makeDemo(
+                      room.config.title,
+                      parsed.data,
+                      Date.now(),
+                      initial.experiment,
+                    ),
+                  );
+                }}
+              >
+                <SettingsFields
+                  experiment={initial.experiment}
+                  demo
+                  settings={draft ?? settings}
+                  onChange={setDraft}
+                />
+                <button className="button secondary" disabled={!dirty}>
+                  設定を保存
+                </button>
+                {draft && (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => setDraft(null)}
+                  >
+                    変更を取り消す
                   </button>
-                  {draft && (
-                    <button
-                      type="button"
-                      className="button secondary"
-                      onClick={() => setDraft(null)}
-                    >
-                      変更を取り消す
-                    </button>
-                  )}
-                  {dirty && (
-                    <p className="field-help">
-                      設定を保存すると、下の分け方に反映されます。
-                    </p>
-                  )}
-                </form>
-              )}
-            </section>
-          )}
+                )}
+                {dirty && (
+                  <p className="field-help">
+                    設定を保存すると、下の分け方に反映されます。
+                  </p>
+                )}
+              </form>
+            )}
+          </section>
+        )}
         {room.status === "lobby" ? (
           role === "student" ? (
             <StudentWaitingCard assigned={assigned}>
@@ -450,6 +504,19 @@ function DemoRoom({
                         市場 1 <span>{room.participants.length}人</span>
                       </h3>
                       <p>タイプ別人数 {room.typeCounts!.join(" / ")}</p>
+                      {initial.experiment === "exp2" && settings.exp2 && (
+                        <p>
+                          内部情報の人数{" "}
+                          {room
+                            .typeCounts!.map((count) =>
+                              Math.min(
+                                count,
+                                settings.exp2!.insiderCountPerType,
+                              ),
+                            )
+                            .join(" / ")}
+                        </p>
+                      )}
                       <p>
                         総証券数{" "}
                         {room.participants.length * settings.initialUnits}

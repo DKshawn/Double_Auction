@@ -18,29 +18,27 @@ test("EMH screen-size preview keeps the same interactive Exp2 session", async ({
   await demo.getByRole("button", { name: "デモルームを作成" }).click();
   await demo.getByRole("button", { name: "分け方を確定して受付終了" }).click();
   await demo.getByRole("button", { name: "全市場で実験を開始" }).click();
-  await demo.getByRole("button", { name: "停止", exact: true }).click();
-  await demo.getByRole("button", { name: "学生画面" }).click();
+  await page.getByRole("button", { name: "一時停止", exact: true }).click();
+  await page.getByRole("button", { name: "学生画面を見る" }).click();
   await page
     .getByRole("button", { name: "スマートフォン 390 × 844", exact: true })
     .click();
   await expect(page.locator("iframe")).toHaveAttribute("width", "390");
   await expect(page.locator("iframe")).toHaveAttribute("height", "724");
-  await expect(demo.getByRole("button", { name: "学生画面" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(
+    page.getByRole("button", { name: "教員画面を見る" }),
+  ).toBeVisible();
   await expect(demo.getByText("状態別の配当 / 確率")).toBeVisible();
   await expect(
-    demo.getByRole("button", { name: "再開", exact: true }),
+    page.getByRole("button", { name: "再開", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "1366 × 768 表示倍率 100%", exact: true })
     .click();
   await expect(page.locator("iframe")).toHaveAttribute("width", "1366");
-  await expect(demo.getByRole("button", { name: "学生画面" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(
+    page.getByRole("button", { name: "教員画面を見る" }),
+  ).toBeVisible();
 });
 
 test("Double Auction preview retains its embedded demo and supports narrow-screen selection", async ({

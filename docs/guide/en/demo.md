@@ -33,15 +33,19 @@ The preview also starts with the teacher settings form. After creation, start, p
 
 The interface labels prices, dividends, trading balances and scores in yen.
 
+After starting, students can review their own conditions during a five-second countdown before trading. Pausing also freezes the countdown.
+
 [EMH Demo Model](https://exp-all-in-one.vercel.app/emh/demo) offers Experiment 1 and Experiment 2. Experiment 1 uses the same settings form, validation limits and defaults as the formal experiment. Set initial securities, target size, type ratios and A/B period duration, then choose **デモルームを作成**. It creates one market of 3–12 participants; everyone except you is virtual, with eight virtual participants by default.
 
 Saving settings during admission, confirming and locking allocation, and explicitly releasing it before starting follow the formal workflow. Starting does not redraw confirmed types. Rounds, trade-attempt duration and break duration are configurable (defaults: 6 rounds, 30 seconds and 60 seconds). Securities, timing, payouts and efficiency use the shared engine. Practice A/B dividends in yen for types 1–3 are 120/40, 100/60 and 150/30; private classroom dividends are not used.
 
-Experiment 2 uses one market with you and 11 virtual participants. Configure 1–6 rounds, a round duration of 1–30 minutes, and trade-attempt and break durations of 1–1800 seconds. Each type has four members; no one receives a clue in rounds 1–2, and two per type receive one in rounds 3–6. Each round defaults to five minutes and starts with two securities per participant. Practice dividends in yen are 80/110/170, 60/180/100 and 140/120/90, with realized states 3/3/3/3/2/2. Virtual participants trade using their own information.
+Experiment 2 uses one market of 3–999 people, with you and 11 virtual participants by default. Configure initial securities, target size, type ratios, the consecutive unsuccessful-attempt limit, insider start round and number per type, state probabilities, dividends and realized states. The demo always simulates one market. Default practice dividends in yen are 80/110/170, 60/180/100 and 140/120/90, with realized states 3/3/3/3/2/2; these differ from formal defaults. Virtual participants trade using their own information.
 
-In Experiment 2, the student view pairs each state’s dividend with its probability, groups buying on the left and selling on the right of the order book, each with the counterparty offer and its own quote input, and shows market prices and personal round records together. During Experiment 2, the teacher view’s **実験条件** button expands or collapses the experiment conditions.
+In Experiment 2, the student view pairs each state’s dividend with its probability, groups buying on the left and selling on the right of the order book, each with the counterparty offer and its own quote input, and shows market prices and personal round records together. During either experiment, the teacher view’s **実験条件** button expands or collapses the experiment conditions.
 
-Open the EMH screen-size preview at `/emh/demo/preview` or with **画面サイズ別プレビュー** on the demo setup page. Choose desktop, iPad or phone dimensions; the interactive demo and progress inside the frame remain intact when switching sizes. You can reserve 120px for browser and system bars and choose fit-to-window or actual size.
+The EMH demo control panel switches between teacher and student views, pauses, advances 30 seconds or to the next period, restarts, and returns to settings. Fast-forward processes virtual trades and deadlines in order; it is disabled during the countdown and while paused. **やり直す** keeps the settings and resets allocation and progress. The screen-size preview places the control panel outside the frame.
+
+Open the EMH screen-size preview at `/emh/demo/preview` or with **画面サイズ別プレビュー** on the demo setup page. Choose desktop, iPad or phone dimensions; the experiment screen and progress remain intact when switching sizes. You can reserve 120px for browser and system bars and choose fit-to-window or actual size.
 
 **設定を見直す** restores the currently saved settings to the form and resets progress when another demo room is created. Reloading returns to the default settings page. State remains in browser memory, with no production room or Neon writes. See the [formal experiment conditions](emh.md).
 

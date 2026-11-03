@@ -13,6 +13,7 @@ import { pptStudySettings } from "@/experiments/double-auction/server/study";
 import { teacherRoomHref } from "@/lib/room-navigation";
 import { requireTeacherPage } from "@/lib/server/teacher-page-access";
 import { TeacherLogout } from "@/components/teacher-login";
+import { FORMAL_EXP2_OPTIONS } from "@/experiments/emh/server/default-config";
 
 function TeacherSelectionNav({ children }: { children?: React.ReactNode }) {
   return (
@@ -91,7 +92,10 @@ export default async function Teacher({
               {experiment === "judgment" ? (
                 <JudgmentCreateForm status={status} studies={studies} />
               ) : (
-                <EmhCreateForm status={status} />
+                <EmhCreateForm
+                  status={status}
+                  exp2Defaults={FORMAL_EXP2_OPTIONS}
+                />
               )}
             </div>
           ) : (

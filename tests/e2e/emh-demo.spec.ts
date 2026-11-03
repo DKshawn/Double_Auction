@@ -88,8 +88,13 @@ test("EMH Demo shares formal settings and confirms or releases them before tradi
   await expect(
     page.getByRole("button", { name: "割り当てを解除", exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "停止", exact: true }).click();
-  await page.getByRole("button", { name: "学生画面", exact: true }).click();
+  await page
+    .getByRole("region", { name: "ひとりデモの操作" })
+    .getByRole("button", { name: "一時停止", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "学生画面を見る", exact: true })
+    .click();
   await expect(page.locator(".stat-grid")).toContainText("円");
   for (const dividend of await page.locator(".stat-grid .private-stat").all()) {
     await expect(dividend).toContainText("円");
@@ -99,7 +104,10 @@ test("EMH Demo shares formal settings and confirms or releases them before tradi
     page.getByText("一時停止中", { exact: true }).first(),
   ).toBeVisible();
   await expect(page.locator(".emh-session-settings")).toHaveCount(0);
-  await page.getByRole("button", { name: "教員画面", exact: true }).click();
+  await page
+    .getByRole("button", { name: "教員画面を見る", exact: true })
+    .click();
+  await page.getByRole("button", { name: "実験条件", exact: true }).click();
   await expect(page.locator(".emh-settings-summary")).toContainText("90秒");
   await page.getByRole("button", { name: "設定を見直す", exact: true }).click();
   await expect(page.locator('[name="initialUnits"]')).toHaveValue("6");
@@ -111,7 +119,7 @@ test("EMH Demo shares formal settings and confirms or releases them before tradi
   expect(errors).toEqual([]);
 });
 
-test("Exp2 demo runs a fixed 12-person market with practice information", async ({
+test("Exp2 demo runs the default 12-person market with practice information", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -126,7 +134,7 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   });
   await page.goto("/emh/demo");
   await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
-  await expect(page.locator('[name="initialUnits"]')).toHaveCount(0);
+  await expect(page.locator('[name="initialUnits"]')).toHaveValue("2");
   await page.getByLabel("各ラウンドの時間（分）").fill("3");
   await page.getByLabel("ラウンド数").fill("3");
   await page.getByLabel("1取引の時間（秒）").fill("15");
@@ -154,7 +162,7 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   await expect(page.locator("#demo-conditions")).toContainText("180秒");
   await conditions.click();
   await expect(page.locator("#demo-conditions")).toHaveCount(0);
-  await page.getByRole("button", { name: "学生画面" }).click();
+  await page.getByRole("button", { name: "学生画面を見る" }).click();
   await expect(page.getByText("Clue カード")).toBeVisible();
   await expect(page.getByText("情報なし")).toBeVisible();
   await expect(page.getByText("状態別の配当 / 確率")).toBeVisible();
@@ -180,6 +188,9 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   expect((await buyColumn.boundingBox())!.x).toBeLessThan(
     (await sellColumn.boundingBox())!.x,
   );
+  await expect(page.getByLabel("買値（円）", { exact: true })).toBeEnabled({
+    timeout: 12000,
+  });
   await page.getByLabel("買値（円）", { exact: true }).fill("1");
   await page.getByLabel("売値（円）", { exact: true }).fill("99999");
   await page.getByRole("button", { name: "買値を提示" }).click();
@@ -208,7 +219,7 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
   await expect(page.getByLabel("売値（円）", { exact: true })).toHaveValue(
     "99999",
   );
-  await page.getByRole("button", { name: "教員画面" }).click();
+  await page.getByRole("button", { name: "教員画面を見る" }).click();
   const tabWidths = await page
     .getByRole("tablist", { name: "表示内容" })
     .getByRole("tab")
@@ -224,7 +235,7 @@ test("Exp2 demo runs a fixed 12-person market with practice information", async 
       .click();
     await page.getByRole("button", { name: "次へ", exact: true }).click();
   }
-  await page.getByRole("button", { name: "学生画面" }).click();
+  await page.getByRole("button", { name: "学生画面を見る" }).click();
   await expect(page.getByText("Clue カード")).toBeVisible();
   await expect(page.locator(".results-panel tbody tr")).toHaveCount(2);
   await expect(page.locator(".results-panel thead")).toContainText("円");
@@ -279,8 +290,11 @@ test("student views use three font sizes and equal state dividend and probabilit
       .getByRole("button", { name: "分け方を確定して受付終了" })
       .click();
     await page.getByRole("button", { name: "全市場で実験を開始" }).click();
-    await page.getByRole("button", { name: "停止", exact: true }).click();
-    await page.getByRole("button", { name: "学生画面" }).click();
+    await page
+      .getByRole("region", { name: "ひとりデモの操作" })
+      .getByRole("button", { name: "一時停止", exact: true })
+      .click();
+    await page.getByRole("button", { name: "学生画面を見る" }).click();
     for (const width of [1366, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       const sizes = await page.locator(".emh-student-view").evaluate((root) => {
@@ -341,4 +355,79 @@ test("student views use three font sizes and equal state dividend and probabilit
       }
     }
   }
+});
+
+test("demo countdown displays private conditions before trading and can be paused", async ({
+  page,
+}) => {
+  await page.goto("/emh/demo");
+  await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
+  await page.getByRole("button", { name: "デモルームを作成" }).click();
+  await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
+  await page.getByRole("button", { name: "全市場で実験を開始" }).click();
+  await expect(page.getByText("開始まで", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "期を終了" })).toBeDisabled();
+  await page
+    .getByRole("region", { name: "ひとりデモの操作" })
+    .getByRole("button", { name: "一時停止", exact: true })
+    .click();
+  await page.getByRole("button", { name: "学生画面を見る" }).click();
+  await expect(page.getByText("状態別の配当 / 確率")).toBeVisible();
+  await expect(page.getByLabel("買値（円）", { exact: true })).toBeDisabled();
+  const clock = page.locator(".session-bar .timer");
+  const pausedClock = await clock.textContent();
+  await page.waitForTimeout(1100);
+  await expect(clock).toHaveText(pausedClock!);
+  await page.getByRole("button", { name: "再開", exact: true }).click();
+  await expect(page.getByLabel("買値（円）", { exact: true })).toBeEnabled({
+    timeout: 12000,
+  });
+  await expect(page.getByText("期の残り", { exact: true })).toBeVisible();
+});
+
+test("EMH demo controls preserve the session while switching views, advancing and resetting", async ({
+  page,
+}) => {
+  await page.goto("/emh/demo");
+  await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
+  await page.getByLabel("各ラウンドの時間（分）").fill("3");
+  await page.getByLabel("1取引の時間（秒）").fill("100");
+  await page.getByRole("button", { name: "デモルームを作成" }).click();
+  const panel = page.getByRole("region", { name: "ひとりデモの操作" });
+  await expect(
+    panel.getByRole("button", { name: "30秒進める" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
+  await page.getByRole("button", { name: "全市場で実験を開始" }).click();
+  await expect(panel.getByRole("button", { name: "次の期へ" })).toBeDisabled();
+  await panel.getByRole("button", { name: "学生画面を見る" }).click();
+  await expect(page.getByLabel("買値（円）", { exact: true })).toBeEnabled({
+    timeout: 12000,
+  });
+  await panel.getByRole("button", { name: "一時停止" }).click();
+  const pausedTime = await page
+    .locator(".session-bar .timer")
+    .first()
+    .textContent();
+  await panel.getByRole("button", { name: "教員画面を見る" }).click();
+  await panel.getByRole("button", { name: "学生画面を見る" }).click();
+  await expect(page.locator(".session-bar .timer").first()).toHaveText(
+    pausedTime!,
+  );
+  await expect(
+    panel.getByRole("button", { name: "30秒進める" }),
+  ).toBeDisabled();
+  await panel.getByRole("button", { name: "再開" }).click();
+  await panel.getByRole("button", { name: "30秒進める" }).click();
+  await expect(page.locator(".session-bar .timer").first()).toContainText(
+    "02:2",
+  );
+  await panel.getByRole("button", { name: "次の期へ" }).click();
+  await expect(
+    page.getByText("第2ラウンド", { exact: true }).first(),
+  ).toBeVisible();
+  await panel.getByRole("button", { name: "やり直す" }).click();
+  await panel.getByRole("button", { name: "教員画面を見る" }).click();
+  await expect(page.getByRole("heading", { name: "12人が入室" })).toBeVisible();
+  await expect(page.getByLabel("1取引の時間（秒）")).toHaveValue("100");
 });

@@ -1,7 +1,27 @@
-import { addParticipant, newRoom } from "./engine";
+import { addParticipant, advanceClock, newRoom } from "./engine";
 import { allocationPlan } from "./allocation";
-import { settingsForExperiment, type EmhSettings } from "./settings";
+import {
+  settingsForExperiment,
+  type EmhSettings,
+  type Exp2Options,
+} from "./settings";
 import type { Participant, Room } from "./types";
+
+export const PRACTICE_EXP2_OPTIONS: Exp2Options = {
+  emptyUnitsLimit: 2,
+  insiderStartRound: 3,
+  insiderCountPerType: 2,
+  marketCount: null,
+  states: {
+    prior: [0.35, 0.42, 0.23],
+    outcomes: [3, 3, 3, 3, 2, 2],
+    dividends: [
+      [80, 110, 170],
+      [60, 180, 100],
+      [140, 120, 90],
+    ],
+  },
+};
 
 export function makeDemo(
   title: string,
@@ -10,7 +30,11 @@ export function makeDemo(
   experiment: "exp1" | "exp2" = "exp1",
 ) {
   const settings = settingsForExperiment(input, experiment);
-  const allocation = allocationPlan(settings.targetMarketSize, settings)[0];
+  const options = settings.exp2 ?? PRACTICE_EXP2_OPTIONS;
+  const allocation = allocationPlan(settings.targetMarketSize, {
+    ...settings,
+    exp2: experiment === "exp2" ? { ...options, marketCount: null } : undefined,
+  })[0];
   const room = newRoom(
     "DEMO23",
     {
@@ -23,15 +47,10 @@ export function makeDemo(
       ...(experiment === "exp2"
         ? {
             experiment: "exp2" as const,
-            states: {
-              prior: [0.35, 0.42, 0.23],
-              outcomes: [3, 3, 3, 3, 2, 2],
-              dividends: [
-                [80, 110, 170],
-                [60, 180, 100],
-                [140, 120, 90],
-              ],
-            },
+            states: structuredClone(options.states),
+            emptyUnitsLimit: options.emptyUnitsLimit,
+            insiderStartRound: options.insiderStartRound,
+            insiderCountPerType: options.insiderCountPerType,
           }
         : {}),
       // Practice dividends stay separate from the private classroom protocol.
@@ -67,10 +86,55 @@ export function demoTraderValue(room: Room, participant: Participant) {
   if (room.config.experiment === "exp2") {
     const states = room.config.states!;
     const values = states.dividends[participant.type! - 1]!;
-    if (participant.insider && room.year > 2)
+    if (
+      participant.insider &&
+      room.year >= (room.config.insiderStartRound ?? 3)
+    )
       return values[states.outcomes[room.year - 1]! - 1]!;
     return values.reduce((sum, value, i) => sum + value * states.prior[i]!, 0);
   }
   const dividend = room.config.dividends[participant.type! - 1]!;
   return room.period === "A" ? dividend.a + dividend.b : dividend.b;
+}
+
+/** Advance only the demo clock, applying deadlines and virtual trades in order. */
+export function advanceDemoTime(
+  room: Room,
+  now: number,
+  lastBotAt: number,
+  bot: (room: Room, at: number) => void,
+  mode: "30-seconds" | "next-period",
+) {
+  if (room.pausedAt !== null || !["trading", "break"].includes(room.status))
+    return { now, lastBotAt };
+  const initialYear = room.year;
+  const initialPeriod = room.period;
+  const end =
+    now +
+    (mode === "30-seconds"
+      ? 30_000
+      : (room.config.periodSeconds + room.config.breakSeconds + 1) * 1000);
+  while (now < end && room.status !== "completed") {
+    const deadlines = [
+      room.countdownEndsAt,
+      room.unitEndsAt,
+      room.periodEndsAt,
+      room.breakEndsAt,
+    ].filter((value): value is number => value != null && value > now);
+    now = Math.min(end, now + 500, ...deadlines);
+    advanceClock(room, now);
+    const status: Room["status"] = (room as Room).status;
+    if (
+      mode === "next-period" &&
+      (room.year !== initialYear ||
+        room.period !== initialPeriod ||
+        status === "completed")
+    )
+      break;
+    if (now - lastBotAt >= 1800) {
+      bot(room, now);
+      lastBotAt = now;
+    }
+  }
+  return { now, lastBotAt };
 }

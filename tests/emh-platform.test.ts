@@ -16,9 +16,13 @@ import type {
   SessionCommand,
   RequestCommand,
 } from "../src/experiments/emh/session-types";
-import { DEFAULT_CONFIG } from "../src/experiments/emh/server/default-config";
+import {
+  DEFAULT_CONFIG,
+  FORMAL_EXP2_OPTIONS,
+} from "../src/experiments/emh/server/default-config";
 import {
   DEFAULT_SETTINGS,
+  EXP2_SETTINGS,
   settingsSchema,
   type EmhSettings,
 } from "../src/experiments/emh/settings";
@@ -87,6 +91,14 @@ async function classroom(
       undefined,
       result.error?.message ?? "command failed",
     );
+    if (kind === "start") {
+      // Existing trading tests start at the elapsed countdown boundary.
+      await db.query(
+        "UPDATE emh_markets SET state=jsonb_set(state, '{countdownEndsAt}', to_jsonb((state->>'countdownEndsAt')::bigint - 5000)) WHERE room_code=$1",
+        [teacher.code],
+      );
+      await get();
+    }
     return result;
   }
   async function act(
@@ -105,7 +117,81 @@ async function classroom(
   return { teacher, students, get, command, act };
 }
 
-test("Exp2 locks its conditions and admits complete 12-person markets", async () => {
+test("classroom starts all markets with one enforced countdown", async () => {
+  const c = await classroom(14);
+  await c.command("assign");
+  const before = (await c.get()).state;
+  const started = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    {
+      scope: "session",
+      requestId: randomUUID(),
+      command: { kind: "start", expectedRevision: before.revision },
+    },
+  );
+  assert.equal(started.error, undefined);
+  assert.equal(started.state.market!.status, "countdown");
+  const rows = (
+    await db.query<{ state: Room }>(
+      "SELECT state FROM emh_markets WHERE room_code=$1 ORDER BY market_id",
+      [c.teacher.code],
+    )
+  ).rows;
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].state.countdownEndsAt, rows[1].state.countdownEndsAt);
+  assert.equal(rows[0].state.countdownEndsAt! - started.state.serverNow, 5000);
+  assert.ok(
+    rows.every(
+      ({ state }) => state.periodEndsAt === null && state.unitEndsAt === null,
+    ),
+  );
+  const student = (await c.get(c.students[0].token, "student")).state;
+  assert.equal(student.market!.status, "countdown");
+  const rejected = await c.act(c.students[0].token, student.marketId!, {
+    kind: "quote",
+    side: "bid",
+    price: 100,
+    unitKey: student.market!.unitKey,
+  });
+  assert.equal(rejected.error?.status, 409);
+  assert.equal(rejected.state.market!.trades.length, 0);
+  await c.command("pause-all");
+  const paused = (
+    await db.query<{ state: Room }>(
+      "SELECT state FROM emh_markets WHERE room_code=$1 ORDER BY market_id",
+      [c.teacher.code],
+    )
+  ).rows;
+  assert.ok(
+    paused.every(
+      ({ state }) => state.status === "countdown" && state.pausedAt !== null,
+    ),
+  );
+  await c.command("resume-all");
+  const resumed = (
+    await db.query<{ state: Room }>(
+      "SELECT state FROM emh_markets WHERE room_code=$1 ORDER BY market_id",
+      [c.teacher.code],
+    )
+  ).rows;
+  assert.ok(
+    resumed.every(
+      ({ state }) => state.status === "countdown" && state.pausedAt === null,
+    ),
+  );
+  assert.equal(
+    resumed[0].state.countdownEndsAt,
+    resumed[1].state.countdownEndsAt,
+  );
+  assert.ok(
+    resumed[0].state.countdownEndsAt! >= paused[0].state.countdownEndsAt!,
+  );
+});
+
+test("Exp2 supports variable attendance, custom conditions and locks them on assignment", async () => {
   const c = await classroom(
     11,
     { ...DEFAULT_SETTINGS, initialUnits: 9, periodSeconds: 300 },
@@ -113,32 +199,62 @@ test("Exp2 locks its conditions and admits complete 12-person markets", async ()
   );
   let current = (await c.get()).state;
   assert.equal(current.experiment, "exp2");
-  assert.equal(current.settings!.initialUnits, 2);
-  assert.equal(current.settings!.periodSeconds, 300);
-  assert.deepEqual(current.allocation, []);
+  assert.equal(current.settings!.initialUnits, 9);
+  assert.deepEqual(
+    current.allocation.map((a) => a.size),
+    [11],
+  );
   const request = async (command: SessionCommand) =>
     emh.request(c.teacher.code, c.teacher.token, "teacher", undefined, {
       scope: "session",
       requestId: randomUUID(),
       command,
     });
-  const invalid = await request({
-    kind: "assign",
-    expectedRevision: current.revision,
-  });
-  assert.ok(invalid.error);
-  const update = await request({
-    kind: "update-settings",
-    settings: DEFAULT_SETTINGS,
-    expectedRevision: current.revision,
-  });
-  assert.ok(update.error);
-  const validSettings = {
+  const invalidSettings = {
     ...current.settings!,
+    exp2: { ...current.settings!.exp2!, marketCount: 4 },
+  };
+  assert.equal(
+    (
+      await request({
+        kind: "update-settings",
+        settings: invalidSettings,
+        expectedRevision: current.revision,
+      })
+    ).error,
+    undefined,
+  );
+  current = (await c.get()).state;
+  assert.deepEqual(current.allocation, []);
+  assert.ok(
+    (await request({ kind: "assign", expectedRevision: current.revision }))
+      .error,
+  );
+  const validSettings: EmhSettings = {
+    ...current.settings!,
+    initialUnits: 4,
+    targetMarketSize: 6,
+    typeRatios: [2, 1, 1],
     periodSeconds: 180,
     rounds: 3,
     unitSeconds: 15,
     breakSeconds: 45,
+    exp2: {
+      ...current.settings!.exp2!,
+      marketCount: 2,
+      emptyUnitsLimit: 3,
+      insiderStartRound: 1,
+      insiderCountPerType: 1,
+      states: {
+        prior: [0.2, 0.3, 0.5],
+        dividends: [
+          [10, 20, 30],
+          [40, 50, 60],
+          [70, 80, 90],
+        ],
+        outcomes: [3, 2, 1, 1, 2, 3],
+      },
+    },
   };
   const updated = await request({
     kind: "update-settings",
@@ -147,47 +263,105 @@ test("Exp2 locks its conditions and admits complete 12-person markets", async ()
   });
   assert.equal(updated.error, undefined);
   assert.deepEqual(updated.state.settings, validSettings);
-  const last = await emh.login(c.teacher.code, {
-    role: "student",
-    nickname: "s11",
-    pin: "1234",
-  });
   current = (await c.get()).state;
   assert.deepEqual(
-    current.allocation.map((a) => [a.size, ...a.typeCounts]),
-    [[12, 4, 4, 4]],
+    current.allocation.map((a) => a.size),
+    [6, 5],
   );
-  assert.equal(
-    (await request({ kind: "assign", expectedRevision: current.revision }))
-      .error,
-    undefined,
-  );
+  await c.command("assign");
   current = (await c.get()).state;
-  assert.equal(
-    (await request({ kind: "start", expectedRevision: current.revision }))
-      .error,
-    undefined,
+  assert.ok(
+    (
+      await request({
+        kind: "update-settings",
+        settings: validSettings,
+        expectedRevision: current.revision,
+      })
+    ).error,
   );
-  const studentView = (await c.get(last.token, "student")).state.market!;
-  assert.equal(studentView.experiment, "exp2");
-  assert.equal(studentView.exp2!.clue, null);
+  await c.command("start");
+  const studentState = (await c.get(c.students[0]!.token, "student")).state;
+  const studentView = studentState.market!;
+  assert.equal(studentState.settings, null);
   assert.equal(studentView.exp2!.allDividends, null);
+  assert.deepEqual(studentView.exp2!.prior, [0.2, 0.3, 0.5]);
+  assert.equal(studentView.initialUnits, 4);
+  assert.equal(studentView.emptyUnitsLimit, 3);
   assert.equal(studentView.periodSeconds, 180);
-  assert.equal(studentView.rounds, 3);
-  assert.equal(studentView.unitSeconds, 15);
-  assert.equal(studentView.breakSeconds, 45);
-  assert.equal(studentView.participants.length, 0);
   const conditions = JSON.parse(
     (await emh.export(c.teacher.code, c.teacher.token, "teacher", "conditions"))
       .body,
   );
   assert.equal(conditions.experiment, "emh-exp2");
-  assert.equal(
-    conditions.markets[0].conditions.assignment.filter(
-      (p: { insider: boolean }) => p.insider,
-    ).length,
-    6,
+  assert.deepEqual(conditions.settings, validSettings);
+  assert.equal(conditions.markets.length, 2);
+  for (const market of conditions.markets) {
+    assert.equal(
+      market.conditions.assignment.filter(
+        (p: { insider: boolean }) => p.insider,
+      ).length,
+      3,
+    );
+    assert.equal(market.conditions.rules.maxEmptyUnits, 3);
+    assert.deepEqual(
+      market.conditions.config.states,
+      validSettings.exp2!.states,
+    );
+  }
+});
+
+test("Exp2 allocation validates a chosen market count without requiring multiples of 12", () => {
+  const opts = { ...structuredClone(FORMAL_EXP2_OPTIONS), marketCount: 2 };
+  const settings = {
+    ...EXP2_SETTINGS,
+    exp2: opts,
+    targetMarketSize: 7,
+    typeRatios: [2, 1, 1] as [number, number, number],
+  };
+  assert.deepEqual(
+    allocationPlan(11, settings).map((group) => group.size),
+    [6, 5],
   );
+  assert.deepEqual(allocationPlan(5, settings), []);
+  assert.deepEqual(
+    allocationPlan(25, settings).map((group) => group.size),
+    [13, 12],
+  );
+  assert.deepEqual(
+    allocationPlan(30, {
+      ...settings,
+      targetMarketSize: 30,
+      exp2: { ...opts, marketCount: 1 },
+    }).map((group) => group.size),
+    [30],
+  );
+  assert.equal(
+    settingsSchema.safeParse({
+      ...settings,
+      exp2: { ...opts, states: { ...opts.states, prior: [0.5, 0.5, 0.5] } },
+    }).success,
+    false,
+  );
+});
+
+test("Exp2 can assign fifteen real students to one market", async () => {
+  const c = await classroom(
+    15,
+    {
+      ...EXP2_SETTINGS,
+      exp2: { ...structuredClone(FORMAL_EXP2_OPTIONS), marketCount: 1 },
+    },
+    "exp2",
+  );
+  assert.deepEqual(
+    (await c.get()).state.allocation.map((a) => [a.size, ...a.typeCounts]),
+    [[15, 5, 5, 5]],
+  );
+  await c.command("assign");
+  await c.command("start");
+  const student = (await c.get(c.students[0]!.token, "student")).state;
+  assert.equal(student.market!.participantCount, 15);
+  assert.equal(student.market!.exp2!.allDividends, null);
 });
 
 test("every attendance 3–999 includes everyone, balances groups and types locally and across the class", () => {

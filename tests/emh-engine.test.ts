@@ -42,9 +42,10 @@ function setup(overrides: Partial<typeof DEFAULT_CONFIG> = {}) {
     room,
     teacher,
     { kind: "start", expectedPhase: phaseKey(room) },
-    0,
+    -5000,
     random,
   );
+  advanceClock(room, 0, random);
   return room;
 }
 function quote(
@@ -301,7 +302,7 @@ test("normalized efficiency and price ratio are separate; no-trade baseline gain
   assert.equal(a.actualDividend, 4038);
   assert.equal(a.gainEfficiency, 0);
   assert.equal(a.priceRatio, null);
-  assert.ok(a.allocationEfficiency > 0);
+  assert.ok(a.allocationEfficiency !== null && a.allocationEfficiency > 0);
 });
 test("CSV is Excel-safe, UTF-8, and personal export excludes others' trades", () => {
   assert.equal(csv([["=2+3", 'a"b', -300]]), '\uFEFF"\'=2+3","a""b","-300"');

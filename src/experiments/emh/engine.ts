@@ -9,7 +9,13 @@ import type {
   RoomView,
   Side,
 } from "./types";
-import { initialUnitsFor, MAX_MARKET_SIZE } from "./settings";
+import {
+  initialUnitsFor,
+  MAX_MARKET_SIZE,
+  MAX_EXP2_MARKET_SIZE,
+} from "./settings";
+
+export const START_COUNTDOWN_SECONDS = 5;
 
 export class RuleError extends Error {
   constructor(
@@ -43,8 +49,20 @@ function exp2Prices(room: Room) {
     values.reduce((sum, value, i) => sum + value * states.prior[i]!, 0),
   );
   const informed = states.dividends.map((values) => values[state - 1]!);
-  const pi = Math.max(...expected, ...(room.year > 2 ? informed : []));
-  const re = room.year > 2 ? Math.max(...informed) : Math.max(...expected);
+  const hasInformation = room.year >= (room.config.insiderStartRound ?? 3);
+  const hasInsider = hasInformation && room.participants.some((p) => p.insider);
+  const pi = Math.max(
+    ...room.participants.map((p) =>
+      hasInformation && p.insider
+        ? informed[p.type! - 1]!
+        : expected[p.type! - 1]!,
+    ),
+  );
+  const re = Math.max(
+    ...room.participants.map((p) =>
+      hasInsider ? informed[p.type! - 1]! : expected[p.type! - 1]!,
+    ),
+  );
   return { state, pi, re };
 }
 export function newRoom(
@@ -69,6 +87,7 @@ export function newRoom(
     unit: 0,
     emptyUnits: 0,
     nominatedSeat: null,
+    countdownEndsAt: null,
     periodEndsAt: null,
     unitEndsAt: null,
     breakEndsAt: null,
@@ -110,7 +129,10 @@ export function addParticipant(
     "受付は終了しました。登録済みの参加者は再入室できます。",
   );
   requireRule(
-    room.participants.length < MAX_MARKET_SIZE,
+    room.participants.length <
+      (room.config.experiment === "exp2"
+        ? MAX_EXP2_MARKET_SIZE
+        : MAX_MARKET_SIZE),
     "この市場は定員に達しています。",
   );
   requireRule(
@@ -158,13 +180,16 @@ function beginPeriod(room: Room, now: number, random: () => number) {
   });
   beginUnit(room, now, random);
 }
-function beginYear(room: Room, now: number, random: () => number) {
+function resetYear(room: Room) {
   room.period = "A";
   for (const p of room.participants) {
     p.holdings = initialUnitsFor(room.config);
     p.cash = 0;
     p.dividend = 0;
   }
+}
+function beginYear(room: Room, now: number, random: () => number) {
+  resetYear(room);
   beginPeriod(room, now, random);
 }
 export function endPeriod(
@@ -241,14 +266,17 @@ export function endPeriod(
     volume: trades.length,
     meanPrice,
     priceRatio:
-      meanPrice === null
+      meanPrice === null ||
+      (prices ? prices.re : period === "A" ? ref!.perfectA : ref!.perfectB) ===
+        0
         ? null
         : meanPrice /
           (prices ? prices.re : period === "A" ? ref!.perfectA : ref!.perfectB),
     actualDividend,
     maxDividend,
     initialDividend,
-    allocationEfficiency: actualDividend / maxDividend,
+    allocationEfficiency:
+      maxDividend === 0 ? null : actualDividend / maxDividend,
     gainEfficiency:
       maxDividend === initialDividend
         ? null
@@ -292,6 +320,13 @@ export function advanceClock(
   )
     return;
   for (let i = 0; i < 1000; i++) {
+    if (room.status === "countdown") {
+      const at = room.countdownEndsAt;
+      if (at == null || now < at) return;
+      room.countdownEndsAt = null;
+      beginPeriod(room, at, random);
+      continue;
+    }
     if (room.status === "break") {
       if (now < room.breakEndsAt!) return;
       const at = room.breakEndsAt!;
@@ -308,7 +343,8 @@ export function advanceClock(
         period: room.period,
         unit: room.unit,
       });
-      if (room.emptyUnits >= 2) endPeriod(room, at, "inactivity", random);
+      if (room.emptyUnits >= (room.config.emptyUnitsLimit ?? 2))
+        endPeriod(room, at, "inactivity", random);
       else beginUnit(room, at, random);
       continue;
     }
@@ -410,7 +446,7 @@ export function assignParticipants(
         [group[i], group[j]] = [group[j]!, group[i]!];
       }
       group.forEach((p, i) => {
-        p.insider = i < 2;
+        p.insider = i < (room.config.insiderCountPerType ?? 2);
       });
     }
   }
@@ -563,12 +599,19 @@ export function act(
             room.participants.length,
         "タイプの割り当てを確認してください。",
       );
-      beginYear(room, now, random);
+      resetYear(room);
+      room.status = "countdown";
+      room.countdownEndsAt = now + START_COUNTDOWN_SECONDS * 1000;
+      record(room, "start-countdown", "system", now, {
+        startsAt: room.countdownEndsAt,
+      });
       break;
     }
     case "pause":
       requireRule(
-        (room.status === "trading" || room.status === "break") &&
+        (room.status === "countdown" ||
+          room.status === "trading" ||
+          room.status === "break") &&
           room.pausedAt === null,
         "一時停止できません。",
       );
@@ -577,6 +620,7 @@ export function act(
     case "resume": {
       requireRule(room.pausedAt !== null, "一時停止していません。");
       const delta = now - room.pausedAt;
+      if (room.countdownEndsAt != null) room.countdownEndsAt += delta;
       if (room.periodEndsAt !== null) room.periodEndsAt += delta;
       if (room.unitEndsAt !== null) room.unitEndsAt += delta;
       if (room.breakEndsAt !== null) room.breakEndsAt += delta;
@@ -652,7 +696,9 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
               ? room.config.states!.dividends[me.type - 1]!
               : null,
             clue:
-              me?.insider && room.year > 2 && room.status === "trading"
+              me?.insider &&
+              room.year >= (room.config.insiderStartRound ?? 3) &&
+              (room.status === "trading" || room.status === "countdown")
                 ? exp2Prices(room).state
                 : null,
             state:
@@ -681,6 +727,8 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
     participantCount: room.participants.length,
     nominatedSeat: room.nominatedSeat,
     emptyUnits: room.emptyUnits,
+    emptyUnitsLimit: room.config.emptyUnitsLimit ?? 2,
+    countdownEndsAt: room.countdownEndsAt ?? null,
     periodEndsAt: room.periodEndsAt,
     unitEndsAt: room.unitEndsAt,
     breakEndsAt: room.breakEndsAt,

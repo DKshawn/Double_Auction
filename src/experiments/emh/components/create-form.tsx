@@ -8,7 +8,9 @@ import {
   DEFAULT_SETTINGS,
   EXP2_SETTINGS,
   settingsForExperiment,
+  settingsSchema,
   type EmhSettings,
+  type Exp2Options,
 } from "../settings";
 import { SettingsFields } from "./settings-fields";
 
@@ -18,6 +20,7 @@ export function EmhCreateForm({
   initialSettings,
   initialExperiment,
   onCreateDemo,
+  exp2Defaults,
 }: {
   status: ServerStatus;
   initialTitle?: string;
@@ -28,6 +31,7 @@ export function EmhCreateForm({
     settings: EmhSettings,
     experiment: "exp1" | "exp2",
   ) => void;
+  exp2Defaults?: Exp2Options;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle ?? "資産市場実験");
@@ -45,6 +49,11 @@ export function EmhCreateForm({
     setBusy(true);
     setError("");
     try {
+      const validation = settingsSchema.safeParse(settings);
+      if (!validation.success)
+        throw new Error(
+          validation.error.issues[0]?.message ?? "実験条件を確認してください。",
+        );
       if (onCreateDemo) {
         const parsed = settingsForExperiment(settings, experiment);
         if (!title.trim() || title.trim().length > 60)
@@ -87,7 +96,9 @@ export function EmhCreateForm({
             setExperiment(next);
             setSettings(
               structuredClone(
-                next === "exp2" ? EXP2_SETTINGS : DEFAULT_SETTINGS,
+                next === "exp2"
+                  ? { ...EXP2_SETTINGS, exp2: exp2Defaults }
+                  : DEFAULT_SETTINGS,
               ),
             );
           }}
@@ -101,10 +112,8 @@ export function EmhCreateForm({
         onChange={setSettings}
         disabled={busy}
         experiment={experiment}
+        demo={Boolean(onCreateDemo)}
       />
-      {experiment === "exp2" && (
-        <p className="field-help">1市場12人 · 初期保有2単位</p>
-      )}
       {!onCreateDemo && (
         <label className="field">
           教員パスワード

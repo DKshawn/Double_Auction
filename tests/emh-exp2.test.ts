@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   act,
+  advanceClock,
   addParticipant,
   newRoom,
   phaseKey,
@@ -14,6 +15,143 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RoomDashboard } from "../src/experiments/emh/components/room-dashboard";
 import { Yen } from "../src/experiments/emh/components/market-panels";
+
+test("custom insider rules and dividends determine private information and equilibrium", () => {
+  const room = newRoom(
+    "CUSTOM",
+    {
+      ...EXP2_CONFIG,
+      rounds: 1,
+      initialUnits: 4,
+      insiderStartRound: 1,
+      insiderCountPerType: 12,
+      states: {
+        prior: [0, 1, 0],
+        outcomes: [1],
+        dividends: [
+          [0, 1000, 0],
+          [1, 1, 0],
+          [2, 2, 0],
+        ],
+      },
+    },
+    0,
+  );
+  for (let i = 0; i < 3; i++)
+    addParticipant(
+      room,
+      {
+        id: `p${i}`,
+        name: `n${i}`,
+        studentId: `s${i}`,
+        pinHash: "",
+        tokenHash: "",
+      },
+      0,
+    );
+  const teacher = { role: "teacher" } as const;
+  act(
+    room,
+    teacher,
+    { kind: "start", expectedPhase: phaseKey(room) },
+    0,
+    () => 0.99,
+  );
+  assert.equal(
+    view(room, { role: "student", participantId: room.participants[0]!.id }, 0)
+      .exp2!.clue,
+    1,
+  );
+  advanceClock(room, 5000, () => 0.99);
+  assert.ok(room.participants.every((p) => p.holdings === 4 && p.insider));
+  assert.equal(
+    view(
+      room,
+      { role: "student", participantId: room.participants[0]!.id },
+      5000,
+    ).exp2!.clue,
+    1,
+  );
+  act(
+    room,
+    teacher,
+    { kind: "end-period", expectedPhase: phaseKey(room) },
+    5001,
+  );
+  assert.equal(room.results[0]!.piPrice, 2);
+  assert.equal(room.results[0]!.rePrice, 2);
+  assert.equal(room.results[0]!.actualDividend, 12);
+});
+
+test("zero dividends and no insiders yield defined results without division by zero", () => {
+  const room = newRoom(
+    "ZERO",
+    {
+      ...EXP2_CONFIG,
+      rounds: 1,
+      insiderStartRound: 1,
+      insiderCountPerType: 0,
+      emptyUnitsLimit: 3,
+      unitSeconds: 2,
+      periodSeconds: 60,
+      states: {
+        prior: [1, 0, 0],
+        outcomes: [1],
+        dividends: [
+          [0, 1, 1],
+          [0, 2, 2],
+          [0, 3, 3],
+        ],
+      },
+    },
+    0,
+  );
+  for (let i = 0; i < 3; i++)
+    addParticipant(
+      room,
+      {
+        id: `p${i}`,
+        name: `n${i}`,
+        studentId: `s${i}`,
+        pinHash: "",
+        tokenHash: "",
+      },
+      0,
+    );
+  const teacher = { role: "teacher" } as const;
+  act(
+    room,
+    teacher,
+    { kind: "start", expectedPhase: phaseKey(room) },
+    0,
+    () => 0.99,
+  );
+  advanceClock(room, 5000, () => 0.99);
+  assert.ok(room.participants.every((p) => !p.insider));
+  act(
+    room,
+    { role: "student", participantId: "p0" },
+    { kind: "quote", side: "ask", price: 1, unitKey: unitKey(room) },
+    5001,
+    () => 0.99,
+  );
+  act(
+    room,
+    { role: "student", participantId: "p1" },
+    { kind: "quote", side: "bid", price: 1, unitKey: unitKey(room) },
+    5001,
+    () => 0.99,
+  );
+  advanceClock(room, 9001, () => 0.99);
+  assert.equal(room.status, "trading");
+  advanceClock(room, 11001, () => 0.99);
+  assert.equal(room.status, "completed");
+  assert.equal(room.results[0]!.reason, "inactivity");
+  assert.equal(room.results[0]!.rePrice, 0);
+  assert.equal(room.results[0]!.meanPrice, 1);
+  assert.equal(room.results[0]!.priceRatio, null);
+  assert.equal(room.results[0]!.allocationEfficiency, null);
+});
 
 test("Exp2 settles one period per round and protects clue cards", () => {
   const room = newRoom("EXP234", EXP2_CONFIG, 0);
@@ -37,9 +175,10 @@ test("Exp2 settles one period per round and protects clue cards", () => {
     room,
     teacher,
     { kind: "start", expectedPhase: phaseKey(room) },
-    0,
+    -5000,
     random,
   );
+  advanceClock(room, 0, random);
   for (const type of [1, 2, 3])
     assert.equal(
       room.participants.filter((p) => p.type === type && p.insider).length,
@@ -116,7 +255,7 @@ test("Exp2 settles one period per round and protects clue cards", () => {
   assert.match(exportData(room, teacher, "results").body, /RE_price/);
   assert.match(
     exportData(room, teacher, "participants").body,
-    /insider_rounds_3_to_6/,
+    /insider_start_round/,
   );
   assert.doesNotMatch(
     exportData(room, student("p0"), "conditions").body,

@@ -39,7 +39,6 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Header } from "@/components/shell";
 import { StudentWaitingCard } from "@/components/student-waiting-card";
 import { DemoSelectionLink } from "@/components/demo-selection-link";
-import { DemoModeBadge } from "@/components/demo-mode-badge";
 
 function bot(room: Room, now: number) {
   if (room.status !== "trading" || room.pausedAt !== null) return;
@@ -96,16 +95,18 @@ type Setup = {
   experiment: "exp1" | "exp2";
 };
 
-function TeacherPageLink() {
+function TeacherPageLink({ showTeacher = true }: { showTeacher?: boolean }) {
   return (
     <>
       <DemoSelectionLink />
-      <Link
-        className="button secondary small-button"
-        href="/teacher?experiment=emh"
-      >
-        教員用ページへ
-      </Link>
+      {showTeacher && (
+        <Link
+          className="button secondary small-button"
+          href="/teacher?experiment=emh"
+        >
+          教員用ページへ
+        </Link>
+      )}
     </>
   );
 }
@@ -129,8 +130,11 @@ export function Demo() {
     );
   return (
     <>
-      <Header homeHref="/emh/demo" leading={<TeacherPageLink />}>
-        <DemoModeBadge />
+      <Header
+        homeHref="/emh/demo"
+        demoLabel="DEMOモード"
+        leading={<TeacherPageLink />}
+      >
         <Link
           className="button secondary small-button"
           href="/emh/demo/preview"
@@ -274,7 +278,6 @@ function DemoRoom({
       <div className="demo-controls emh-demo-controls">
         <div className="demo-options">
           <div className="demo-status">
-            <DemoModeBadge />
             <span className={`role-tag ${teacher ? "teacher" : "student"}`}>
               {teacher ? "教員" : "学生"}
             </span>
@@ -356,7 +359,7 @@ function DemoRoom({
     </section>
   );
   return (
-    <Shell wide room leading={<TeacherPageLink />}>
+    <Shell wide room demo leading={<TeacherPageLink showTeacher={teacher} />}>
       <div
         className={
           initial.experiment === "exp2" && room.status !== "lobby"

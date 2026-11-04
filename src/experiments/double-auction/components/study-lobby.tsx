@@ -388,7 +388,7 @@ export function StudyWaitingRoom({
   const assigned = view.study!.lobby!.randomizedAt !== null;
   return (
     <div className="study-shell study-waiting-shell">
-      <Header>
+      <Header demoLabel={demo ? "DEMOモード" : undefined}>
         {!demo && (
           <span className={`connection ${connected ? "" : "disconnected"}`}>
             {connected ? <Wifi size={14} /> : <WifiOff size={14} />}

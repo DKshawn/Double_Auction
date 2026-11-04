@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { ChartNoAxesCombined } from "lucide-react";
+import { DemoModeBadge } from "@/components/demo-mode-badge";
+import { DemoExitLink } from "@/components/demo-exit-link";
 
 export function Shell({
   children,
   leading,
   wide = false,
   room = false,
+  demo = false,
 }: {
   children: React.ReactNode;
   leading?: React.ReactNode;
   wide?: boolean;
   room?: boolean;
+  demo?: boolean;
 }) {
   return (
     <div className="emh-app">
@@ -23,9 +27,11 @@ export function Shell({
               </span>
               市場実験室
             </Link>
+            {demo && <DemoModeBadge />}
             {leading}
           </div>
           <nav aria-label="メインナビゲーション">
+            {demo && <DemoExitLink />}
             {!room && (
               <>
                 <Link className="button secondary small-button" href="/">

@@ -14,7 +14,6 @@ import type { PreviewProtocol, Settings, Study } from "../types";
 import { JudgmentPreview } from "./preview";
 import { SettingsFields } from "./settings-fields";
 import { DemoSelectionLink } from "@/components/demo-selection-link";
-import { DemoModeBadge } from "@/components/demo-mode-badge";
 
 export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
   const [language, setLanguage] = useTeacherLanguage();
@@ -51,6 +50,8 @@ export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
     <>
       <Header
         homeHref="/judgment/demo"
+        demoLabel={t("DEMOモード")}
+        demoExitLabel={t("DEMOモードを終了")}
         leading={
           <>
             <DemoSelectionLink />
@@ -62,9 +63,7 @@ export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
             </Link>
           </>
         }
-      >
-        <DemoModeBadge label={t("DEMOモード")} />
-      </Header>
+      ></Header>
       <main
         className="judgment-entry-main"
         lang={language === "zh" ? "zh-CN" : language}

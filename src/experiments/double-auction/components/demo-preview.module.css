@@ -111,8 +111,8 @@
 .demoControls {
   flex-shrink: 0;
   padding: 10px 22px;
-  background: #f6f3ff;
-  border-bottom: 1px solid #d7d0f0;
+  background: #fff7df;
+  border-bottom: 1px solid #e9d7a2;
 }
 .demoControls:empty {
   display: none;
@@ -130,7 +130,7 @@
   min-height: 0;
   padding: 24px;
   overflow: auto;
-  background: #e6e9f1;
+  background: #f0eadb;
 }
 .frameBox {
   position: relative;

@@ -12,8 +12,10 @@
   --ink: #22283d;
   --muted: #6a7287;
   --line: #e5e8f1;
-  --accent: #5456c7;
-  --accent-hover: #4345b2;
+  --formal-accent: #5456c7;
+  --formal-accent-hover: #4345b2;
+  --accent: var(--formal-accent);
+  --accent-hover: var(--formal-accent-hover);
   --demo-yellow: #f4cb51;
   --demo-ink: #40300a;
   --lavender: #eeeefd;
@@ -1210,4 +1212,66 @@ summary.disclosure-button {
   padding: 28px;
   max-width: 480px;
   margin: 40px auto;
+}
+
+/* Demo mode keeps the market's buy/sell colors while using a warm shared theme. */
+.demo-theme {
+  --bg: #fffbf0;
+  --line: #e9dfc5;
+  --accent: #805c00;
+  --accent-hover: #624500;
+  --lavender: #fff2c7;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+.demo-theme .emh-app {
+  --accent-line: #e9d7a2;
+  --accent-border-hover: #d8bf76;
+  --accent-ink: #6d5000;
+  --focus: #d5a72d;
+  --surface-hover: #fff8e8;
+}
+.demo-theme .brand-mark,
+.demo-theme .emh-app .brand-mark,
+.demo-theme .button.primary,
+.demo-theme .emh-app .button.primary {
+  background: var(--demo-yellow);
+  color: var(--demo-ink);
+}
+.demo-theme .button.primary:not(:disabled):hover,
+.demo-theme .emh-app .button.primary:not(:disabled):hover {
+  background: #e9bb35;
+  color: var(--demo-ink);
+}
+.demo-theme :is(button, a, summary):focus-visible {
+  outline-color: #bc8f1d;
+}
+.demo-theme :is(input, select):focus {
+  outline-color: #dfba58;
+}
+.demo-theme .demo-panel {
+  background: linear-gradient(120deg, #fff3cf, #fffcf2);
+  border-color: #e9d7a2;
+}
+.demo-theme .demo-count {
+  background: #fff0bf;
+  color: #725000;
+}
+.demo-theme .demo-hint {
+  color: #725000;
+}
+.demo-theme .header-left {
+  gap: 10px;
+}
+.demo-theme .demo-exit,
+.demo-theme .emh-app .demo-exit {
+  background: var(--formal-accent);
+  border-color: var(--formal-accent);
+  color: #fff;
+}
+.demo-theme .demo-exit:hover,
+.demo-theme .emh-app .demo-exit:hover {
+  background: var(--formal-accent-hover);
+  border-color: var(--formal-accent-hover);
+  color: #fff;
 }

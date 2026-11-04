@@ -4,6 +4,8 @@ Give navigation and action text a visible button shape using the shared button s
 
 When changing a shared feature or control, check every experiment and its demo and formal screens, and apply the same labels, colors, styles, accessibility, and behavior wherever the feature is shared. Prefer shared components and tokens, and verify the affected screens; preserve experiment-specific behavior where it differs.
 
+Whenever a formal experiment interface changes, update the corresponding demo interfaces at the same time, and vice versa. Check all affected experiments, teacher and student views, and previews; verify each corresponding screen while preserving intentional demo-specific behavior.
+
 Do not add meaningless arrows. Use arrows only when they communicate a clear direction, relationship, or action.
 
 Keep the color palette consistent with DoubleAuction: blue-purple primary, cool gray backgrounds, teal for buying, and warm orange for selling. Reuse the shared color tokens in `src/app/globals.css`.

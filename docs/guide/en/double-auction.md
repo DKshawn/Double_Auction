@@ -10,7 +10,7 @@ Open the screen-size demo at `/demo/preview`. On narrow screens, choose a size f
 
 Authenticate once with the key at the teacher entry, then set a teacher password of at least eight characters for each room. The creation form does not request the key again.
 
-The setup header contains **戻る** and, when opened from an existing room, **ルーム … に戻る**. Demo setup offers **デモを選び直す** to return to the list and **教員用ページへ** to return to the teacher page.
+The setup header contains **戻る** and, when opened from an existing room, **ルーム … に戻る**. Demo setup offers **戻る** to return to the list and **教員用ページへ** to return to the teacher page.
 
 ## Allocate using actual attendance
 

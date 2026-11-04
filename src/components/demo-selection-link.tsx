@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export function DemoSelectionLink() {
   return (
@@ -7,7 +8,8 @@ export function DemoSelectionLink() {
       href="/demo/select"
       target="_top"
     >
-      デモを選び直す
+      <ArrowLeft size={15} />
+      戻る
     </Link>
   );
 }

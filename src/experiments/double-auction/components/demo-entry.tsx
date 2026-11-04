@@ -10,7 +10,6 @@ import { DEMO_SETTINGS } from "@/experiments/double-auction/lib/demo";
 import { Header, Footer } from "../../../components/shell";
 import { TeacherForm } from "./teacher-form";
 import { DemoSelectionLink } from "@/components/demo-selection-link";
-import { DemoModeBadge } from "@/components/demo-mode-badge";
 
 const DemoRoom = dynamic(() => import("./demo-room"), {
   ssr: false,
@@ -41,6 +40,7 @@ export function DemoEntry() {
     <>
       <Header
         homeHref="/demo"
+        demoLabel="DEMOモード"
         leading={
           <>
             <DemoSelectionLink />
@@ -50,9 +50,7 @@ export function DemoEntry() {
             </Link>
           </>
         }
-      >
-        <DemoModeBadge />
-      </Header>
+      ></Header>
       <main className="narrow-main teacher-setup-main">
         <h1 className="eyebrow teacher-entry-heading">
           <GraduationCap size={18} />

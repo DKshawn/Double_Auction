@@ -51,7 +51,7 @@ The EMH demo control panel switches between teacher and student views, pauses, a
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 
-Use **Demo Model** on the home page or teacher experiment selection page to choose a demo. The demo list and each experiment identify demo mode with a yellow badge matching the home-page Demo button. Each demo setup offers **デモを選び直す** to return to the list and **教員用ページへ** to return to the teacher page.
+Use **Demo Model** on the home page or teacher experiment selection page to choose a demo. The demo list and screens use a yellow theme, with a demo-mode label beside the site name. The blue-purple **DEMOモードを終了** button returns to the student entry. Each demo setup offers **戻る** to return to the list and **教員用ページへ** to return to the teacher page.
 
 Judgement teacher pages and the demo share task cards, the selection list and controls, with Japanese, Chinese and English switching and settings locked during a run.
 

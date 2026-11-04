@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { teacherText } from "./teacher-language";
-import { DemoModeBadge } from "@/components/demo-mode-badge";
+import { Header } from "@/components/shell";
 import type { Language, PreviewProtocol } from "../types";
 import {
   StudentApp,
@@ -43,12 +43,15 @@ export function JudgmentPreview({
         onClose();
       }}
     >
+      {demo && (
+        <Header
+          homeHref="/judgment/demo"
+          demoLabel={t("DEMOモード")}
+          demoExitLabel={t("DEMOモードを終了")}
+        />
+      )}
       <div className="judgment-preview-toolbar">
-        {demo ? (
-          <DemoModeBadge label={t("DEMOモード")} />
-        ) : (
-          <strong>{t("プレビュー")}</strong>
-        )}
+        {!demo && <strong>{t("プレビュー")}</strong>}
         <span>{t("回答は保存されません。制限時間は停止しています。")}</span>
         <div>
           <button

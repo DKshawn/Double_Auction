@@ -393,25 +393,28 @@ export function StudyRoom({
     <div
       className={`study-shell ${demo ? "study-demo" : ""} ${teacher && study.lobby && view.phase === "waiting" ? "study-lobby-shell" : ""}`}
     >
-      {teacher && (
+      {(teacher || demo) && (
         <Header
+          demoLabel={demo ? "DEMOモード" : undefined}
           homeHref={demo ? "/demo" : teacherSetupHref(view.code)}
           onHome={onConfigure}
         >
-          <Link
-            className="button secondary small-button"
-            href={demo ? "/demo" : teacherSetupHref(view.code)}
-            onNavigate={
-              onConfigure
-                ? (event) => {
-                    event.preventDefault();
-                    onConfigure();
-                  }
-                : undefined
-            }
-          >
-            教員の管理・設定へ
-          </Link>
+          {teacher && (
+            <Link
+              className="button secondary small-button"
+              href={demo ? "/demo" : teacherSetupHref(view.code)}
+              onNavigate={
+                onConfigure
+                  ? (event) => {
+                      event.preventDefault();
+                      onConfigure();
+                    }
+                  : undefined
+              }
+            >
+              教員の管理・設定へ
+            </Link>
+          )}
           {roomStatus}
         </Header>
       )}

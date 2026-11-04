@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowLeftRight } from "lucide-react";
+import { DemoModeBadge } from "./demo-mode-badge";
+import { DemoExitLink } from "./demo-exit-link";
 
 export function Brand({
   homeHref = "/",
@@ -38,21 +40,29 @@ export function Header({
   homeHref,
   onHome,
   className,
+  demoLabel,
+  demoExitLabel,
 }: {
   children?: React.ReactNode;
   leading?: React.ReactNode;
   homeHref?: string;
   onHome?: () => void;
   className?: string;
+  demoLabel?: string;
+  demoExitLabel?: string;
 }) {
   return (
     <header className={`site-header${className ? ` ${className}` : ""}`}>
       <div className="header-inner">
         <div className="header-left">
           <Brand homeHref={homeHref} onHome={onHome} />
+          {demoLabel && <DemoModeBadge label={demoLabel} />}
           {leading}
         </div>
-        <div className="header-right">{children}</div>
+        <div className="header-right">
+          {children}
+          {demoLabel && <DemoExitLink label={demoExitLabel} />}
+        </div>
       </div>
     </header>
   );

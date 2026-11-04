@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LockKeyhole } from "lucide-react";
 import { api, errorMessage } from "@/lib/client";
 import { Spinner } from "./shell";
 import { MAX_NICKNAME_LENGTH } from "@/lib/participant-config";
@@ -89,7 +88,7 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
         {judgment ? "学生証番号" : "ニックネーム"}
         <input
           name="nickname"
-          placeholder={judgment ? "7桁の数字" : "例：学生01"}
+          placeholder="例：8888888"
           pattern={judgment ? "[0-9]{7}" : undefined}
           inputMode={judgment ? "numeric" : "text"}
           minLength={judgment ? 7 : undefined}
@@ -129,10 +128,6 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
       <button className="button primary full" disabled={pending || identifying}>
         {pending ? <Spinner /> : "入室する"}
       </button>
-      <div className="form-footnote">
-        <LockKeyhole size={14} />
-        あなたの条件は、他の学生には非公開です。
-      </div>
     </form>
   );
 }

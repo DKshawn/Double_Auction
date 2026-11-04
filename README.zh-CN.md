@@ -6,7 +6,7 @@
 
 学生等待画面使用统一的卡片设计，并保留各实验的信息。
 
-[教师入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)
+[教师入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)（教师入口使用独立地址）
 
 ## 开始使用
 

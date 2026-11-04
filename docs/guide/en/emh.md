@@ -8,7 +8,7 @@ The implementation is in `src/experiments/emh/`, the rules page is `/emh/guide`,
 
 The interface labels prices, dividends, trading balances and scores in yen.
 
-Formal setup uses **実験を選び直す** in the header to return to experiment selection. Both EMH demo setup and the demo room use **デモを選び直す** to return to the demo list and **教員用ページへ** to return to the teacher’s EMH setup.
+Formal setup uses **戻る** in the header to return to experiment selection. Both EMH demo setup and the demo room use **デモを選び直す** to return to the demo list and **教員用ページへ** to return to the teacher’s EMH setup.
 
 Starting the session shows a five-second preparation countdown in the center of the student screen, matching DA. Students can review their own conditions; trading and the period clock start when it ends. Pausing also freezes the countdown. This applies to both experiments and the demo.
 

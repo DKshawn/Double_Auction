@@ -8,7 +8,7 @@ Student waiting screens use a consistent design. In EMH, a five-second preparati
 
 Create a room, bring students in, run the experiment, and download the results. Screenshots show a local sample classroom in the default Japanese interface; use the online entry links above for class. The creation and download panels use Double Auction as the example.
 
-On experiment setup and re-entry pages, use **実験を選び直す** in the header to return to experiment selection. When opening settings from a Double Auction room, **ルーム … に戻る** in the same header returns to that room.
+On experiment setup and re-entry pages, use **戻る** in the header to return to experiment selection. When opening settings from a Double Auction room, **ルーム … に戻る** in the same header returns to that room.
 
 Judgement room creation places task cards beside the selection and create controls; on narrow screens controls appear above the cards. See the [Judgement guide](judgment.md) for language switching and controls during a run.
 

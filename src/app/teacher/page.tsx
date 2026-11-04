@@ -20,7 +20,7 @@ function TeacherSelectionNav({ children }: { children?: React.ReactNode }) {
     <nav className="header-leading-nav" aria-label="教員の操作">
       <Link className="button secondary small-button" href="/teacher">
         <ArrowLeft size={15} />
-        実験を選び直す
+        戻る
       </Link>
       {children}
     </nav>
@@ -66,7 +66,10 @@ export default async function Teacher({
       experiment === "emh" || experiment === "judgment";
     return (
       <>
-        <Header homeHref="/teacher" leading={<TeacherSelectionNav />}>
+        <Header
+          homeHref="/teacher"
+          leading={selectedExperiment ? <TeacherSelectionNav /> : undefined}
+        >
           {!selectedExperiment && <DemoEntryLink />}
           <Link className="button secondary small-button" href="/">
             学生の入室画面

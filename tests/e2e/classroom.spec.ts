@@ -30,7 +30,17 @@ test("Japanese student entry, teacher navigation and mobile layout", async ({
     path: info.outputPath("home-mobile.png"),
     fullPage: true,
   });
-  await page.getByRole("link", { name: "教員用ページ", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: "教員用ページ", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator('input[name="nickname"]')).toHaveAttribute(
+    "placeholder",
+    "例：8888888",
+  );
+  await expect(
+    page.getByText("あなたの条件は、他の学生には非公開です。"),
+  ).toHaveCount(0);
+  await page.goto("/teacher");
   await expect(
     page.getByRole("heading", { name: /^(教員ログイン|実験を選ぶ)$/ }),
   ).toBeVisible();

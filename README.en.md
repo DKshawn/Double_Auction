@@ -6,7 +6,7 @@ A classroom experiment platform with one entry point for Double Auction, EMH, an
 
 Student waiting screens share a consistent card design while retaining experiment-specific information.
 
-[Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app)
+[Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app) (the teacher entry has a separate URL)
 
 ## Get started
 

@@ -17,7 +17,7 @@ npm run dev
 
 On Windows, `pwsh -NoProfile -File scripts/dev-local.ps1` starts an isolated local verification environment on port 3200, using `.data/platform-verification`. The old EMH folder is no longer needed; see the [consolidation record](../../releases/emh-folder-consolidation.md).
 
-The ordinary development server's teacher entry is `http://localhost:3000/teacher`, also reachable from **教員用ページ** on the student entry `/`. With a key configured, authentication is required before experiment selection. Without Neon configured, the app uses embedded PostgreSQL through PGlite at `.data/auction`. Do not open the same data directory from multiple servers. Production uses Neon.
+The ordinary development server's teacher entry is `http://localhost:3000/teacher`; open it directly using its separate URL. With a key configured, authentication is required before experiment selection. Without Neon configured, the app uses embedded PostgreSQL through PGlite at `.data/auction`. Do not open the same data directory from multiple servers. Production uses Neon.
 
 To require a teacher key locally, set `TEACHER_ACCESS_KEY` in the Git-ignored `.env.local` file and restart the server. Without a configured key, local access does not require one.
 

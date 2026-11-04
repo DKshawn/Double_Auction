@@ -58,7 +58,16 @@ test("home and teacher hub share one demo selection, without experiment-specific
   await expect(
     page.getByRole("link", { name: "Demo Model", exact: true }),
   ).toHaveAttribute("href", "/demo/select");
+  await expect(
+    page.getByRole("link", { name: "戻る", exact: true }),
+  ).toHaveCount(0);
   for (const experiment of ["institutions", "emh", "judgment"]) {
+    await page.goto(`/teacher?experiment=${experiment}`);
+    await expect(
+      page.getByRole("link", { name: "戻る", exact: true }),
+    ).toHaveAttribute("href", "/teacher");
+    await page.getByRole("link", { name: "戻る", exact: true }).click();
+    await expect(page).toHaveURL(/\/teacher$/);
     await page.goto(`/teacher?experiment=${experiment}`);
     await expect(
       page.getByRole("link", { name: "Demo Model", exact: true }),

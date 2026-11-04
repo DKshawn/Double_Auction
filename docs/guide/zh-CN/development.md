@@ -17,7 +17,7 @@ npm run dev
 
 Windows 上可使用 `pwsh -NoProfile -File scripts/dev-local.ps1` 启动隔离的本地验证环境，端口为3200，数据目录为 `.data/platform-verification`。不再需要旧 EMH 文件夹，见[整理记录（英文）](../../releases/emh-folder-consolidation.md)。
 
-普通开发服务器的教师入口为 `http://localhost:3000/teacher`，也可从学生入口 `/` 的「教員用ページ」打开。配置密钥后，需先登录才能选择实验。未配置 Neon 时使用嵌入式 PostgreSQL（PGlite），默认保存在 `.data/auction`；不要让多个服务器同时打开同一保存目录。生产环境使用 Neon。
+普通开发服务器的教师入口为 `http://localhost:3000/teacher`，请使用与学生入口不同的独立地址打开。配置密钥后，需先登录才能选择实验。未配置 Neon 时使用嵌入式 PostgreSQL（PGlite），默认保存在 `.data/auction`；不要让多个服务器同时打开同一保存目录。生产环境使用 Neon。
 
 如需本地也要求教师密钥，在不提交到 Git 的 `.env.local` 中设置 `TEACHER_ACCESS_KEY` 并重启服务。未设置时，本地不要求密钥。
 

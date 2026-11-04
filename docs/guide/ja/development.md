@@ -17,7 +17,7 @@ npm run dev
 
 Windows の隔離したローカル検証環境は、`pwsh -NoProfile -File scripts/dev-local.ps1` で起動できます。ポートは3200、保存先は `.data/platform-verification` です。旧 EMH フォルダーは不要です。[整理記録](../../../docs/releases/emh-folder-consolidation.md)を参照してください。
 
-教員入口は `http://localhost:3000/teacher` です。学生の入室画面 `/` の「教員用ページ」からも開けます。キー設定時は、実験選択の前にログインします。Neonの設定がなければ組み込みPostgreSQL（PGlite）の `.data/auction` に保存されます。同じ保存先を複数サーバーから開かないでください。本番はNeonを使用します。
+教員入口は `http://localhost:3000/teacher` です。学生の入室画面とは別のURLから開きます。キー設定時は、実験選択の前にログインします。Neonの設定がなければ組み込みPostgreSQL（PGlite）の `.data/auction` に保存されます。同じ保存先を複数サーバーから開かないでください。本番はNeonを使用します。
 
 ローカルでも教員用キーを必須にするには、Gitに含めない `.env.local` に `TEACHER_ACCESS_KEY` を設定し、サーバーを再起動します。未設定の場合、ローカルではキー不要です。
 

@@ -6,7 +6,7 @@ Double Auction、EMH、Judgement under Uncertainty を一つの入口から実�
 
 学生の待機画面は共通のカードデザインを使い、実験ごとの情報を表示します。
 
-[教員入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)
+[教員入口](https://exp-all-in-one.vercel.app/teacher) · [学生入口](https://exp-all-in-one.vercel.app)（教員入口は学生画面とは別のURLです）
 
 ## 使い始める
 

@@ -228,11 +228,38 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
     await expect(
       studentPage.getByText("開始まで", { exact: true }),
     ).toBeVisible();
-    await expect(studentPage.getByLabel("提示価格（円）")).toBeDisabled();
-    await expect(studentPage.getByLabel("提示価格（円）")).toBeEnabled({
+    await expect(studentPage.getByLabel("買値（円）")).toBeDisabled();
+    await expect(studentPage.getByLabel("買値（円）")).toBeEnabled({
       timeout: 12000,
     });
     await expect(studentPage.locator(".emh-countdown-card")).toHaveCount(0);
+    await expect(
+      studentPage.getByRole("heading", { name: "注文板" }),
+    ).toBeVisible();
+    await expect(
+      studentPage.getByRole("heading", { name: "取引価格（円）" }),
+    ).toBeVisible();
+    await expect(
+      studentPage.getByRole("heading", { name: "あなたの記録" }),
+    ).toBeVisible();
+    await expect(studentPage.getByRole("tab", { name: "市場" })).toHaveCount(0);
+    await expect(
+      studentPage.getByRole("tab", { name: "自分の記録" }),
+    ).toHaveCount(0);
+    const buyColumn = studentPage.locator(".student-action-column.buy-side");
+    const sellColumn = studentPage.locator(".student-action-column.sell-side");
+    await buyColumn.getByLabel("買値（円）").fill("1");
+    await sellColumn.getByLabel("売値（円）").fill("99999");
+    await buyColumn.getByRole("button", { name: "買値を提示" }).click();
+    await expect(
+      buyColumn.getByRole("button", { name: "買値を取り消す" }),
+    ).toBeVisible();
+    await sellColumn.getByRole("button", { name: "売値を提示" }).click();
+    await expect(
+      sellColumn.getByRole("button", { name: "売値を取り消す" }),
+    ).toBeVisible();
+    await buyColumn.getByRole("button", { name: "買値を取り消す" }).click();
+    await sellColumn.getByRole("button", { name: "売値を取り消す" }).click();
     expect((await exported()).markets[0].conditions.assignment).toEqual(
       confirmed.markets[0].conditions.assignment,
     );

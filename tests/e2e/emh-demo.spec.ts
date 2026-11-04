@@ -99,7 +99,10 @@ test("EMH Demo shares formal settings and confirms or releases them before tradi
   for (const dividend of await page.locator(".stat-grid .private-stat").all()) {
     await expect(dividend).toContainText("円");
   }
-  await expect(page.locator(".price-entry .input-yen")).toHaveText("円");
+  await expect(page.locator(".price-entry .input-yen")).toHaveText([
+    "円",
+    "円",
+  ]);
   await expect(
     page.getByText("一時停止中", { exact: true }).first(),
   ).toBeVisible();
@@ -179,8 +182,8 @@ test("Exp2 demo runs the default 12-person market with practice information", as
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: "市場" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "注文板" })).toBeVisible();
-  const buyColumn = page.locator(".exp2-action-column.buy-side");
-  const sellColumn = page.locator(".exp2-action-column.sell-side");
+  const buyColumn = page.locator(".student-action-column.buy-side");
+  const sellColumn = page.locator(".student-action-column.sell-side");
   await expect(buyColumn).toContainText("最低売値");
   await expect(buyColumn.getByLabel("買値（円）")).toBeVisible();
   await expect(sellColumn).toContainText("最高買値");
@@ -254,7 +257,7 @@ test("Exp2 demo runs the default 12-person market with practice information", as
       ).toBe("nowrap");
     }
     for (const table of await page
-      .locator(".exp2-student-market .table-scroll")
+      .locator(".student-market-grid .table-scroll")
       .all()) {
       if (
         width <= 760 &&
@@ -276,6 +279,53 @@ test("Exp2 demo runs the default 12-person market with practice information", as
   );
   expect(errors).toEqual([]);
   expect(writes).toEqual([]);
+});
+
+test("Exp1 student demo shows the trading board, prices and records together", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto("/emh/demo");
+  await page.getByRole("button", { name: "デモルームを作成" }).click();
+  await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
+  await page.getByRole("button", { name: "全市場で実験を開始" }).click();
+  await page.getByRole("button", { name: "学生画面を見る" }).click();
+  for (const name of ["注文板", "取引価格（円）", "あなたの記録"]) {
+    await expect(page.getByRole("heading", { name })).toBeVisible();
+  }
+  await expect(page.getByRole("tab", { name: "市場" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "自分の記録" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "提示の種類" })).toHaveCount(0);
+  await expect(page.getByLabel("買値（円）")).toBeVisible();
+  await expect(page.getByLabel("売値（円）")).toBeVisible();
+  const columns = await page
+    .locator(".student-market-grid > *")
+    .evaluateAll((elements) =>
+      elements.map((el) => ({
+        top: el.getBoundingClientRect().top,
+        left: el.getBoundingClientRect().left,
+      })),
+    );
+  expect(columns).toHaveLength(3);
+  expect(
+    Math.max(...columns.map((item) => item.top)) -
+      Math.min(...columns.map((item) => item.top)),
+  ).toBeLessThanOrEqual(1);
+  expect(columns[0].left).toBeLessThan(columns[1].left);
+  expect(columns[1].left).toBeLessThan(columns[2].left);
+  for (const width of [1175, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await expect(page.getByLabel("買値（円）")).toBeVisible();
+    await expect(page.getByLabel("売値（円）")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "あなたの記録" }),
+    ).toBeVisible();
+  }
 });
 
 test("student views use three font sizes and equal state dividend and probability sizes", async ({
@@ -422,9 +472,9 @@ test("Exp1 student countdown uses the centered DA card and clears when trading o
     "pointer-events",
     "none",
   );
-  await expect(page.getByLabel("提示価格（円）")).toBeDisabled();
+  await expect(page.getByLabel("買値（円）")).toBeDisabled();
   await expect(card).toHaveCount(0, { timeout: 12000 });
-  await expect(page.getByLabel("提示価格（円）")).toBeEnabled();
+  await expect(page.getByLabel("買値（円）")).toBeEnabled();
 });
 
 test("EMH demo controls preserve the session while switching views, advancing and resetting", async ({

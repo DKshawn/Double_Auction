@@ -12,6 +12,8 @@ Formal setup uses **戻る** in the header to return to experiment selection. Bo
 
 Starting the session shows a five-second preparation countdown in the center of the student screen, matching DA. Students can review their own conditions; trading and the period clock start when it ends. Pausing also freezes the countdown. This applies to both experiments and the demo.
 
+In both experiments, the student screen places buy and sell controls side by side and shows market prices and personal records at the same time. Each column supports submitting or cancelling a quote and accepting the other side’s quote.
+
 ## Experiment 1
 
 1. After authenticating at the teacher entry, alongside the title and room teacher password, set initial securities per participant per round (1–20, default 2), target market size (3–12, default 9), three type weights (integers 1–100 each, default 1:1:1), and the shared A/B period duration (1–30 minutes, default 4, rounded to whole seconds). While admission is open, these settings can still be edited and applied with **設定を保存**.

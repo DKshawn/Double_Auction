@@ -1,6 +1,6 @@
 # Demo Model
 
-The demo list and screens use a yellow theme, with a demo-mode label beside the site name. The blue-purple **DEMOモードを終了** button returns to the student entry.
+The demo list and screens use a yellow theme, with a demo-mode text label beside the site name. The blue-purple **DEMOモードを終了** button returns to the student entry.
 
 [日本語](../ja/demo.md) · [中文](../zh-CN/demo.md) · [English](../en/demo.md)
 

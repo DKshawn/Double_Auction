@@ -555,7 +555,7 @@ export function RoomDashboard({
                 )}
               </div>
             )}
-            {!(room.exp2 && !teacher) && (
+            {teacher && (
               <div
                 className="tabs room-tabs"
                 role="tablist"
@@ -573,28 +573,21 @@ export function RoomDashboard({
                   aria-selected={tab === "results"}
                   onClick={() => setTab("results")}
                 >
-                  {teacher ? "結果" : "自分の記録"}
+                  結果
                 </button>
-                {teacher && (
-                  <button
-                    role="tab"
-                    aria-selected={tab === "people"}
-                    onClick={() => setTab("people")}
-                  >
-                    参加者
-                  </button>
-                )}
+                <button
+                  role="tab"
+                  aria-selected={tab === "people"}
+                  onClick={() => setTab("people")}
+                >
+                  参加者
+                </button>
               </div>
             )}
-            {room.exp2 && !teacher ? (
-              <div className="market-grid exp2-student-market">
+            {!teacher ? (
+              <div className="market-grid student-market-grid">
                 <aside>
-                  <OrderPanel
-                    room={room}
-                    act={act}
-                    disabled={disabled}
-                    compact={!!demo}
-                  />
+                  <OrderPanel room={room} act={act} disabled={disabled} />
                 </aside>
                 <HistoryPanel room={room} compact />
                 <ResultsPanel room={room} />
@@ -603,24 +596,17 @@ export function RoomDashboard({
               tab === "market" && (
                 <div className="market-grid">
                   <aside>
-                    <OrderPanel
-                      room={room}
-                      act={act}
-                      disabled={disabled}
-                      compact={!!demo && !!room.exp2}
-                    />
+                    <OrderPanel room={room} act={act} disabled={disabled} />
                   </aside>
                   <HistoryPanel room={room} compact={!!demo && !!room.exp2} />
                 </div>
               )
             )}
-            {!(room.exp2 && !teacher) && tab === "results" && (
+            {teacher && tab === "results" && <ResultsPanel room={room} />}
+            {tab === "people" && teacher && <ParticipantsPanel room={room} />}
+            {room.status === "completed" && tab === "market" && teacher && (
               <ResultsPanel room={room} />
             )}
-            {tab === "people" && teacher && <ParticipantsPanel room={room} />}
-            {room.status === "completed" &&
-              tab === "market" &&
-              !(room.exp2 && !teacher) && <ResultsPanel room={room} />}
             <ExportPanel room={room} demo={demo} />
           </>
         )}

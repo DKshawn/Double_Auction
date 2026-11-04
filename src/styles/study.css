@@ -741,8 +741,7 @@
   padding: 8px 12px;
   font-size: 12px;
 }
-.demo-count,
-.demo-header-tag {
+.demo-count {
   border-radius: 20px;
   padding: 7px 12px;
   font-size: 12px;
@@ -753,8 +752,10 @@
   color: #5b408d;
 }
 .demo-header-tag {
-  background: var(--demo-yellow);
-  color: var(--demo-ink);
+  color: #805c00;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .demo-caption .demo-count {
   padding: 3px 10px;

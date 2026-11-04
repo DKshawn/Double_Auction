@@ -1,6 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import { Download, LockKeyhole, Send, X } from "lucide-react";
+import { Download, LockKeyhole } from "lucide-react";
 import type { Action, RoomView, Side } from "@/experiments/emh/types";
 import { PriceChart } from "./price-chart";
 
@@ -32,15 +32,11 @@ export function OrderPanel({
   room,
   act,
   disabled,
-  compact = false,
 }: {
   room: RoomView;
   act: RunAction;
   disabled: boolean;
-  compact?: boolean;
 }) {
-  const [side, setSide] = useState<Side>("bid");
-  const [price, setPrice] = useState("");
   const [bidPrice, setBidPrice] = useState("");
   const [askPrice, setAskPrice] = useState("");
   const canTrade =
@@ -48,8 +44,8 @@ export function OrderPanel({
   const student = room.role === "student";
   async function submit(
     e: FormEvent,
-    submittedSide: Side = side,
-    submittedPrice = price,
+    submittedSide: Side,
+    submittedPrice: string,
   ) {
     e.preventDefault();
     await act({
@@ -59,14 +55,14 @@ export function OrderPanel({
       unitKey: room.unitKey,
     });
   }
-  if (student && room.exp2) {
+  if (student) {
     return (
-      <section className="panel order-panel exp2-order-panel">
+      <section className="panel order-panel student-order-panel">
         <div className="section-heading">
           <h2>注文板</h2>
           <span className="muted">1単位</span>
         </div>
-        <div className="exp2-action-columns">
+        <div className="student-action-columns">
           {(["bid", "ask"] as const).map((quoteSide) => {
             const buying = quoteSide === "bid";
             const oppositeSide = buying ? "ask" : "bid";
@@ -80,7 +76,7 @@ export function OrderPanel({
             return (
               <div
                 key={quoteSide}
-                className={`exp2-action-column ${buying ? "buy-side" : "sell-side"}`}
+                className={`student-action-column ${buying ? "buy-side" : "sell-side"}`}
               >
                 <h3>{buying ? "買う" : "売る"}</h3>
                 <div className={`quote-card ${oppositeSide}`}>
@@ -123,13 +119,13 @@ export function OrderPanel({
                 >
                   <label
                     className="sr-only"
-                    htmlFor={`exp2-${quoteSide}-price`}
+                    htmlFor={`order-${quoteSide}-price`}
                   >
                     {label}（円）
                   </label>
                   <div className="price-input">
                     <input
-                      id={`exp2-${quoteSide}-price`}
+                      id={`order-${quoteSide}-price`}
                       inputMode="numeric"
                       type="number"
                       placeholder={`${label}を入力`}
@@ -157,7 +153,7 @@ export function OrderPanel({
                 {ownQuote && (
                   <button
                     type="button"
-                    className="button small secondary exp2-cancel-quote"
+                    className="button small secondary student-cancel-quote"
                     disabled={!canTrade}
                     onClick={() =>
                       act({
@@ -190,7 +186,6 @@ export function OrderPanel({
       <div className="quote-grid">
         {(["bid", "ask"] as const).map((s) => {
           const q = room[s];
-          const own = q?.participantId === room.me?.id;
           return (
             <div key={s} className={`quote-card ${s}`}>
               <div className="quote-label">
@@ -200,109 +195,12 @@ export function OrderPanel({
                 <Yen value={q?.price} />
               </strong>
               <div className="quote-owner">
-                {q ? `被験者 ${q.seat}${own ? "（あなた）" : ""}` : "提示なし"}
+                {q ? `被験者 ${q.seat}` : "提示なし"}
               </div>
-              {student &&
-                (own ? (
-                  <button
-                    className="button small quiet"
-                    disabled={!canTrade}
-                    onClick={() =>
-                      act({
-                        kind: "cancel",
-                        side: s,
-                        quoteId: q!.id,
-                        unitKey: room.unitKey,
-                      })
-                    }
-                  >
-                    <X size={14} />
-                    取り消す
-                  </button>
-                ) : (
-                  <button
-                    className={`button small ${s === "bid" ? "sell" : "buy"}`}
-                    disabled={
-                      !canTrade || !q || (s === "bid" && !room.me?.holdings)
-                    }
-                    onClick={() =>
-                      act({
-                        kind: "accept",
-                        side: s,
-                        quoteId: q!.id,
-                        unitKey: room.unitKey,
-                      })
-                    }
-                  >
-                    {s === "bid" ? "この価格で売る" : "この価格で買う"}
-                  </button>
-                ))}
             </div>
           );
         })}
       </div>
-      {student && (
-        <form onSubmit={submit} className="quote-form">
-          <div className="segmented" role="group" aria-label="提示の種類">
-            <button
-              type="button"
-              aria-pressed={side === "bid"}
-              onClick={() => setSide("bid")}
-            >
-              買値を提示
-            </button>
-            <button
-              type="button"
-              aria-pressed={side === "ask"}
-              onClick={() => setSide("ask")}
-            >
-              売値を提示
-            </button>
-          </div>
-          <div className="price-entry">
-            <label className="sr-only" htmlFor="quote-price">
-              提示価格（円）
-            </label>
-            <div className="price-input">
-              <input
-                id="quote-price"
-                inputMode="numeric"
-                type="number"
-                placeholder="価格を入力"
-                min={1}
-                max={100000}
-                step={1}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                disabled={!canTrade}
-                required
-              />
-              <span className="input-yen" aria-hidden="true">
-                円
-              </span>
-            </div>
-            <button
-              className="button primary"
-              disabled={!canTrade || (side === "ask" && !room.me?.holdings)}
-            >
-              <Send size={16} />
-              提示
-            </button>
-          </div>
-          <p className="field-note">
-            {compact ? (
-              "買値は高く、売値は低く。相手の提示価格で成立。"
-            ) : (
-              <>
-                {side === "bid"
-                  ? "買値は現在より高く。"
-                  : "売値は現在より低く。"}{" "}
-                相手の価格に達すると、その価格で成立します。
-              </>
-            )}
-          </p>
-        </form>
-      )}
     </section>
   );
 }

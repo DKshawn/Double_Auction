@@ -2126,40 +2126,40 @@
   min-width: 104px;
   white-space: nowrap;
 }
-.emh-app .exp2-student-market .results-panel {
+.emh-app .student-market-grid .results-panel {
   margin-top: 0;
   min-width: 0;
 }
-.emh-app .exp2-student-market .results-panel .section-heading {
+.emh-app .student-market-grid .results-panel .section-heading {
   margin: 0 0 10px;
 }
-.emh-app .exp2-student-market .results-panel table,
-.emh-app .exp2-student-market .trade-table table {
+.emh-app .student-market-grid .results-panel table,
+.emh-app .student-market-grid .trade-table table {
   min-width: 0;
 }
-.emh-app .exp2-student-market .trade-table th,
-.emh-app .exp2-student-market .trade-table td {
+.emh-app .student-market-grid .trade-table th,
+.emh-app .student-market-grid .trade-table td {
   padding: 8px 5px;
 }
-.emh-app .exp2-student-market .compact-chart .chart-axis {
+.emh-app .student-market-grid .compact-chart .chart-axis {
   font-size: 14px;
 }
-.emh-app .exp2-student-market .compact-chart .chart-empty {
+.emh-app .student-market-grid .compact-chart .chart-empty {
   font-size: 14px;
 }
-.emh-app .exp2-student-market .results-panel th,
-.emh-app .exp2-student-market .results-panel td {
+.emh-app .student-market-grid .results-panel th,
+.emh-app .student-market-grid .results-panel td {
   padding: 8px 5px;
   white-space: nowrap;
 }
 @media (min-width: 1100px) {
-  .emh-app .market-grid.exp2-student-market {
+  .emh-app .market-grid.student-market-grid {
     grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(0, 1fr);
     gap: 14px;
   }
 }
 @media (min-width: 761px) and (max-width: 1099px) {
-  .emh-app .exp2-student-market .results-panel {
+  .emh-app .student-market-grid .results-panel {
     grid-column: 2;
   }
 }
@@ -2189,8 +2189,8 @@
   }
 }
 @media (max-width: 400px) {
-  .emh-app .exp2-student-market .results-panel th,
-  .emh-app .exp2-student-market .results-panel td {
+  .emh-app .student-market-grid .results-panel th,
+  .emh-app .student-market-grid .results-panel td {
     padding-left: 3px;
     padding-right: 3px;
   }
@@ -2274,52 +2274,52 @@
 }
 
 /* Each trading column groups an action with the matching counterparty offer. */
-.emh-app .exp2-action-columns {
+.emh-app .student-action-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
-.emh-app .exp2-action-column {
+.emh-app .student-action-column {
   min-width: 0;
 }
-.emh-app .exp2-action-column h3 {
+.emh-app .student-action-column h3 {
   margin: 0 0 6px;
 }
-.emh-app .exp2-action-column.buy-side h3 {
+.emh-app .student-action-column.buy-side h3 {
   color: var(--buy);
 }
-.emh-app .exp2-action-column.sell-side h3 {
+.emh-app .student-action-column.sell-side h3 {
   color: var(--sell);
 }
-.emh-app .exp2-action-column.buy-side .quote-card {
+.emh-app .student-action-column.buy-side .quote-card {
   background: var(--buy-bg);
   border-color: var(--buy-line);
 }
-.emh-app .exp2-action-column.sell-side .quote-card {
+.emh-app .student-action-column.sell-side .quote-card {
   background: var(--sell-bg);
   border-color: var(--sell-line);
 }
-.emh-app .exp2-action-column.buy-side .quote-label {
+.emh-app .student-action-column.buy-side .quote-label {
   color: var(--buy);
 }
-.emh-app .exp2-action-column.sell-side .quote-label {
+.emh-app .student-action-column.sell-side .quote-label {
   color: var(--sell);
 }
-.emh-app .exp2-action-column .price-entry {
+.emh-app .student-action-column .price-entry {
   display: grid;
   gap: 6px;
   margin: 10px 0 0;
 }
-.emh-app .exp2-action-column .price-entry .button,
-.emh-app .exp2-action-column .exp2-cancel-quote {
+.emh-app .student-action-column .price-entry .button,
+.emh-app .student-action-column .student-cancel-quote {
   width: 100%;
   min-height: 38px;
   white-space: nowrap;
 }
-.emh-app .exp2-action-column .exp2-cancel-quote {
+.emh-app .student-action-column .student-cancel-quote {
   margin-top: 6px;
 }
-.emh-app .exp2-order-panel > .field-note {
+.emh-app .student-order-panel > .field-note {
   margin-top: 8px;
 }
 .emh-app .wide .exp2-state-values > div {
@@ -2347,7 +2347,7 @@
   display: inline;
   white-space: nowrap;
 }
-.emh-app .exp2-student-market .results-panel th {
+.emh-app .student-market-grid .results-panel th {
   white-space: nowrap;
 }
 
@@ -2362,23 +2362,23 @@
     flex-basis: 100%;
   }
 }
-.emh-app .exp2-action-column .quote-card {
+.emh-app .student-action-column .quote-card {
   padding: 6px;
 }
-.emh-app .exp2-action-column .quote-card .button {
+.emh-app .student-action-column .quote-card .button {
   min-height: 30px;
   margin-top: 4px;
   padding: 5px 2px;
 }
-.emh-app .exp2-action-column .price-entry {
+.emh-app .student-action-column .price-entry {
   margin-top: 6px;
 }
-.emh-app .exp2-action-column .price-entry input {
+.emh-app .student-action-column .price-entry input {
   padding-top: 7px;
   padding-bottom: 7px;
 }
-.emh-app .exp2-action-column .price-entry .button,
-.emh-app .exp2-action-column .exp2-cancel-quote {
+.emh-app .student-action-column .price-entry .button,
+.emh-app .student-action-column .student-cancel-quote {
   min-height: 34px;
 }
 
@@ -2491,4 +2491,15 @@
   .emh-demo-panel .demo-actions .button {
     flex: 1 1 120px;
   }
+}
+
+/* Keep dashboard panels aligned independently of the shared history spacing. */
+.emh-app .market-grid .history-panel {
+  margin-top: 0;
+}
+.emh-app .market-grid.student-market-grid .panel {
+  padding: 16px;
+}
+.emh-app .market-grid.student-market-grid .section-heading {
+  margin: 0 0 12px;
 }

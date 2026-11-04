@@ -75,7 +75,7 @@ test("home and teacher hub share one demo selection, without experiment-specific
   }
 });
 
-test("demo mode badges match the shared entry color in every experiment and view", async ({
+test("demo mode labels and entry colors are consistent across experiments", async ({
   page,
 }) => {
   await page.goto("/");
@@ -93,8 +93,8 @@ test("demo mode badges match the shared entry color in every experiment and view
   const assertBadge = async (selector: string, label: string) => {
     const badge = page.locator(selector);
     await expect(badge).toHaveText(label);
-    await expect(badge).toHaveCSS("background-color", colors.background);
-    await expect(badge).toHaveCSS("color", colors.color);
+    await expect(badge).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(badge).toHaveCSS("color", "rgb(128, 92, 0)");
   };
   await page.goto("/demo/select");
   await assertBadge("header .header-left .demo-header-tag", "DEMOモード");

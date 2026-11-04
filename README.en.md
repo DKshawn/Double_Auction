@@ -43,7 +43,7 @@ EMH labels prices, dividends, trading balances and scores in yen.
 
 After the teacher starts EMH, a five-second countdown appears in the center of the student screen while students review their conditions; trading opens when it ends.
 
-EMH Demo Model supports both experiments. Experiment 2 defaults to a 12-person market and uses separate practice dividends and states. Students see state conditions, buy and sell controls in separate columns, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
+EMH Demo Model supports both experiments. Experiment 2 defaults to a 12-person market and uses separate practice dividends and states. Students see their state-contingent dividends and probabilities. In both experiments, students see buy and sell controls in separate columns, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
 
 Experiment 2 configures initial securities, the unsuccessful-attempt limit, insider start round and number per type, state probabilities, dividends, realized states, market count, target size and type ratios. Market count may be automatic or specified; actual attendance is split into markets of 3–999. Defaults are a target of 12, two securities, two unsuccessful attempts and up to two insiders per type from round 3.
 

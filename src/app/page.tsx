@@ -1,6 +1,5 @@
 import { Header } from "@/components/shell";
 import { JoinForm } from "@/components/join-form";
-import { DemoEntryLink } from "@/components/demo-entry-link";
 
 export default async function Home({
   searchParams,
@@ -10,9 +9,7 @@ export default async function Home({
   const { code } = await searchParams;
   return (
     <>
-      <Header className="home-header">
-        <DemoEntryLink />
-      </Header>
+      <Header className="home-header" />
       <main className="home-main">
         <section className="home-grid">
           <div className="home-story">

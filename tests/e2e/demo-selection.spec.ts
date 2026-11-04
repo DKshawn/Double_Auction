@@ -19,7 +19,7 @@ const demos = [
   },
 ];
 
-test("home and teacher hub share one demo selection, without experiment-specific launch buttons", async ({
+test("student home omits demo while the teacher hub links to the shared selection", async ({
   page,
 }) => {
   await page.goto("/");
@@ -31,6 +31,11 @@ test("home and teacher hub share one demo selection, without experiment-specific
       ),
     ).toBe(true);
   }
+  await expect(
+    page.getByRole("link", { name: "Demo Model", exact: true }),
+  ).toHaveCount(0);
+  await page.goto("/teacher");
+  await enterTeacherPage(page);
   await page.getByRole("link", { name: "Demo Model", exact: true }).click();
   await expect(page).toHaveURL(/\/demo\/select$/);
   await expect(
@@ -78,7 +83,8 @@ test("home and teacher hub share one demo selection, without experiment-specific
 test("demo mode labels and entry colors are consistent across experiments", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/teacher");
+  await enterTeacherPage(page);
   const formalAccent = await page.evaluate(() =>
     getComputedStyle(document.documentElement)
       .getPropertyValue("--formal-accent")

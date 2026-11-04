@@ -4,7 +4,7 @@ The demo list and screens use a yellow theme, with a demo-mode text label beside
 
 [日本語](../ja/demo.md) · [中文](../zh-CN/demo.md) · [English](../en/demo.md)
 
-Use **Demo Model** on the home page or teacher experiment selection page to open the list at `/demo/select`, then choose an experiment. The demo list and each experiment show a yellow demo-mode badge matching the home-page Demo button. No login is required and no production room is created; the individual demo URLs below also remain available.
+Use **Demo Model** on the teacher experiment selection page to open the list at `/demo/select`, then choose an experiment. The demo list and each experiment show a demo-mode text label. No login is required and no production room is created; the individual demo URLs below also remain available.
 
 All three demo setup pages have **戻る** to return to the list and **教員用ページへ** to return to the teacher page. The EMH demo room always shows **戻る**, and shows **教員用ページへ** in the teacher view.
 

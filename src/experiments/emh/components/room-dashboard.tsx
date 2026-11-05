@@ -10,16 +10,15 @@ import {
   WifiOff,
   Radio,
   Eye,
-  LockKeyhole,
 } from "lucide-react";
 import { StudentWaitingCard } from "@/components/student-waiting-card";
 import type { RoomView, TeacherAction } from "@/experiments/emh/types";
 import {
   ExportPanel,
-  fmt,
   HistoryPanel,
   OrderPanel,
   ParticipantsPanel,
+  PersonalPanel,
   ResultsPanel,
   Yen,
   type RunAction,
@@ -77,10 +76,25 @@ export function RoomDashboard({
     };
   }, [confirmation]);
   const teacher = room.role === "teacher";
-  const disabled = busy || !online;
   const active = room.status === "trading";
   const countdown = room.status === "countdown";
   const paused = room.pausedAt !== null;
+  const awaitingClock =
+    active &&
+    !paused &&
+    (reference >= (room.unitEndsAt ?? Infinity) ||
+      reference >= (room.periodEndsAt ?? Infinity));
+  const disabled = busy || !online || awaitingClock;
+  const finalScore = room.results.some(
+    (result) =>
+      result.year === room.year && (room.exp2 || result.period === "B"),
+  );
+  const lastPersonalTrade = room.trades.findLast(
+    (trade) =>
+      trade.year === room.year &&
+      room.me &&
+      (trade.buyerId === room.me.id || trade.sellerId === room.me.id),
+  );
   const status =
     room.status === "lobby"
       ? "参加者を受付中"
@@ -353,6 +367,17 @@ export function RoomDashboard({
                           ),
                         )}
                       </strong>
+                      {active && (
+                        <progress
+                          max={room.periodSeconds}
+                          value={remaining(room.periodEndsAt, reference)}
+                          aria-label={
+                            room.exp2
+                              ? "ラウンドの残り時間"
+                              : `${room.period}期の残り時間`
+                          }
+                        />
+                      )}
                     </div>
                     {active && (
                       <div
@@ -362,11 +387,16 @@ export function RoomDashboard({
                             : ""
                         }
                       >
-                        <span>この取引</span>
+                        <span>第{room.unit}取引の残り</span>
                         <strong className="timer small-timer">
                           {remaining(room.unitEndsAt, reference)}
                           <small>秒</small>
                         </strong>
+                        <progress
+                          max={room.unitSeconds}
+                          value={remaining(room.unitEndsAt, reference)}
+                          aria-label="この取引の残り時間"
+                        />
                       </div>
                     )}
                   </>
@@ -455,105 +485,103 @@ export function RoomDashboard({
                 </span>
               </div>
             ) : (
-              <div className="market-note">
+              <div className="market-note" role="status" aria-atomic="true">
                 <Radio size={14} />
                 <span>
                   {paused
                     ? "教員が再開するまでお待ちください。"
                     : countdown
                       ? "自分の条件を確認してください。カウントダウン後に取引できます。"
-                      : `被験者 #${room.nominatedSeat} さん、最初の提示をお願いします。全員が取引できます。`}
+                      : awaitingClock
+                        ? "取引の切替を確認しています。"
+                        : busy
+                          ? "操作を送信しています。"
+                          : teacher
+                            ? "全員が提示・取引できます。"
+                            : room.me?.holdings === 0
+                              ? "買値を提示できます。保有0単位のため売れません。"
+                              : "買値・売値を提示できます。相手の提示を受けると即時成立します。"}
                 </span>
                 {room.emptyUnits > 0 && (
-                  <span className="inactivity">前回は成立なし</span>
+                  <span className="inactivity">
+                    連続{room.emptyUnits}回、成立なし
+                  </span>
                 )}
               </div>
             )}
-            {!teacher && (
-              <div className={`stat-grid ${room.exp2 ? "exp2-stats" : ""}`}>
-                <div>
-                  <span>保有証券</span>
-                  <strong>
-                    {room.me?.holdings}
-                    <small>単位</small>
-                  </strong>
-                </div>
-                <div>
-                  <span>売買収支</span>
-                  <strong>
-                    <Yen value={room.me?.cash} />
-                  </strong>
-                </div>
-                <div>
-                  <span>ラウンド得点</span>
-                  <strong>
-                    <Yen
-                      value={(room.me?.cash ?? 0) + (room.me?.dividend ?? 0)}
-                    />
-                  </strong>
-                </div>
-                {room.exp2 ? (
-                  <>
-                    <div className="private-stat exp2-state-info">
-                      <span>
-                        <LockKeyhole size={11} /> 状態別の配当 / 確率
-                      </span>
-                      <div className="exp2-state-values">
-                        {room.exp2.prior.map((probability, index) => (
-                          <div key={index}>
-                            <span>状態 {index + 1}</span>
-                            <div className="exp2-state-line">
-                              <span>配当</span>
-                              <strong>
-                                <Yen value={room.exp2!.dividends?.[index]} />
-                              </strong>
-                            </div>
-                            <div className="exp2-state-line">
-                              <span>確率</span>
-                              <small>{fmt(probability * 100)}%</small>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="private-stat exp2-clue">
-                      <span>
-                        <LockKeyhole size={11} /> Clue カード
-                      </span>
-                      <strong>
-                        {room.exp2.clue ? `状態 ${room.exp2.clue}` : "情報なし"}
-                      </strong>
-                    </div>
-                    {room.exp2.state !== null && (
-                      <div className="exp2-realized">
-                        <span>実現した状態</span>
-                        <strong>{room.exp2.state}</strong>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="private-stat">
-                      <span>
-                        <LockKeyhole size={11} />
-                        A期配当 / 単位
-                      </span>
-                      <strong>
-                        <Yen value={room.me?.dividends?.a} />
-                      </strong>
-                    </div>
-                    <div className="private-stat">
-                      <span>
-                        <LockKeyhole size={11} />
-                        B期配当 / 単位
-                      </span>
-                      <strong>
-                        <Yen value={room.me?.dividends?.b} />
-                      </strong>
-                    </div>
-                  </>
-                )}
+            {active && (
+              <div className="trading-clock-rule">
+                <span>1取引につき1単位。時間切れは成立なしで次の取引へ。</span>
+                <span>
+                  連続{room.emptyUnitsLimit}回不成立、または
+                  {room.exp2 ? "ラウンド" : "期"}の時間終了で精算します。
+                </span>
               </div>
+            )}
+            {!teacher && (
+              <>
+                <div className="emh-account-section">
+                  <div className="emh-account-balance">
+                    <div className="stat-grid emh-account-stats">
+                      <div>
+                        <span>保有証券</span>
+                        <strong>
+                          {room.me?.holdings}
+                          <small>単位</small>
+                        </strong>
+                      </div>
+                      <div>
+                        <span>売買収支</span>
+                        <strong>
+                          <Yen value={room.me?.cash} />
+                        </strong>
+                      </div>
+                      <div>
+                        <span>
+                          {finalScore
+                            ? "ラウンド確定得点"
+                            : "現在の累計得点（暫定）"}
+                        </span>
+                        <strong>
+                          <Yen
+                            value={
+                              (room.me?.cash ?? 0) + (room.me?.dividend ?? 0)
+                            }
+                          />
+                        </strong>
+                      </div>
+                    </div>
+                    <p className="emh-score-note">
+                      {finalScore
+                        ? "このラウンドの得点は確定しました。"
+                        : room.exp2
+                          ? "ラウンド末に確定。表示は売買収支＋受取済み配当です。"
+                          : "B期末に確定。A期は途中経過で、B期の売買と配当も反映します。"}
+                      <span>
+                        受取済み配当 <Yen value={room.me?.dividend} />
+                        {!finalScore && "・未受取の配当は得点に含みません。"}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div
+                  className="personal-trade-feedback"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {lastPersonalTrade && (
+                    <p key={lastPersonalTrade.id}>
+                      直近の成立：1単位を
+                      <Yen value={lastPersonalTrade.price} />で
+                      {lastPersonalTrade.buyerId === room.me?.id
+                        ? "買いました"
+                        : "売りました"}
+                      。
+                    </p>
+                  )}
+                </div>
+              </>
             )}
             {teacher && (
               <div
@@ -586,17 +614,18 @@ export function RoomDashboard({
             )}
             {!teacher ? (
               <div className="market-grid student-market-grid">
-                <aside>
-                  <OrderPanel room={room} act={act} disabled={disabled} />
-                </aside>
-                <HistoryPanel room={room} compact />
-                <ResultsPanel room={room} />
+                <OrderPanel room={room} />
+                <PersonalPanel room={room} act={act} disabled={disabled} />
+                <div className="emh-records">
+                  <HistoryPanel room={room} compact />
+                  <ResultsPanel room={room} />
+                </div>
               </div>
             ) : (
               tab === "market" && (
                 <div className="market-grid">
                   <aside>
-                    <OrderPanel room={room} act={act} disabled={disabled} />
+                    <OrderPanel room={room} />
                   </aside>
                   <HistoryPanel room={room} compact={!!demo && !!room.exp2} />
                 </div>

@@ -51,6 +51,24 @@ export interface Trade {
   price: number;
   at: number;
 }
+/** Student payloads retain only the student's own identity. */
+export type QuoteView = Omit<Quote, "participantId" | "seat"> & {
+  participantId: string | null;
+  seat: number | null;
+};
+export type TradeView = Omit<
+  Trade,
+  "buyerId" | "sellerId" | "buyerSeat" | "sellerSeat"
+> & {
+  buyerId: string | null;
+  sellerId: string | null;
+  buyerSeat: number | null;
+  sellerSeat: number | null;
+};
+export interface OwnQuoteState {
+  status: "none" | "active" | "replaced" | "cancelled" | "cleared" | "filled";
+  price: number | null;
+}
 export interface Payout {
   participantId: string;
   seat: number;
@@ -172,9 +190,10 @@ export interface RoomView {
   unitEndsAt: number | null;
   breakEndsAt: number | null;
   pausedAt: number | null;
-  bid: Quote | null;
-  ask: Quote | null;
-  trades: Trade[];
+  bid: QuoteView | null;
+  ask: QuoteView | null;
+  trades: TradeView[];
+  ownQuotes: { bid: OwnQuoteState; ask: OwnQuoteState };
   me: PersonView | null;
   participants: PersonView[];
   results: PeriodResult[];

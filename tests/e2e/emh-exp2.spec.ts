@@ -57,7 +57,7 @@ test("Exp2 creation and participant view use fixed single-period rules", async (
     await expect(studentPage.getByText("情報なし")).toBeVisible();
     await expect(studentPage.getByText("状態別の配当 / 確率")).toBeVisible();
     await expect(
-      studentPage.getByRole("heading", { name: "配当・得点の記録" }),
+      studentPage.getByRole("heading", { name: "あなたの記録" }),
     ).toBeVisible();
     await expect(studentPage.getByText("B期配当 / 単位")).toHaveCount(0);
     for (const width of [1440, 768, 390, 320]) {

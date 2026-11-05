@@ -1,5 +1,5 @@
 "use client";
-import type { RoomView, TradeView } from "@/experiments/emh/types";
+import type { RoomView, Trade } from "@/experiments/emh/types";
 
 export function PriceChart({
   trades,
@@ -7,7 +7,7 @@ export function PriceChart({
   singlePeriod = false,
   compact = false,
 }: {
-  trades: TradeView[];
+  trades: Trade[];
   benchmarks: RoomView["benchmarks"];
   singlePeriod?: boolean;
   compact?: boolean;

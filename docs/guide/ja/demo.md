@@ -51,8 +51,6 @@ EMHの画面サイズ別プレビューは `/emh/demo/preview` またはデモ�
 
 [Judgement の Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) では、課題を選んで学生画面を確認できます。丸い **i** ボタンで課題の詳細を開けます。回答は保存せず、制限時間を停止したプレビューです。正式な計時や回答記録の確認には、隔離したローカル環境の検証手順を使ってください。
 
-EMHでは全員が提示でき、相手の価格を受ける操作と跨ぐ提示は1単位が即時成立します。学生は匿名の取引記録と自分の提示状態を確認でき、実験1の得点にはB期末まで「暫定」と表示します。
-
 ---
 
 [ホーム](../../../README.md) · [授業での使い方](classroom.md) · [Double Auction](double-auction.md) · [EMH 資産市場実験](emh.md) · [Judgement under Uncertainty](judgment.md) · [開発・デプロイ・検証](development.md)

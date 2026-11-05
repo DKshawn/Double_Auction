@@ -57,8 +57,6 @@ EMH 的屏幕尺寸预览可从 `/emh/demo/preview` 或演示设置页的「画�
 
 [Judgement Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) 在选择任务后显示学生画面。点击圆圈 **i** 查看任务详情。预览不保存回答，计时限制暂停。需要验证正式计时和回答记录时，请使用隔离本地环境中的验证流程。
 
-EMH 允许所有人报价；接受对方价格或提交跨价报价会立即成交1单位。学生可查看匿名成交记录和自己的报价状态，实验1得分在B期末前明确标为“暂计”。
-
 ---
 
 [首页](../../../README.zh-CN.md) · [课堂使用流程](classroom.md) · [Double Auction](double-auction.md) · [EMH 资产市场实验](emh.md) · [Judgement under Uncertainty](judgment.md) · [开发、部署与验证](development.md)

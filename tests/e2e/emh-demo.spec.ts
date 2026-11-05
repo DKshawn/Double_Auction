@@ -96,13 +96,14 @@ test("EMH Demo shares formal settings and confirms or releases them before tradi
     .getByRole("button", { name: "学生画面を見る", exact: true })
     .click();
   await expect(page.locator(".stat-grid")).toContainText("円");
-  for (const dividend of await page.locator(".stat-grid .private-stat").all()) {
+  for (const dividend of await page
+    .locator(".emh-conditions .private-dividends")
+    .all()) {
     await expect(dividend).toContainText("円");
   }
-  await expect(page.locator(".price-entry .input-yen")).toHaveText([
-    "円",
-    "円",
-  ]);
+  await expect(
+    page.locator(".emh-conditions .study-price-input > span"),
+  ).toHaveText(["円", "円"]);
   await expect(
     page.getByText("一時停止中", { exact: true }).first(),
   ).toBeVisible();
@@ -174,19 +175,21 @@ test("Exp2 demo runs the default 12-person market with practice information", as
     await expect(state).toContainText("円");
     await expect(state).toContainText("%");
   }
+  await expect(page.getByRole("heading", { name: "取引記録" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "取引価格（円）" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "あなたの記録" }),
+    page.getByRole("heading", { name: "配当・得点の記録" }),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: "市場" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "注文板" })).toBeVisible();
   const buyColumn = page.locator(".student-action-column.buy-side");
   const sellColumn = page.locator(".student-action-column.sell-side");
-  await expect(buyColumn).toContainText("最低売値");
+  await expect(
+    buyColumn.getByRole("button", { name: "買い成行注文" }),
+  ).toBeVisible();
   await expect(buyColumn.getByLabel("買値（円）")).toBeVisible();
-  await expect(sellColumn).toContainText("最高買値");
+  await expect(
+    sellColumn.getByRole("button", { name: "売り成行注文" }),
+  ).toBeVisible();
   await expect(sellColumn.getByLabel("売値（円）")).toBeVisible();
   expect((await buyColumn.boundingBox())!.x).toBeLessThan(
     (await sellColumn.boundingBox())!.x,
@@ -196,28 +199,36 @@ test("Exp2 demo runs the default 12-person market with practice information", as
   });
   await page.getByLabel("買値（円）", { exact: true }).fill("1");
   await page.getByLabel("売値（円）", { exact: true }).fill("99999");
-  await page.getByRole("button", { name: "買値を提示" }).click();
-  await expect(page.locator(".quote-card.bid")).toContainText("（あなた）");
-  await expect(page.locator(".quote-card.bid strong")).toContainText("円");
-  await page.getByRole("button", { name: "売値を提示" }).click();
-  await expect(page.locator(".quote-card.ask")).toContainText("（あなた）");
-  await expect(page.locator(".quote-card.ask strong")).toContainText("円");
+  await page.getByRole("button", { name: "買い指値注文" }).click();
+  await expect(page.locator("[aria-label='買い注文一覧']")).toContainText(
+    "あなた含む",
+  );
+  await expect(page.locator("[aria-label='買い注文一覧'] thead")).toContainText(
+    "円",
+  );
+  await page.getByRole("button", { name: "売り指値注文" }).click();
+  await expect(page.locator("[aria-label='売り注文一覧']")).toContainText(
+    "あなた含む",
+  );
+  await expect(page.locator("[aria-label='売り注文一覧'] thead")).toContainText(
+    "円",
+  );
   await expect(
-    buyColumn.getByRole("button", { name: "この価格で買う" }),
+    buyColumn.getByRole("button", { name: "買い成行注文" }),
   ).toBeDisabled();
   await expect(
-    sellColumn.getByRole("button", { name: "この価格で売る" }),
+    sellColumn.getByRole("button", { name: "売り成行注文" }),
   ).toBeDisabled();
   await buyColumn.getByRole("button", { name: "買値を取り消す" }).click();
   await expect(
     buyColumn.getByRole("button", { name: "買値を取り消す" }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "買値を提示" }).click();
+  await page.getByRole("button", { name: "買い指値注文" }).click();
   await sellColumn.getByRole("button", { name: "売値を取り消す" }).click();
   await expect(
     sellColumn.getByRole("button", { name: "売値を取り消す" }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "売値を提示" }).click();
+  await page.getByRole("button", { name: "売り指値注文" }).click();
   await expect(page.getByLabel("買値（円）", { exact: true })).toHaveValue("1");
   await expect(page.getByLabel("売値（円）", { exact: true })).toHaveValue(
     "99999",
@@ -266,11 +277,15 @@ test("Exp2 demo runs the default 12-person market with practice information", as
         )
       )
         continue;
+      const size = await table.evaluate((element) => ({
+        width: element.clientWidth,
+        content: element.scrollWidth,
+        panel: element.parentElement?.className,
+      }));
       expect(
-        await table.evaluate(
-          (element) => element.scrollWidth <= element.clientWidth,
-        ),
-      ).toBe(true);
+        size.content,
+        JSON.stringify({ viewport: width, ...size }),
+      ).toBeLessThanOrEqual(size.width);
     }
   }
   await page.getByRole("button", { name: "設定を見直す" }).click();
@@ -290,7 +305,7 @@ test("Exp1 student demo shows the trading board, prices and records together", a
   await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
   await page.getByRole("button", { name: "全市場で実験を開始" }).click();
   await page.getByRole("button", { name: "学生画面を見る" }).click();
-  for (const name of ["注文板", "取引価格（円）", "あなたの記録"]) {
+  for (const name of ["注文板", "取引記録", "配当・得点の記録"]) {
     await expect(page.getByRole("heading", { name })).toBeVisible();
   }
   await expect(page.getByRole("tab", { name: "市場" })).toHaveCount(0);
@@ -323,7 +338,7 @@ test("Exp1 student demo shows the trading board, prices and records together", a
     await expect(page.getByLabel("買値（円）")).toBeVisible();
     await expect(page.getByLabel("売値（円）")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "あなたの記録" }),
+      page.getByRole("heading", { name: "配当・得点の記録" }),
     ).toBeVisible();
   }
 });

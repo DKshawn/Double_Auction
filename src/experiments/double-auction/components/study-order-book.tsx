@@ -7,6 +7,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { OrderBookList } from "@/components/order-book-list";
 import { ChartBar, List } from "lucide-react";
 import { studyMarketCounts } from "@/experiments/double-auction/lib/study-config";
 import {
@@ -105,73 +106,12 @@ export function StudyOrderBook({
       {display === "chart" ? (
         <StudyBookChart sides={sides} slots={slots} maximum={maximum} />
       ) : (
-        <div className="study-book">
-          {sides.map(({ side, label, rows }) => (
-            <div key={side}>
-              <h3 className={side === "buyer" ? "buy-text" : "sell-text"}>
-                {label}
-              </h3>
-              <div
-                className="study-book-rows"
-                role="region"
-                aria-label={`${label}一覧`}
-              >
-                <table>
-                  <thead>
-                    <tr>
-                      <th>価格（円）</th>
-                      <th>
-                        {market.institution === "call" ? "残数量" : "数量"}
-                      </th>
-                      {teacher && <th>参加者</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => (
-                      <tr
-                        key={row.price}
-                        className={
-                          row.ownQuantity ? "study-own-order" : undefined
-                        }
-                      >
-                        <td>
-                          {row.price}
-                          {row.ownQuantity > 0 && (
-                            <span
-                              className="study-own-order-tag"
-                              title={`あなたの注文${row.ownQuantity}単位を含みます`}
-                            >
-                              あなた含む
-                            </span>
-                          )}
-                        </td>
-                        <td>{row.quantity}</td>
-                        {teacher && <td>{row.aliases}</td>}
-                      </tr>
-                    ))}
-                    {Array.from(
-                      { length: Math.max(0, slots - rows.length) },
-                      (_, i) => (
-                        <tr
-                          key={`empty-${i}`}
-                          className="study-book-placeholder"
-                          aria-hidden="true"
-                        >
-                          <td>—</td>
-                          <td>—</td>
-                          {teacher && <td>—</td>}
-                        </tr>
-                      ),
-                    )}
-                  </tbody>
-                </table>
-                {!rows.length && (
-                  <p className="study-empty">まだ注文はありません</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <OrderBookList
+          sides={sides}
+          minimumRows={slots}
+          showParticipants={teacher}
+          quantityLabel={market.institution === "call" ? "残数量" : "数量"}
+        />
       )}
       {teacher && (
         <StudyMarketHistory

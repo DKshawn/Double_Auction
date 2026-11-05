@@ -12,8 +12,6 @@ Authenticate once with the key at the teacher entry, then set a teacher password
 
 The setup header contains **戻る** and, when opened from an existing room, **ルーム … に戻る**. Demo setup offers **戻る** to return to the list and **教員用ページへ** to return to the teacher page.
 
-The order-book list shares its presentation component with EMH. CDA price/time priority, depth, quantities and cancellation rules are unchanged.
-
 ## Allocate using actual attendance
 
 Create a room first and configure it while students join. Set the desired number of markets, then use **締切タイマーを開始** (5–3600 seconds) or **入室を締め切って割り当て** to close admission. The saved server deadline applies even if the browser closes: the next join or reconnect rejects new arrivals after it. Closing admission does not itself start the experiment.

@@ -14,8 +14,6 @@ Starting the session shows a five-second preparation countdown in the center of 
 
 In both experiments, the student screen places buy and sell controls side by side and shows market prices and personal records at the same time. Each column supports submitting or cancelling a quote and accepting the other side’s quote.
 
-The student conditions panel follows the CDA layout, and the order book uses the same shared table. Private dividends and both buying and selling controls sit together: a limit order quotes a price, while a market order immediately accepts the best opposing price. EMH allows both sides for every participant and retains only one best bid and ask; it does not adopt CDA order depth or fixed buyer/seller roles.
-
 ## Experiment 1
 
 1. After authenticating at the teacher entry, alongside the title and room teacher password, set initial securities per participant per round (1–20, default 2), target market size (3–12, default 9), three type weights (integers 1–100 each, default 1:1:1), and the shared A/B period duration (1–30 minutes, default 4, rounded to whole seconds). While admission is open, these settings can still be edited and applied with **設定を保存**.
@@ -42,18 +40,6 @@ With a local server running, use `npx tsx scripts/verify-emh-http.ts`. It defaul
 `tests/emh-engine.test.ts` and `tests/emh-platform.test.ts` cover allocations across participant counts, parallel markets with 30 participants, private information, re-entry, retries and simultaneous trades, clocks, all six rounds, dividends, explicit explanation release, and shared room codes and management.
 
 `tests/e2e/emh-settings.spec.ts` verifies saving and reloading settings, concurrent editor conflicts, confirmation and release, all six rounds with eight participants, duplicate submissions, privacy and CSV/JSON export through the browser.
-
-## Student trading screen
-
-Experiment 1 source page 11 permits everyone to quote, so the interface does not ask students to wait for a randomly nominated person. The market retains only one best bid and one best ask. Bids must improve upward and asks downward; equal prices are rejected and replaced quotes are not queued. Each student sees whether their quote is active, replaced, cancelled, filled or cleared, including after refresh.
-
-Accepting a quote immediately trades one unit at that price. A new bid at or above the ask, or an ask at or below the bid, also immediately trades at the standing opposing price. Controls state this consequence. Simultaneous actions follow the order in which the server accepts valid operations; stale quotes cannot execute. Students may cancel their own active quote before execution. Executed trades cannot be cancelled. Execution, timeout and period end clear quotes. Selling controls and inputs are disabled with zero holdings.
-
-Students see all historical trade prices as numbers, without trend lines or counterpart identifiers, and can filter their own trades. Other participants' IDs and seat numbers are also removed from student API responses. Teachers retain full records, charts and exports. These rules apply to formal and demo screens in both experiments.
-
-Experiment 1 dividends occupy a private, student-specific area. The current score is trading cash flow plus dividends already received; unpaid dividends are excluded. Period A is provisional and the round score becomes final at the end of B. Settlement rows explicitly distinguish provisional and final scores. Experiment 2 has one period and settles at round end.
-
-Each trading interval can execute at most one unit. Separate timers show the interval and the whole period. An interval timeout starts the next interval; the configured consecutive no-trade limit or period deadline ends the period. Controls are disabled during server transitions, pauses and disconnections.
 
 ---
 

@@ -481,15 +481,8 @@ export function act(
         room[side]?.id === action.quoteId && room[side]?.participantId === p.id,
         "この提示は取り消せません。",
       );
-      const price = room[side]!.price;
       room[side] = null;
-      record(room, "quote-cancelled", p.id, now, {
-        side,
-        price,
-        year: room.year,
-        period: room.period,
-        unit: room.unit,
-      });
+      record(room, "quote-cancelled", p.id, now, { side });
       return;
     }
     if (action.kind === "accept") {
@@ -502,13 +495,6 @@ export function act(
         quote.participantId !== p.id,
         "自分の提示とは取引できません。",
       );
-      const accepted = {
-        side: side === "ask" ? "bid" : "ask",
-        price: quote.price,
-        year: room.year,
-        period: room.period,
-        unit: room.unit,
-      };
       settle(
         room,
         side === "ask" ? p.id : quote.participantId,
@@ -517,7 +503,6 @@ export function act(
         now,
         random,
       );
-      record(room, "quote-accepted", p.id, now, accepted);
       return;
     }
     requireRule(
@@ -660,47 +645,6 @@ export function act(
   }
   record(room, action.kind, "teacher", now);
 }
-/** Reconstruct the student's last quote without exposing the private audit log. */
-function ownQuoteState(
-  room: Room,
-  participantId: string | undefined,
-  side: Side,
-): RoomView["ownQuotes"]["bid"] {
-  const current = room[side];
-  if (current && current.participantId === participantId)
-    return { status: "active", price: current.price };
-  const last = room.events.findLast(
-    (event) =>
-      event.actor === participantId &&
-      event.details.side === side &&
-      (event.kind === "quote-submitted" ||
-        event.kind === "quote-cancelled" ||
-        event.kind === "quote-accepted"),
-  );
-  if (!last || last.details.year !== room.year)
-    return { status: "none", price: null };
-  const price =
-    typeof last.details.price === "number" ? last.details.price : null;
-  if (last.kind === "quote-cancelled") return { status: "cancelled", price };
-  if (last.kind === "quote-accepted") return { status: "filled", price };
-  const trade = room.trades.find(
-    (trade) =>
-      trade.year === last.details.year &&
-      trade.period === last.details.period &&
-      trade.unit === last.details.unit &&
-      (side === "bid" ? trade.buyerId : trade.sellerId) === participantId,
-  );
-  if (trade) return { status: "filled", price: trade.price };
-  return {
-    status:
-      room.status !== "trading" ||
-      last.details.period !== room.period ||
-      last.details.unit !== room.unit
-        ? "cleared"
-        : "replaced",
-    price,
-  };
-}
 /** Explicit allowlist: private conditions, identities and scores never enter another student's response. */
 export function view(room: Room, actor: Actor, now: number): RoomView {
   const teacher = actor.role === "teacher";
@@ -781,7 +725,7 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
     unitSeconds: room.config.unitSeconds,
     breakSeconds: room.config.breakSeconds,
     participantCount: room.participants.length,
-    nominatedSeat: teacher ? room.nominatedSeat : null,
+    nominatedSeat: room.nominatedSeat,
     emptyUnits: room.emptyUnits,
     emptyUnitsLimit: room.config.emptyUnitsLimit ?? 2,
     countdownEndsAt: room.countdownEndsAt ?? null,
@@ -789,41 +733,9 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
     unitEndsAt: room.unitEndsAt,
     breakEndsAt: room.breakEndsAt,
     pausedAt: room.pausedAt,
-    bid: room.bid
-      ? {
-          ...room.bid,
-          participantId:
-            teacher || room.bid.participantId === me?.id
-              ? room.bid.participantId
-              : null,
-          seat:
-            teacher || room.bid.participantId === me?.id ? room.bid.seat : null,
-        }
-      : null,
-    ask: room.ask
-      ? {
-          ...room.ask,
-          participantId:
-            teacher || room.ask.participantId === me?.id
-              ? room.ask.participantId
-              : null,
-          seat:
-            teacher || room.ask.participantId === me?.id ? room.ask.seat : null,
-        }
-      : null,
-    trades: teacher
-      ? room.trades
-      : room.trades.map((trade) => ({
-          ...trade,
-          buyerId: trade.buyerId === me?.id ? trade.buyerId : null,
-          sellerId: trade.sellerId === me?.id ? trade.sellerId : null,
-          buyerSeat: trade.buyerId === me?.id ? trade.buyerSeat : null,
-          sellerSeat: trade.sellerId === me?.id ? trade.sellerSeat : null,
-        })),
-    ownQuotes: {
-      bid: ownQuoteState(room, me?.id, "bid"),
-      ask: ownQuoteState(room, me?.id, "ask"),
-    },
+    bid: room.bid,
+    ask: room.ask,
+    trades: room.trades,
     me: me ? person(me) : null,
     participants: teacher ? room.participants.map(person) : [],
     results: visibleResults,

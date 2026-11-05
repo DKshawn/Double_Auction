@@ -1,5 +1,7 @@
 Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
 
+User acceptance is a required release gate. Complete implementation and local verification on a review branch, then wait for the user to explicitly accept the current changes before merging into `main` or deploying. Passing tests, a finished implementation, or earlier general permission to commit/push/deploy does not count as acceptance of a new change. Do not push an unaccepted change when that push triggers a Vercel preview or production deployment. Keep unaccepted work local and preserve it for review. Only an explicit user instruction for the specific release or rollback can authorize that operation.
+
 Give navigation and action text a visible button shape using the shared button styles. Preserve link semantics for navigation and button semantics for actions; do not rely on text color alone to signal that a control is clickable.
 
 When changing a shared feature or control, check every experiment and its demo and formal screens, and apply the same labels, colors, styles, accessibility, and behavior wherever the feature is shared. Prefer shared components and tokens, and verify the affected screens; preserve experiment-specific behavior where it differs.

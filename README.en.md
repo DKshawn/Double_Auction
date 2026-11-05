@@ -8,8 +8,6 @@ Student waiting screens share a consistent card design while retaining experimen
 
 [Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app) (the teacher entry has a separate URL)
 
-EMH follows the CDA conditions layout and shares its order-book table. Private dividends and limit/market orders are grouped together while retaining EMH’s one-best-bid/ask and one-unit trading rules.
-
 ## Get started
 
 ```mermaid
@@ -46,8 +44,6 @@ EMH labels prices, dividends, trading balances and scores in yen.
 After the teacher starts EMH, a five-second countdown appears in the center of the student screen while students review their conditions; trading opens when it ends.
 
 EMH Demo Model supports both experiments. Experiment 2 defaults to a 12-person market and uses separate practice dividends and states. Students see their state-contingent dividends and probabilities. In both experiments, students see buy and sell controls in separate columns, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
-
-Everyone can quote in EMH. Accepting an opposing price or submitting a crossing quote immediately trades one unit. Students see anonymous trade records and their own quote status; Experiment 1 scores are marked provisional until period B ends.
 
 Experiment 2 configures initial securities, the unsuccessful-attempt limit, insider start round and number per type, state probabilities, dividends, realized states, market count, target size and type ratios. Market count may be automatic or specified; actual attendance is split into markets of 3–999. Defaults are a target of 12, two securities, two unsuccessful attempts and up to two insiders per type from round 3.
 

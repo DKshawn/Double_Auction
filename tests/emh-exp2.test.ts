@@ -289,10 +289,10 @@ test("formal Exp2 student view presents state conditions, both quote forms and r
     createElement(RoomDashboard, { room: studentRoom, act: async () => {} }),
   );
   assert.match(html, /状態別の配当 \/ 確率/);
-  assert.match(html, /買い指値注文/);
-  assert.match(html, /売り指値注文/);
-  assert.match(html, /取引記録/);
-  assert.match(html, /配当・得点の記録/);
+  assert.match(html, /買値を提示/);
+  assert.match(html, /売値を提示/);
+  assert.match(html, /取引価格/);
+  assert.match(html, /あなたの記録/);
   assert.match(html, /class="yen-unit">円/);
   assert.doesNotMatch(html, /role="tablist"/);
 });

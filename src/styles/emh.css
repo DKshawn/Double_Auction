@@ -2618,11 +2618,8 @@
 .emh-app .cda-order-book .study-own-order-tag {
   max-width: 100%;
 }
-.emh-app .cda-order-book th:first-child:nth-last-child(3) {
-  width: 35%;
-}
-.emh-app .cda-order-book td:nth-child(3) {
-  white-space: normal;
+.emh-app .cda-order-book .study-book th:first-child {
+  white-space: nowrap;
 }
 .emh-app .emh-records {
   display: grid;

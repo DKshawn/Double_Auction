@@ -8,7 +8,7 @@ Student waiting screens share a consistent card design while retaining experimen
 
 [Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app) (the teacher entry has a separate URL)
 
-The EMH order book marks your resting orders in both the list and bar chart. On each side, the limit and market buttons sit side by side, with estimated profit based on your remaining dividends below each button. Unfilled limits queue by price, then arrival time, until period end. You can amend or cancel them. Draft bid and ask prices also stay in their fields throughout the period.
+The EMH order book shows price and quantity and marks your resting orders in both the list and bar chart. Teachers can find buyer and seller numbers in the trade records and CSV export. On each side, the limit and market buttons sit side by side, with estimated profit based on your remaining dividends below each button. Unfilled limits queue by price, then arrival time, until period end. You can amend or cancel them. Draft bid and ask prices also stay in their fields throughout the period.
 
 ## Get started
 

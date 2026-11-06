@@ -46,6 +46,7 @@ export function Header({
   className,
   demoLabel,
   demoExitLabel,
+  demoExitHref,
 }: {
   children?: React.ReactNode;
   leading?: React.ReactNode;
@@ -54,6 +55,7 @@ export function Header({
   className?: string;
   demoLabel?: string;
   demoExitLabel?: string;
+  demoExitHref?: string;
 }) {
   return (
     <header className={`site-header${className ? ` ${className}` : ""}`}>
@@ -69,7 +71,9 @@ export function Header({
         </div>
         <div className="header-right">
           {children}
-          {demoLabel && <DemoExitLink label={demoExitLabel} />}
+          {demoLabel && (
+            <DemoExitLink label={demoExitLabel} href={demoExitHref} />
+          )}
         </div>
       </div>
     </header>

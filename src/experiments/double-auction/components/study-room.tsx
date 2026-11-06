@@ -64,6 +64,7 @@ import type {
 } from "@/experiments/double-auction/lib/study-types";
 import type { Command, RoomView } from "@/experiments/double-auction/lib/types";
 import { teacherSetupHref } from "@/lib/room-navigation";
+import { DEMO_TEACHER_HREFS } from "@/lib/demo-navigation";
 import type { ExportProvider } from "@/experiments/double-auction/lib/exports";
 
 type Props = {
@@ -396,6 +397,7 @@ export function StudyRoom({
       {(teacher || demo) && (
         <Header
           demoLabel={demo ? "DEMOモード" : undefined}
+          demoExitHref={DEMO_TEACHER_HREFS.institutions}
           homeHref={demo ? "/demo" : teacherSetupHref(view.code)}
           onHome={onConfigure}
         >

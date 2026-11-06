@@ -1,12 +1,12 @@
 # Demo Model
 
-The demo list and screens use a yellow theme, with a demo-mode text label beside the site name. The blue-purple **DEMOモードを終了** button returns to the student entry.
+The demo list and screens use a yellow theme, with a demo-mode text label beside the site name. The blue-purple **DEMOモードを終了** button returns to the corresponding teacher setup, or to teacher experiment selection from the demo list.
 
 [日本語](../ja/demo.md) · [中文](../zh-CN/demo.md) · [English](../en/demo.md)
 
 Sign in at the teacher entry and open **Demo Model** to choose an experiment at `/demo/select`. Opening a demo or screen-size preview directly first takes you to teacher login, then returns you to that page. A student room session grants access only to the classroom experiment.
 
-Select **市場実験室** in the demo header to return to the demo experiment list. All three demo setup pages have **戻る** to return to the list and **教員用ページへ** to return to the teacher page. The EMH demo room always shows **戻る**, and shows **教員用ページへ** in the teacher view.
+Select **市場実験室** or **戻る** in the demo header to return to the demo experiment list.
 
 ## Double Auction
 

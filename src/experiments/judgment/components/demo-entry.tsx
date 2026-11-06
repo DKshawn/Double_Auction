@@ -6,7 +6,6 @@ import {
 } from "./teacher-language";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { Header } from "@/components/shell";
 import { api, errorMessage } from "@/lib/client";
 import { JUDGMENT_NAME } from "../constants";
@@ -14,6 +13,7 @@ import type { PreviewProtocol, Settings, Study } from "../types";
 import { JudgmentPreview } from "./preview";
 import { SettingsFields } from "./settings-fields";
 import { DemoSelectionLink } from "@/components/demo-selection-link";
+import { DEMO_TEACHER_HREFS } from "@/lib/demo-navigation";
 
 export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
   const [language, setLanguage] = useTeacherLanguage();
@@ -52,17 +52,8 @@ export function JudgmentDemoEntry({ studies }: { studies: Study[] }) {
         homeHref="/judgment/demo"
         demoLabel={t("DEMOモード")}
         demoExitLabel={t("DEMOモードを終了")}
-        leading={
-          <>
-            <DemoSelectionLink />
-            <Link
-              className="button secondary small-button"
-              href="/teacher?experiment=judgment"
-            >
-              教員用ページへ
-            </Link>
-          </>
-        }
+        demoExitHref={DEMO_TEACHER_HREFS.judgment}
+        leading={<DemoSelectionLink />}
       ></Header>
       <main
         className="judgment-entry-main"

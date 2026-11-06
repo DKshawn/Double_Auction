@@ -39,6 +39,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Header } from "@/components/shell";
 import { StudentWaitingCard } from "@/components/student-waiting-card";
 import { DemoSelectionLink } from "@/components/demo-selection-link";
+import { DEMO_TEACHER_HREFS } from "@/lib/demo-navigation";
 
 function bot(room: Room, now: number) {
   if (room.status !== "trading" || room.pausedAt !== null) return;
@@ -95,22 +96,6 @@ type Setup = {
   experiment: "exp1" | "exp2";
 };
 
-function TeacherPageLink({ showTeacher = true }: { showTeacher?: boolean }) {
-  return (
-    <>
-      <DemoSelectionLink />
-      {showTeacher && (
-        <Link
-          className="button secondary small-button"
-          href="/teacher?experiment=emh"
-        >
-          教員用ページへ
-        </Link>
-      )}
-    </>
-  );
-}
-
 export function Demo() {
   const [setup, setSetup] = useState<Setup>({
     title: "資産市場実験 · デモ",
@@ -133,7 +118,8 @@ export function Demo() {
       <Header
         homeHref="/emh/demo"
         demoLabel="DEMOモード"
-        leading={<TeacherPageLink />}
+        demoExitHref={DEMO_TEACHER_HREFS.emh}
+        leading={<DemoSelectionLink />}
       >
         <Link
           className="button secondary small-button"
@@ -359,7 +345,7 @@ function DemoRoom({
     </section>
   );
   return (
-    <Shell wide room demo leading={<TeacherPageLink showTeacher={teacher} />}>
+    <Shell wide room demo leading={<DemoSelectionLink />}>
       <div
         className={
           initial.experiment === "exp2" && room.status !== "lobby"

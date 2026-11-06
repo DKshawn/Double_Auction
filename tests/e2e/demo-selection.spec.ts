@@ -161,21 +161,24 @@ test("demo mode labels and entry colors are consistent across experiments", asyn
   await assertBadge("header .header-left .demo-header-tag", "DEMOモード");
   await expect(
     page.getByRole("link", { name: "DEMOモードを終了" }),
-  ).toHaveAttribute("href", "/");
+  ).toHaveAttribute("href", "/teacher");
   await expect(page.getByRole("link", { name: "DEMOモードを終了" })).toHaveCSS(
     "background-color",
     "rgb(84, 86, 199)",
   );
   expect(formalAccent).toBe("#5456c7");
-  for (const [path, create] of [
-    ["/demo", "ルーム作成"],
-    ["/emh/demo", "デモルームを作成"],
+  for (const [path, create, teacherHref] of [
+    ["/demo", "ルーム作成", "/teacher?experiment=institutions"],
+    ["/emh/demo", "デモルームを作成", "/teacher?experiment=emh"],
   ]) {
     await page.goto(path);
     await assertBadge("header .header-left .demo-header-tag", "DEMOモード");
     await expect(
       page.getByRole("link", { name: "DEMOモードを終了" }),
-    ).toHaveAttribute("href", "/");
+    ).toHaveAttribute("href", teacherHref);
+    await expect(
+      page.getByRole("link", { name: "教員用ページへ" }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: create, exact: true }),
     ).toHaveCSS("background-color", colors.background);
@@ -189,7 +192,7 @@ test("demo mode labels and entry colors are consistent across experiments", asyn
       await page.getByRole("button", { name: "教員画面を見る" }).click();
       await expect(
         page.getByRole("link", { name: "教員用ページへ" }),
-      ).toBeVisible();
+      ).toHaveCount(0);
       await page.getByRole("button", { name: "学生画面を見る" }).click();
     }
     await assertBadge("header .header-left .demo-header-tag", "DEMOモード");
@@ -229,16 +232,16 @@ test("demo mode labels and entry colors are consistent across experiments", asyn
   );
 });
 
-test("demo exit uses the formal color and returns to the student entry", async ({
+test("demo exit uses the formal color and returns to teacher setup", async ({
   page,
 }) => {
-  for (const path of [
-    "/demo/select",
-    "/demo",
-    "/emh/demo",
-    "/judgment/demo",
-    "/demo/preview",
-    "/emh/demo/preview",
+  for (const [path, teacherHref] of [
+    ["/demo/select", "/teacher"],
+    ["/demo", "/teacher?experiment=institutions"],
+    ["/emh/demo", "/teacher?experiment=emh"],
+    ["/judgment/demo", "/teacher?experiment=judgment"],
+    ["/demo/preview", "/teacher?experiment=institutions"],
+    ["/emh/demo/preview", "/teacher?experiment=emh"],
   ]) {
     await page.goto(path);
     await enterTeacherPage(page);
@@ -247,15 +250,19 @@ test("demo exit uses the formal color and returns to the student entry", async (
       exact: true,
     });
     await expect(exit).toHaveCSS("background-color", "rgb(84, 86, 199)");
-    await exit.click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(exit).toHaveAttribute("href", teacherHref);
     await expect(
-      page.getByRole("form", { name: "実験に参加する" }),
-    ).toBeVisible();
+      page.getByRole("link", { name: "教員用ページへ" }),
+    ).toHaveCount(0);
+    await exit.click();
+    await expect(page).toHaveURL(new URL(teacherHref, page.url()).href);
   }
 });
 
-for (const path of ["/demo/preview", "/emh/demo/preview"]) {
+for (const [path, teacherHref] of [
+  ["/demo/preview", "/teacher?experiment=institutions"],
+  ["/emh/demo/preview", "/teacher?experiment=emh"],
+]) {
   test(`demo selection navigates the whole page from ${path}`, async ({
     page,
   }) => {
@@ -263,7 +270,7 @@ for (const path of ["/demo/preview", "/emh/demo/preview"]) {
     await enterTeacherPage(page);
     await expect(
       page.getByRole("link", { name: "DEMOモードを終了" }),
-    ).toHaveAttribute("href", "/");
+    ).toHaveAttribute("href", teacherHref);
     const frame = page.frameLocator('iframe[title="操作できるひとりデモ"]');
     await frame.getByRole("link", { name: "戻る", exact: true }).click();
     await expect(page).toHaveURL(/\/demo\/select$/);
@@ -271,4 +278,49 @@ for (const path of ["/demo/preview", "/emh/demo/preview"]) {
       page.getByRole("heading", { name: "デモする実験を選ぶ" }),
     ).toBeVisible();
   });
+
+  test(`demo exit navigates the whole page from the preview frame at ${path}`, async ({
+    page,
+  }) => {
+    await page.goto(path);
+    await enterTeacherPage(page);
+    const frame = page.frameLocator('iframe[title="操作できるひとりデモ"]');
+    const exit = frame.getByRole("link", { name: "DEMOモードを終了" });
+    await expect(exit).toHaveAttribute("href", teacherHref);
+    await exit.click();
+    await expect(page).toHaveURL(new URL(teacherHref, page.url()).href);
+  });
 }
+
+test("demo exit returns to teacher setup from live experiment views", async ({
+  page,
+}) => {
+  for (const [path, create, teacherHref] of [
+    ["/demo", "ルーム作成", "/teacher?experiment=institutions"],
+    ["/emh/demo", "デモルームを作成", "/teacher?experiment=emh"],
+  ]) {
+    for (const view of ["teacher", "student"]) {
+      await page.goto(path);
+      await enterTeacherPage(page);
+      await page.getByRole("button", { name: create, exact: true }).click();
+      if (view === "student")
+        await page.getByRole("button", { name: "学生画面を見る" }).click();
+      await expect(
+        page.getByRole("link", { name: "教員用ページへ" }),
+      ).toHaveCount(0);
+      await page.getByRole("link", { name: "DEMOモードを終了" }).click();
+      await expect(page).toHaveURL(new URL(teacherHref, page.url()).href);
+    }
+  }
+
+  await page.goto("/judgment/demo");
+  await page.getByRole("button", { name: "すべて選択" }).click();
+  await page.getByRole("button", { name: "デモを開始" }).click();
+  await page
+    .getByRole("dialog", { name: "DEMOモード" })
+    .getByRole("link", { name: "DEMOモードを終了" })
+    .click();
+  await expect(page).toHaveURL(
+    new URL("/teacher?experiment=judgment", page.url()).href,
+  );
+});

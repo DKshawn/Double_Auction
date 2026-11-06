@@ -26,6 +26,7 @@ import { Header } from "../../../components/shell";
 import { StudentWaitingCard } from "@/components/student-waiting-card";
 import { StudyAdmission } from "./study-admission";
 import { ConfirmDialog } from "../../../components/confirm-dialog";
+import { DEMO_TEACHER_HREFS } from "@/lib/demo-navigation";
 
 type RosterPerson = NonNullable<
   NonNullable<RoomView["study"]>["teacher"]
@@ -388,7 +389,10 @@ export function StudyWaitingRoom({
   const assigned = view.study!.lobby!.randomizedAt !== null;
   return (
     <div className="study-shell study-waiting-shell">
-      <Header demoLabel={demo ? "DEMOモード" : undefined}>
+      <Header
+        demoLabel={demo ? "DEMOモード" : undefined}
+        demoExitHref={DEMO_TEACHER_HREFS.institutions}
+      >
         {!demo && (
           <span className={`connection ${connected ? "" : "disconnected"}`}>
             {connected ? <Wifi size={14} /> : <WifiOff size={14} />}

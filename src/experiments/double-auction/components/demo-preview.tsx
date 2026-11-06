@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExternalLink, Laptop } from "lucide-react";
 import styles from "./demo-preview.module.css";
 import { Header } from "@/components/shell";
+import { DEMO_TEACHER_HREFS } from "@/lib/demo-navigation";
 
 const PRESETS = [
   {
@@ -104,7 +105,12 @@ export function DemoPreview({
 
   return (
     <main className={styles.shell}>
-      <Header demoLabel="DEMOモード" />
+      <Header
+        demoLabel="DEMOモード"
+        demoExitHref={
+          isEmh ? DEMO_TEACHER_HREFS.emh : DEMO_TEACHER_HREFS.institutions
+        }
+      />
       <header className={styles.toolbar}>
         <div className={styles.heading}>
           <div>

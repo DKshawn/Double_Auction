@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChartNoAxesCombined } from "lucide-react";
 import { DemoModeBadge } from "@/components/demo-mode-badge";
 import { DemoExitLink } from "@/components/demo-exit-link";
-import { DEMO_SELECTION_HREF } from "@/lib/demo-navigation";
+import { DEMO_SELECTION_HREF, DEMO_TEACHER_HREFS } from "@/lib/demo-navigation";
 
 export function Shell({
   children,
@@ -37,7 +37,7 @@ export function Shell({
             {leading}
           </div>
           <nav aria-label="メインナビゲーション">
-            {demo && <DemoExitLink />}
+            {demo && <DemoExitLink href={DEMO_TEACHER_HREFS.emh} />}
             {!room && (
               <>
                 <Link className="button secondary small-button" href="/">

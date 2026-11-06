@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { teacherText } from "./teacher-language";
 import { Header } from "@/components/shell";
+import { DEMO_TEACHER_HREFS } from "@/lib/demo-navigation";
 import type { Language, PreviewProtocol } from "../types";
 import {
   StudentApp,
@@ -48,6 +49,7 @@ export function JudgmentPreview({
           homeHref="/judgment/demo"
           demoLabel={t("DEMOモード")}
           demoExitLabel={t("DEMOモードを終了")}
+          demoExitHref={DEMO_TEACHER_HREFS.judgment}
         />
       )}
       <div className="judgment-preview-toolbar">

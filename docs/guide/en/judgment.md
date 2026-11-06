@@ -6,7 +6,7 @@ Student waiting screens share a consistent card design while retaining experimen
 
 This module comes from the former standalone Judgment application, previously named `DKshawn/Exp-all-in-one`. Its implementation is in `src/experiments/judgment/`. See the [pinned source and change record](../../../src/experiments/judgment/UPSTREAM.md).
 
-The teacher setup header has **戻る** to return to experiment selection. The demo task-selection header has **戻る** to return to the demo list and **教員用ページへ** to return to teacher setup.
+The teacher setup header has **戻る** to return to experiment selection. The demo task-selection header has **戻る** to return to the demo list and **DEMOモードを終了** to return to teacher setup.
 
 Select tasks using cards with descriptions. The right panel groups the selected count, task list, randomization and create/start/end/preview controls, staying visible while scrolling on desktop and moving above the cards on narrow screens. Teacher pages support Japanese, Chinese and English and remember the language in this browser. Switching language does not change task selection or randomization. The preview opens in the teacher's selected language and also allows switching within the student view. Settings are locked during an active run, while the circular **i** buttons and preview remain usable. After ending, configure the next run in the same room.
 

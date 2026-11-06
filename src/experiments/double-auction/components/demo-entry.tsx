@@ -2,14 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, GraduationCap } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import type { RoomConfig } from "@/experiments/double-auction/lib/types";
 import type { StudyGeneratorConfig } from "@/experiments/double-auction/lib/study-types";
 import { DEMO_SETTINGS } from "@/experiments/double-auction/lib/demo";
 import { Header, Footer } from "../../../components/shell";
 import { TeacherForm } from "./teacher-form";
 import { DemoSelectionLink } from "@/components/demo-selection-link";
+import { DEMO_TEACHER_HREFS } from "@/lib/demo-navigation";
 
 const DemoRoom = dynamic(() => import("./demo-room"), {
   ssr: false,
@@ -41,15 +41,8 @@ export function DemoEntry() {
       <Header
         homeHref="/demo"
         demoLabel="DEMOモード"
-        leading={
-          <>
-            <DemoSelectionLink />
-            <Link className="button secondary small-button" href="/teacher">
-              <ArrowLeft size={15} />
-              教員用ページへ
-            </Link>
-          </>
-        }
+        demoExitHref={DEMO_TEACHER_HREFS.institutions}
+        leading={<DemoSelectionLink />}
       ></Header>
       <main className="narrow-main teacher-setup-main">
         <h1 className="eyebrow teacher-entry-heading">

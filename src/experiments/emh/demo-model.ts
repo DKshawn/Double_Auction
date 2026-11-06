@@ -14,7 +14,6 @@ export const PRACTICE_EXP2_OPTIONS: Exp2Options = {
   marketCount: null,
   states: {
     prior: [0.35, 0.42, 0.23],
-    outcomes: [3, 3, 3, 3, 2, 2],
     dividends: [
       [80, 110, 170],
       [60, 180, 100],
@@ -47,7 +46,7 @@ export function makeDemo(
       ...(experiment === "exp2"
         ? {
             experiment: "exp2" as const,
-            states: structuredClone(options.states),
+            states: { ...structuredClone(options.states), outcomes: [] },
             emptyUnitsLimit: options.emptyUnitsLimit,
             insiderStartRound: options.insiderStartRound,
             insiderCountPerType: options.insiderCountPerType,

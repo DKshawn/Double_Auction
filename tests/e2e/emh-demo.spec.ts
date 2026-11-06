@@ -170,7 +170,7 @@ test("EMH Demo shares formal settings and confirms or releases them before tradi
 
 test("Exp2 demo runs the default 12-person market with practice information", async ({
   page,
-}) => {
+}, info) => {
   const errors: string[] = [];
   const writes: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -214,8 +214,11 @@ test("Exp2 demo runs the default 12-person market with practice information", as
   await page.getByRole("button", { name: "学生画面を見る" }).click();
   await expect(page.getByText("Clue カード")).toBeVisible();
   await expect(page.getByText("情報なし")).toBeVisible();
-  await expect(page.getByText("状態別の配当 / 確率")).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "状態別の配当、確率と期待配当" }),
+  ).toBeVisible();
   await expect(page.locator(".exp2-state-values > div")).toHaveCount(3);
+  await expect(page.locator(".exp2-state-realized")).toHaveCount(0);
   for (const state of await page.locator(".exp2-state-values > div").all()) {
     await expect(state).toContainText("円");
     await expect(state).toContainText("%");
@@ -240,6 +243,8 @@ test("Exp2 demo runs the default 12-person market with practice information", as
   await expect(page.getByRole("heading", { name: "注文板" })).toBeVisible();
   const buyColumn = page.locator(".student-action-column.buy-side");
   const sellColumn = page.locator(".student-action-column.sell-side");
+  await expect(buyColumn).toHaveCSS("border-top-width", "1px");
+  await expect(sellColumn).toHaveCSS("border-top-width", "1px");
   await expect(
     buyColumn.getByRole("button", { name: "買い成行注文" }),
   ).toBeVisible();
@@ -300,7 +305,38 @@ test("Exp2 demo runs the default 12-person market with practice information", as
       .getByRole("dialog")
       .getByRole("button", { name: "配当を確定して進む" })
       .click();
+    if (round === 1) {
+      await page.getByRole("button", { name: "学生画面を見る" }).click();
+      const realized = page.locator(
+        ".exp2-state-values > .exp2-state-realized",
+      );
+      await expect(realized).toHaveCount(1);
+      const realizedState = (await realized.textContent())!.match(
+        /状態\s*([123])/,
+      )?.[1];
+      expect(realizedState).toBeDefined();
+      await expect(realized).toContainText("実現");
+      await expect(realized).toHaveCSS("animation-name", "emh-state-reveal");
+      await realized.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: info.outputPath("exp2-state-reveal.png") });
+      await page
+        .locator(".emh-conditions")
+        .screenshot({ path: info.outputPath("exp2-conditions.png") });
+      await expect(
+        page.locator(".exp2-private-values [role='status']"),
+      ).toHaveText(`実現した状態は状態 ${realizedState} です`);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await expect(realized).toHaveCSS("animation-name", "none");
+      await expect(realized).toContainText("実現");
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.getByRole("button", { name: "教員画面を見る" }).click();
+    }
     await page.getByRole("button", { name: "次へ", exact: true }).click();
+    if (round === 1) {
+      await page.getByRole("button", { name: "学生画面を見る" }).click();
+      await expect(page.locator(".exp2-state-realized")).toHaveCount(0);
+      await page.getByRole("button", { name: "教員画面を見る" }).click();
+    }
   }
   await page.getByRole("button", { name: "学生画面を見る" }).click();
   await expect(page.getByText("Clue カード")).toBeVisible();
@@ -602,7 +638,9 @@ test("demo countdown displays private conditions before trading and can be pause
     ).toBe(true);
   }
   await page.setViewportSize({ width: 1366, height: 768 });
-  await expect(page.getByText("状態別の配当 / 確率")).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "状態別の配当、確率と期待配当" }),
+  ).toBeVisible();
   await expect(page.getByLabel("買値（円）", { exact: true })).toBeDisabled();
   const clock = page.locator(".session-bar .timer");
   const pausedClock = await clock.textContent();

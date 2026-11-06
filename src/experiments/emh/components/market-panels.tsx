@@ -220,6 +220,10 @@ export function PersonalPanel({
 }) {
   const me = room.me!;
   const panelRef = useRef<HTMLElement>(null);
+  const previousState = useRef({
+    year: room.year,
+    state: room.exp2?.state ?? null,
+  });
   useEffect(() => {
     if (room.status !== "countdown") return;
     const panel = panelRef.current;
@@ -270,6 +274,22 @@ export function PersonalPanel({
       window.removeEventListener("scroll", positionCard);
     };
   }, [room.status, room.pausedAt]);
+  useEffect(() => {
+    const state = room.exp2?.state ?? null;
+    const previous = previousState.current;
+    previousState.current = { year: room.year, state };
+    if (
+      state === null ||
+      (previous.year === room.year && previous.state === state)
+    )
+      return;
+    const card = panelRef.current?.querySelector(".exp2-state-realized");
+    if (!card) return;
+    const bounds = card.getBoundingClientRect();
+    if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
+      card.scrollIntoView({ block: "center", behavior: "instant" });
+    }
+  }, [room.year, room.exp2?.state]);
   return (
     <aside
       ref={panelRef}
@@ -306,11 +326,26 @@ export function PersonalPanel({
         ) : (
           <div className="exp2-private-values">
             <div className="exp2-state-info">
-              <p>状態別の配当 / 確率</p>
-              <div className="exp2-state-values">
+              <div
+                className="exp2-state-values"
+                role="group"
+                aria-label="状態別の配当、確率と期待配当"
+              >
                 {room.exp2.prior.map((probability, index) => (
-                  <div key={index}>
-                    <span>状態 {index + 1}</span>
+                  <div
+                    key={`${room.year}:${index}`}
+                    className={
+                      room.exp2!.state === index + 1
+                        ? "exp2-state-realized"
+                        : undefined
+                    }
+                  >
+                    <span>
+                      状態 {index + 1}
+                      {room.exp2!.state === index + 1 && (
+                        <b className="exp2-state-realized-label">実現</b>
+                      )}
+                    </span>
                     <div className="exp2-state-line">
                       <span>配当</span>
                       <strong>
@@ -344,12 +379,10 @@ export function PersonalPanel({
                 {room.exp2.clue ? `状態 ${room.exp2.clue}` : "情報なし"}
               </strong>
             </div>
-            {room.exp2.state !== null && (
-              <div className="exp2-realized">
-                <span>実現した状態</span>
-                <strong>{room.exp2.state}</strong>
-              </div>
-            )}
+            <div className="sr-only" role="status" aria-live="polite">
+              {room.exp2.state !== null &&
+                `実現した状態は状態 ${room.exp2.state} です`}
+            </div>
           </div>
         )}
       </div>

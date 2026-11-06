@@ -56,7 +56,10 @@ test("Exp2 creation and participant view use the default two securities and a si
       .click();
     await expect(studentPage.getByText("Clue カード")).toBeVisible();
     await expect(studentPage.getByText("情報なし")).toBeVisible();
-    await expect(studentPage.getByText("状態別の配当 / 確率")).toBeVisible();
+    await expect(
+      studentPage.getByRole("group", { name: "状態別の配当、確率と期待配当" }),
+    ).toBeVisible();
+    await expect(studentPage.locator(".exp2-state-realized")).toHaveCount(0);
     await expect(studentPage.locator(".stat-grid")).toContainText(
       /保有証券\s*2\s*単位/,
     );
@@ -77,6 +80,38 @@ test("Exp2 creation and participant view use the default two securities and a si
         ),
       ).toBe(true);
     }
+    await studentPage.setViewportSize({ width: 390, height: 568 });
+    await expect(studentPage.getByLabel("買値（円）")).toBeEnabled({
+      timeout: 12000,
+    });
+    await studentPage.evaluate(() => window.scrollTo(0, 0));
+    await page.getByRole("button", { name: "期を終了", exact: true }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "配当を確定して進む" })
+      .click();
+    const realized = studentPage.locator(
+      ".exp2-state-values > .exp2-state-realized",
+    );
+    await expect(realized).toHaveCount(1);
+    await expect(realized).toContainText("実現");
+    await expect(realized).toHaveCSS("animation-name", "emh-state-reveal");
+    await expect
+      .poll(() =>
+        realized.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.top >= 0 && bounds.bottom <= window.innerHeight;
+        }),
+      )
+      .toBe(true);
+    await studentPage.screenshot({
+      path: info.outputPath("exp2-state-reveal.png"),
+    });
+    const resultState = await studentPage
+      .locator(".results-panel tbody .period-chip")
+      .first()
+      .textContent();
+    await expect(realized).toContainText(`状態 ${resultState}`);
     expect(errors).toEqual([]);
   } finally {
     await Promise.all(contexts.map((context) => context.close()));

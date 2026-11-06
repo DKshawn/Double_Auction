@@ -75,12 +75,6 @@ export function SettingsSummary({
               タイプ{i + 1}：{values.join(" / ")}円
             </p>
           ))}
-          <p>
-            実現状態：
-            {settings.exp2.states.outcomes
-              .slice(0, settings.rounds)
-              .join(" / ")}
-          </p>
         </details>
       )}
     </>

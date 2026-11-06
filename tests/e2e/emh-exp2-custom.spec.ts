@@ -37,7 +37,9 @@ test("teacher configures Exp2 and allocates 11 students across two markets", asy
         await page
           .getByLabel(`タイプ${type}・状態${state}`, { exact: true })
           .fill(String(values[state - 1]));
-    await page.getByRole("combobox", { name: "第1ラウンド" }).selectOption("3");
+    await expect(
+      page.getByRole("combobox", { name: "第1ラウンド" }),
+    ).toHaveCount(0);
     await page
       .getByLabel("教員パスワード", { exact: false })
       .fill("Emh-Custom-Verification");
@@ -93,7 +95,12 @@ test("teacher configures Exp2 and allocates 11 students across two markets", asy
       [37, 39, 41],
     ]);
     expect(exported.markets).toHaveLength(2);
-    expect(exported.markets[0].conditions.config.states.outcomes[0]).toBe(3);
+    expect(exported.markets[0].conditions.config.states.outcomes).toHaveLength(
+      3,
+    );
+    expect(exported.markets[1].conditions.config.states.outcomes).toEqual(
+      exported.markets[0].conditions.config.states.outcomes,
+    );
     expect(exported.markets[0].conditions.rules.maxEmptyUnits).toBe(3);
     const studentResponse = await contexts[0]!.request.get(
       `${path}/emh?session=student`,
@@ -130,14 +137,16 @@ test("Exp2 demo uses custom information and dividends", async ({ page }) => {
   await page.getByLabel("内部情報の開始ラウンド").fill("1");
   await page.getByLabel("内部情報を持つ人数（各タイプ）").fill("1");
   await page.getByText("状態・配当の設定", { exact: true }).click();
-  for (const [i, p] of [20, 30, 50].entries())
+  for (const [i, p] of [0, 0, 100].entries())
     await page.getByLabel(`状態${i + 1}`, { exact: true }).fill(String(p));
   for (let type = 1; type <= 3; type++)
     for (let state = 1; state <= 3; state++)
       await page
         .getByLabel(`タイプ${type}・状態${state}`, { exact: true })
         .fill(String(state * 10));
-  await page.getByRole("combobox", { name: "第1ラウンド" }).selectOption("3");
+  await expect(page.getByRole("combobox", { name: "第1ラウンド" })).toHaveCount(
+    0,
+  );
   await page.getByRole("button", { name: "デモルームを作成" }).click();
   await expect(page.getByRole("heading", { name: "3人が入室" })).toBeVisible();
   await expect(page.locator(".emh-allocation")).toContainText(
@@ -147,7 +156,7 @@ test("Exp2 demo uses custom information and dividends", async ({ page }) => {
   await page.getByRole("button", { name: "全市場で実験を開始" }).click();
   await page.getByRole("button", { name: "学生画面を見る" }).click();
   await expect(page.locator(".exp2-clue")).toContainText("状態 3");
-  await expect(page.locator(".exp2-state-info")).toContainText("20%");
+  await expect(page.locator(".exp2-state-info")).toContainText("100%");
   await expect(page.locator(".exp2-state-info")).toContainText("30円");
   await expect(page.locator(".stat-grid")).toContainText("5");
   await page.getByRole("button", { name: "設定を見直す" }).click();

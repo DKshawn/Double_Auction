@@ -50,6 +50,36 @@ export function benchmarks(config: Config) {
     perfectB: Math.max(...config.dividends.map((d) => d.b)),
   };
 }
+/** Draw once before trading; every draw uses the configured state distribution. */
+export function drawStates(
+  prior: number[],
+  rounds: number,
+  random: () => number = Math.random,
+): number[] {
+  const total = prior.reduce((sum, probability) => sum + probability, 0);
+  requireRule(
+    prior.length === 3 &&
+      prior.every((p) => Number.isFinite(p) && p >= 0) &&
+      Math.abs(total - 1) < 0.000001 &&
+      Number.isInteger(rounds) &&
+      rounds > 0,
+    "状態の確率を確認してください。",
+  );
+  return Array.from({ length: rounds }, () => {
+    const draw = random();
+    requireRule(
+      Number.isFinite(draw) && draw >= 0 && draw < 1,
+      "抽選に失敗しました。",
+    );
+    const value = draw * total;
+    let cumulative = 0;
+    for (let i = 0; i < prior.length; i++) {
+      cumulative += prior[i]!;
+      if (value < cumulative) return i + 1;
+    }
+    return prior.findLastIndex((p) => p > 0) + 1;
+  });
+}
 function exp2Prices(room: Room) {
   const states = room.config.states!;
   const state = states.outcomes[room.year - 1]!;
@@ -648,6 +678,16 @@ export function act(
             room.participants.length,
         "タイプの割り当てを確認してください。",
       );
+      if (
+        room.config.experiment === "exp2" &&
+        room.config.states?.outcomes.length === 0
+      ) {
+        room.config.states.outcomes = drawStates(
+          room.config.states.prior,
+          room.config.rounds,
+          random,
+        );
+      }
       resetYear(room);
       room.status = "countdown";
       room.countdownEndsAt = now + START_COUNTDOWN_SECONDS * 1000;

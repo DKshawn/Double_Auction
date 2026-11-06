@@ -252,7 +252,6 @@ test("Exp2 supports variable attendance, custom conditions and locks them on ass
           [40, 50, 60],
           [70, 80, 90],
         ],
-        outcomes: [3, 2, 1, 1, 2, 3],
       },
     },
   };
@@ -304,10 +303,49 @@ test("Exp2 supports variable attendance, custom conditions and locks them on ass
     );
     assert.equal(market.conditions.rules.maxEmptyUnits, 3);
     assert.deepEqual(
-      market.conditions.config.states,
-      validSettings.exp2!.states,
+      market.conditions.config.states.prior,
+      validSettings.exp2!.states.prior,
+    );
+    assert.deepEqual(
+      market.conditions.config.states.dividends,
+      validSettings.exp2!.states.dividends,
+    );
+    assert.equal(market.conditions.config.states.outcomes.length, 3);
+    assert.ok(
+      market.conditions.config.states.outcomes.every(
+        (state: number) => state >= 1 && state <= 3,
+      ),
     );
   }
+  assert.deepEqual(
+    conditions.markets[0].conditions.config.states.outcomes,
+    conditions.markets[1].conditions.config.states.outcomes,
+  );
+  const drawnStates = conditions.markets[0].conditions.config.states.outcomes;
+  const insiderClues: number[] = [];
+  for (const student of c.students) {
+    const snapshot = (await c.get(student.token, "student")).state;
+    assert.equal(snapshot.settings, null);
+    assert.equal(JSON.stringify(snapshot).includes('"outcomes"'), false);
+    if (snapshot.market!.exp2!.clue !== null)
+      insiderClues.push(snapshot.market!.exp2!.clue!);
+  }
+  assert.equal(insiderClues.length, 6);
+  assert.ok(insiderClues.every((state) => state === drawnStates[0]));
+  await c.command("pause-all");
+  await c.command("resume-all");
+  const reloaded = JSON.parse(
+    (await emh.export(c.teacher.code, c.teacher.token, "teacher", "conditions"))
+      .body,
+  );
+  assert.deepEqual(
+    reloaded.markets.map(
+      (market: {
+        conditions: { config: { states: { outcomes: number[] } } };
+      }) => market.conditions.config.states.outcomes,
+    ),
+    [drawnStates, drawnStates],
+  );
 });
 
 test("Exp2 allocation validates a chosen market count without requiring multiples of 12", () => {
@@ -342,6 +380,77 @@ test("Exp2 allocation validates a chosen market count without requiring multiple
     }).success,
     false,
   );
+});
+
+test("new Exp2 draws once for all markets, keeps the draw on retry and exposes only the insider's clue", async () => {
+  const options = structuredClone(FORMAL_EXP2_OPTIONS);
+  options.marketCount = 2;
+  options.insiderStartRound = 1;
+  options.insiderCountPerType = 1;
+  options.states.prior = [0, 0, 1];
+  const c = await classroom(
+    6,
+    { ...EXP2_SETTINGS, rounds: 3, exp2: options },
+    "exp2",
+  );
+  await c.command("assign");
+  const revision = (await c.get()).state.revision;
+  const input: RequestCommand = {
+    scope: "session",
+    requestId: randomUUID(),
+    command: { kind: "start", expectedRevision: revision },
+  };
+  const start = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    input,
+  );
+  assert.equal(start.error, undefined);
+  const retry = await emh.request(
+    c.teacher.code,
+    c.teacher.token,
+    "teacher",
+    undefined,
+    input,
+  );
+  assert.equal(retry.error, undefined);
+  const exported = JSON.parse(
+    (await emh.export(c.teacher.code, c.teacher.token, "teacher", "conditions"))
+      .body,
+  );
+  for (const market of exported.markets)
+    assert.deepEqual(market.conditions.config.states.outcomes, [3, 3, 3]);
+  for (const student of c.students) {
+    const snapshot = (await c.get(student.token, "student")).state;
+    assert.equal(snapshot.market!.exp2!.clue, 3);
+    assert.equal(snapshot.market!.exp2!.state, null);
+    assert.equal(JSON.stringify(snapshot).includes('"outcomes"'), false);
+  }
+});
+
+test("legacy assigned Exp2 rooms preserve their saved states on start", async () => {
+  const c = await classroom(3, EXP2_SETTINGS, "exp2");
+  await c.command("assign");
+  await db.query(
+    "UPDATE emh_sessions SET state=jsonb_set(state, '{settings,exp2,states,outcomes}', '[2,1,2,1,2,1]'::jsonb) WHERE code=$1",
+    [c.teacher.code],
+  );
+  await db.query(
+    "UPDATE emh_markets SET state=jsonb_set(state, '{config,states,outcomes}', '[2,1,2,1,2,1]'::jsonb) WHERE room_code=$1",
+    [c.teacher.code],
+  );
+  await c.command("start");
+  const exported = JSON.parse(
+    (await emh.export(c.teacher.code, c.teacher.token, "teacher", "conditions"))
+      .body,
+  );
+  assert.deepEqual(
+    exported.markets[0].conditions.config.states.outcomes,
+    [2, 1, 2, 1, 2, 1],
+  );
+  assert.equal("outcomes" in exported.settings.exp2.states, false);
 });
 
 test("Exp2 can assign fifteen real students to one market", async () => {

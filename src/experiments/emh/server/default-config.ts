@@ -23,7 +23,6 @@ export const FORMAL_EXP2_OPTIONS: Exp2Options = {
   marketCount: null,
   states: {
     prior: [0.35, 0.42, 0.23],
-    outcomes: [1, 1, 1, 1, 2, 2],
     dividends: [
       [90, 95, 214],
       [52, 232, 115],
@@ -41,5 +40,5 @@ export const EXP2_CONFIG: Config = {
   unitSeconds: 30,
   breakSeconds: 60,
   dividends: [],
-  states: FORMAL_EXP2_OPTIONS.states,
+  states: { ...FORMAL_EXP2_OPTIONS.states, outcomes: [] },
 };

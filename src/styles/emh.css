@@ -2281,6 +2281,15 @@
 }
 .emh-app .student-action-column {
   min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.emh-app .student-action-column.buy-side {
+  border-color: var(--buy-line);
+}
+.emh-app .student-action-column.sell-side {
+  border-color: var(--sell-line);
 }
 .emh-app .student-action-column h3 {
   margin: 0 0 6px;
@@ -2320,6 +2329,7 @@
 }
 .emh-app .wide .exp2-state-values > div {
   border-radius: 6px;
+  border: 1px solid transparent;
   background: var(--surface-soft);
   padding: 4px 6px;
 }
@@ -2647,8 +2657,7 @@
 .emh-app .score-status.final {
   color: var(--buy);
 }
-.emh-app .emh-conditions .exp2-clue,
-.emh-app .emh-conditions .exp2-realized {
+.emh-app .emh-conditions .exp2-clue {
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -2657,10 +2666,6 @@
   border-radius: 6px;
   background: var(--lavender);
   color: var(--accent);
-}
-.emh-app .emh-conditions .exp2-state-info > p {
-  color: var(--muted);
-  margin-bottom: 6px;
 }
 .emh-app .emh-conditions .exp2-state-values > div {
   display: grid;
@@ -2680,6 +2685,31 @@
 }
 .emh-app .emh-conditions .exp2-expected-contribution {
   grid-column: 1 / -1;
+}
+.emh-app .emh-conditions .exp2-state-values > .exp2-state-realized {
+  border-color: var(--accent);
+  background: var(--lavender);
+  animation: emh-state-reveal 1.8s ease-out;
+}
+.emh-app .exp2-state-realized-label {
+  margin-left: 4px;
+  color: var(--accent);
+}
+@keyframes emh-state-reveal {
+  0%,
+  50%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-line);
+  }
+  25%,
+  70% {
+    box-shadow: 0 0 0 4px var(--accent-line);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .emh-app .emh-conditions .exp2-state-values > .exp2-state-realized {
+    animation: none;
+  }
 }
 .emh-app .market-grid > .emh-conditions.study-conditions-review {
   position: relative;

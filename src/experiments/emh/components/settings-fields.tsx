@@ -258,6 +258,9 @@ export function SettingsFields({
                 確率の合計は100%にしてください。
               </p>
             )}
+            <p className="field-help">
+              各ラウンドの状態は実験開始時にこの確率で抽選します。
+            </p>
           </fieldset>
           <fieldset className="emh-exp2-grid">
             <legend>タイプ別・状態別の配当（円／単位）</legend>
@@ -287,36 +290,6 @@ export function SettingsFields({
                 ))}
               </div>
             ))}
-          </fieldset>
-          <fieldset className="emh-exp2-grid">
-            <legend>各ラウンドの実現状態</legend>
-            <div className="emh-ratio-grid">
-              {options.states.outcomes
-                .slice(0, settings.rounds)
-                .map((state, index) => (
-                  <label className="field" key={index}>
-                    第{index + 1}ラウンド
-                    <select
-                      value={state}
-                      onChange={(e) => {
-                        const outcomes = [
-                          ...options.states.outcomes,
-                        ] as Exp2Options["states"]["outcomes"];
-                        outcomes[index] = Number(e.target.value);
-                        updateOptions({
-                          states: { ...options.states, outcomes },
-                        });
-                      }}
-                    >
-                      {[1, 2, 3].map((n) => (
-                        <option key={n} value={n}>
-                          状態 {n}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ))}
-            </div>
           </fieldset>
         </details>
       )}

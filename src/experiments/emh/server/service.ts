@@ -20,6 +20,7 @@ import {
   act,
   addParticipant,
   assignParticipants,
+  drawStates,
   advanceClock,
   newRoom,
   phaseKey,
@@ -435,9 +436,12 @@ export class EmhService {
                       breakSeconds: session.settings!.breakSeconds,
                       ...(session.experiment === "exp2"
                         ? {
-                            states: structuredClone(
-                              session.settings!.exp2!.states,
-                            ),
+                            states: {
+                              ...structuredClone(
+                                session.settings!.exp2!.states,
+                              ),
+                              outcomes: [],
+                            },
                             emptyUnitsLimit:
                               session.settings!.exp2!.emptyUnitsLimit,
                             insiderStartRound:
@@ -512,6 +516,21 @@ export class EmhService {
                         ? "reveal"
                         : "start";
                 const next = structuredClone(markets);
+                // One room-wide draw keeps all markets on the same state each round.
+                if (actionKind === "start" && session.experiment === "exp2") {
+                  const pending = next.filter(
+                    (m) => m.state.config.states?.outcomes.length === 0,
+                  );
+                  if (pending.length) {
+                    const states = drawStates(
+                      session.settings!.exp2!.states.prior,
+                      session.settings!.rounds,
+                      random,
+                    );
+                    for (const m of pending)
+                      m.state.config.states!.outcomes = [...states];
+                  }
+                }
                 for (const m of next) {
                   if (
                     actionKind === "pause" &&
@@ -700,7 +719,10 @@ export class EmhService {
                 breakSeconds: session.settings!.breakSeconds,
                 ...(session.experiment === "exp2"
                   ? {
-                      states: structuredClone(session.settings!.exp2!.states),
+                      states: {
+                        ...structuredClone(session.settings!.exp2!.states),
+                        outcomes: [],
+                      },
                       emptyUnitsLimit: session.settings!.exp2!.emptyUnitsLimit,
                       insiderStartRound:
                         session.settings!.exp2!.insiderStartRound,

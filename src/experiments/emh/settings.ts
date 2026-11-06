@@ -39,16 +39,20 @@ export const exp2OptionsSchema = z
             z.number().int().min(0).max(100000),
           ]),
         ]),
-        outcomes: z.tuple([
-          z.number().int().min(1).max(3),
-          z.number().int().min(1).max(3),
-          z.number().int().min(1).max(3),
-          z.number().int().min(1).max(3),
-          z.number().int().min(1).max(3),
-          z.number().int().min(1).max(3),
-        ]),
+        // Accepted only for old saved settings; new experiments draw their states.
+        outcomes: z
+          .tuple([
+            z.number().int().min(1).max(3),
+            z.number().int().min(1).max(3),
+            z.number().int().min(1).max(3),
+            z.number().int().min(1).max(3),
+            z.number().int().min(1).max(3),
+            z.number().int().min(1).max(3),
+          ])
+          .optional(),
       })
-      .strict(),
+      .strict()
+      .transform(({ prior, dividends }) => ({ prior, dividends })),
   })
   .strict();
 export type Exp2Options = z.infer<typeof exp2OptionsSchema>;

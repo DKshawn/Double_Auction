@@ -64,7 +64,9 @@ test("EMH screen-size preview keeps the same interactive Exp2 session", async ({
   await expect(
     page.getByRole("button", { name: "教員画面を見る" }),
   ).toBeVisible();
-  await expect(demo.getByText("状態別の配当 / 確率")).toBeVisible();
+  await expect(
+    demo.getByRole("group", { name: "状態別の配当、確率と期待配当" }),
+  ).toBeVisible();
   await expect(demo.locator(".emh-conditions")).toHaveClass(
     /study-conditions-review/,
   );

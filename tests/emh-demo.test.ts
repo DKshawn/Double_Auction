@@ -134,7 +134,7 @@ test("Exp2 demo uses adjustable securities, practice conditions, and private-inf
   assert.deepEqual(room.typeCounts, [4, 4, 4]);
   assert.equal(room.config.initialUnits, 10);
   assert.equal(room.config.periodSeconds, 300);
-  assert.deepEqual(room.config.states!.outcomes, [3, 3, 3, 3, 2, 2]);
+  assert.deepEqual(room.config.states!.outcomes, []);
   assignParticipants(room, () => 0.999);
   const insider = room.participants.find((p) => p.type === 1 && p.insider)!;
   const uninformed = room.participants.find((p) => p.type === 1 && !p.insider)!;
@@ -148,6 +148,7 @@ test("Exp2 demo uses adjustable securities, practice conditions, and private-inf
       () => 0.999,
     );
   command("start");
+  assert.deepEqual(room.config.states!.outcomes, [3, 3, 3, 3, 3, 3]);
   now += 5000;
   advanceClock(room, now);
   const expected = 80 * 0.35 + 110 * 0.42 + 170 * 0.23;

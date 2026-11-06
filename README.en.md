@@ -8,7 +8,7 @@ Student waiting screens share a consistent card design while retaining experimen
 
 [Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app) (the teacher entry has a separate URL)
 
-The EMH order book shows price and quantity and marks your resting orders in both the list and bar chart. Teachers can find buyer and seller numbers in the trade records and CSV export. On each side, the limit and market buttons sit side by side. Experiment 2 shows each state’s dividend multiplied by its public probability. Unfilled limits queue by price, then arrival time, until period end. You can amend or cancel them. Draft bid and ask prices also stay in their fields throughout the period.
+The EMH order book shows price and quantity and marks your resting orders in both the list and bar chart. Teachers can find buyer and seller numbers in the trade records and CSV export. On each side, the limit and market buttons sit side by side. Experiment 2 shows each state’s dividend multiplied by its public probability and highlights the realized state on its card at round end. Unfilled limits queue by price, then arrival time, until period end. You can amend or cancel them. Draft bid and ask prices also stay in their fields throughout the period.
 
 ## Get started
 
@@ -49,7 +49,7 @@ EMH Demo Model supports both experiments. Experiment 2 defaults to a 12-person m
 
 Everyone can quote in EMH. Accepting an opposing price or submitting a crossing quote immediately trades one unit. Students see anonymous trade records and their own resting orders highlighted in the book; Experiment 1 scores are marked provisional until period B ends.
 
-Experiment 2 configures initial securities, the unsuccessful-attempt limit, insider start round and number per type, state probabilities, dividends, realized states, market count, target size and type ratios. Market count may be automatic or specified; actual attendance is split into markets of 3–999. Defaults are a target of 12, two securities, two unsuccessful attempts and up to two insiders per type from round 3.
+Experiment 2 configures initial securities, the unsuccessful-attempt limit, insider start round and number per type, state probabilities, dividends, market count, target size and type ratios. At start, each round’s state is drawn independently from the configured probabilities and saved; markets in the same room share the draw and Clues show the corresponding state. Market count may be automatic or specified; actual attendance is split into markets of 3–999. Defaults are a target of 12, two securities, two unsuccessful attempts and up to two insiders per type from round 3.
 
 The EMH demo control panel switches between teacher and student views, pauses, advances 30 seconds or to the next period, restarts, and returns to settings. Fast-forward processes virtual trades and deadlines in order; it is disabled during the countdown and while paused. **やり直す** keeps the settings and resets allocation and progress. The screen-size preview places the control panel outside the frame.
 

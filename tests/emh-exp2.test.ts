@@ -4,6 +4,8 @@ import {
   act,
   advanceClock,
   addParticipant,
+  assignParticipants,
+  drawStates,
   newRoom,
   phaseKey,
   unitKey,
@@ -15,6 +17,105 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RoomDashboard } from "../src/experiments/emh/components/room-dashboard";
 import { Yen } from "../src/experiments/emh/components/market-panels";
+
+test("state draws use the configured probabilities, including boundaries and zero probabilities", () => {
+  const draws = [0, 0.349999, 0.35, 0.769999, 0.77, 0.999999];
+  assert.deepEqual(
+    drawStates([0.35, 0.42, 0.23], draws.length, () => draws.shift()!),
+    [1, 1, 2, 2, 3, 3],
+  );
+  for (const [prior, expected] of [
+    [[1, 0, 0], 1],
+    [[0, 1, 0], 2],
+    [[0, 0, 1], 3],
+  ] as const) {
+    assert.deepEqual(
+      drawStates([...prior], 3, () => 0.999999),
+      [expected, expected, expected],
+    );
+  }
+  let index = 0;
+  const evenlySpaced = drawStates(
+    [0.35, 0.42, 0.23],
+    1000,
+    () => (index++ + 0.5) / 1000,
+  );
+  assert.deepEqual(
+    [1, 2, 3].map(
+      (state) => evenlySpaced.filter((draw) => draw === state).length,
+    ),
+    [350, 420, 230],
+  );
+  assert.throws(() => drawStates([0.1, 0.1, 0.1], 1, () => 0.5));
+  assert.throws(() => drawStates([0.35, 0.42, 0.23], 1, () => 1));
+});
+
+test("new Exp2 draws all states once before countdown and keeps each clue consistent with settlement", () => {
+  const room = newRoom(
+    "DRAW",
+    {
+      ...EXP2_CONFIG,
+      rounds: 3,
+      insiderStartRound: 1,
+      insiderCountPerType: 1,
+      states: { ...EXP2_CONFIG.states!, outcomes: [] },
+    },
+    0,
+  );
+  for (let i = 0; i < 3; i++)
+    addParticipant(
+      room,
+      {
+        id: `p${i}`,
+        name: `name${i}`,
+        studentId: `s${i}`,
+        pinHash: "",
+        tokenHash: "",
+      },
+      0,
+    );
+  assignParticipants(room, () => 0.9);
+  const draws = [0.1, 0.5, 0.9];
+  act(
+    room,
+    { role: "teacher" },
+    { kind: "start", expectedPhase: phaseKey(room) },
+    0,
+    () => draws.shift()!,
+  );
+  assert.deepEqual(room.config.states!.outcomes, [1, 2, 3]);
+  assert.equal(room.status, "countdown");
+  const saved = JSON.parse(JSON.stringify(room)) as typeof room;
+  assert.deepEqual(saved.config.states!.outcomes, [1, 2, 3]);
+  for (let year = 1; year <= 3; year++) {
+    const student = view(
+      saved,
+      { role: "student", participantId: "p0" },
+      year * 10000,
+    );
+    assert.equal(student.exp2!.clue, year);
+    assert.equal(student.exp2!.state, null);
+    assert.equal(JSON.stringify(student).includes('"outcomes"'), false);
+    if (year === 1) advanceClock(saved, 5000, () => 0.1);
+    act(
+      saved,
+      { role: "teacher" },
+      { kind: "end-period", expectedPhase: phaseKey(saved) },
+      year * 10000 + 1,
+      () => 0.1,
+    );
+    assert.equal(saved.results.at(-1)!.state, year);
+    assert.deepEqual(saved.config.states!.outcomes, [1, 2, 3]);
+    if (year < 3)
+      act(
+        saved,
+        { role: "teacher" },
+        { kind: "next-year", expectedPhase: phaseKey(saved) },
+        year * 10000 + 2,
+        () => 0.1,
+      );
+  }
+});
 
 test("custom insider rules and dividends determine private information and equilibrium", () => {
   const room = newRoom(
@@ -153,8 +254,15 @@ test("zero dividends and no insiders yield defined results without division by z
   assert.equal(room.results[0]!.allocationEfficiency, null);
 });
 
-test("Exp2 settles one period per round and protects clue cards", () => {
-  const room = newRoom("EXP234", EXP2_CONFIG, 0);
+test("legacy Exp2 sessions retain their preset states and protect clue cards", () => {
+  const room = newRoom(
+    "EXP234",
+    {
+      ...EXP2_CONFIG,
+      states: { ...EXP2_CONFIG.states!, outcomes: [1, 1, 1, 1, 2, 2] },
+    },
+    0,
+  );
   for (let i = 0; i < 12; i++)
     addParticipant(
       room,
@@ -207,7 +315,7 @@ test("Exp2 settles one period per round and protects clue cards", () => {
     const uninformedView = view(room, student(uninformed.id), year * 10);
     assert.equal(
       informedView.exp2!.clue,
-      year > 2 ? EXP2_CONFIG.states!.outcomes[year - 1] : null,
+      year > 2 ? room.config.states!.outcomes[year - 1] : null,
     );
     assert.equal(uninformedView.exp2!.clue, null);
     assert.equal(uninformedView.exp2!.allDividends, null);
@@ -221,7 +329,7 @@ test("Exp2 settles one period per round and protects clue cards", () => {
       random,
     );
     const result = room.results.at(-1)!;
-    assert.equal(result.state, EXP2_CONFIG.states!.outcomes[year - 1]);
+    assert.equal(result.state, room.config.states!.outcomes[year - 1]);
     assert.ok(Math.abs(result.piPrice! - (year <= 4 ? 142.09 : 232)) < 1e-8);
     assert.ok(
       Math.abs(result.rePrice! - (year <= 2 ? 142.09 : year <= 4 ? 136 : 232)) <
@@ -288,7 +396,8 @@ test("formal Exp2 student view presents state conditions, both quote forms and r
   const html = renderToStaticMarkup(
     createElement(RoomDashboard, { room: studentRoom, act: async () => {} }),
   );
-  assert.match(html, /状態別の配当 \/ 確率/);
+  assert.match(html, /aria-label="状態別の配当、確率と期待配当"/);
+  assert.doesNotMatch(html, /状態別の配当 \/ 確率/);
   assert.match(html, /期待配当/);
   assert.doesNotMatch(html, /期待配当合計/);
   assert.doesNotMatch(html, /見込利益/);
@@ -335,6 +444,24 @@ test("state dividend contributions use the student's public probabilities, even 
     );
   }
   assert.match(html, /Clue カード/);
+  assert.doesNotMatch(html, /class="exp2-state-realized"/);
+  for (const state of [1, 2, 3]) {
+    studentRoom.exp2!.state = state;
+    const revealed = renderToStaticMarkup(
+      createElement(RoomDashboard, { room: studentRoom, act: async () => {} }),
+    );
+    assert.match(
+      revealed,
+      new RegExp(
+        `class="exp2-state-realized"><span>状態 ${state}<b class="exp2-state-realized-label">実現</b>`,
+      ),
+    );
+    assert.equal(
+      (revealed.match(/class="exp2-state-realized"/g) ?? []).length,
+      1,
+    );
+    assert.match(revealed, new RegExp(`実現した状態は状態 ${state} です`));
+  }
 });
 
 test("yen amounts retain zero, negative amounts and decimals, while missing values remain empty", () => {

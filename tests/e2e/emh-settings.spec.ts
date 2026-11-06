@@ -252,14 +252,24 @@ test("EMH conditions persist, lock with allocation, and govern six rounds and ex
     await sellColumn.getByLabel("売値（円）").fill("99999");
     await buyColumn.getByRole("button", { name: "買い指値注文" }).click();
     await expect(
-      buyColumn.getByRole("button", { name: "買値を取り消す" }),
+      studentPage
+        .locator(".study-order-book")
+        .getByRole("button", { name: "買値を取り消す" }),
     ).toBeVisible();
     await sellColumn.getByRole("button", { name: "売り指値注文" }).click();
     await expect(
-      sellColumn.getByRole("button", { name: "売値を取り消す" }),
+      studentPage
+        .locator(".study-order-book")
+        .getByRole("button", { name: "売値を取り消す" }),
     ).toBeVisible();
-    await buyColumn.getByRole("button", { name: "買値を取り消す" }).click();
-    await sellColumn.getByRole("button", { name: "売値を取り消す" }).click();
+    await studentPage
+      .locator(".study-order-book")
+      .getByRole("button", { name: "買値を取り消す" })
+      .click();
+    await studentPage
+      .locator(".study-order-book")
+      .getByRole("button", { name: "売値を取り消す" })
+      .click();
     expect((await exported()).markets[0].conditions.assignment).toEqual(
       confirmed.markets[0].conditions.assignment,
     );

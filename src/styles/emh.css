@@ -2310,14 +2310,10 @@
   gap: 6px;
   margin: 10px 0 0;
 }
-.emh-app .student-action-column .price-entry .button,
-.emh-app .student-action-column .student-cancel-quote {
+.emh-app .student-action-column .price-entry .button {
   width: 100%;
   min-height: 38px;
   white-space: nowrap;
-}
-.emh-app .student-action-column .student-cancel-quote {
-  margin-top: 6px;
 }
 .emh-app .student-order-panel > .field-note {
   margin-top: 8px;
@@ -2377,8 +2373,7 @@
   padding-top: 7px;
   padding-bottom: 7px;
 }
-.emh-app .student-action-column .price-entry .button,
-.emh-app .student-action-column .student-cancel-quote {
+.emh-app .student-action-column .price-entry .button {
   min-height: 34px;
 }
 
@@ -2546,7 +2541,7 @@
   color: var(--muted);
 }
 .emh-app .market-grid.student-market-grid {
-  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.5fr) minmax(0, 1.35fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(430px, 1.14fr);
   align-items: start;
   gap: 14px;
 }
@@ -2583,68 +2578,51 @@
 .emh-app .emh-conditions .study-order-form input {
   padding: 8px 28px 8px 10px;
 }
-.emh-app .emh-conditions .study-order-form > .button {
+.emh-app .emh-order-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 6px;
+}
+.emh-app .emh-book-cancellations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.emh-app .emh-conditions .study-market-order > .button {
   margin-top: 0;
   min-height: 38px;
-  padding: 8px 6px;
+  padding: 4px 2px;
+  line-height: 1.25;
+  white-space: normal;
+  justify-content: center;
+  text-align: center;
 }
-.emh-app .emh-conditions .order-outcome {
-  font-size: 11px;
-  line-height: 1.5;
-  min-height: 36px;
-  margin: 5px 0 10px;
+.emh-app .emh-conditions .study-market-order small {
+  flex-wrap: wrap;
+  column-gap: 4px;
+  text-align: center;
 }
-.emh-app .own-quote-status {
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 11px;
+.emh-app .market-grid.student-market-grid > .cda-order-book,
+.emh-app .market-grid > aside > .cda-order-book {
+  align-self: stretch;
+  padding: 12px;
+  margin: 0;
+  border-radius: 12px;
 }
-.emh-app .own-quote-status.active {
-  border-color: var(--accent);
-  background: var(--lavender);
-}
-.emh-app .emh-student-view .own-quote-status strong {
-  font-size: 16px !important;
-  font-variant-numeric: tabular-nums;
-}
-.emh-app .study-order-book .study-book {
-  gap: 12px;
-  margin-top: 12px;
-}
-.emh-app .study-order-book .study-book table {
-  min-width: 0;
-}
-.emh-app .study-order-book .study-book th,
-.emh-app .study-order-book .study-book td {
-  padding: 4px;
-  height: 30px;
-}
-.emh-app .study-order-book .study-book th:first-child {
-  width: 65%;
-}
-.emh-app .study-order-book .study-book-rows .study-empty {
-  position: static;
-  padding: 6px 0;
-  background: transparent;
-}
-.emh-app .study-order-book .study-own-order-tag {
-  display: block;
+.emh-app .cda-order-book .study-book td:first-child,
+.emh-app .cda-order-book .study-own-order-tag {
   white-space: normal;
 }
-.emh-app .order-rules {
-  margin-top: 14px;
+.emh-app .cda-order-book .study-own-order-tag {
+  max-width: 100%;
 }
-.emh-app .order-rules ul {
-  padding-left: 20px;
-  font-size: 12px;
-  line-height: 1.7;
+.emh-app .cda-order-book th:first-child:nth-last-child(3) {
+  width: 35%;
 }
-.emh-app .order-rules li + li {
-  margin-top: 8px;
+.emh-app .cda-order-book td:nth-child(3) {
+  white-space: normal;
 }
 .emh-app .emh-records {
   display: grid;
@@ -2777,9 +2755,6 @@
   }
   .emh-app .timers {
     gap: 14px;
-  }
-  .emh-app .emh-conditions .order-outcome {
-    min-height: 54px;
   }
 }
 

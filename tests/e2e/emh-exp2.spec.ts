@@ -1,19 +1,20 @@
 import { expect, test, type BrowserContext } from "@playwright/test";
 import { enterTeacherPage } from "./helpers/teacher-login";
 
-test("Exp2 creation and participant view use fixed single-period rules", async ({
+test("Exp2 creation and participant view use the default two securities and a single period per round", async ({
   page,
   browser,
   baseURL,
 }, info) => {
   const contexts: BrowserContext[] = [];
+  let code: string | undefined;
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {
     await page.goto("/teacher?experiment=emh");
     await enterTeacherPage(page);
     await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
-    await expect(page.locator('[name="initialUnits"]')).toHaveCount(0);
+    await expect(page.locator('[name="initialUnits"]')).toHaveValue("2");
     await page
       .getByLabel("教員パスワード", { exact: false })
       .fill("Exp2-Verification-Password");
@@ -21,7 +22,7 @@ test("Exp2 creation and participant view use fixed single-period rules", async (
       .getByRole("button", { name: "ルームを作成", exact: true })
       .click();
     await expect(page).toHaveURL(/\/room\/[A-Z0-9]+\?entry=teacher/);
-    const code = new URL(page.url()).pathname.split("/")[2];
+    code = new URL(page.url()).pathname.split("/")[2];
     const student = await browser.newContext({ baseURL });
     contexts.push(student);
     const studentPage = await student.newPage();
@@ -56,6 +57,9 @@ test("Exp2 creation and participant view use fixed single-period rules", async (
     await expect(studentPage.getByText("Clue カード")).toBeVisible();
     await expect(studentPage.getByText("情報なし")).toBeVisible();
     await expect(studentPage.getByText("状態別の配当 / 確率")).toBeVisible();
+    await expect(studentPage.locator(".stat-grid")).toContainText(
+      /保有証券\s*2\s*単位/,
+    );
     await expect(
       studentPage.getByRole("heading", { name: "配当・得点の記録" }),
     ).toBeVisible();
@@ -76,5 +80,12 @@ test("Exp2 creation and participant view use fixed single-period rules", async (
     expect(errors).toEqual([]);
   } finally {
     await Promise.all(contexts.map((context) => context.close()));
+    if (code) {
+      const deleted = await page.request.delete(
+        `/api/rooms/${code}?session=teacher`,
+        { data: { confirmed: true } },
+      );
+      expect(deleted.ok()).toBe(true);
+    }
   }
 });

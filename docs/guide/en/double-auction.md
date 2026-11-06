@@ -12,7 +12,7 @@ Authenticate once with the key at the teacher entry, then set a teacher password
 
 The setup header contains **戻る** and, when opened from an existing room, **ルーム … に戻る**. Demo setup offers **戻る** to return to the list and **教員用ページへ** to return to the teacher page.
 
-The order-book list shares its presentation component with EMH. CDA price/time priority, depth, quantities and cancellation rules are unchanged.
+CDA and EMH share an order book with list and bar-chart views. Both mark your active orders. CDA price/time priority, depth, quantities and cancellation rules are unchanged.
 
 ## Allocate using actual attendance
 

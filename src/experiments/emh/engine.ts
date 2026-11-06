@@ -4,6 +4,7 @@ import type {
   AuditEvent,
   Config,
   Participant,
+  Quote,
   PeriodResult,
   Room,
   RoomView,
@@ -14,6 +15,13 @@ import {
   MAX_MARKET_SIZE,
   MAX_EXP2_MARKET_SIZE,
 } from "./settings";
+
+import {
+  canSellAtMarket,
+  standingQuotes,
+  updateStandingQuote,
+  visiblePriceLevels,
+} from "./order-book";
 
 export const START_COUNTDOWN_SECONDS = 5;
 
@@ -94,6 +102,7 @@ export function newRoom(
     pausedAt: null,
     bid: null,
     ask: null,
+    queuedQuotes: { bid: [], ask: [] },
     trades: [],
     results: [],
     events: [],
@@ -153,8 +162,11 @@ export function addParticipant(
 }
 function beginUnit(room: Room, now: number, random: () => number) {
   room.unit++;
-  room.bid = null;
-  room.ask = null;
+  // Catch up overdue legacy units under their original expiry rule before upgrading.
+  if (!room.queuedQuotes) {
+    room.bid = null;
+    room.ask = null;
+  }
   room.unitEndsAt = Math.min(
     now + room.config.unitSeconds * 1000,
     room.periodEndsAt!,
@@ -284,6 +296,7 @@ export function endPeriod(
   });
   room.bid = null;
   room.ask = null;
+  if (room.queuedQuotes) room.queuedQuotes = { bid: [], ask: [] };
   room.unitEndsAt = null;
   room.periodEndsAt = null;
   room.nominatedSeat = null;
@@ -313,6 +326,18 @@ export function advanceClock(
   now: number,
   random: () => number = Math.random,
 ) {
+  advanceDeadlines(room, now, random);
+  if (!room.queuedQuotes && room.status !== "completed") {
+    room.queuedQuotes = { bid: [], ask: [] };
+    record(room, "order-book-upgraded", "system", now, {
+      year: room.year,
+      period: room.period,
+      unit: room.unit,
+    });
+  }
+}
+
+function advanceDeadlines(room: Room, now: number, random: () => number) {
   if (
     room.pausedAt !== null ||
     room.status === "lobby" ||
@@ -356,18 +381,68 @@ export function advanceClock(
   }
   throw new Error("Clock transition limit exceeded");
 }
-function settle(
+function recordQuote(
   room: Room,
-  buyerId: string,
-  sellerId: string,
+  participant: Participant,
+  side: Side,
   price: number,
   now: number,
+): Quote {
+  const quote = {
+    id: `q${room.revision + 1}`,
+    participantId: participant.id,
+    seat: participant.seat!,
+    price,
+    at: now,
+  };
+  record(room, "quote-submitted", participant.id, now, {
+    quoteId: quote.id,
+    side,
+    price,
+    year: room.year,
+    period: room.period,
+    unit: room.unit,
+  });
+  return quote;
+}
+
+function settle(
+  room: Room,
+  taker: Participant,
+  restingSide: Side,
+  quote: Quote,
+  now: number,
   random: () => number,
+  limitPrice?: number,
 ) {
-  requireRule(buyerId !== sellerId, "自分の提示とは取引できません。");
-  const buyer = room.participants.find((p) => p.id === buyerId)!;
-  const seller = room.participants.find((p) => p.id === sellerId)!;
-  requireRule(seller.holdings > 0, "売り手の保有証券が不足しています。");
+  requireRule(
+    quote.participantId !== taker.id,
+    "自分の反対側の提示を取り消してください。",
+  );
+  const maker = room.participants.find((p) => p.id === quote.participantId)!;
+  const buying = restingSide === "ask";
+  const buyer = buying ? taker : maker;
+  const seller = buying ? maker : taker;
+  const buyerId = buyer.id;
+  const sellerId = seller.id;
+  const price = quote.price;
+  requireRule(seller.holdings > 0, "保有証券が不足しています。");
+  if (!buying && limitPrice === undefined) {
+    const hasAsk = standingQuotes(room, "ask").some(
+      (order) => order.participantId === sellerId,
+    );
+    requireRule(
+      canSellAtMarket(seller.holdings, hasAsk),
+      "売り指値注文に証券を使用しています。先に注文を取り消してください。",
+    );
+  }
+
+  if (limitPrice !== undefined) {
+    const side = buying ? "bid" : "ask";
+    recordQuote(room, taker, side, limitPrice, now);
+    updateStandingQuote(room, side, taker.id);
+  }
+  updateStandingQuote(room, restingSide, maker.id);
   buyer.holdings++;
   seller.holdings--;
   buyer.cash -= price;
@@ -386,6 +461,7 @@ function settle(
     at: now,
   });
   record(room, "traded", buyerId, now, {
+    restingQuoteId: quote.id,
     sellerId,
     price,
     year: room.year,
@@ -477,13 +553,17 @@ export function act(
     requireRule(p, "参加者が見つかりません。");
     const side = action.side;
     if (action.kind === "cancel") {
+      const quote = standingQuotes(room, side).find(
+        (order) => order.id === action.quoteId,
+      );
       requireRule(
-        room[side]?.id === action.quoteId && room[side]?.participantId === p.id,
+        quote && quote.participantId === p.id,
         "この提示は取り消せません。",
       );
-      const price = room[side]!.price;
-      room[side] = null;
+      const price = quote.price;
+      updateStandingQuote(room, side, p.id);
       record(room, "quote-cancelled", p.id, now, {
+        quoteId: quote.id,
         side,
         price,
         year: room.year,
@@ -498,10 +578,6 @@ export function act(
         quote?.id === action.quoteId,
         "提示が更新されました。新しい価格を確認してください。",
       );
-      requireRule(
-        quote.participantId !== p.id,
-        "自分の提示とは取引できません。",
-      );
       const accepted = {
         side: side === "ask" ? "bid" : "ask",
         price: quote.price,
@@ -509,14 +585,7 @@ export function act(
         period: room.period,
         unit: room.unit,
       };
-      settle(
-        room,
-        side === "ask" ? p.id : quote.participantId,
-        side === "ask" ? quote.participantId : p.id,
-        quote.price,
-        now,
-        random,
-      );
+      settle(room, p, side, quote, now, random);
       record(room, "quote-accepted", p.id, now, accepted);
       return;
     }
@@ -528,16 +597,11 @@ export function act(
     );
     if (side === "ask")
       requireRule(p.holdings > 0, "保有証券がないため売れません。");
-    const existing = room[side];
-    requireRule(
-      !existing ||
-        (side === "bid"
-          ? action.price > existing.price
-          : action.price < existing.price),
-      side === "bid"
-        ? "現在の買値より高い価格を提示してください。"
-        : "現在の売値より低い価格を提示してください。",
+    const existing = standingQuotes(room, side).find(
+      (order) => order.participantId === p.id,
     );
+    // An unchanged limit retains its place at this price.
+    if (existing?.price === action.price) return;
     const otherSide: Side = side === "bid" ? "ask" : "bid";
     const opposing = room[otherSide];
     if (
@@ -546,40 +610,10 @@ export function act(
         ? action.price >= opposing.price
         : action.price <= opposing.price)
     ) {
-      requireRule(
-        opposing.participantId !== p.id,
-        "自分の反対側の提示を取り消してください。",
-      );
-      record(room, "quote-submitted", p.id, now, {
-        side,
-        price: action.price,
-        year: room.year,
-        period: room.period,
-        unit: room.unit,
-      });
-      settle(
-        room,
-        side === "bid" ? p.id : opposing.participantId,
-        side === "bid" ? opposing.participantId : p.id,
-        opposing.price,
-        now,
-        random,
-      );
+      settle(room, p, otherSide, opposing, now, random, action.price);
     } else {
-      record(room, "quote-submitted", p.id, now, {
-        side,
-        price: action.price,
-        year: room.year,
-        period: room.period,
-        unit: room.unit,
-      });
-      room[side] = {
-        id: `q${room.revision}`,
-        participantId: p.id,
-        seat: p.seat!,
-        price: action.price,
-        at: now,
-      };
+      const quote = recordQuote(room, p, side, action.price, now);
+      updateStandingQuote(room, side, p.id, quote);
     }
     return;
   }
@@ -666,31 +700,29 @@ function ownQuoteState(
   participantId: string | undefined,
   side: Side,
 ): RoomView["ownQuotes"]["bid"] {
-  const current = room[side];
-  if (current && current.participantId === participantId)
-    return { status: "active", price: current.price };
-  const last = room.events.findLast(
-    (event) =>
-      event.actor === participantId &&
-      event.details.side === side &&
-      (event.kind === "quote-submitted" ||
-        event.kind === "quote-cancelled" ||
-        event.kind === "quote-accepted"),
+  if (!participantId) return { status: "none", price: null };
+  const current = standingQuotes(room, side).find(
+    (quote) => quote.participantId === participantId,
+  );
+  if (current)
+    return { status: "active", price: current.price, quoteId: current.id };
+  const last = room.events.findLast((event) =>
+    event.kind === "traded"
+      ? (side === "bid" ? event.actor : event.details.sellerId) ===
+        participantId
+      : event.actor === participantId &&
+        event.details.side === side &&
+        (event.kind === "quote-submitted" ||
+          event.kind === "quote-cancelled" ||
+          event.kind === "quote-accepted"),
   );
   if (!last || last.details.year !== room.year)
     return { status: "none", price: null };
   const price =
     typeof last.details.price === "number" ? last.details.price : null;
   if (last.kind === "quote-cancelled") return { status: "cancelled", price };
-  if (last.kind === "quote-accepted") return { status: "filled", price };
-  const trade = room.trades.find(
-    (trade) =>
-      trade.year === last.details.year &&
-      trade.period === last.details.period &&
-      trade.unit === last.details.unit &&
-      (side === "bid" ? trade.buyerId : trade.sellerId) === participantId,
-  );
-  if (trade) return { status: "filled", price: trade.price };
+  if (last.kind === "quote-accepted" || last.kind === "traded")
+    return { status: "filled", price };
   return {
     status:
       room.status !== "trading" ||
@@ -811,6 +843,10 @@ export function view(room: Room, actor: Actor, now: number): RoomView {
             teacher || room.ask.participantId === me?.id ? room.ask.seat : null,
         }
       : null,
+    orderBook: {
+      bid: visiblePriceLevels(standingQuotes(room, "bid"), teacher, me?.id),
+      ask: visiblePriceLevels(standingQuotes(room, "ask"), teacher, me?.id),
+    },
     trades: teacher
       ? room.trades
       : room.trades.map((trade) => ({

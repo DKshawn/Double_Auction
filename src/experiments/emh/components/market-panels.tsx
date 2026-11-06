@@ -2,10 +2,10 @@
 import { useState, type FormEvent } from "react";
 import { Download, LockKeyhole } from "lucide-react";
 import type { Action, RoomView, Side } from "@/experiments/emh/types";
-import {
-  OrderBookList,
-  type OrderBookSide,
-} from "@/components/order-book-list";
+import { OrderBookPanel } from "@/components/order-book-panel";
+import type { OrderBookSide } from "@/lib/order-book";
+import { canSellAtMarket } from "@/experiments/emh/order-book";
+import { orderProfitPreview } from "@/experiments/emh/order-profit";
 import { PriceChart } from "./price-chart";
 
 export const fmt = (n: number | null | undefined, digits = 0) =>
@@ -32,54 +32,62 @@ export function Yen({
 }
 export type RunAction = (action: Action) => Promise<void>;
 
-export function OrderPanel({ room }: { room: RoomView }) {
-  const teacher = room.role === "teacher";
-  const sides: OrderBookSide[] = (["bid", "ask"] as const).map((side) => {
-    const quote = room[side];
-    return {
-      side: side === "bid" ? "buyer" : "seller",
-      label: side === "bid" ? "買い注文" : "売り注文",
-      rows: quote
-        ? [
-            {
-              price: quote.price,
-              quantity: 1,
-              ownQuantity:
-                !teacher && quote.participantId === room.me?.id ? 1 : 0,
-              aliases: teacher ? `被験者 #${quote.seat}` : "",
-            },
-          ]
-        : [],
-    };
-  });
+export function OrderPanel({
+  room,
+  act,
+  disabled = false,
+}: {
+  room: RoomView;
+  act?: RunAction;
+  disabled?: boolean;
+}) {
+  const orderSides = ["bid", "ask"] as const;
+  const sides: OrderBookSide[] = orderSides.map((side) => ({
+    side: side === "bid" ? "buyer" : "seller",
+    label: side === "bid" ? "買い注文" : "売り注文",
+    rows: room.orderBook?.[side] ?? [],
+  }));
+  const cancellable = orderSides.filter((side) => room.ownQuotes[side].quoteId);
   return (
-    <section className="panel study-section study-order-book order-panel">
-      <div className="study-book-heading">
-        <h2>注文板</h2>
-        <span className="muted">最良価格・各1単位</span>
-      </div>
-      <OrderBookList sides={sides} showParticipants={teacher} />
-      <details className="order-rules">
-        <summary className="button secondary small-button disclosure-button">
-          注文の扱い
-        </summary>
-        <ul>
-          <li>全員が注文できます。最高買値・最低売値を各1件だけ保持します。</li>
-          <li>
-            指値注文は、買値を現在より高く、売値を現在より低く提示します。同額は受け付けません。更新前の提示は残りません。
-          </li>
-          <li>
-            成行注文は相手の提示価格で1単位が即時成立します。相手の価格に届く指値注文も、先に出ている相手の価格で即時成立します。
-          </li>
-          <li>
-            同時操作はサーバーで先に受理した有効な操作が優先されます。変更済みの提示への応答は成立しません。
-          </li>
-          <li>
-            有効な自分の提示は成立前に取り消せます。成立後は取り消せません。成立・時間切れ・期末で提示は消えます。
-          </li>
-        </ul>
-      </details>
-    </section>
+    <OrderBookPanel
+      sides={sides}
+      className="cda-order-book"
+      showParticipants={room.role === "teacher"}
+      footer={
+        act &&
+        cancellable.length > 0 && (
+          <div className="emh-book-cancellations">
+            {cancellable.map((side) => (
+              <button
+                key={side}
+                type="button"
+                className="button secondary small"
+                disabled={disabled}
+                onClick={() =>
+                  act({
+                    kind: "cancel",
+                    side,
+                    quoteId: room.ownQuotes[side].quoteId!,
+                    unitKey: room.unitKey,
+                  })
+                }
+              >
+                {side === "bid" ? "買値を取り消す" : "売値を取り消す"}
+              </button>
+            ))}
+          </div>
+        )
+      }
+    />
+  );
+}
+
+function OrderProfit({ id, profit }: { id: string; profit: number | null }) {
+  if (profit === null) return null;
+  return (
+    <small id={id} className={profit < 0 ? "loss" : "field-help"}>
+      <span>見込利益</span> <span>{fmt(profit, 2)}円</span>
+    </small>
   );
 }
 
@@ -94,8 +102,8 @@ function StudentOrderEntry({
 }) {
   const [bidPrice, setBidPrice] = useState("");
   const [askPrice, setAskPrice] = useState("");
-  const canTrade =
-    !disabled && room.status === "trading" && room.pausedAt === null;
+  const trading = room.status === "trading" && room.pausedAt === null;
+  const canTrade = trading && !disabled;
   async function submit(event: FormEvent, side: Side, price: string) {
     event.preventDefault();
     if (!canTrade) return;
@@ -106,14 +114,6 @@ function StudentOrderEntry({
       unitKey: room.unitKey,
     });
   }
-  const quoteLabels = {
-    none: "提示なし",
-    active: "有効",
-    replaced: "他の提示に更新済み",
-    cancelled: "取消済み",
-    cleared: "取引終了で失効",
-    filled: "成立済み",
-  };
   return (
     <div className="study-private-order student-action-columns">
       {(["bid", "ask"] as const).map((side) => {
@@ -121,9 +121,6 @@ function StudentOrderEntry({
         const oppositeSide = buying ? "ask" : "bid";
         const offer = room[oppositeSide];
         const ownOffer = !!offer && offer.participantId === room.me?.id;
-        const ownQuote =
-          room[side]?.participantId === room.me?.id ? room[side] : null;
-        const own = room.ownQuotes[side];
         const label = buying ? "買値" : "売値";
         const actionLabel = buying ? "買い" : "売り";
         const price = buying ? bidPrice : askPrice;
@@ -134,7 +131,19 @@ function StudentOrderEntry({
             ? Number(price) >= offer.price
             : Number(price) <= offer.price);
         const noHoldings = !buying && !room.me?.holdings;
-        const cannotQuote = !canTrade || noHoldings || (crosses && ownOffer);
+        const sameLimit =
+          room.ownQuotes[side].price === Number(price) &&
+          room.ownQuotes[side].status === "active";
+        const cannotQuote =
+          !canTrade || noHoldings || sameLimit || (crosses && ownOffer);
+        const reserved =
+          !buying &&
+          !noHoldings &&
+          !canSellAtMarket(
+            room.me!.holdings,
+            room.ownQuotes.ask.status === "active",
+          );
+        const profit = orderProfitPreview(room, side, price);
         return (
           <div
             key={side}
@@ -155,89 +164,75 @@ function StudentOrderEntry({
                     inputMode="numeric"
                     type="number"
                     placeholder={`${label}を入力`}
-                    min={buying ? (room.bid?.price ?? 0) + 1 : 1}
-                    max={buying ? 100000 : (room.ask?.price ?? 100001) - 1}
+                    min={1}
+                    max={100000}
                     step={1}
                     value={price}
                     onChange={(event) =>
                       (buying ? setBidPrice : setAskPrice)(event.target.value)
                     }
-                    disabled={!canTrade || noHoldings}
+                    disabled={!trading || noHoldings}
                     required
-                    aria-describedby={`order-${side}-outcome`}
+                    aria-describedby={
+                      profit.limit === null ? undefined : `order-${side}-profit`
+                    }
                   />
                   <span aria-hidden="true">円</span>
                 </div>
               </div>
-              <button
-                className={`button ${buying ? "buy" : "sell"} full`}
-                disabled={cannotQuote}
-                aria-label={`${actionLabel}指値注文${crosses && !ownOffer ? "（即時成立）" : ""}`}
-              >
-                指値注文{crosses && !ownOffer ? "（即時）" : ""}
-              </button>
-              <p id={`order-${side}-outcome`} className="order-outcome">
-                {noHoldings
-                  ? "保有0単位のため売れません。"
-                  : crosses
-                    ? ownOffer
-                      ? "反対側の自分の提示を取り消してください。"
-                      : `${fmt(offer!.price)}円で1単位が即時成立します。`
-                    : "1単位の価格を提示し、相手の応答を待ちます。"}
-              </p>
-              <button
-                type="button"
-                className={`button ${buying ? "buy" : "sell"} full`}
-                aria-label={`${actionLabel}成行注文`}
-                aria-describedby={`order-${side}-market`}
-                disabled={!canTrade || !offer || ownOffer || noHoldings}
-                onClick={() =>
-                  act({
-                    kind: "accept",
-                    side: oppositeSide,
-                    quoteId: offer!.id,
-                    unitKey: room.unitKey,
-                  })
-                }
-              >
-                成行注文
-              </button>
-              <p id={`order-${side}-market`} className="order-outcome">
-                {offer
-                  ? ownOffer
-                    ? "相手の提示を待っています。"
-                    : `${fmt(offer.price)}円・1単位・即時成立`
-                  : "相手の提示を待っています。"}
-              </p>
+              <div className="emh-order-actions">
+                <div className="study-market-order">
+                  <button
+                    className={`button ${buying ? "buy" : "sell"} full`}
+                    disabled={cannotQuote}
+                    aria-label={`${actionLabel}指値注文${crosses && !ownOffer ? "（即時成立）" : ""}`}
+                    aria-describedby={
+                      profit.limit === null ? undefined : `order-${side}-profit`
+                    }
+                  >
+                    指値注文{crosses && !ownOffer ? "（即時）" : ""}
+                  </button>
+                  <OrderProfit
+                    id={`order-${side}-profit`}
+                    profit={profit.limit}
+                  />
+                </div>
+                <div className="study-market-order">
+                  <button
+                    type="button"
+                    className={`button ${buying ? "buy" : "sell"} full`}
+                    aria-label={`${actionLabel}成行注文`}
+                    aria-describedby={
+                      profit.market === null
+                        ? undefined
+                        : `order-${side}-market-profit`
+                    }
+                    disabled={
+                      !canTrade || !offer || ownOffer || noHoldings || reserved
+                    }
+                    title={
+                      reserved
+                        ? "売り指値注文を取り消すと、この証券を成行で売れます。"
+                        : undefined
+                    }
+                    onClick={() =>
+                      act({
+                        kind: "accept",
+                        side: oppositeSide,
+                        quoteId: offer!.id,
+                        unitKey: room.unitKey,
+                      })
+                    }
+                  >
+                    成行注文
+                  </button>
+                  <OrderProfit
+                    id={`order-${side}-market-profit`}
+                    profit={profit.market}
+                  />
+                </div>
+              </div>
             </form>
-            <div
-              className={`own-quote-status ${own.status}`}
-              role="status"
-              aria-atomic="true"
-            >
-              <span>あなたの{label}</span>
-              <strong>
-                {own.price === null ? "—" : <Yen value={own.price} />}
-              </strong>
-              <span>{quoteLabels[own.status]}</span>
-              {ownQuote && (
-                <button
-                  type="button"
-                  className="button small secondary student-cancel-quote"
-                  disabled={!canTrade}
-                  onClick={() =>
-                    act({
-                      kind: "cancel",
-                      side,
-                      quoteId: ownQuote.id,
-                      unitKey: room.unitKey,
-                    })
-                  }
-                >
-                  {label}を取り消す
-                </button>
-              )}
-            </div>
           </div>
         );
       })}
@@ -318,7 +313,7 @@ export function PersonalPanel({
         )}
       </div>
       <StudentOrderEntry
-        key={room.unitKey}
+        key={`${room.code}:${me.id}:${room.year}:${room.period}`}
         room={room}
         act={act}
         disabled={disabled}

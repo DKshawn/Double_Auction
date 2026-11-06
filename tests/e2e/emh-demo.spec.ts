@@ -213,20 +213,16 @@ test("Exp2 demo runs the default 12-person market with practice information", as
   await expect(page.locator("[aria-label='売り注文一覧'] thead")).toContainText(
     "円",
   );
+  const ownBook = page.locator(".study-order-book");
+  await expect(ownBook.locator("tr.study-own-order")).toHaveCount(2);
+  await ownBook.getByRole("button", { name: "買値を取り消す" }).click();
   await expect(
-    buyColumn.getByRole("button", { name: "買い成行注文" }),
-  ).toBeDisabled();
-  await expect(
-    sellColumn.getByRole("button", { name: "売り成行注文" }),
-  ).toBeDisabled();
-  await buyColumn.getByRole("button", { name: "買値を取り消す" }).click();
-  await expect(
-    buyColumn.getByRole("button", { name: "買値を取り消す" }),
+    ownBook.getByRole("button", { name: "買値を取り消す" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "買い指値注文" }).click();
-  await sellColumn.getByRole("button", { name: "売値を取り消す" }).click();
+  await ownBook.getByRole("button", { name: "売値を取り消す" }).click();
   await expect(
-    sellColumn.getByRole("button", { name: "売値を取り消す" }),
+    ownBook.getByRole("button", { name: "売値を取り消す" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "売り指値注文" }).click();
   await expect(page.getByLabel("買値（円）", { exact: true })).toHaveValue("1");
@@ -421,6 +417,71 @@ test("student views use three font sizes and equal state dividend and probabilit
     }
   }
 });
+
+for (const experiment of ["exp1", "exp2"] as const) {
+  test(`${experiment} demo keeps submitted orders, both draft prices and focus across a timed-out trading unit`, async ({
+    page,
+  }) => {
+    const start = Date.now();
+    await page.clock.install({ time: new Date(start) });
+    await page.clock.pauseAt(new Date(start + 1000));
+    await page.goto("/emh/demo");
+    await page.getByRole("combobox", { name: "実験" }).selectOption(experiment);
+    await page.getByLabel("1取引の時間（秒）").fill("5");
+    await page.getByRole("button", { name: "デモルームを作成" }).click();
+    await page
+      .getByRole("button", { name: "分け方を確定して受付終了" })
+      .click();
+    await page.getByRole("button", { name: "全市場で実験を開始" }).click();
+    await page.getByRole("button", { name: "学生画面を見る" }).click();
+    // One virtual trader submits only bids, so the unit expires without a bot-to-bot trade.
+    await page.evaluate(() => {
+      Math.random = () => 0.25;
+    });
+    await page.clock.fastForward(5000);
+    await expect(
+      page.getByText("第1取引の残り", { exact: true }),
+    ).toBeVisible();
+    const bid = page.getByLabel("買値（円）", { exact: true });
+    const ask = page.getByLabel("売値（円）", { exact: true });
+    const book = page.locator(".study-order-book");
+    await bid.fill("1");
+    await page
+      .getByRole("button", { name: "買い指値注文", exact: true })
+      .click();
+    await ask.fill("99999");
+    await page
+      .getByRole("button", { name: "売り指値注文", exact: true })
+      .click();
+    await expect(book.locator("tr.study-own-order")).toHaveCount(2);
+    await ask.fill("220");
+    await bid.fill("100");
+    await page.clock.fastForward(5000);
+    await expect(
+      page.getByText("第2取引の残り", { exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".inactivity")).toContainText("連続1回");
+    await expect(ask).toHaveValue("220");
+    await expect(bid).toHaveValue("100");
+    await expect(bid).toBeFocused();
+    await bid.press("5");
+    await expect(bid).toHaveValue("1005");
+    await expect(book.locator("tr.study-own-order")).toHaveCount(2);
+    await expect(book.getByRole("button", { name: /取り消す/ })).toHaveCount(2);
+    await page.getByRole("button", { name: "次の期へ" }).click();
+    await expect(
+      page
+        .getByText(experiment === "exp1" ? "Period B" : "第2ラウンド", {
+          exact: true,
+        })
+        .first(),
+    ).toBeVisible();
+    await expect(bid).toHaveValue("");
+    await expect(ask).toHaveValue("");
+    await expect(book.locator("tr.study-own-order")).toHaveCount(0);
+    await expect(book.getByRole("button", { name: /取り消す/ })).toHaveCount(0);
+  });
+}
 
 test("demo countdown displays private conditions before trading and can be paused", async ({
   page,

@@ -1,14 +1,4 @@
-/** Shared presentation only; each experiment supplies its own valid orders. */
-export type OrderBookSide = {
-  side: "buyer" | "seller";
-  label: string;
-  rows: {
-    price: number;
-    quantity: number;
-    ownQuantity: number;
-    aliases: string;
-  }[];
-};
+import type { OrderBookSide } from "@/lib/order-book";
 
 export function OrderBookList({
   sides,

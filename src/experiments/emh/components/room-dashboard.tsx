@@ -614,7 +614,11 @@ export function RoomDashboard({
             )}
             {!teacher ? (
               <div className="market-grid student-market-grid">
-                <OrderPanel room={room} />
+                <OrderPanel
+                  room={room}
+                  act={act}
+                  disabled={disabled || !active || paused}
+                />
                 <PersonalPanel room={room} act={act} disabled={disabled} />
                 <div className="emh-records">
                   <HistoryPanel room={room} compact />

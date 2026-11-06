@@ -14,7 +14,7 @@ import type { SessionView } from "../../src/experiments/emh/session-types";
 import type { Action } from "../../src/experiments/emh/types";
 
 for (const experiment of ["exp1", "exp2"] as const) {
-  test(`${experiment} formal market explains immediate trades, protects identities and distinguishes final earnings`, async ({
+  test(`${experiment} formal market previews order profit, protects identities and distinguishes final earnings`, async ({
     page,
     browser,
     baseURL,
@@ -126,6 +126,7 @@ for (const experiment of ["exp1", "exp2"] as const) {
       await page.goto(`/room/${code}?entry=teacher`);
       const student = await contexts[0]!.newPage();
       student.on("pageerror", (error) => errors.push(error.message));
+      await student.setViewportSize({ width: 1440, height: 1000 });
       await student.goto(`/room/${code}`);
       const bid = student.getByLabel("買値（円）", { exact: true });
       const ask = student.getByLabel("売値（円）", { exact: true });
@@ -149,35 +150,150 @@ for (const experiment of ["exp1", "exp2"] as const) {
           "B期末に確定",
         );
       }
+      await expect(student.locator(".order-rules, .order-outcome")).toHaveCount(
+        0,
+      );
+      const buttons = student.locator(
+        ".emh-conditions .study-market-order > button",
+      );
+      await expect(buttons).toHaveCount(4);
+      await expect(student.locator(".own-quote-status")).toHaveCount(0);
+      for (const side of ["buy", "sell"]) {
+        const pair = student.locator(
+          `.student-action-column.${side}-side .emh-order-actions button`,
+        );
+        const [limit, market] = await Promise.all([
+          pair.nth(0).boundingBox(),
+          pair.nth(1).boundingBox(),
+        ]);
+        expect(limit).not.toBeNull();
+        expect(market).not.toBeNull();
+        expect(Math.abs(limit!.y - market!.y)).toBeLessThan(2);
+        expect(limit!.x + limit!.width).toBeLessThanOrEqual(market!.x + 1);
+      }
+      for (const button of await buttons.all()) {
+        await expect(button).toHaveCSS("justify-content", "center");
+        await expect(button).toHaveCSS("text-align", "center");
+      }
       await bid.fill("100");
       await buy
         .getByRole("button", { name: "買い指値注文", exact: true })
         .click();
-      await expect(buy.locator(".own-quote-status")).toContainText("有効");
-      await quote(1, "bid", 101);
-      await expect(buy.locator(".own-quote-status")).toContainText(
-        "他の提示に更新済み",
+      const book = student.locator(".study-order-book");
+      await expect(
+        book.getByRole("button", { name: "買値を取り消す", exact: true }),
+      ).toBeVisible();
+      const bids = book.getByRole("region", { name: "買い注文一覧" });
+      const asks = book.getByRole("region", { name: "売り注文一覧" });
+      const list = book.getByRole("button", { name: "一覧", exact: true });
+      const chart = book.getByRole("button", { name: "棒グラフ", exact: true });
+      await expect(list).toHaveAttribute("aria-pressed", "true");
+      await expect(bids.locator("tr.study-own-order")).toContainText(
+        "100あなた含む",
       );
-      const other = (await state(contexts[1]!.request, "student")).market!;
-      await send(contexts[1]!.request, "student", {
-        kind: "cancel",
-        side: "bid",
-        quoteId: other.bid!.id,
-        unitKey: other.unitKey,
+      await ask.fill("200");
+      await student
+        .getByRole("button", { name: "売り指値注文", exact: true })
+        .click();
+      await expect(asks.locator("tr.study-own-order")).toContainText(
+        "200あなた含む",
+      );
+      const otherStudent = await contexts[1]!.newPage();
+      await otherStudent.goto(`/room/${code}`);
+      const otherBook = otherStudent.locator(".study-order-book");
+      await expect(
+        otherBook.getByRole("region", { name: "売り注文一覧" }),
+      ).toContainText("200");
+      await expect(otherBook.locator("tr.study-own-order")).toHaveCount(0);
+      await otherBook
+        .getByRole("button", { name: "棒グラフ", exact: true })
+        .click();
+      await expect(
+        otherBook.getByRole("img", {
+          name: "200円、買い0単位、売り1単位",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(otherBook.locator(".study-book-chart-own-dot")).toHaveCount(
+        0,
+      );
+      const teacherBook = page.locator(".study-order-book");
+      await expect(teacherBook).toContainText("被験者 #");
+      await expect(teacherBook.locator(".study-own-order-tag")).toHaveCount(0);
+      await chart.click();
+      const chartRows = book.getByRole("region", {
+        name: "価格別の注文数量の棒グラフ",
       });
       await expect(
-        student
-          .getByRole("region", { name: "買い注文一覧" })
-          .locator(".study-empty"),
-      ).toHaveText("まだ注文はありません");
+        chartRows.getByRole("img", {
+          name: "100円、買い1単位、売り0単位、あなたの注文1単位を含む",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        chartRows.getByRole("img", {
+          name: "200円、買い0単位、売り1単位、あなたの注文1単位を含む",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(chartRows.locator(".study-book-chart-own-dot")).toHaveCount(
+        2,
+      );
+      await expect(chartRows.locator(".study-book-chart-own")).toHaveCount(2);
+      await quote(1, "bid", 101);
+      await expect(
+        chartRows.getByRole("img", {
+          name: "101円、買い1単位、売り0単位",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(chartRows.locator(".study-book-chart-own-dot")).toHaveCount(
+        2,
+      );
+      await list.click();
+      await quote(1, "ask", 190);
+      await student.reload();
+      const bidPrices = bids.locator(
+        "tbody tr:not(.study-book-placeholder) td:first-child",
+      );
+      const askPrices = asks.locator(
+        "tbody tr:not(.study-book-placeholder) td:first-child",
+      );
+      await expect(bidPrices).toHaveText(["101", /100.*あなた含む/]);
+      await expect(askPrices).toHaveText(["190", /200.*あなた含む/]);
+      await book
+        .getByRole("button", { name: "売値を取り消す", exact: true })
+        .click();
+      await expect(askPrices).toHaveText(["190"]);
+      await expect(book.locator(".study-own-order-tag")).toHaveCount(1);
+      const other = (await state(contexts[1]!.request, "student")).market!;
+      for (const side of ["bid", "ask"] as const) {
+        await send(contexts[1]!.request, "student", {
+          kind: "cancel",
+          side,
+          quoteId: other[side]!.id,
+          unitKey: other.unitKey,
+        });
+      }
+      await expect(bidPrices).toHaveText([/100.*あなた含む/]);
       await bid.fill("99");
       await buy
         .getByRole("button", { name: "買い指値注文", exact: true })
         .click();
-      await buy.getByRole("button", { name: "買値を取り消す" }).click();
+      await expect(bidPrices).toHaveText([/99.*あなた含む/]);
+      await book.getByRole("button", { name: "買値を取り消す" }).click();
       await student.reload();
-      await expect(buy.locator(".own-quote-status")).toContainText("取消済み");
+      await expect(book.getByRole("button", { name: /取り消す/ })).toHaveCount(
+        0,
+      );
+      await expect(book.locator(".study-own-order-tag")).toHaveCount(0);
       await quote(1, "ask", 177);
+      await expect(
+        otherBook.getByRole("img", {
+          name: "177円、買い0単位、売り1単位、あなたの注文1単位を含む",
+          exact: true,
+        }),
+      ).toBeVisible();
       const standing = (await state(contexts[2]!.request, "student")).market!;
       expect(standing.ask!.participantId).toBeNull();
       expect(standing.ask!.seat).toBeNull();
@@ -185,19 +301,48 @@ for (const experiment of ["exp1", "exp2"] as const) {
         student.getByRole("region", { name: "売り注文一覧" }),
       ).toContainText("177");
       await bid.fill("180");
-      await expect(buy.locator("#order-bid-outcome")).toContainText(
-        "177円で1単位が即時成立",
+      const privateView = (await state(contexts[0]!.request, "student"))
+        .market!;
+      const remaining =
+        experiment === "exp1"
+          ? privateView.me!.dividends!.a + privateView.me!.dividends!.b
+          : privateView.exp2!.dividends!.reduce(
+              (total, dividend, index) =>
+                total + dividend * privateView.exp2!.prior[index]!,
+              0,
+            );
+      const expectedProfit = (remaining - 177).toLocaleString("ja-JP", {
+        maximumFractionDigits: 2,
+      });
+      await expect(buy.locator("#order-bid-profit")).toHaveText(
+        `見込利益 ${expectedProfit}円`,
       );
+      await expect(buy.locator("#order-bid-market-profit")).toHaveText(
+        `見込利益 ${expectedProfit}円`,
+      );
+      await student.locator(".emh-conditions").screenshot({
+        path: info.outputPath(`${experiment}-profit-desktop.png`),
+      });
       await buy
         .getByRole("button", { name: "買い指値注文（即時成立）", exact: true })
         .click();
       await expect(student.locator(".personal-trade-feedback")).toContainText(
         "177円で買いました",
       );
-      await expect(buy.locator(".own-quote-status")).toContainText("成立済み");
+      await expect(
+        book.getByRole("button", { name: "買値を取り消す" }),
+      ).toHaveCount(0);
+      await expect(
+        book.locator("tbody tr:not(.study-book-placeholder)"),
+      ).toHaveCount(0);
       const after = (await state(contexts[0]!.request, "student")).market!;
+      await expect(otherBook.locator(".study-book-chart-empty")).toBeVisible();
+      await expect(otherBook.locator(".study-book-chart-own-dot")).toHaveCount(
+        0,
+      );
       expect(after.me!.holdings).toBe(2);
       expect(after.me!.cash).toBe(-177);
+      expect(after.ownQuotes?.bid.status).toBe("filled");
       expect(after.trades[0]!.sellerId).toBeNull();
       expect(after.trades[0]!.sellerSeat).toBeNull();
       const late = await contexts[2]!.request.post(
@@ -218,20 +363,20 @@ for (const experiment of ["exp1", "exp2"] as const) {
       );
       expect(late.status()).toBe(409);
       expect((await state()).market!.trades).toHaveLength(1);
-      for (const width of [1440, 390, 320]) {
-        await student.setViewportSize({ width, height: 1000 });
-        expect(
-          await student.evaluate(
-            () => document.documentElement.scrollWidth <= innerWidth,
-          ),
-        ).toBe(true);
-        await student.screenshot({
-          path: info.outputPath(`${experiment}-student-${width}.png`),
-          fullPage: true,
-        });
-      }
+      await student.screenshot({
+        path: info.outputPath(`${experiment}-student-desktop.png`),
+        fullPage: true,
+      });
+      await ask.fill("220");
+      const lower = (await quote(1, "bid", 100)).market!.ownQuotes!.bid.quoteId;
+      expect(lower).toBeTruthy();
+      await quote(2, "bid", 101);
       for (let count = 0; count < 2; count++) {
-        await quote(1, "bid", 100);
+        await expect(bidPrices.first()).toHaveText(count === 0 ? "101" : "100");
+        expect(
+          (await state(contexts[1]!.request, "student")).market!.ownQuotes!.bid
+            .quoteId,
+        ).toBe(lower);
         await student
           .locator(".sell-side")
           .getByRole("button", { name: "売り成行注文", exact: true })
@@ -247,13 +392,32 @@ for (const experiment of ["exp1", "exp2"] as const) {
       await expect(ask).toBeDisabled();
       await expect(bid).toBeEnabled();
       await expect(
-        student.locator(".sell-side #order-ask-outcome"),
-      ).toContainText("保有0単位");
+        student.locator(".sell-side .study-market-order small"),
+      ).toHaveCount(0);
+      await expect(
+        student.getByRole("button", { name: "売り指値注文", exact: true }),
+      ).toBeDisabled();
+      await expect(
+        student.getByRole("button", { name: "売り成行注文", exact: true }),
+      ).toBeDisabled();
+      await expect(ask).toHaveValue("220");
+      await bid.fill("100");
       await quote(1, "ask", 90);
+      await expect(asks).toContainText("90");
+      await expect(bid).toHaveValue("100");
       await quote(2, "bid", 90);
       await expect(
         student.getByRole("button", { name: "全体 4件", exact: true }),
       ).toBeVisible();
+      await expect(bid).toHaveValue("100");
+      await expect(bid).toBeFocused();
+      await expect(bids.locator(".study-own-order-tag")).toHaveCount(0);
+      await buy
+        .getByRole("button", { name: "買い指値注文", exact: true })
+        .click();
+      await expect(bids.locator("tr.study-own-order")).toContainText(
+        "100あなた含む",
+      );
       await student
         .getByRole("button", { name: "自分の売買 3件", exact: true })
         .click();
@@ -269,11 +433,20 @@ for (const experiment of ["exp1", "exp2"] as const) {
       await control("resume");
       await expect(bid).toBeEnabled();
       await control("end-period");
+      await expect(book.locator(".study-own-order-tag")).toHaveCount(0);
+      await expect(book.getByRole("button", { name: /取り消す/ })).toHaveCount(
+        0,
+      );
       if (experiment === "exp1") {
         await expect(student.locator(".score-status.provisional")).toHaveText(
           "暫定",
         );
-        await quote(1, "ask", 100);
+        await expect(bid).toHaveValue("");
+        await expect(ask).toHaveValue("");
+        await quote(2, "ask", 100);
+        await expect(buy.locator("#order-bid-market-profit")).toHaveText(
+          `見込利益 ${privateView.me!.dividends!.b - 100}円`,
+        );
         await buy
           .getByRole("button", { name: "買い成行注文", exact: true })
           .click();
@@ -292,7 +465,7 @@ for (const experiment of ["exp1", "exp2"] as const) {
       ).toBeVisible();
       const final = (await state(contexts[0]!.request, "student")).market!;
       const expected =
-        experiment === "exp1" ? -77 + final.me!.dividends!.b : 23;
+        experiment === "exp1" ? -76 + final.me!.dividends!.b : 24;
       expect(final.me!.totalProfit).toBe(expected);
       expect(
         (

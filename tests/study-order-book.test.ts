@@ -2,12 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StudyBookChart } from "../src/experiments/double-auction/components/study-order-book";
+import { OrderBookChart } from "../src/components/order-book-panel";
 import {
-  studyBookChartRows,
-  studyBookRowCapacity,
-  studyPriceLevels,
-} from "../src/experiments/double-auction/lib/study-order-book";
+  orderBookChartRows,
+  orderBookRowCapacity,
+} from "../src/lib/order-book";
+import { studyPriceLevels } from "../src/experiments/double-auction/lib/study-order-book";
 import type { StudyOrder } from "../src/experiments/double-auction/lib/study-types";
 import { DemoSession } from "../src/experiments/double-auction/lib/demo";
 
@@ -59,7 +59,7 @@ test("CDA charts use proportional quantities on a shared scale and identify the 
     order("seller", 100, 4),
   ];
   const html = renderToStaticMarkup(
-    createElement(StudyBookChart, {
+    createElement(OrderBookChart, {
       sides: [
         {
           side: "buyer",
@@ -140,7 +140,7 @@ const crowdedSellers = studyPriceLevels(crowdedOrders, "seller", "me");
 
 test("crowded CDA charts retain the best bid/ask and aggregate strictly above/below the visible prices", () => {
   const before = structuredClone([crowdedBuyers, crowdedSellers]);
-  const rows = studyBookChartRows(crowdedBuyers, crowdedSellers, 4);
+  const rows = orderBookChartRows(crowdedBuyers, crowdedSellers, 4);
   assert.deepEqual(
     rows.map(({ kind, price }) => [kind, price]),
     [
@@ -160,10 +160,10 @@ test("crowded CDA charts retain the best bid/ask and aggregate strictly above/be
 });
 
 test("CDA row budgets conserve every quantity and own order as the available height and sides change", () => {
-  assert.equal(studyBookRowCapacity(96), 4);
-  assert.equal(studyBookRowCapacity(191.9), 7);
-  assert.equal(studyBookRowCapacity(192), 8);
-  assert.equal(studyBookRowCapacity(480), 20);
+  assert.equal(orderBookRowCapacity(96), 4);
+  assert.equal(orderBookRowCapacity(191.9), 7);
+  assert.equal(orderBookRowCapacity(192), 8);
+  assert.equal(orderBookRowCapacity(480), 20);
   for (const [buyers, sellers] of [
     [crowdedBuyers, crowdedSellers],
     [crowdedBuyers, []],
@@ -171,7 +171,7 @@ test("CDA row budgets conserve every quantity and own order as the available hei
     [[], []],
   ]) {
     for (let capacity = 4; capacity <= 45; capacity++) {
-      const rows = studyBookChartRows(buyers, sellers, capacity);
+      const rows = orderBookChartRows(buyers, sellers, capacity);
       assert.ok(rows.length <= capacity);
       const details = rows.filter((row) => row.kind === "price");
       assert.deepEqual(
@@ -202,7 +202,7 @@ test("CDA row budgets conserve every quantity and own order as the available hei
 
 test("CDA chart summary bars use the combined quantity scale and preserve ownership labels", () => {
   const html = renderToStaticMarkup(
-    createElement(StudyBookChart, {
+    createElement(OrderBookChart, {
       sides: [
         { side: "buyer", label: "買い注文", rows: crowdedBuyers },
         { side: "seller", label: "売り注文", rows: crowdedSellers },

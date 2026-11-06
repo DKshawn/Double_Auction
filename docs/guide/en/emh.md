@@ -12,9 +12,9 @@ Formal setup uses **戻る** in the header to return to experiment selection. Bo
 
 Starting the session shows a five-second preparation countdown in the center of the student screen, matching DA. Students can review their own conditions; trading and the period clock start when it ends. Pausing also freezes the countdown. This applies to both experiments and the demo.
 
-In both experiments, the student screen places buy and sell controls side by side and shows market prices and personal records at the same time. Each column supports submitting or cancelling a quote and accepting the other side’s quote.
+Both experiments place the limit and market buttons side by side for buying and for selling. Draft bid and ask prices stay in their fields when another trade clears or a trading unit times out. Submitted limits are matched against the current book. Both fields start empty in a new period or round.
 
-The student conditions panel follows the CDA layout, and the order book uses the same shared table. Private dividends and both buying and selling controls sit together: a limit order quotes a price, while a market order immediately accepts the best opposing price. EMH allows both sides for every participant and retains only one best bid and ask; it does not adopt CDA order depth or fixed buyer/seller roles.
+The conditions panel groups each student’s private dividends with their trading controls. The shared CDA book opens in list view (一覧) and can switch to a bar chart (棒グラフ). Your resting limits are identified by a highlighted row and あなた含む in the list, or a dot and outlined bar at that price in the chart. The book shows a cancel button for each side where you have a resting limit.
 
 ## Experiment 1
 
@@ -45,9 +45,11 @@ With a local server running, use `npx tsx scripts/verify-emh-http.ts`. It defaul
 
 ## Student trading screen
 
-Experiment 1 source page 11 permits everyone to quote, so the interface does not ask students to wait for a randomly nominated person. The market retains only one best bid and one best ask. Bids must improve upward and asks downward; equal prices are rejected and replaced quotes are not queued. Each student sees whether their quote is active, replaced, cancelled, filled or cleared, including after refresh.
+Everyone can post one bid and one ask at a time, each for one unit. Higher bids and lower asks take priority. Equal prices fill in the order the server received them. Your unfilled limit stays in the book through better quotes, other trades and individual trading-unit timeouts. Changing its price gives it a new place in the queue. Resubmitting the same price retains its place. You can cancel from the book. Remaining orders expire at period end.
 
-Accepting a quote immediately trades one unit at that price. A new bid at or above the ask, or an ask at or below the bid, also immediately trades at the standing opposing price. Controls state this consequence. Simultaneous actions follow the order in which the server accepts valid operations; stale quotes cannot execute. Students may cancel their own active quote before execution. Executed trades cannot be cancelled. Execution, timeout and period end clear quotes. Selling controls and inputs are disabled with zero holdings.
+A market order or a limit that crosses the best opposing price immediately trades one unit at the resting order’s price. A market order leaves your separate resting limits in place. A resting ask reserves one security. To sell your last reserved unit, amend that ask or cancel it before selling at market. The market rejects self-trades and attempts to accept an order that has already changed or traded.
+
+All four order buttons have centered labels with a CDA-style, per-unit estimated-profit badge underneath. Experiment 1 compares the order with holding until round end without further trading: period A uses the student’s A+B dividends, while period B uses only the unpaid B dividend. Buying subtracts the price from remaining dividends; selling subtracts the forgone remaining dividends from the price. Experiment 2 weights the student’s state dividends by public probabilities, or uses the indicated state dividend when the student has a Clue. Crossing limit and market orders use the standing opposing price. Invalid prices, self-trades and sales with no holdings show no profit estimate. Market-sell estimates use only unreserved securities.
 
 Students see all historical trade prices as numbers, without trend lines or counterpart identifiers, and can filter their own trades. Other participants' IDs and seat numbers are also removed from student API responses. Teachers retain full records, charts and exports. These rules apply to formal and demo screens in both experiments.
 

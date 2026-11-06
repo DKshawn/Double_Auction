@@ -12,7 +12,7 @@ On experiment setup and re-entry pages, use **戻る** in the header to return t
 
 Judgement room creation places task cards beside the selection and create controls; on narrow screens controls appear above the cards. See the [Judgement guide](judgment.md) for language switching and controls during a run.
 
-CDA and EMH share their order-book list presentation. Student views mark their own orders and omit other participant identifiers. Each experiment module keeps its own order and settlement rules.
+In CDA and EMH, switch the order book between the list (一覧) and the bar chart (棒グラフ). Student views mark their own orders and omit other participant identifiers. Each experiment module keeps its own order and settlement rules.
 
 ## 1. Choose an experiment and create a room
 

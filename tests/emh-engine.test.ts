@@ -114,10 +114,11 @@ test("a crossed bid settles one unit at the standing ask; quotes clear; cash con
   assert.equal(r.unit, 2);
   assert.equal(r.unitEndsAt, 30002);
 });
-test("standing bid execution, price improvement, cancellation ownership and stale quote checks", () => {
+test("equal bids queue behind earlier bids, and only the current best can be accepted", () => {
   const r = setup();
   quote(r, 0, "bid", 310);
-  assert.throws(() => quote(r, 1, "bid", 310), /高い/);
+  quote(r, 1, "bid", 310);
+  assert.equal(r.bid!.participantId, "p0");
   assert.throws(
     () =>
       act(
@@ -147,6 +148,7 @@ test("standing bid execution, price improvement, cancellation ownership and stal
   );
   quote(r, 2, "ask", 300, 5);
   assert.equal(r.trades[0]!.price, 320);
+  assert.equal(r.bid!.participantId, "p0");
 });
 test("self trading and short selling are rejected; stale unit cannot trade", () => {
   const r = setup();
@@ -365,4 +367,202 @@ test("legacy market snapshots retain two-unit resets and correct exported condit
   const output = JSON.parse(exportData(r, teacher, "conditions").body);
   assert.equal(output.config.initialUnits, 2);
   assert.equal(output.rules.totalUnits, 18);
+});
+
+test("all participants may quote regardless of nomination, with counterpart identities absent from student views", () => {
+  const r = setup();
+  assert.notEqual(r.nominatedSeat, r.participants[0]!.seat);
+  quote(r, 0, "ask", 300);
+  const other = view(r, student(1), 1);
+  assert.equal(other.nominatedSeat, null);
+  assert.equal(other.ask!.price, 300);
+  assert.equal(other.ask!.participantId, null);
+  assert.equal(other.ask!.seat, null);
+  assert.equal(view(r, student(0), 1).ask!.participantId, "p0");
+  assert.equal(view(r, teacher, 1).ask!.participantId, "p0");
+  quote(r, 1, "bid", 300, 2);
+  const observer = view(r, student(2), 2).trades[0]!;
+  assert.equal(observer.price, 300);
+  for (const key of ["buyerId", "sellerId", "buyerSeat", "sellerSeat"] as const)
+    assert.equal(observer[key], null);
+  const buyer = view(r, student(1), 2).trades[0]!;
+  assert.equal(buyer.buyerId, "p1");
+  assert.equal(buyer.sellerId, null);
+  assert.equal(view(r, teacher, 2).trades[0]!.sellerId, "p0");
+  r.reveal = true;
+  assert.equal(view(r, student(2), 3).trades[0]!.sellerId, null);
+});
+
+test("a better bid or ask changes priority without removing other participants' quotes", () => {
+  const r = setup();
+  for (const [i, side, price] of [
+    [0, "bid", 100],
+    [1, "bid", 110],
+    [2, "bid", 100],
+    [3, "ask", 200],
+    [4, "ask", 190],
+    [5, "ask", 200],
+  ] as const)
+    quote(r, i, side, price);
+  const owner = view(r, student(0), 1);
+  const levels = (side: "bid" | "ask") =>
+    owner.orderBook[side].map(({ price, quantity, ownQuantity }) => [
+      price,
+      quantity,
+      ownQuantity,
+    ]);
+  assert.deepEqual(levels("bid"), [
+    [110, 1, 0],
+    [100, 2, 1],
+  ]);
+  assert.deepEqual(levels("ask"), [
+    [190, 1, 0],
+    [200, 2, 0],
+  ]);
+  assert.ok(owner.orderBook.bid.every((level) => level.aliases === ""));
+  assert.equal(
+    view(r, teacher, 1).orderBook.bid[1]!.aliases,
+    "被験者 #1・被験者 #3",
+  );
+  const firstBidId = owner.ownQuotes.bid.quoteId;
+  quote(r, 0, "bid", 100);
+  assert.equal(view(r, student(0), 1).ownQuotes.bid.quoteId, firstBidId);
+  quote(r, 6, "ask", 90, 2);
+  quote(r, 7, "bid", 250, 3);
+  assert.deepEqual(
+    r.trades.map((t) => [t.price, t.buyerId, t.sellerId]),
+    [
+      [110, "p1", "p6"],
+      [190, "p7", "p4"],
+    ],
+  );
+  advanceClock(r, 30003, random);
+  assert.equal(r.emptyUnits, 1);
+  assert.equal(r.bid!.id, firstBidId);
+  assert.equal(r.ask!.participantId, "p3");
+  // Execute depth in FIFO order after serialization and another unit's timeout.
+  const restored: Room = JSON.parse(JSON.stringify(r));
+  for (const [i, side, price] of [
+    [6, "ask", 95],
+    [8, "ask", 95],
+    [1, "bid", 210],
+    [2, "bid", 210],
+  ] as const)
+    quote(restored, i, side, price, 30005);
+  assert.deepEqual(
+    restored.trades.slice(2).map((t) => [t.price, t.buyerId, t.sellerId]),
+    [
+      [100, "p0", "p6"],
+      [100, "p2", "p8"],
+      [200, "p1", "p3"],
+      [200, "p2", "p5"],
+    ],
+  );
+  assert.deepEqual(view(restored, student(0), 30005).ownQuotes.bid, {
+    status: "filled",
+    price: 100,
+  });
+  assert.deepEqual(view(restored, student(5), 30005).ownQuotes.ask, {
+    status: "filled",
+    price: 200,
+  });
+});
+
+test("a trader can amend or cancel a queued order without affecting a better quote", () => {
+  const r = setup();
+  quote(r, 0, "ask", 160);
+  const first = r.ask!.id;
+  quote(r, 1, "ask", 150);
+  quote(r, 2, "ask", 165);
+  quote(r, 0, "ask", 165);
+  const remaining = view(r, student(0), 1).ownQuotes.ask;
+  assert.notEqual(remaining.quoteId, first);
+  const cancel = (i: number, id: string) =>
+    act(
+      r,
+      student(i),
+      { kind: "cancel", side: "ask", quoteId: id, unitKey: unitKey(r) },
+      2,
+    );
+  assert.throws(() => cancel(0, first), /取り消せ/);
+  assert.throws(() => cancel(1, remaining.quoteId!), /取り消せ/);
+  assert.equal(r.ask!.price, 150);
+  assert.equal(r.queuedQuotes!.ask[0]!.participantId, "p2");
+  cancel(0, remaining.quoteId!);
+  assert.equal(r.ask!.participantId, "p1");
+  assert.equal(view(r, student(0), 2).ownQuotes.ask.status, "cancelled");
+  finish(r, 3);
+  assert.equal(r.period, "B");
+  assert.deepEqual(view(r, teacher, 3).orderBook, { bid: [], ask: [] });
+  assert.equal(view(r, student(1), 3).ownQuotes.ask.status, "cleared");
+});
+
+test("market orders leave the trader's independent limits active and cannot spend reserved stock", () => {
+  const r = setup();
+  quote(r, 0, "bid", 100);
+  quote(r, 0, "ask", 210);
+  quote(r, 1, "bid", 110);
+  const sell = () =>
+    act(
+      r,
+      student(0),
+      { kind: "accept", side: "bid", quoteId: r.bid!.id, unitKey: unitKey(r) },
+      3,
+    );
+  sell();
+  assert.equal(r.participants[0]!.holdings, 1);
+  quote(r, 1, "bid", 110, 4);
+  const before = JSON.stringify(r);
+  assert.throws(sell, /売り指値注文/);
+  assert.throws(() => quote(r, 0, "bid", 210, 5), /自分/);
+  assert.equal(JSON.stringify(r), before);
+  // Amending the existing ask may use the reserved unit, including a crossing price.
+  quote(r, 0, "ask", 105, 6);
+  assert.equal(r.participants[0]!.holdings, 0);
+  assert.equal(r.ask, null);
+  assert.equal(r.bid!.participantId, "p0");
+  assert.equal(r.trades.at(-1)!.price, 110);
+  assert.deepEqual(view(r, student(0), 6).ownQuotes.ask, {
+    status: "filled",
+    price: 110,
+  });
+  assert.equal(
+    r.participants.reduce((sum, p) => sum + p.cash, 0),
+    0,
+  );
+});
+
+test("legacy snapshots promote live best quotes but never resurrect expired ones", () => {
+  const r = setup();
+  quote(r, 0, "bid", 100);
+  delete r.queuedQuotes;
+  const expired: Room = structuredClone(r);
+  const completed: Room = {
+    ...structuredClone(r),
+    status: "completed",
+    bid: null,
+  };
+  const id = r.bid!.id;
+  advanceClock(r, 2, random);
+  quote(r, 1, "bid", 101, 3);
+  advanceClock(r, 30000, random);
+  assert.equal(view(r, student(0), 30000).ownQuotes.bid.quoteId, id);
+  assert.equal(
+    r.events.filter((e) => e.kind === "order-book-upgraded").length,
+    1,
+  );
+  advanceClock(expired, 30001, random);
+  assert.equal(expired.bid, null);
+  assert.equal(expired.queuedQuotes!.bid.length, 0);
+  advanceClock(completed, 30001, random);
+  assert.equal(completed.queuedQuotes, undefined);
+  assert.equal(
+    JSON.parse(exportData(completed, teacher, "conditions").body).rules
+      .orderPriority,
+    undefined,
+  );
+  assert.equal(
+    JSON.parse(exportData(r, teacher, "conditions").body).rules.orderPriority,
+    "price-then-arrival",
+  );
 });

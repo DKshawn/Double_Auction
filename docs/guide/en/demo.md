@@ -43,7 +43,7 @@ Saving settings during admission, confirming and locking allocation, and explici
 
 Experiment 2 uses one market of 3–999 people, with you and 11 virtual participants by default. Configure initial securities, target size, type ratios, the consecutive unsuccessful-attempt limit, insider start round and number per type, state probabilities, dividends and realized states. The demo always simulates one market. Default practice dividends in yen are 80/110/170, 60/180/100 and 140/120/90, with realized states 3/3/3/3/2/2; these differ from formal defaults. Virtual participants trade using their own information.
 
-In Experiment 2, the student view pairs each state’s dividend with its probability, groups buying on the left and selling on the right of the order book, each with the counterparty offer and its own quote input, and shows market prices and personal round records together. During either experiment, the teacher view’s **実験条件** button expands or collapses the experiment conditions.
+Both EMH experiments share the formal conditions panel: the buy and sell sides each place the limit and market buttons side by side and estimated profit beneath them, using the same [remaining-dividend calculation](emh.md). The order book offers the same list and bar-chart views as the formal experiment, with your resting limits marked in both. They stay active through other quotes, trades and individual timeouts until period end, unless filled, amended or cancelled. Experiment 2 groups state dividends, probabilities and the Clue, alongside trade and personal round records. Teachers can expand or collapse conditions with **実験条件**.
 
 The EMH demo control panel switches between teacher and student views, pauses, advances 30 seconds or to the next period, restarts, and returns to settings. Fast-forward processes virtual trades and deadlines in order; it is disabled during the countdown and while paused. **やり直す** keeps the settings and resets allocation and progress. The screen-size preview places the control panel outside the frame.
 
@@ -56,6 +56,8 @@ Open the EMH screen-size preview at `/emh/demo/preview` or with **画面サイ�
 Task cards, selected count/list and randomization settings are shared with formal experiments. Use **デモを開始** in the right control panel; on narrow screens the panel moves above the cards. Setup supports Japanese, Chinese and English, and closing the preview retains the current selection. The preview opens in the teacher's selected language and also allows switching within the student view.
 
 [Judgement Demo Model](https://exp-all-in-one.vercel.app/judgment/demo) previews the student screens after task selection. Circular **i** buttons open task details. The preview does not save answers and pauses time limits. Use the isolated local verification flow to check production timing and answer persistence.
+
+Everyone can quote in EMH. Accepting an opposing price or submitting a crossing quote immediately trades one unit. Students see anonymous trade records and their own resting orders highlighted in the book; Experiment 1 scores are marked provisional until period B ends.
 
 ---
 

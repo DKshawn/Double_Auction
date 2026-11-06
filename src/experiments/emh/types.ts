@@ -1,3 +1,5 @@
+import type { OrderBookLevel } from "@/lib/order-book";
+
 export type Period = "A" | "B";
 export type Side = "bid" | "ask";
 export type Status = "lobby" | "countdown" | "trading" | "break" | "completed";
@@ -50,6 +52,25 @@ export interface Trade {
   sellerSeat: number;
   price: number;
   at: number;
+}
+/** Student payloads retain only the student's own identity. */
+export type QuoteView = Omit<Quote, "participantId" | "seat"> & {
+  participantId: string | null;
+  seat: number | null;
+};
+export type TradeView = Omit<
+  Trade,
+  "buyerId" | "sellerId" | "buyerSeat" | "sellerSeat"
+> & {
+  buyerId: string | null;
+  sellerId: string | null;
+  buyerSeat: number | null;
+  sellerSeat: number | null;
+};
+export interface OwnQuoteState {
+  quoteId?: string;
+  status: "none" | "active" | "replaced" | "cancelled" | "cleared" | "filled";
+  price: number | null;
 }
 export interface Payout {
   participantId: string;
@@ -108,6 +129,9 @@ export interface Room {
   pausedAt: number | null;
   bid: Quote | null;
   ask: Quote | null;
+  // Best prices remain in bid/ask; these queues hold the remaining orders in matching order.
+  // Older snapshots contain only the two best quotes.
+  queuedQuotes?: Record<Side, Quote[]>;
   trades: Trade[];
   results: PeriodResult[];
   events: AuditEvent[];
@@ -172,9 +196,11 @@ export interface RoomView {
   unitEndsAt: number | null;
   breakEndsAt: number | null;
   pausedAt: number | null;
-  bid: Quote | null;
-  ask: Quote | null;
-  trades: Trade[];
+  bid: QuoteView | null;
+  ask: QuoteView | null;
+  orderBook: Record<Side, OrderBookLevel[]>;
+  trades: TradeView[];
+  ownQuotes: { bid: OwnQuoteState; ask: OwnQuoteState };
   me: PersonView | null;
   participants: PersonView[];
   results: PeriodResult[];

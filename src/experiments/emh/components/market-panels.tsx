@@ -2,6 +2,10 @@
 import { useState, type FormEvent } from "react";
 import { Download, LockKeyhole } from "lucide-react";
 import type { Action, RoomView, Side } from "@/experiments/emh/types";
+import { OrderBookPanel } from "@/components/order-book-panel";
+import type { OrderBookSide } from "@/lib/order-book";
+import { canSellAtMarket } from "@/experiments/emh/order-book";
+import { orderProfitPreview } from "@/experiments/emh/order-profit";
 import { PriceChart } from "./price-chart";
 
 export const fmt = (n: number | null | undefined, digits = 0) =>
@@ -31,6 +35,65 @@ export type RunAction = (action: Action) => Promise<void>;
 export function OrderPanel({
   room,
   act,
+  disabled = false,
+}: {
+  room: RoomView;
+  act?: RunAction;
+  disabled?: boolean;
+}) {
+  const orderSides = ["bid", "ask"] as const;
+  const sides: OrderBookSide[] = orderSides.map((side) => ({
+    side: side === "bid" ? "buyer" : "seller",
+    label: side === "bid" ? "買い注文" : "売り注文",
+    rows: room.orderBook?.[side] ?? [],
+  }));
+  const cancellable = orderSides.filter((side) => room.ownQuotes[side].quoteId);
+  return (
+    <OrderBookPanel
+      sides={sides}
+      className="cda-order-book"
+      showParticipants={room.role === "teacher"}
+      footer={
+        act &&
+        cancellable.length > 0 && (
+          <div className="emh-book-cancellations">
+            {cancellable.map((side) => (
+              <button
+                key={side}
+                type="button"
+                className="button secondary small"
+                disabled={disabled}
+                onClick={() =>
+                  act({
+                    kind: "cancel",
+                    side,
+                    quoteId: room.ownQuotes[side].quoteId!,
+                    unitKey: room.unitKey,
+                  })
+                }
+              >
+                {side === "bid" ? "買値を取り消す" : "売値を取り消す"}
+              </button>
+            ))}
+          </div>
+        )
+      }
+    />
+  );
+}
+
+function OrderProfit({ id, profit }: { id: string; profit: number | null }) {
+  if (profit === null) return null;
+  return (
+    <small id={id} className={profit < 0 ? "loss" : "field-help"}>
+      <span>見込利益</span> <span>{fmt(profit, 2)}円</span>
+    </small>
+  );
+}
+
+function StudentOrderEntry({
+  room,
+  act,
   disabled,
 }: {
   room: RoomView;
@@ -39,65 +102,118 @@ export function OrderPanel({
 }) {
   const [bidPrice, setBidPrice] = useState("");
   const [askPrice, setAskPrice] = useState("");
-  const canTrade =
-    !disabled && room.status === "trading" && room.pausedAt === null;
-  const student = room.role === "student";
-  async function submit(
-    e: FormEvent,
-    submittedSide: Side,
-    submittedPrice: string,
-  ) {
-    e.preventDefault();
+  const trading = room.status === "trading" && room.pausedAt === null;
+  const canTrade = trading && !disabled;
+  async function submit(event: FormEvent, side: Side, price: string) {
+    event.preventDefault();
+    if (!canTrade) return;
     await act({
       kind: "quote",
-      side: submittedSide,
-      price: Number(submittedPrice),
+      side,
+      price: Number(price),
       unitKey: room.unitKey,
     });
   }
-  if (student) {
-    return (
-      <section className="panel order-panel student-order-panel">
-        <div className="section-heading">
-          <h2>注文板</h2>
-          <span className="muted">1単位</span>
-        </div>
-        <div className="student-action-columns">
-          {(["bid", "ask"] as const).map((quoteSide) => {
-            const buying = quoteSide === "bid";
-            const oppositeSide = buying ? "ask" : "bid";
-            const offer = room[oppositeSide];
-            const ownOffer = offer?.participantId === room.me?.id;
-            const ownQuote =
-              room[quoteSide]?.participantId === room.me?.id
-                ? room[quoteSide]
-                : null;
-            const label = buying ? "買値" : "売値";
-            return (
-              <div
-                key={quoteSide}
-                className={`student-action-column ${buying ? "buy-side" : "sell-side"}`}
-              >
-                <h3>{buying ? "買う" : "売る"}</h3>
-                <div className={`quote-card ${oppositeSide}`}>
-                  <div className="quote-label">
-                    {buying ? "最低売値" : "最高買値"}
-                  </div>
-                  <strong>
-                    <Yen value={offer?.price} />
-                  </strong>
-                  <div className="quote-owner">
-                    {offer
-                      ? `被験者 ${offer.seat}${ownOffer ? "（あなた）" : ""}`
-                      : "提示なし"}
-                  </div>
+  return (
+    <div className="study-private-order student-action-columns">
+      {(["bid", "ask"] as const).map((side) => {
+        const buying = side === "bid";
+        const oppositeSide = buying ? "ask" : "bid";
+        const offer = room[oppositeSide];
+        const ownOffer = !!offer && offer.participantId === room.me?.id;
+        const label = buying ? "買値" : "売値";
+        const actionLabel = buying ? "買い" : "売り";
+        const price = buying ? bidPrice : askPrice;
+        const crosses =
+          !!price &&
+          !!offer &&
+          (buying
+            ? Number(price) >= offer.price
+            : Number(price) <= offer.price);
+        const noHoldings = !buying && !room.me?.holdings;
+        const sameLimit =
+          room.ownQuotes[side].price === Number(price) &&
+          room.ownQuotes[side].status === "active";
+        const cannotQuote =
+          !canTrade || noHoldings || sameLimit || (crosses && ownOffer);
+        const reserved =
+          !buying &&
+          !noHoldings &&
+          !canSellAtMarket(
+            room.me!.holdings,
+            room.ownQuotes.ask.status === "active",
+          );
+        const profit = orderProfitPreview(room, side, price);
+        return (
+          <div
+            key={side}
+            className={`student-action-column ${buying ? "buy-side" : "sell-side"}`}
+          >
+            <h3 className={buying ? "buy-text" : "sell-text"}>
+              {buying ? "買う" : "売る"}
+            </h3>
+            <form
+              className="study-order-form"
+              onSubmit={(event) => submit(event, side, price)}
+            >
+              <div className="field">
+                <label htmlFor={`order-${side}-price`}>{label}（円）</label>
+                <div className="study-price-input">
+                  <input
+                    id={`order-${side}-price`}
+                    inputMode="numeric"
+                    type="number"
+                    placeholder={`${label}を入力`}
+                    min={1}
+                    max={100000}
+                    step={1}
+                    value={price}
+                    onChange={(event) =>
+                      (buying ? setBidPrice : setAskPrice)(event.target.value)
+                    }
+                    disabled={!trading || noHoldings}
+                    required
+                    aria-describedby={
+                      profit.limit === null ? undefined : `order-${side}-profit`
+                    }
+                  />
+                  <span aria-hidden="true">円</span>
+                </div>
+              </div>
+              <div className="emh-order-actions">
+                <div className="study-market-order">
                   <button
-                    className={`button small ${buying ? "buy" : "sell"}`}
+                    className={`button ${buying ? "buy" : "sell"} full`}
+                    disabled={cannotQuote}
+                    aria-label={`${actionLabel}指値注文${crosses && !ownOffer ? "（即時成立）" : ""}`}
+                    aria-describedby={
+                      profit.limit === null ? undefined : `order-${side}-profit`
+                    }
+                  >
+                    指値注文{crosses && !ownOffer ? "（即時）" : ""}
+                  </button>
+                  <OrderProfit
+                    id={`order-${side}-profit`}
+                    profit={profit.limit}
+                  />
+                </div>
+                <div className="study-market-order">
+                  <button
+                    type="button"
+                    className={`button ${buying ? "buy" : "sell"} full`}
+                    aria-label={`${actionLabel}成行注文`}
+                    aria-describedby={
+                      profit.market === null
+                        ? undefined
+                        : `order-${side}-market-profit`
+                    }
                     disabled={
-                      !canTrade ||
-                      !offer ||
-                      ownOffer ||
-                      (!buying && !room.me?.holdings)
+                      !canTrade || !offer || ownOffer || noHoldings || reserved
+                    }
+                    title={
+                      reserved
+                        ? "売り指値注文を取り消すと、この証券を成行で売れます。"
+                        : undefined
                     }
                     onClick={() =>
                       act({
@@ -108,146 +224,101 @@ export function OrderPanel({
                       })
                     }
                   >
-                    この価格で{buying ? "買う" : "売る"}
+                    成行注文
                   </button>
+                  <OrderProfit
+                    id={`order-${side}-market-profit`}
+                    profit={profit.market}
+                  />
                 </div>
-                <form
-                  className="price-entry"
-                  onSubmit={(event) =>
-                    submit(event, quoteSide, buying ? bidPrice : askPrice)
-                  }
-                >
-                  <label
-                    className="sr-only"
-                    htmlFor={`order-${quoteSide}-price`}
-                  >
-                    {label}（円）
-                  </label>
-                  <div className="price-input">
-                    <input
-                      id={`order-${quoteSide}-price`}
-                      inputMode="numeric"
-                      type="number"
-                      placeholder={`${label}を入力`}
-                      min={1}
-                      max={100000}
-                      step={1}
-                      value={buying ? bidPrice : askPrice}
-                      onChange={(event) =>
-                        (buying ? setBidPrice : setAskPrice)(event.target.value)
-                      }
-                      disabled={!canTrade}
-                      required
-                    />
-                    <span className="input-yen" aria-hidden="true">
-                      円
-                    </span>
-                  </div>
-                  <button
-                    className={`button ${buying ? "buy" : "sell"}`}
-                    disabled={!canTrade || (!buying && !room.me?.holdings)}
-                  >
-                    {label}を提示
-                  </button>
-                </form>
-                {ownQuote && (
-                  <button
-                    type="button"
-                    className="button small secondary student-cancel-quote"
-                    disabled={!canTrade}
-                    onClick={() =>
-                      act({
-                        kind: "cancel",
-                        side: quoteSide,
-                        quoteId: ownQuote.id,
-                        unitKey: room.unitKey,
-                      })
-                    }
-                  >
-                    {label}を取り消す
-                  </button>
-                )}
               </div>
-            );
-          })}
-        </div>
-        <p className="field-note">
-          買値は高く、売値は低く。相手の提示価格で成立。
-        </p>
-      </section>
-    );
-  }
-  return (
-    <section className="panel order-panel">
-      <div className="section-heading">
-        <h2>注文板</h2>
-        <span className="muted">1単位</span>
-      </div>
-      <div className="quote-grid">
-        {(["bid", "ask"] as const).map((s) => {
-          const q = room[s];
-          return (
-            <div key={s} className={`quote-card ${s}`}>
-              <div className="quote-label">
-                {s === "bid" ? "最高買値" : "最低売値"}
-              </div>
-              <strong>
-                <Yen value={q?.price} />
-              </strong>
-              <div className="quote-owner">
-                {q ? `被験者 ${q.seat}` : "提示なし"}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+            </form>
+          </div>
+        );
+      })}
+    </div>
   );
 }
-export function PersonalPanel({ room }: { room: RoomView }) {
+
+export function PersonalPanel({
+  room,
+  act,
+  disabled,
+}: {
+  room: RoomView;
+  act: RunAction;
+  disabled: boolean;
+}) {
   const me = room.me!;
   return (
-    <section className="panel private-panel">
-      <div className="section-heading">
-        <h2>あなたの配当</h2>
-        <LockKeyhole size={15} aria-label="本人のみ" />
+    <aside className="panel study-section private-panel emh-conditions">
+      <h2>
+        <LockKeyhole size={16} aria-hidden="true" />
+        {me.name}の条件 <small>非公開</small>
+      </h2>
+      <div className="study-private-values private-dividends">
+        {!room.exp2 ? (
+          <>
+            <p>1単位あたりの配当</p>
+            <div className="study-values dividend-grid">
+              <div className={room.period === "A" ? "current" : ""}>
+                <span>A期末</span>
+                <b>
+                  <Yen value={me.dividends?.a} />
+                </b>
+              </div>
+              <div className={room.period === "B" ? "current" : ""}>
+                <span>B期末</span>
+                <b>
+                  <Yen value={me.dividends?.b} />
+                </b>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="exp2-private-values">
+            <div className="exp2-state-info">
+              <p>状態別の配当 / 確率</p>
+              <div className="exp2-state-values">
+                {room.exp2.prior.map((probability, index) => (
+                  <div key={index}>
+                    <span>状態 {index + 1}</span>
+                    <div className="exp2-state-line">
+                      <span>配当</span>
+                      <strong>
+                        <Yen value={room.exp2!.dividends?.[index]} />
+                      </strong>
+                    </div>
+                    <div className="exp2-state-line">
+                      <span>確率</span>
+                      <small>{fmt(probability * 100)}%</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="exp2-clue">
+              <span>Clue カード</span>
+              <strong>
+                {room.exp2.clue ? `状態 ${room.exp2.clue}` : "情報なし"}
+              </strong>
+            </div>
+            {room.exp2.state !== null && (
+              <div className="exp2-realized">
+                <span>実現した状態</span>
+                <strong>{room.exp2.state}</strong>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      <div className="dividend-grid">
-        <div className={room.period === "A" ? "current" : ""}>
-          <span>A期</span>
-          <strong>
-            <Yen value={me.dividends?.a} />
-          </strong>
-        </div>
-        <div className={room.period === "B" ? "current" : ""}>
-          <span>B期</span>
-          <strong>
-            <Yen value={me.dividends?.b} />
-          </strong>
-        </div>
-      </div>
-      <p className="field-note">期末の保有1単位につき受け取る得点</p>
-      <div className="personal-lines">
-        <div>
-          <span>このラウンドの配当受取</span>
-          <strong>
-            <Yen value={me.dividend} />
-          </strong>
-        </div>
-        <div>
-          <span>このラウンドの得点</span>
-          <strong>
-            <Yen value={me.cash + me.dividend} />
-          </strong>
-        </div>
-        <div>
-          <span>終了ラウンドの累計</span>
-          <strong>
-            <Yen value={me.totalProfit} />
-          </strong>
-        </div>
-      </div>
-    </section>
+      <StudentOrderEntry
+        key={`${room.code}:${me.id}:${room.year}:${room.period}`}
+        room={room}
+        act={act}
+        disabled={disabled}
+      />
+    </aside>
   );
 }
 export function HistoryPanel({
@@ -258,12 +329,18 @@ export function HistoryPanel({
   compact?: boolean;
 }) {
   const [selection, setSelection] = useState<number | null>(null);
+  const [personalOnly, setPersonalOnly] = useState(false);
+  const teacher = room.role === "teacher";
   const year = selection ?? room.year;
-  const trades = room.trades.filter((t) => t.year === year);
+  const allTrades = room.trades.filter((t) => t.year === year);
+  const personal = allTrades.filter(
+    (t) => t.buyerId === room.me?.id || t.sellerId === room.me?.id,
+  );
+  const trades = !teacher && personalOnly ? personal : allTrades;
   return (
     <section className="panel history-panel">
       <div className="section-heading">
-        <h2>取引価格（円）</h2>
+        <h2>{teacher ? "取引価格（円）" : "取引記録"}</h2>
         <label className="round-select">
           <span className="sr-only">表示ラウンド</span>
           <select
@@ -283,12 +360,31 @@ export function HistoryPanel({
           </select>
         </label>
       </div>
-      <PriceChart
-        trades={trades}
-        benchmarks={room.benchmarks}
-        singlePeriod={!!room.exp2}
-        compact={compact}
-      />
+      {teacher ? (
+        <PriceChart
+          trades={trades}
+          benchmarks={room.benchmarks}
+          singlePeriod={!!room.exp2}
+          compact={compact}
+        />
+      ) : (
+        <div className="trade-history-filter" aria-label="取引記録の表示">
+          <button
+            className="button secondary small-button"
+            aria-pressed={!personalOnly}
+            onClick={() => setPersonalOnly(false)}
+          >
+            全体 {allTrades.length}件
+          </button>
+          <button
+            className="button secondary small-button"
+            aria-pressed={personalOnly}
+            onClick={() => setPersonalOnly(true)}
+          >
+            自分の売買 {personal.length}件
+          </button>
+        </div>
+      )}
       <div className="table-scroll trade-table">
         <table>
           <thead>
@@ -296,8 +392,17 @@ export function HistoryPanel({
               <th>取引</th>
               {!room.exp2 && <th>期</th>}
               <th>価格（円）</th>
-              <th>買い手</th>
-              <th>売り手</th>
+              {teacher ? (
+                <>
+                  <th>買い手</th>
+                  <th>売り手</th>
+                </>
+              ) : (
+                <>
+                  <th>数量</th>
+                  <th>自分の売買</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -321,20 +426,31 @@ export function HistoryPanel({
                     </td>
                   )}
                   <td className="numeric emphasis">{fmt(t.price)}</td>
-                  <td>
-                    #{t.buyerSeat}
-                    {t.buyerId === room.me?.id && " · あなた"}
-                  </td>
-                  <td>
-                    #{t.sellerSeat}
-                    {t.sellerId === room.me?.id && " · あなた"}
-                  </td>
+                  {teacher ? (
+                    <>
+                      <td>#{t.buyerSeat}</td>
+                      <td>#{t.sellerSeat}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td>1単位</td>
+                      <td>
+                        {t.buyerId === room.me?.id
+                          ? "買い"
+                          : t.sellerId === room.me?.id
+                            ? "売り"
+                            : "—"}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))
             ) : (
               <tr>
                 <td colSpan={room.exp2 ? 4 : 5} className="empty-cell">
-                  まだ取引はありません
+                  {personalOnly
+                    ? "このラウンドではまだ売買していません"
+                    : "まだ取引はありません"}
                 </td>
               </tr>
             )}
@@ -397,8 +513,10 @@ export function ResultsPanel({ room }: { room: RoomView }) {
   return (
     <section className="panel results-panel">
       <div className="section-heading">
-        <h2>{teacher ? "ラウンドの結果" : "あなたの記録"}</h2>
-        <span className="muted">{room.results.length} 期終了</span>
+        <h2>{teacher ? "ラウンドの結果" : "配当・得点の記録"}</h2>
+        <span className="muted">
+          {room.results.length ? `${room.results.length}期を精算` : "精算待ち"}
+        </span>
       </div>
       <div className="table-scroll">
         <table>
@@ -459,9 +577,11 @@ export function ResultsPanel({ room }: { room: RoomView }) {
                         <td>{fmt(payout?.cash)}</td>
                         <td className="emphasis">
                           {fmt(payout?.yearProfit)}
-                          {!room.exp2 && r.period === "A" && (
-                            <span className="muted"> *</span>
-                          )}
+                          <span
+                            className={`score-status ${!room.exp2 && r.period === "A" ? "provisional" : "final"}`}
+                          >
+                            {!room.exp2 && r.period === "A" ? "暫定" : "確定"}
+                          </span>
                         </td>
                       </>
                     )}
@@ -498,10 +618,6 @@ export function ResultsPanel({ room }: { room: RoomView }) {
             初期配分の総配当）。全員の配当が同じ場合は定義しません。
           </p>
         </details>
-      ) : !room.exp2 ? (
-        <p className="field-note">
-          * A期の得点は途中経過。B期の得点がそのラウンドの確定得点です。
-        </p>
       ) : null}
       {room.exp2 && (teacher || room.reveal) && (
         <div className="debrief">

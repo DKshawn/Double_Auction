@@ -1690,9 +1690,12 @@
 }
 
 /* A full-width workstation; content can still flow on small screens or at zoom. */
-.study-shell {
+.study-shell,
+.study-order-book {
   --study-table-body-font-size: 14px;
   --study-table-header-font-size: 11px;
+}
+.study-shell {
   container: study-screen / inline-size;
   min-height: 100dvh;
   display: flex;
@@ -1928,16 +1931,16 @@
   line-height: 1.4;
 }
 .cda-layout > .study-market-column,
-.cda-layout .study-order-book {
+.cda-order-book {
   min-height: 0;
 }
-.cda-layout .study-order-book > .study-book,
-.cda-layout .study-order-book > .study-book-chart {
+.cda-order-book > .study-book,
+.cda-order-book > .study-book-chart {
   flex: 1;
   min-height: 0;
   overflow: auto;
 }
-.cda-layout .study-order-book > .study-book-chart {
+.cda-order-book > .study-book-chart {
   overflow: hidden;
 }
 :is(.cda-layout, .call-layout, .posted-layout) > .private-panel h2 {
@@ -2357,7 +2360,8 @@
   padding: 9px 12px;
   font-size: 12px;
 }
-.study-trading-grid .study-book {
+.study-trading-grid .study-book,
+.cda-order-book .study-book {
   margin-top: 8px;
   gap: 16px;
 }
@@ -2580,38 +2584,38 @@
 .study-order-book .study-book-rows .study-empty {
   top: 20px;
 }
-.cda-layout .study-book-heading {
+.cda-order-book .study-book-heading {
   min-height: 32px;
   margin-bottom: 4px;
 }
-.cda-layout .study-book-heading h2 {
+.cda-order-book .study-book-heading h2 {
   margin: 0;
   font-size: var(--study-table-body-font-size);
 }
-.cda-layout .study-order-book > p {
+.cda-order-book > p {
   font-size: var(--study-table-body-font-size);
   line-height: 1.4;
 }
-.cda-layout .study-book h3 {
+.cda-order-book .study-book h3 {
   font-size: var(--study-table-body-font-size);
   line-height: 1.4;
 }
-.cda-layout .study-book th,
-.cda-layout .study-book td {
+.cda-order-book .study-book th,
+.cda-order-book .study-book td {
   height: 24px;
   padding: 2px 5px;
   line-height: 1.4;
 }
-.cda-layout .study-book th {
+.cda-order-book .study-book th {
   font-size: var(--study-table-header-font-size);
 }
-.cda-layout .study-book th:first-child {
+.cda-order-book .study-book th:first-child {
   width: 65%;
 }
-.cda-layout .study-book td {
+.cda-order-book .study-book td {
   font-size: var(--study-table-body-font-size);
 }
-.cda-layout .study-book-rows .study-empty {
+.cda-order-book .study-book-rows .study-empty {
   top: 24px;
   font-size: var(--study-table-body-font-size);
   line-height: 1.4;
@@ -3133,7 +3137,7 @@
 @container study-screen (max-width: 1199px) {
   /* Stacked layouts have no fixed grid height; keep quote growth independent
      of the page height while retaining a useful preview on small screens. */
-  .cda-layout .study-order-book > .study-book-chart {
+  .cda-order-book > .study-book-chart {
     flex: none;
   }
   .study-trading-grid.call-layout {

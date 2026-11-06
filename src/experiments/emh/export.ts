@@ -132,6 +132,14 @@ export function exportData(room: Room, actor: Actor, kind: string) {
             priceBounds: [1, 100000],
             cashConstraint: false,
             tradePrice: "standing-quote",
+            ...(room.queuedQuotes
+              ? {
+                  orderPriority: "price-then-arrival",
+                  unfilledLimitExpires: "period-end",
+                  maxLimitsPerParticipantPerSide: 1,
+                  reservedUnitsPerAsk: 1,
+                }
+              : {}),
             nomination: "invitation-only",
           },
         },

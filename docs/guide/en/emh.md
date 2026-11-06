@@ -12,7 +12,9 @@ Formal setup uses **戻る** in the header to return to experiment selection. Bo
 
 Starting the session shows a five-second preparation countdown in the center of the student screen, matching DA. Students can review their own conditions; trading and the period clock start when it ends. Pausing also freezes the countdown. This applies to both experiments and the demo.
 
-In both experiments, the student screen places buy and sell controls side by side and shows market prices and personal records at the same time. Each column supports submitting or cancelling a quote and accepting the other side’s quote.
+Both experiments place the limit and market buttons side by side for buying and for selling. Draft bid and ask prices stay in their fields when another trade clears or a trading unit times out. Submitted limits are matched against the current book. Both fields start empty in a new period or round.
+
+The conditions panel groups each student’s private dividends with their trading controls. The shared CDA book opens in list view (一覧) and can switch to a bar chart (棒グラフ). Your resting limits are identified by a highlighted row and あなた含む in the list, or a dot and outlined bar at that price in the chart. The book shows a cancel button for each side where you have a resting limit.
 
 ## Experiment 1
 
@@ -40,6 +42,20 @@ With a local server running, use `npx tsx scripts/verify-emh-http.ts`. It defaul
 `tests/emh-engine.test.ts` and `tests/emh-platform.test.ts` cover allocations across participant counts, parallel markets with 30 participants, private information, re-entry, retries and simultaneous trades, clocks, all six rounds, dividends, explicit explanation release, and shared room codes and management.
 
 `tests/e2e/emh-settings.spec.ts` verifies saving and reloading settings, concurrent editor conflicts, confirmation and release, all six rounds with eight participants, duplicate submissions, privacy and CSV/JSON export through the browser.
+
+## Student trading screen
+
+Everyone can post one bid and one ask at a time, each for one unit. Higher bids and lower asks take priority. Equal prices fill in the order the server received them. Your unfilled limit stays in the book through better quotes, other trades and individual trading-unit timeouts. Changing its price gives it a new place in the queue. Resubmitting the same price retains its place. You can cancel from the book. Remaining orders expire at period end.
+
+A market order or a limit that crosses the best opposing price immediately trades one unit at the resting order’s price. A market order leaves your separate resting limits in place. A resting ask reserves one security. To sell your last reserved unit, amend that ask or cancel it before selling at market. The market rejects self-trades and attempts to accept an order that has already changed or traded.
+
+All four order buttons have centered labels with a CDA-style, per-unit estimated-profit badge underneath. Experiment 1 compares the order with holding until round end without further trading: period A uses the student’s A+B dividends, while period B uses only the unpaid B dividend. Buying subtracts the price from remaining dividends; selling subtracts the forgone remaining dividends from the price. Experiment 2 weights the student’s state dividends by public probabilities, or uses the indicated state dividend when the student has a Clue. Crossing limit and market orders use the standing opposing price. Invalid prices, self-trades and sales with no holdings show no profit estimate. Market-sell estimates use only unreserved securities.
+
+Students see all historical trade prices as numbers, without trend lines or counterpart identifiers, and can filter their own trades. Other participants' IDs and seat numbers are also removed from student API responses. Teachers retain full records, charts and exports. These rules apply to formal and demo screens in both experiments.
+
+Experiment 1 dividends occupy a private, student-specific area. The current score is trading cash flow plus dividends already received; unpaid dividends are excluded. Period A is provisional and the round score becomes final at the end of B. Settlement rows explicitly distinguish provisional and final scores. Experiment 2 has one period and settles at round end.
+
+Each trading interval can execute at most one unit. Separate timers show the interval and the whole period. An interval timeout starts the next interval; the configured consecutive no-trade limit or period deadline ends the period. Controls are disabled during server transitions, pauses and disconnections.
 
 ---
 

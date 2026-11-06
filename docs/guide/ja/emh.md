@@ -4,7 +4,7 @@
 
 学生の待機画面は共通のカードデザインを使い、実験ごとの情報を表示します。
 
-実装は `src/experiments/emh/`、ルールは `/emh/guide`、人数・条件を設定して練習できるデモは `/emh/demo` です。出典は [Session5-1（Exp1解説あり）.pdf](../../../material/emh/Session5-1（Exp1解説あり）.pdf) の実験1です。[実施条件と原資料との対応](../../../docs/experiments/emh.md) を参照してください。実験2は [Session6-1](../../../material/emh/Session6-1（Exp2解説あり）.pdf) に基づきます。
+実装は `src/experiments/emh/`、ルールは `/emh/guide`、ログインした教員が人数・条件を設定して練習できるデモは `/emh/demo` です。出典は [Session5-1（Exp1解説あり）.pdf](../../../material/emh/Session5-1（Exp1解説あり）.pdf) の実験1です。[実施条件と原資料との対応](../../../docs/experiments/emh.md) を参照してください。実験2は [Session6-1](../../../material/emh/Session6-1（Exp2解説あり）.pdf) に基づきます。
 
 価格・配当・売買収支・得点は画面上で円と表示します。
 

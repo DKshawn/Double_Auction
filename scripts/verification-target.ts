@@ -30,7 +30,9 @@ export function verificationTarget(variable: string) {
     ? readFileSync(process.env.VERIFY_TEACHER_KEY_FILE, "utf8")
         .replace(/^\uFEFF/, "")
         .trim()
-    : "";
+    : local && variable === "E2E_BASE_URL" && !process.env.E2E_BASE_URL
+      ? (process.env.E2E_LOCAL_TEACHER_KEY ?? "")
+      : "";
   if (!local) assert.ok(accessKey, "Teacher key is empty");
   return { origin, accessKey };
 }

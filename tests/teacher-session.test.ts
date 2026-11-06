@@ -149,6 +149,18 @@ test("login only returns to local teacher pages", () => {
     "/room/ABC234?entry=teacher",
   );
   for (const path of [
+    "/demo",
+    "/demo/select",
+    "/demo/preview",
+    "/emh/demo",
+    "/emh/demo/preview",
+    "/judgment/demo",
+  ])
+    assert.equal(teacherReturnPath(path), path);
+  for (const path of [
+    "//evil.test/demo",
+    "/demo/fake",
+    "/api/judgment/demo",
     "https://evil.test/teacher",
     "//evil.test/teacher",
     "/\\evil.test/teacher",

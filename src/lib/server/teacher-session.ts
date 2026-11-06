@@ -49,6 +49,28 @@ export function teacherAccessKey(request: NextRequest, fallback = "") {
   return fallback;
 }
 
+const demoPages = new Set([
+  "/demo",
+  "/demo/select",
+  "/demo/preview",
+  "/emh/demo",
+  "/emh/demo/preview",
+  "/judgment/demo",
+]);
+
+export function teacherPageAvailable(path: string) {
+  return (
+    !demoPages.has(path.split("?")[0]!) ||
+    Boolean(process.env.TEACHER_ACCESS_KEY)
+  );
+}
+
+export function requireDemoTeacher(request: NextRequest, fallback?: string) {
+  if (!process.env.TEACHER_ACCESS_KEY)
+    throw new AuctionError("管理者による教員用キーの設定が必要です。", 503);
+  teacherAccessKey(request, fallback);
+}
+
 export function teacherReturnPath(input?: string) {
   if (!input || input.length > 1024 || /[\\\r\n]/.test(input))
     return "/teacher";
@@ -56,6 +78,7 @@ export function teacherReturnPath(input?: string) {
     const url = new URL(input, "https://platform.invalid");
     if (url.origin !== "https://platform.invalid") return "/teacher";
     if (
+      demoPages.has(url.pathname) ||
       url.pathname === "/teacher" ||
       (/^\/room\/[A-Z2-9]{6}$/.test(url.pathname) &&
         url.searchParams.get("entry") === "teacher")

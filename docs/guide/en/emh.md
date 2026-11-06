@@ -4,7 +4,7 @@
 
 Student waiting screens share a consistent card design while retaining experiment-specific information.
 
-The implementation is in `src/experiments/emh/`, the rules page is `/emh/guide`, and `/emh/demo` provides practice with configurable group size and conditions. The source is Experiment 1 in [Session5-1（Exp1解説あり）.pdf](../../../material/emh/Session5-1（Exp1解説あり）.pdf). See the [protocol-to-source mapping (Japanese)](../../experiments/emh.md). Experiment 2 follows [Session6-1](../../../material/emh/Session6-1（Exp2解説あり）.pdf).
+The implementation is in `src/experiments/emh/`, the rules page is `/emh/guide`, and signed-in teachers use `/emh/demo` for practice with configurable group size and conditions. The source is Experiment 1 in [Session5-1（Exp1解説あり）.pdf](../../../material/emh/Session5-1（Exp1解説あり）.pdf). See the [protocol-to-source mapping (Japanese)](../../experiments/emh.md). Experiment 2 follows [Session6-1](../../../material/emh/Session6-1（Exp2解説あり）.pdf).
 
 The interface labels prices, dividends, trading balances and scores in yen.
 

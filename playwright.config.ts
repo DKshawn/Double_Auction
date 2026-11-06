@@ -1,4 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+
+// Give only the loopback server started by this test run its own teacher key.
+if (!process.env.E2E_BASE_URL)
+  process.env.E2E_LOCAL_TEACHER_KEY ??= randomUUID();
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -26,12 +31,14 @@ export default defineConfig({
     ? undefined
     : {
         // Match normal `npm run dev` startup while visiting the numeric loopback URL.
-        command: "npm run dev -- --port 3100",
+        command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
         url: "http://127.0.0.1:3100",
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         env: {
           DATABASE_URL: "",
-          TEACHER_ACCESS_KEY: "",
+          LOCAL_DATABASE_URL: "",
+          LOCAL_ONLY: "1",
+          TEACHER_ACCESS_KEY: process.env.E2E_LOCAL_TEACHER_KEY!,
           PGLITE_DATA_DIR: ".data/e2e",
         },
       },

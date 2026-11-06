@@ -1,7 +1,9 @@
+import { requireTeacherPage } from "@/lib/server/teacher-page-access";
 import { Header } from "@/components/shell";
 import { ExperimentCards } from "@/components/experiment-cards";
 
-export default function DemoSelectionPage() {
+export default async function DemoSelectionPage() {
+  await requireTeacherPage("/demo/select");
   return (
     <>
       <Header demoLabel="DEMOモード" />

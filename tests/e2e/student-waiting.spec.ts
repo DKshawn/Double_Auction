@@ -1,4 +1,9 @@
+import { signInTeacher } from "./helpers/teacher-login";
 import { expect, test } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  await signInTeacher(page.request);
+});
 
 test("Double Auction and EMH demos share the student waiting card", async ({
   page,

@@ -4,7 +4,10 @@ import { Header } from "@/components/shell";
 import { TeacherLogin } from "@/components/teacher-login";
 import { getServerStatus } from "@/lib/server/config";
 import { teacherPageAuthorized } from "@/lib/server/teacher-page-access";
-import { teacherReturnPath } from "@/lib/server/teacher-session";
+import {
+  teacherPageAvailable,
+  teacherReturnPath,
+} from "@/lib/server/teacher-session";
 
 export default async function TeacherLoginPage({
   searchParams,
@@ -12,7 +15,7 @@ export default async function TeacherLoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const returnTo = teacherReturnPath((await searchParams).next);
-  if (await teacherPageAuthorized()) redirect(returnTo);
+  if (await teacherPageAuthorized(returnTo)) redirect(returnTo);
   return (
     <>
       <Header>
@@ -21,7 +24,10 @@ export default async function TeacherLoginPage({
         </Link>
       </Header>
       <main className="narrow-main">
-        <TeacherLogin returnTo={returnTo} ready={getServerStatus().ready} />
+        <TeacherLogin
+          returnTo={returnTo}
+          ready={getServerStatus().ready && teacherPageAvailable(returnTo)}
+        />
       </main>
     </>
   );

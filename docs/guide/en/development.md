@@ -19,7 +19,7 @@ On Windows, `pwsh -NoProfile -File scripts/dev-local.ps1` starts an isolated loc
 
 The ordinary development server's teacher entry is `http://localhost:3000/teacher`; open it directly using its separate URL. With a key configured, authentication is required before experiment selection. Without Neon configured, the app uses embedded PostgreSQL through PGlite at `.data/auction`. Do not open the same data directory from multiple servers. Production uses Neon.
 
-To require a teacher key locally, set `TEACHER_ACCESS_KEY` in the Git-ignored `.env.local` file and restart the server. Without a configured key, local access does not require one.
+Set `TEACHER_ACCESS_KEY` in the Git-ignored `.env.local` and restart the server to use teacher demos locally. With no key, local classroom development remains available and the demo login stays disabled.
 
 Teacher entry and room pages with `?entry=teacher` validate authentication on the server. `POST /api/teacher/session` validates the key and issues an eight-hour signed HttpOnly, SameSite=Lax cookie, with Secure on HTTPS. The key itself is never stored in the cookie or browser storage. `DELETE` logs out; key rotation invalidates existing sessions. Creation, management, deletion and Judgment teacher-preview APIs validate the session while retaining `accessKey` support for existing authenticated scripts. No new environment variable or database migration is required.
 
@@ -61,7 +61,7 @@ npm run build
 
 Automated tests cover the three institutions, marginal values and per-unit orders for 1–5 units, balanced institution-order allocation, database admission for 96 participants across six markets, concurrent requests, deadlines, pauses, convergence metrics, private information, exports, and compatibility with saved rooms. Module-specific HTTP verification is documented under [EMH](emh.md) and [Judgement](judgment.md).
 
-`tests/e2e` contains Playwright browser tests. `npm run test:e2e` uses a dedicated local database. Do not point `E2E_BASE_URL`, which selects an existing environment, at production. The suite includes regression checks for legacy 12-person CDA rooms and the teacher form for creating Experiment 1.
+`tests/e2e` contains Playwright browser tests. `npm run test:e2e` uses a dedicated local database and a temporary teacher key. For a separate local test server, supply its key in `VERIFY_TEACHER_KEY_FILE`. Do not point `E2E_BASE_URL`, which selects an existing environment, at production. The suite includes regression checks for legacy 12-person CDA rooms and the teacher form for creating Experiment 1.
 
 Keep all released experiments together on `main`. Use short-lived feature branches, validate, merge, and delete the branch. The platform owns entry points, rooms, sessions, and database connections; modules own experiment rules and data. See the [architecture and development policy](../../architecture.md).
 

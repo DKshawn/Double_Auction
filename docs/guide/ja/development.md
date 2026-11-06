@@ -19,7 +19,7 @@ Windows の隔離したローカル検証環境は、`pwsh -NoProfile -File scri
 
 教員入口は `http://localhost:3000/teacher` です。学生の入室画面とは別のURLから開きます。キー設定時は、実験選択の前にログインします。Neonの設定がなければ組み込みPostgreSQL（PGlite）の `.data/auction` に保存されます。同じ保存先を複数サーバーから開かないでください。本番はNeonを使用します。
 
-ローカルでも教員用キーを必須にするには、Gitに含めない `.env.local` に `TEACHER_ACCESS_KEY` を設定し、サーバーを再起動します。未設定の場合、ローカルではキー不要です。
+ローカルで教員用デモを利用するには、Gitに含めない `.env.local` に `TEACHER_ACCESS_KEY` を設定し、サーバーを再起動します。キーが未設定でも正式実験のローカル開発は可能ですが、デモのログインは無効になります。
 
 教員入口と `?entry=teacher` のルームページはサーバーで認証します。`POST /api/teacher/session` はキーを検証して8時間の署名付きHttpOnly・SameSite=Lax Cookieを発行し、HTTPSではSecure属性を付けます。キー自体はCookieやブラウザーストレージに保存しません。`DELETE` はログアウトし、キー変更は既存セッションを無効にします。作成・管理・削除・Judgmentの教員用プレビューAPIはセッションを検証し、既存の認証済みスクリプト向け `accessKey` も受け付けます。追加の環境変数やDB移行は不要です。
 
@@ -61,7 +61,7 @@ npm run build
 
 自動テストは3制度の取引、1〜5単位の限界価値と逐単位注文、順序の均衡割当、6市場96人のDB入室、並行要求、締切、休止、収束指標、非公開情報、出力、既存ルームとの互換性を確認します。
 
-`tests/e2e` はPlaywrightのブラウザーテストです。`npm run test:e2e` でテスト専用ローカルDBを使用します。既存環境を指定する `E2E_BASE_URL` は本番に向けないでください。旧12人CDAの回帰テストと、新規教員フォームの実験1作成テストを含みます。
+`tests/e2e` はPlaywrightのブラウザーテストです。`npm run test:e2e` でテスト専用のローカルDBと一時的な教員用キーを使用します。別途起動したローカルサーバーを検証する際は、キーを保存したファイルを `VERIFY_TEACHER_KEY_FILE` で指定します。既存環境を指定する `E2E_BASE_URL` は本番に向けないでください。旧12人CDAの回帰テストと、新規教員フォームの実験1作成テストを含みます。
 
 各モジュールの HTTP 検証は [EMH](emh.md) と [Judgement](judgment.md) を参照してください。
 

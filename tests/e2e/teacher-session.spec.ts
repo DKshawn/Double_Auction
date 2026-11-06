@@ -37,7 +37,7 @@ test("one teacher login protects entry and authorizes all experiments and manage
           title: "Denied",
           password: "12345678",
           settings: {
-            studyIds: ["02-01"],
+            studyIds: ["01-02"],
             randomizeExperiments: false,
             randomizeChoices: false,
           },
@@ -128,6 +128,21 @@ test("one teacher login protects entry and authorizes all experiments and manage
       await expect(page).toHaveURL(/\/room\/[A-Z2-9]{6}\?entry=teacher$/);
       const code = new URL(page.url()).pathname.split("/")[2];
       codes.push(code);
+      if (experiment === "emh") {
+        await expect(
+          await outsider.request.post(`/api/rooms/${code}/join`, {
+            data: { nickname: "学生A", pin: "2468" },
+          }),
+        ).toBeOK();
+        const student = await outsider.newPage();
+        await student.goto(`/room/${code}`);
+        await expect(student).toHaveURL(`/room/${code}`);
+        await student.goto("/emh/demo");
+        await expect(
+          student.getByRole("heading", { name: "教員ログイン" }),
+        ).toBeVisible();
+        await student.close();
+      }
       await expect(page).toHaveURL(`/room/${code}?entry=teacher`);
       const unauthorized = await outsider.newPage();
       await unauthorized.goto(`/room/${code}?entry=teacher`);
@@ -191,4 +206,78 @@ test("one teacher login protects entry and authorizes all experiments and manage
         .toBe(true);
     await outsider.close();
   }
+});
+
+test("direct demo links, embedded previews and question requests require a teacher session", async ({
+  page,
+  baseURL,
+}) => {
+  const { accessKey } = verificationTarget("E2E_BASE_URL");
+  test.skip(!accessKey, "Requires a key-enabled verification server");
+  const paths = [
+    "/demo",
+    "/demo/select",
+    "/demo/preview",
+    "/emh/demo",
+    "/emh/demo/preview",
+    "/judgment/demo",
+  ];
+  const settings = {
+    studyIds: ["01-02"],
+    randomizeExperiments: false,
+    randomizeChoices: false,
+  };
+  const denied = async (path: string, headers?: Record<string, string>) => {
+    const response = await page.request.get(path, { maxRedirects: 0, headers });
+    expect(response.status()).toBe(307);
+    const location = new URL(response.headers().location!, baseURL);
+    expect(location.pathname).toBe("/teacher/login");
+    expect(location.searchParams.get("next")).toBe(path);
+    expect(response.headers()["cache-control"]).toMatch(/no-store|no-cache/);
+    expect(response.headers()["cache-control"]).not.toMatch(/public|s-maxage/);
+  };
+  for (const path of paths) await denied(path);
+  const flight = await page.request.get("/emh/demo", { headers: { RSC: "1" } });
+  expect(flight.headers()["content-type"]).toContain("text/x-component");
+  expect(await flight.text()).toContain("/teacher/login?next=%2Femh%2Fdemo");
+  await denied("/demo", { Cookie: "lab_teacher_session=forged" });
+  expect(
+    (
+      await page.request.post("/api/judgment/demo", { data: settings })
+    ).status(),
+  ).toBe(401);
+  await page.goto("/demo/preview");
+  await expect(
+    page.getByRole("heading", { name: "教員ログイン" }),
+  ).toBeVisible();
+  await page.getByLabel("教員用キー").fill(accessKey);
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL("/demo/preview");
+  await expect(
+    page
+      .frameLocator("iframe")
+      .getByRole("button", { name: "ルーム作成", exact: true }),
+  ).toBeVisible();
+  for (const path of paths) {
+    const response = await page.request.get(path, { maxRedirects: 0 });
+    expect(response.status()).toBe(200);
+    expect(response.headers()["cache-control"]).toMatch(/no-store|no-cache/);
+    expect(response.headers()["cache-control"]).not.toMatch(/public|s-maxage/);
+  }
+  await expect(
+    await page.request.post("/api/judgment/demo", { data: settings }),
+  ).toBeOK();
+  await page.goto("/teacher");
+  await page.getByRole("button", { name: "ログアウト", exact: true }).click();
+  await expect(page).toHaveURL(/\/teacher\/login/);
+  for (const path of paths) await denied(path);
+  expect(
+    (
+      await page.request.post("/api/judgment/demo", { data: settings })
+    ).status(),
+  ).toBe(401);
+  await page.goto("/");
+  await expect(
+    page.getByRole("form", { name: "実験に参加する" }),
+  ).toBeVisible();
 });

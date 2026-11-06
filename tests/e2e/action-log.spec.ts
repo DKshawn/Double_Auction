@@ -1,3 +1,4 @@
+import { signInTeacher } from "./helpers/teacher-login";
 import {
   test,
   expect,
@@ -14,6 +15,7 @@ import type {
 
 async function classroom(teacher: Page, browser: Browser, baseURL: string) {
   expect(new URL(baseURL).hostname).toBe("127.0.0.1");
+  await signInTeacher(teacher.request);
   const created = await teacher.request.post("/api/rooms", {
     data: {
       config: {

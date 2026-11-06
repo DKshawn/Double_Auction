@@ -11,6 +11,7 @@ test("Judgment task cards, translated details and demo controls stay usable acro
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/judgment/demo");
+  await enterTeacherPage(page);
   const language = page.getByRole("combobox", {
     name: "言語 / 语言 / Language",
     exact: true,

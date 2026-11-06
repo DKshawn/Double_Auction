@@ -4,7 +4,7 @@
 
 学生等待画面使用统一的卡片设计，并保留各实验的信息。
 
-实现位于 `src/experiments/emh/`，规则页为 `/emh/guide`，可在 `/emh/demo` 设置人数与条件后练习。来源是 [Session5-1（Exp1解説あり）.pdf](../../../material/emh/Session5-1（Exp1解説あり）.pdf) 中的实验1，详见[实施条件与原材料对应（日文）](../../experiments/emh.md)。实验2依据 [Session6-1](../../../material/emh/Session6-1（Exp2解説あり）.pdf)。
+实现位于 `src/experiments/emh/`，规则页为 `/emh/guide`，教师登录后可在 `/emh/demo` 设置人数和条件进行练习。来源是 [Session5-1（Exp1解説あり）.pdf](../../../material/emh/Session5-1（Exp1解説あり）.pdf) 中的实验1，详见[实施条件与原材料对应（日文）](../../experiments/emh.md)。实验2依据 [Session6-1](../../../material/emh/Session6-1（Exp2解説あり）.pdf)。
 
 界面上的价格、分红、买卖收支与得分均以「円」标注。
 

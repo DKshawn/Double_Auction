@@ -1,4 +1,9 @@
+import { signInTeacher } from "./helpers/teacher-login";
 import { expect, test } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  await signInTeacher(page.request);
+});
 
 test("EMH screen-size preview keeps the same interactive Exp2 session", async ({
   page,

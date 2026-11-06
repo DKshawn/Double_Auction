@@ -181,6 +181,7 @@ test("market roster buttons expand and collapse each market independently", asyn
   page,
 }) => {
   await page.goto("/demo");
+  await enterTeacherPage(page);
   await page.getByRole("button", { name: "ルーム作成", exact: true }).click();
   await page.getByRole("button", { name: "確定して次へ", exact: true }).click();
   await page.getByLabel("市場数", { exact: true }).fill("2");
@@ -293,6 +294,7 @@ test("demo carries saved dialog settings into the same compact room controls", a
   page,
 }) => {
   await page.goto("/demo");
+  await enterTeacherPage(page);
   const open = page.getByRole("button", {
     name: "作成前に詳細を設定",
     exact: true,
@@ -413,6 +415,7 @@ test("shared preparation flow validates, advances, closes admission and preserve
   page,
 }) => {
   await page.goto("/demo");
+  await enterTeacherPage(page);
   await page.getByRole("button", { name: "ルーム作成", exact: true }).click();
   const expanded = page.locator(
     '.study-setup-step-toggle[aria-expanded="true"]',

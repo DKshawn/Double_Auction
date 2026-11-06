@@ -1,4 +1,9 @@
+import { signInTeacher } from "./helpers/teacher-login";
 import { expect, test } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  await signInTeacher(page.request);
+});
 
 test("EMH Demo shares formal settings and confirms or releases them before trading", async ({
   page,

@@ -86,7 +86,7 @@ Changing template attendance affects supply/demand quantities and Posted's defau
 
 ## Custom stepped supply and demand
 
-Before creation, detailed settings use step 2 for attendance and markets and step 3, **供需プリセット**, for units, Commission, and conditions. Default evenly samples or duplicates existing presentation conditions for attendance and units. Custom settings generate a separate stepped schedule from p, K, L, and d. Public demos use the same form but have practice-specific Default conditions. The custom preview updates with input, and **設定を保存して閉じる** saves once before the admission-closing step.
+Before creation, detailed settings use step 2 for attendance and markets and step 3, **供需プリセット**, for units, Commission, and conditions. Default evenly samples or duplicates existing presentation conditions for attendance and units. Custom settings generate a separate stepped schedule from p, K, L, and d. Teacher demos use the same form but have practice-specific Default conditions. The custom preview updates with input, and **設定を保存して閉じる** saves once before the admission-closing step.
 
 Before starting an existing room, use **市場・取引条件** under **実験の準備**. For either Default or custom conditions, one click on **確定して次へ** saves and advances. The API receives generation parameters; the server regenerates, validates, and saves them. Student-facing general room settings omit generation parameters, seeds, and allocation tables.
 

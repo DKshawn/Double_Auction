@@ -186,6 +186,7 @@ test("demo exit uses the formal color and returns to the student entry", async (
     "/emh/demo/preview",
   ]) {
     await page.goto(path);
+    await enterTeacherPage(page);
     const exit = page.getByRole("link", {
       name: "DEMOモードを終了",
       exact: true,
@@ -204,6 +205,7 @@ for (const path of ["/demo/preview", "/emh/demo/preview"]) {
     page,
   }) => {
     await page.goto(path);
+    await enterTeacherPage(page);
     await expect(
       page.getByRole("link", { name: "DEMOモードを終了" }),
     ).toHaveAttribute("href", "/");

@@ -19,7 +19,7 @@ Windows 上可使用 `pwsh -NoProfile -File scripts/dev-local.ps1` 启动隔离�
 
 普通开发服务器的教师入口为 `http://localhost:3000/teacher`，请使用与学生入口不同的独立地址打开。配置密钥后，需先登录才能选择实验。未配置 Neon 时使用嵌入式 PostgreSQL（PGlite），默认保存在 `.data/auction`；不要让多个服务器同时打开同一保存目录。生产环境使用 Neon。
 
-如需本地也要求教师密钥，在不提交到 Git 的 `.env.local` 中设置 `TEACHER_ACCESS_KEY` 并重启服务。未设置时，本地不要求密钥。
+要在本地使用教师演示，请在 Git 忽略的 `.env.local` 中设置 `TEACHER_ACCESS_KEY`，然后重启服务。未配置密钥时，本地仍可开发正式课堂流程，演示登录会被禁用。
 
 教师入口及 `?entry=teacher` 的房间页面在服务器端验证登录。`POST /api/teacher/session` 验证密钥后签发8小时有效的签名HttpOnly、SameSite=Lax Cookie，HTTPS下启用Secure；不会把密钥本身存入Cookie或浏览器存储。`DELETE` 用于退出，更换密钥使已有会话失效。创建、管理、删除及Judgment教师预览API验证会话，同时兼容现有已认证脚本的 `accessKey`。无需新增环境变量或数据库迁移。
 
@@ -61,7 +61,7 @@ npm run build
 
 自动测试检查三种交易制度、1至5单位的边际价值与逐单位订单、制度顺序的均衡分配、6市场96人的数据库加入、并发请求、截止、暂停、收敛指标、私有信息、导出和已有房间兼容性。各模块的 HTTP 验证方法见 [EMH](emh.md) 和 [Judgement](judgment.md)。
 
-`tests/e2e` 是 Playwright 浏览器测试，`npm run test:e2e` 使用专用本地数据库。指定已有环境的 `E2E_BASE_URL` 不应指向生产地址。包含旧12人 CDA 的回归测试和教师新建实验1的表单测试。
+`tests/e2e` 是 Playwright 浏览器测试，`npm run test:e2e` 使用专用本地数据库和临时教师密钥。测试另行启动的本地服务器时，用 `VERIFY_TEACHER_KEY_FILE` 指定保存该服务器教师密钥的文件。指定已有环境的 `E2E_BASE_URL` 不应指向生产地址。包含旧12人 CDA 的回归测试和教师新建实验1的表单测试。
 
 所有正式实验共同维护在 `main`，开发使用短期功能分支，验证后合并并删除分支。平台负责入口、房间、会话与数据库连接，各实验模块负责自己的规则和数据。详见[架构与开发约定（英文）](../../architecture.md)。
 

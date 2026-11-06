@@ -122,6 +122,7 @@ test("teacher configures Exp2 and allocates 11 students across two markets", asy
 
 test("Exp2 demo uses custom information and dividends", async ({ page }) => {
   await page.goto("/emh/demo");
+  await enterTeacherPage(page);
   await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
   await page.locator('[name="initialUnits"]').fill("5");
   await page.locator('[name="targetMarketSize"]').fill("3");

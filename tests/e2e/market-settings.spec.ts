@@ -1,3 +1,4 @@
+import { signInTeacher } from "./helpers/teacher-login";
 import { expect, test, type BrowserContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import type { RoomView } from "../../src/experiments/double-auction/lib/types";
@@ -9,6 +10,7 @@ test("teacher edits private market conditions, students receive them, and starti
 }, info) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  await signInTeacher(page.request);
   const created = await page.request.post("/api/rooms", {
     data: {
       config: {

@@ -1,3 +1,4 @@
+import { signInTeacher } from "./helpers/teacher-login";
 import {
   expect,
   test,
@@ -20,6 +21,7 @@ async function classroom(
   seconds: number,
 ) {
   expect(["127.0.0.1", "localhost"]).toContain(new URL(baseURL).hostname);
+  await signInTeacher(teacher.request);
   const created = await teacher.request.post("/api/rooms", {
     data: {
       config: {

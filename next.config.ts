@@ -34,7 +34,7 @@ const config: NextConfig = {
         ],
       },
       {
-        // The public, in-memory demo can be embedded by our own size preview.
+        // Teachers can embed the demo in the same-origin size preview.
         // Authenticated room and teacher pages retain the DENY rule above.
         source: "/demo",
         headers: [

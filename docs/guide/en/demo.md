@@ -4,13 +4,13 @@ The demo list and screens use a yellow theme, with a demo-mode text label beside
 
 [日本語](../ja/demo.md) · [中文](../zh-CN/demo.md) · [English](../en/demo.md)
 
-Use **Demo Model** on the teacher experiment selection page to open the list at `/demo/select`, then choose an experiment. The demo list and each experiment show a demo-mode text label. No login is required and no production room is created; the individual demo URLs below also remain available.
+Sign in at the teacher entry and open **Demo Model** to choose an experiment at `/demo/select`. Opening a demo or screen-size preview directly first takes you to teacher login, then returns you to that page. A student room session grants access only to the classroom experiment.
 
 All three demo setup pages have **戻る** to return to the list and **教員用ページへ** to return to the teacher page. The EMH demo room always shows **戻る**, and shows **教員用ページへ** in the teacher view.
 
 ## Double Auction
 
-Open [`/demo`](https://exp-all-in-one.vercel.app/demo) directly or choose Double Auction from the demo list. No login is required. It starts with the same settings form used for production experiments. The defaults are one market and 16 participants; institutions, periods per institution, markets, participants, and timing are configurable using the same validation rules as room creation.
+Open [`/demo`](https://exp-all-in-one.vercel.app/demo) directly or choose Double Auction from the demo list. It starts with the same settings form used for production experiments. The defaults are one market and 16 participants; institutions, periods per institution, markets, participants, and timing are configurable using the same validation rules as room creation.
 
 1. **デモルームを作成** opens a teacher view containing you and virtual participants. Use **作成前に詳細を設定** for detailed configuration before creation. Before starting, **実験設定を変更** can change institutions, periods, timing, values, and costs.
 2. Close admission with **入室を締め切って割り当て** or the admission timer to allocate actual participants to markets and buyer/seller roles. **実験を開始** begins a five-second countdown before trading. **学生画面を見る** shows the transition from waiting to trading.

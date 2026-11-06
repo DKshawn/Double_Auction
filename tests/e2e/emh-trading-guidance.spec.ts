@@ -218,7 +218,22 @@ for (const experiment of ["exp1", "exp2"] as const) {
         0,
       );
       const teacherBook = page.locator(".study-order-book");
-      await expect(teacherBook).toContainText("被験者 #");
+      for (const orderBook of [teacherBook, book]) {
+        for (const side of ["買い注文一覧", "売り注文一覧"]) {
+          const table = orderBook.getByRole("region", { name: side });
+          await expect(table.getByRole("columnheader")).toHaveText([
+            "価格（円）",
+            "数量",
+          ]);
+          await expect(
+            table.getByRole("columnheader", { name: "価格（円）" }),
+          ).toHaveCSS("white-space", "nowrap");
+          await expect(
+            table.locator("tbody tr").first().getByRole("cell"),
+          ).toHaveCount(2);
+        }
+      }
+      await expect(teacherBook).not.toContainText("被験者 #");
       await expect(teacherBook.locator(".study-own-order-tag")).toHaveCount(0);
       await chart.click();
       const chartRows = book.getByRole("region", {
@@ -345,6 +360,18 @@ for (const experiment of ["exp1", "exp2"] as const) {
       expect(after.ownQuotes?.bid.status).toBe("filled");
       expect(after.trades[0]!.sellerId).toBeNull();
       expect(after.trades[0]!.sellerSeat).toBeNull();
+      const buyerSeat = after.me!.seat;
+      const sellerSeat = other.me!.seat;
+      const teacherTrade = page
+        .locator(".history-panel .trade-table tbody tr")
+        .first();
+      await expect(teacherTrade.getByRole("cell")).toHaveText([
+        "1",
+        ...(experiment === "exp1" ? ["A"] : []),
+        "177",
+        `#${buyerSeat}`,
+        `#${sellerSeat}`,
+      ]);
       const late = await contexts[2]!.request.post(
         `${path}/emh?session=student`,
         {
@@ -467,13 +494,13 @@ for (const experiment of ["exp1", "exp2"] as const) {
       const expected =
         experiment === "exp1" ? -76 + final.me!.dividends!.b : 24;
       expect(final.me!.totalProfit).toBe(expected);
-      expect(
-        (
-          await page.request.get(
-            `${path}/emh/export?session=teacher&kind=trades`,
-          )
-        ).ok(),
-      ).toBe(true);
+      const exported = await page.request.get(
+        `${path}/emh/export?session=teacher&kind=trades`,
+      );
+      expect(exported.ok()).toBe(true);
+      const [csvHeader, firstTrade] = (await exported.text()).split(/\r?\n/);
+      expect(csvHeader).toContain('"buyer","seller","price","quantity"');
+      expect(firstTrade).toContain(`"${buyerSeat}","${sellerSeat}","177","1"`);
       await student.reload();
       await expect(student.locator(".score-status.final")).toBeVisible();
       expect(errors).toEqual([]);

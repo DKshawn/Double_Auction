@@ -14,7 +14,7 @@ Starting the session shows a five-second preparation countdown in the center of 
 
 Both experiments place the limit and market buttons side by side for buying and for selling. Draft bid and ask prices stay in their fields when another trade clears or a trading unit times out. Submitted limits are matched against the current book. Both fields start empty in a new period or round.
 
-The conditions panel groups each student’s private dividends with their trading controls. The shared CDA book opens in list view (一覧) and can switch to a bar chart (棒グラフ). Your resting limits are identified by a highlighted row and あなた含む in the list, or a dot and outlined bar at that price in the chart. The book shows a cancel button for each side where you have a resting limit.
+The conditions panel groups each student’s private dividends with their trading controls. The shared CDA book opens in list view (一覧) and can switch to a bar chart (棒グラフ). Both teachers and students see two columns per side, price and quantity. The teacher’s trade records and CSV export identify the buyer and seller for each trade. Your resting limits are identified by a highlighted row and あなた含む in the list, or a dot and outlined bar at that price in the chart. The book shows a cancel button for each side where you have a resting limit.
 
 ## Experiment 1
 

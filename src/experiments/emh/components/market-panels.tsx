@@ -52,7 +52,6 @@ export function OrderPanel({
     <OrderBookPanel
       sides={sides}
       className="cda-order-book"
-      showParticipants={room.role === "teacher"}
       footer={
         act &&
         cancellable.length > 0 && (

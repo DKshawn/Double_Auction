@@ -1,6 +1,6 @@
 "use client";
-import { useState, type FormEvent } from "react";
-import { Download, LockKeyhole } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowBigLeft, Download, LockKeyhole } from "lucide-react";
 import type { Action, RoomView, Side } from "@/experiments/emh/types";
 import { OrderBookPanel } from "@/components/order-book-panel";
 import type { OrderBookSide } from "@/lib/order-book";
@@ -219,8 +219,67 @@ export function PersonalPanel({
   disabled: boolean;
 }) {
   const me = room.me!;
+  const panelRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (room.status !== "countdown") return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const positionCard = () => {
+      const card = document.querySelector(".emh-countdown-card");
+      const overlay = card?.closest<HTMLElement>(".study-trade-feedback");
+      if (!card || !overlay) return;
+      const bounds = panel.getBoundingClientRect();
+      const cardBounds = card.getBoundingClientRect();
+      const center = Math.max(
+        cardBounds.width / 2 + 12,
+        Math.min(
+          (bounds.left + bounds.right) / 2,
+          window.innerWidth - cardBounds.width / 2 - 12,
+        ),
+      );
+      overlay.style.left = `${center}px`;
+      overlay.style.top = `${bounds.top - 40 - cardBounds.height / 2}px`;
+    };
+    const revealConditions = () => {
+      const bounds = panel.getBoundingClientRect();
+      const card = document.querySelector(".emh-countdown-card");
+      if (!card) return;
+      const cardBounds = card.getBoundingClientRect();
+      const values = panel
+        .querySelector(".private-dividends")
+        ?.getBoundingClientRect();
+      const conditionsHeight = values
+        ? values.bottom - bounds.top
+        : bounds.height;
+      const top = Math.max(
+        cardBounds.height + 52,
+        Math.min(
+          window.innerHeight * 0.55,
+          window.innerHeight - conditionsHeight - 16,
+        ),
+      );
+      window.scrollBy({ top: bounds.top - top, behavior: "instant" });
+      positionCard();
+    };
+    const frame = requestAnimationFrame(revealConditions);
+    window.addEventListener("resize", revealConditions);
+    window.addEventListener("scroll", positionCard, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", revealConditions);
+      window.removeEventListener("scroll", positionCard);
+    };
+  }, [room.status, room.pausedAt]);
   return (
-    <aside className="panel study-section private-panel emh-conditions">
+    <aside
+      ref={panelRef}
+      className={`panel study-section private-panel emh-conditions${room.status === "countdown" ? " study-conditions-review" : ""}`}
+    >
+      {room.status === "countdown" && (
+        <span className="study-conditions-arrow" aria-hidden="true">
+          <ArrowBigLeft size={80} fill="currentColor" strokeWidth={1.5} />
+        </span>
+      )}
       <h2>
         <LockKeyhole size={16} aria-hidden="true" />
         {me.name}の条件 <small>非公開</small>

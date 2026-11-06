@@ -1,9 +1,49 @@
 import { signInTeacher } from "./helpers/teacher-login";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await signInTeacher(page.request);
 });
+
+async function expectCountdownPlacement(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const card = document
+          .querySelector(".emh-countdown-card")!
+          .getBoundingClientRect();
+        const panel = document
+          .querySelector(".emh-conditions")!
+          .getBoundingClientRect();
+        const arrow = document
+          .querySelector(".study-conditions-arrow")!
+          .getBoundingClientRect();
+        const overlaps = (a: DOMRect, b: DOMRect) =>
+          a.left < b.right &&
+          a.right > b.left &&
+          a.top < b.bottom &&
+          a.bottom > b.top;
+        return (
+          Math.abs((card.left + card.right - panel.left - panel.right) / 2) <
+            1 &&
+          Math.abs(panel.top - card.bottom - 40) < 1 &&
+          card.left >= 0 &&
+          card.right <= innerWidth &&
+          card.top >= 0 &&
+          card.bottom <= innerHeight &&
+          arrow.left >= 0 &&
+          arrow.right <= innerWidth &&
+          arrow.top >= 0 &&
+          arrow.bottom <= innerHeight &&
+          panel.top >= 0 &&
+          panel.top < innerHeight - 50 &&
+          !overlaps(card, panel) &&
+          !overlaps(card, arrow)
+        );
+      }),
+    )
+    .toBe(true);
+}
 
 test("EMH Demo shares formal settings and confirms or releases them before trading", async ({
   page,
@@ -504,7 +544,7 @@ for (const experiment of ["exp1", "exp2"] as const) {
 
 test("demo countdown displays private conditions before trading and can be paused", async ({
   page,
-}) => {
+}, info) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("/emh/demo");
   await page.getByRole("combobox", { name: "実験" }).selectOption("exp2");
@@ -527,18 +567,34 @@ test("demo countdown displays private conditions before trading and can be pause
   const countdownValue = await countdownCard.locator("strong").textContent();
   const bounds = await countdownCard.boundingBox();
   expect(bounds).not.toBeNull();
-  const conditionsBounds = await page.locator(".exp2-state-info").boundingBox();
-  expect(conditionsBounds!.y + conditionsBounds!.height).toBeLessThanOrEqual(
-    bounds!.y + 4,
+  const conditions = page.locator(".emh-conditions");
+  const conditionsBounds = await conditions.boundingBox();
+  const countdownDocumentTop = await conditions.evaluate(
+    (element) => element.getBoundingClientRect().top + window.scrollY,
   );
-  expect(
-    Math.abs(bounds!.x + bounds!.width / 2 - page.viewportSize()!.width / 2),
-  ).toBeLessThan(1);
-  expect(
-    Math.abs(bounds!.y + bounds!.height / 2 - page.viewportSize()!.height / 2),
-  ).toBeLessThan(1);
-  for (const width of [1200, 1024, 768, 390, 320]) {
-    await page.setViewportSize({ width, height: 768 });
+  expect(conditionsBounds).not.toBeNull();
+  await expect(conditions).toHaveClass(/study-conditions-review/);
+  await expect(conditions.locator(".study-conditions-arrow")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "注文板" })).toBeVisible();
+  await page.screenshot({ path: info.outputPath("countdown-desktop.png") });
+  await page.evaluate(() => window.scrollBy(0, -40));
+  await expectCountdownPlacement(page);
+  for (const [width, height] of [
+    [1920, 1080],
+    [1440, 900],
+    [1366, 768],
+    [1200, 720],
+    [1024, 768],
+    [768, 1024],
+    [640, 360],
+    [390, 844],
+    [320, 568],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await expectCountdownPlacement(page);
+    if (width === 390) {
+      await page.screenshot({ path: info.outputPath("countdown-mobile.png") });
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -558,27 +614,79 @@ test("demo countdown displays private conditions before trading and can be pause
     timeout: 12000,
   });
   await expect(countdownCard).toHaveCount(0);
+  await expect(conditions).not.toHaveClass(/study-conditions-review/);
+  await expect(conditions.locator(".study-conditions-arrow")).toHaveCount(0);
+  const tradingBounds = await conditions.boundingBox();
+  const tradingDocumentTop = await conditions.evaluate(
+    (element) => element.getBoundingClientRect().top + window.scrollY,
+  );
+  expect(Math.abs(conditionsBounds!.x - tradingBounds!.x)).toBeLessThan(1);
+  expect(Math.abs(conditionsBounds!.width - tradingBounds!.width)).toBeLessThan(
+    1,
+  );
+  expect(Math.abs(countdownDocumentTop - tradingDocumentTop)).toBeLessThan(16);
   await expect(page.getByText("期の残り", { exact: true })).toBeVisible();
 });
 
-test("Exp1 student countdown uses the centered DA card and clears when trading opens", async ({
+test("Exp1 student countdown highlights the trading conditions and clears when trading opens", async ({
   page,
 }) => {
   await page.goto("/emh/demo");
   await page.getByRole("button", { name: "デモルームを作成" }).click();
   await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
   await page.getByRole("button", { name: "全市場で実験を開始" }).click();
+  await page
+    .getByRole("region", { name: "ひとりデモの操作" })
+    .getByRole("button", { name: "一時停止", exact: true })
+    .click();
   await page.getByRole("button", { name: "学生画面を見る" }).click();
   const card = page.locator(".emh-countdown-card");
-  await expect(card).toContainText("まもなく実験が始まります");
+  const conditions = page.locator(".emh-conditions");
+  await expect(card).toContainText("開始前に一時停止しています");
   await expect(card.locator("strong")).toHaveText(/^[1-5]$/);
+  await expect(conditions).toHaveClass(/study-conditions-review/);
+  await expect(conditions.locator(".study-conditions-arrow")).toBeVisible();
+  const countdownBounds = await conditions.boundingBox();
+  const countdownDocumentTop = await conditions.evaluate(
+    (element) => element.getBoundingClientRect().top + window.scrollY,
+  );
+  for (const [width, height] of [
+    [1920, 1080],
+    [1440, 900],
+    [1366, 768],
+    [1200, 720],
+    [1024, 768],
+    [768, 1024],
+    [640, 360],
+    [390, 844],
+    [320, 568],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await expectCountdownPlacement(page);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
   await expect(page.locator(".study-start-countdown")).toHaveCSS(
     "pointer-events",
     "none",
   );
   await expect(page.getByLabel("買値（円）")).toBeDisabled();
+  await page
+    .getByRole("region", { name: "ひとりデモの操作" })
+    .getByRole("button", { name: "再開", exact: true })
+    .click();
+  await expectCountdownPlacement(page);
   await expect(card).toHaveCount(0, { timeout: 12000 });
   await expect(page.getByLabel("買値（円）")).toBeEnabled();
+  await expect(conditions).not.toHaveClass(/study-conditions-review/);
+  const tradingBounds = await conditions.boundingBox();
+  const tradingDocumentTop = await conditions.evaluate(
+    (element) => element.getBoundingClientRect().top + window.scrollY,
+  );
+  expect(Math.abs(countdownBounds!.x - tradingBounds!.x)).toBeLessThan(1);
+  expect(Math.abs(countdownBounds!.width - tradingBounds!.width)).toBeLessThan(
+    1,
+  );
+  expect(Math.abs(countdownDocumentTop - tradingDocumentTop)).toBeLessThan(16);
 });
 
 test("EMH demo controls preserve the session while switching views, advancing and resetting", async ({

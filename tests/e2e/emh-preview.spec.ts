@@ -19,6 +19,37 @@ test("EMH screen-size preview keeps the same interactive Exp2 session", async ({
 
   await page.goto("/emh/demo/preview");
   const demo = page.frameLocator('iframe[title="操作できるひとりデモ"]');
+  const expectUnobstructedCountdown = async () => {
+    await expect
+      .poll(() =>
+        demo.locator("body").evaluate(() => {
+          const card = document
+            .querySelector(".emh-countdown-card")!
+            .getBoundingClientRect();
+          const panel = document
+            .querySelector(".emh-conditions")!
+            .getBoundingClientRect();
+          const arrow = document
+            .querySelector(".study-conditions-arrow")!
+            .getBoundingClientRect();
+          const overlap = (a: DOMRect, b: DOMRect) =>
+            a.left < b.right &&
+            a.right > b.left &&
+            a.top < b.bottom &&
+            a.bottom > b.top;
+          return (
+            Math.abs((card.left + card.right - panel.left - panel.right) / 2) <
+              1 &&
+            Math.abs(panel.top - card.bottom - 40) < 1 &&
+            arrow.top >= 0 &&
+            arrow.bottom <= innerHeight &&
+            !overlap(card, arrow) &&
+            !overlap(card, panel)
+          );
+        }),
+      )
+      .toBe(true);
+  };
   await demo.getByRole("combobox", { name: "実験" }).selectOption("exp2");
   await demo.getByRole("button", { name: "デモルームを作成" }).click();
   await demo.getByRole("button", { name: "分け方を確定して受付終了" }).click();
@@ -34,6 +65,13 @@ test("EMH screen-size preview keeps the same interactive Exp2 session", async ({
     page.getByRole("button", { name: "教員画面を見る" }),
   ).toBeVisible();
   await expect(demo.getByText("状態別の配当 / 確率")).toBeVisible();
+  await expect(demo.locator(".emh-conditions")).toHaveClass(
+    /study-conditions-review/,
+  );
+  await expect(
+    demo.locator(".emh-conditions .study-conditions-arrow"),
+  ).toBeVisible();
+  await expectUnobstructedCountdown();
   await expect(
     page.getByRole("button", { name: "再開", exact: true }),
   ).toBeVisible();
@@ -44,6 +82,10 @@ test("EMH screen-size preview keeps the same interactive Exp2 session", async ({
   await expect(
     page.getByRole("button", { name: "教員画面を見る" }),
   ).toBeVisible();
+  await expect(
+    demo.locator(".emh-conditions .study-conditions-arrow"),
+  ).toBeVisible();
+  await expectUnobstructedCountdown();
 });
 
 test("Double Auction preview retains its embedded demo and supports narrow-screen selection", async ({

@@ -35,7 +35,7 @@ The preview also starts with the teacher settings form. After creation, start, p
 
 The interface labels prices, dividends, trading balances and scores in yen.
 
-After starting, a five-second countdown appears in the center of the student screen while students review their own conditions before trading. Pausing also freezes the countdown.
+After starting, a five-second countdown appears directly above the personal conditions panel in its trading-screen position, highlighted with an arrow and border. The page scrolls to reveal it if needed. Pausing also freezes the countdown.
 
 [EMH Demo Model](https://exp-all-in-one.vercel.app/emh/demo) offers Experiment 1 and Experiment 2. Experiment 1 uses the same settings form, validation limits and defaults as the formal experiment. Set initial securities, target size, type ratios and A/B period duration, then choose **デモルームを作成**. It creates one market of 3–12 participants; everyone except you is virtual, with eight virtual participants by default.
 

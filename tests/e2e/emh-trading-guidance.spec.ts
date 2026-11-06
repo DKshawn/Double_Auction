@@ -119,15 +119,28 @@ for (const experiment of ["exp1", "exp2"] as const) {
           expectedPhase: (await state()).market!.phaseKey,
         });
       await session("assign");
-      await session("start");
-      await expect
-        .poll(async () => (await state()).market?.status)
-        .toBe("trading");
-      await page.goto(`/room/${code}?entry=teacher`);
       const student = await contexts[0]!.newPage();
       student.on("pageerror", (error) => errors.push(error.message));
       await student.setViewportSize({ width: 1440, height: 1000 });
       await student.goto(`/room/${code}`);
+      await session("start");
+      const conditions = student.locator(".emh-conditions");
+      await expect(conditions).toHaveClass(/study-conditions-review/);
+      await expect(conditions.locator(".study-conditions-arrow")).toBeVisible();
+      const countdownBounds = await conditions.boundingBox();
+      await expect(student.locator(".emh-countdown-card")).toHaveCount(0, {
+        timeout: 12000,
+      });
+      await expect(conditions).not.toHaveClass(/study-conditions-review/);
+      const tradingBounds = await conditions.boundingBox();
+      expect(Math.abs(countdownBounds!.x - tradingBounds!.x)).toBeLessThan(1);
+      expect(
+        Math.abs(countdownBounds!.width - tradingBounds!.width),
+      ).toBeLessThan(1);
+      await expect
+        .poll(async () => (await state()).market?.status)
+        .toBe("trading");
+      await page.goto(`/room/${code}?entry=teacher`);
       const bid = student.getByLabel("買値（円）", { exact: true });
       const ask = student.getByLabel("売値（円）", { exact: true });
       const buy = student.locator(".buy-side");

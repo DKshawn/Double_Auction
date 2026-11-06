@@ -43,7 +43,7 @@ Enter the teacher key once at the teacher entry. The same browser stays signed i
 
 EMH labels prices, dividends, trading balances and scores in yen.
 
-After the teacher starts EMH, a five-second countdown appears in the center of the student screen while students review their conditions; trading opens when it ends.
+After the teacher starts EMH, a five-second countdown appears directly above the personal conditions panel in its trading-screen position, highlighted with an arrow and border; trading opens when it ends.
 
 EMH Demo Model supports both experiments. Experiment 2 defaults to a 12-person market and uses separate practice dividends and states. Students see their state-contingent dividends and probabilities. In both experiments, students see buy and sell controls in separate columns, market prices, and personal records together; teachers can expand or collapse conditions during play. Open `/emh/demo/preview` to view the demo at different screen sizes.
 

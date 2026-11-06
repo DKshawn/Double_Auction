@@ -2429,7 +2429,8 @@
   gap: 10px;
 }
 .emh-app .emh-countdown-card {
-  padding: 30px 36px;
+  width: min(380px, calc(100vw - 24px));
+  padding: 10px 20px;
   border-radius: 12px;
 }
 .emh-app .emh-countdown-card .eyebrow {
@@ -2439,31 +2440,16 @@
   letter-spacing: 0.1em;
 }
 .emh-app .emh-countdown-card h2 {
-  margin: 14px 0 0;
-  font-size: 22px;
+  margin: 4px 0 0;
+  font-size: 18px;
+}
+.emh-app .emh-countdown-card strong {
+  font-size: 44px;
+  line-height: 1.1;
 }
 .emh-app .emh-countdown-card p {
   font-size: 14px;
   line-height: 1.6;
-}
-.emh-app .emh-countdown-view {
-  display: flex;
-  flex-direction: column;
-}
-.emh-app .emh-countdown-view .stat-grid {
-  position: relative;
-  z-index: 41;
-  order: -1;
-  margin-bottom: 8px;
-  padding-block: 4px;
-}
-@media (max-height: 700px) {
-  .emh-app .emh-countdown-card {
-    padding: 16px 24px;
-  }
-  .emh-app .emh-countdown-card h2 {
-    margin-top: 8px;
-  }
 }
 @media (max-width: 760px) {
   .emh-demo-panel {
@@ -2695,25 +2681,18 @@
 .emh-app .emh-conditions .exp2-expected-contribution {
   grid-column: 1 / -1;
 }
-.emh-app .emh-countdown-view > .emh-account-section {
-  display: none;
-}
-.emh-app .emh-countdown-view > .student-market-grid {
-  order: -1;
-  display: block;
-}
-.emh-app .emh-countdown-view .student-market-grid > :not(.emh-conditions) {
-  display: none;
-}
-.emh-app .emh-countdown-view .emh-conditions {
+.emh-app .market-grid > .emh-conditions.study-conditions-review {
   position: relative;
   z-index: 41;
-}
-.emh-app .emh-countdown-view .emh-conditions .study-private-order {
-  display: none;
-}
-.emh-app .emh-countdown-view .emh-conditions .private-dividends {
-  margin-bottom: 0;
+  pointer-events: none;
+  overflow: visible;
+  border-color: var(--accent);
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 8px var(--lavender),
+    0 8px 30px rgb(83 72 200 / 22%);
 }
 @media (max-width: 1199px) {
   .emh-app .market-grid.student-market-grid {
@@ -2731,9 +2710,6 @@
   }
   .emh-app .emh-records .results-panel {
     grid-column: auto;
-  }
-  .emh-app .emh-countdown-view .emh-conditions {
-    display: block;
   }
 }
 @media (max-width: 760px) {
@@ -2753,76 +2729,20 @@
   }
 }
 
-@media (min-width: 1200px) {
-  .emh-app .emh-countdown-view .emh-conditions {
-    padding-block: 8px;
-  }
-  .emh-app .emh-countdown-view .emh-conditions > h2 {
-    margin-bottom: 4px;
-  }
-  .emh-app .emh-countdown-view .exp2-private-values {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .emh-app .emh-countdown-view .exp2-state-info {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    align-items: center;
-    gap: 8px;
-  }
-  .emh-app .emh-countdown-view .exp2-state-info > p:first-child {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .emh-app .emh-countdown-view .exp2-state-values {
-    flex: 1;
-  }
-  .emh-app .emh-countdown-view .exp2-state-values > div {
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 4px;
-  }
-  .emh-app .emh-countdown-view .exp2-state-line {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 4px;
-    white-space: nowrap;
-  }
-  .emh-app .emh-countdown-view .exp2-clue {
-    margin: 0;
-  }
+.emh-app:has(.emh-countdown-view) .study-trade-feedback {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
-@media (min-width: 1000px) {
-  .emh-app .emh-countdown-view .private-dividends:has(.dividend-grid) {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .emh-app .emh-countdown-view .dividend-grid {
-    flex: 1;
-    margin: 0;
-  }
-  .emh-app .emh-countdown-view .dividend-grid > div {
-    flex-direction: row;
-    align-items: baseline;
-    padding: 2px 8px;
-  }
+.emh-app .emh-countdown-view .emh-conditions .study-conditions-arrow {
+  top: -30px;
+  left: calc(50% - 24px);
+  width: 48px;
+  height: 48px;
+  transform: rotate(-90deg);
+  animation: none;
 }
-@media (max-width: 999px) {
-  .emh-app:has(.emh-countdown-view) .study-trade-feedback {
-    position: relative;
-    top: auto;
-    left: auto;
-    transform: none;
-    width: 100%;
-    max-height: none;
-    margin-bottom: 12px;
-  }
+.emh-app .emh-countdown-view .emh-conditions .study-conditions-arrow svg {
+  width: 48px;
+  height: 48px;
 }

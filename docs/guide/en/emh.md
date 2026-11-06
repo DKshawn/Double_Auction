@@ -10,7 +10,7 @@ The interface labels prices, dividends, trading balances and scores in yen.
 
 Formal setup uses **戻る** in the header to return to experiment selection. Both EMH demo setup and the demo room use **戻る** to return to the demo list. **教員用ページへ** is shown on demo setup and in the demo room’s teacher view.
 
-Starting the session shows a five-second preparation countdown in the center of the student screen, matching DA. Students can review their own conditions; trading and the period clock start when it ends. Pausing also freezes the countdown. This applies to both experiments and the demo.
+Starting the session shows a five-second preparation countdown directly above the personal conditions panel in its trading-screen position, highlighted with an arrow and border. The page scrolls to reveal it if needed. Trading and the period clock start when the countdown ends; pausing also freezes it. This applies to both experiments and the demo.
 
 Both experiments place the limit and market buttons side by side for buying and for selling. Draft bid and ask prices stay in their fields when another trade clears or a trading unit times out. Submitted limits are matched against the current book. Both fields start empty in a new period or round.
 

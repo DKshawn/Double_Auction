@@ -509,7 +509,7 @@ export function RoomDashboard({
                 )}
               </div>
             )}
-            {active && (
+            {(active || countdown) && (
               <div className="trading-clock-rule">
                 <span>1取引につき1単位。時間切れは成立なしで次の取引へ。</span>
                 <span>

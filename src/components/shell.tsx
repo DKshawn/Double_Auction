@@ -2,19 +2,23 @@ import Link from "next/link";
 import { ArrowLeftRight } from "lucide-react";
 import { DemoModeBadge } from "./demo-mode-badge";
 import { DemoExitLink } from "./demo-exit-link";
+import { DEMO_SELECTION_HREF } from "@/lib/demo-navigation";
 
 export function Brand({
   homeHref = "/",
   onHome,
+  demo = false,
 }: {
   homeHref?: string;
   onHome?: () => void;
+  demo?: boolean;
 }) {
   return (
     <Link
       href={homeHref}
       className="brand"
-      aria-label="市場実験室 ホーム"
+      aria-label={demo ? "市場実験室 デモの実験選択" : "市場実験室 ホーム"}
+      target={demo ? "_top" : undefined}
       onNavigate={
         onHome
           ? (event) => {
@@ -55,7 +59,11 @@ export function Header({
     <header className={`site-header${className ? ` ${className}` : ""}`}>
       <div className="header-inner">
         <div className="header-left">
-          <Brand homeHref={homeHref} onHome={onHome} />
+          <Brand
+            homeHref={demoLabel ? DEMO_SELECTION_HREF : homeHref}
+            onHome={demoLabel ? undefined : onHome}
+            demo={!!demoLabel}
+          />
           {demoLabel && <DemoModeBadge label={demoLabel} />}
           {leading}
         </div>

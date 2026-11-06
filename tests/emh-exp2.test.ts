@@ -289,12 +289,52 @@ test("formal Exp2 student view presents state conditions, both quote forms and r
     createElement(RoomDashboard, { room: studentRoom, act: async () => {} }),
   );
   assert.match(html, /状態別の配当 \/ 確率/);
+  assert.match(html, /期待配当/);
+  assert.doesNotMatch(html, /期待配当合計/);
+  assert.doesNotMatch(html, /見込利益/);
   assert.match(html, /買い指値注文/);
   assert.match(html, /売り指値注文/);
   assert.match(html, /取引記録/);
   assert.match(html, /配当・得点の記録/);
   assert.match(html, /class="yen-unit">円/);
   assert.doesNotMatch(html, /role="tablist"/);
+});
+
+test("state dividend contributions use the student's public probabilities, even with a clue", () => {
+  const room = newRoom("EXPECT", EXP2_CONFIG, 0);
+  for (let i = 0; i < 3; i++)
+    addParticipant(
+      room,
+      {
+        id: `p${i}`,
+        name: `name${i}`,
+        studentId: `s${i}`,
+        pinHash: "",
+        tokenHash: "",
+      },
+      0,
+    );
+  act(
+    room,
+    { role: "teacher" },
+    { kind: "start", expectedPhase: phaseKey(room) },
+    0,
+    () => 0.999,
+  );
+  const studentRoom = view(room, { role: "student", participantId: "p0" }, 0);
+  studentRoom.exp2!.prior = [0.35, 0.42, 0.23];
+  studentRoom.exp2!.dividends = [80, 110, 170];
+  studentRoom.exp2!.clue = 3;
+  const html = renderToStaticMarkup(
+    createElement(RoomDashboard, { room: studentRoom, act: async () => {} }),
+  );
+  for (const amount of ["28", "46.2", "39.1"]) {
+    assert.match(
+      html,
+      new RegExp(`${amount.replace(".", "\\.")}<span class="yen-unit">円`),
+    );
+  }
+  assert.match(html, /Clue カード/);
 });
 
 test("yen amounts retain zero, negative amounts and decimals, while missing values remain empty", () => {

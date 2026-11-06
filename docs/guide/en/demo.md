@@ -6,7 +6,7 @@ The demo list and screens use a yellow theme, with a demo-mode text label beside
 
 Sign in at the teacher entry and open **Demo Model** to choose an experiment at `/demo/select`. Opening a demo or screen-size preview directly first takes you to teacher login, then returns you to that page. A student room session grants access only to the classroom experiment.
 
-All three demo setup pages have **戻る** to return to the list and **教員用ページへ** to return to the teacher page. The EMH demo room always shows **戻る**, and shows **教員用ページへ** in the teacher view.
+Select **市場実験室** in the demo header to return to the demo experiment list. All three demo setup pages have **戻る** to return to the list and **教員用ページへ** to return to the teacher page. The EMH demo room always shows **戻る**, and shows **教員用ページへ** in the teacher view.
 
 ## Double Auction
 
@@ -43,7 +43,7 @@ Saving settings during admission, confirming and locking allocation, and explici
 
 Experiment 2 uses one market of 3–999 people, with you and 11 virtual participants by default. Configure initial securities, target size, type ratios, the consecutive unsuccessful-attempt limit, insider start round and number per type, state probabilities, dividends and realized states. The demo always simulates one market. Default practice dividends in yen are 80/110/170, 60/180/100 and 140/120/90, with realized states 3/3/3/3/2/2; these differ from formal defaults. Virtual participants trade using their own information.
 
-Both EMH experiments share the formal conditions panel: the buy and sell sides each place the limit and market buttons side by side and estimated profit beneath them, using the same [remaining-dividend calculation](emh.md). The order book lists price and quantity for both teachers and students. Students can see their own resting limits marked in the list and bar chart. Those limits stay active through other quotes, trades and individual timeouts until period end, unless filled, amended or cancelled. Experiment 2 groups state dividends, probabilities and the Clue, alongside trade and personal round records. Teachers can expand or collapse conditions with **実験条件**.
+Both EMH experiments share the formal conditions panel: the buy and sell sides each place the limit and market buttons side by side. The order book lists price and quantity for both teachers and students. Students can see their own resting limits marked in the list and bar chart. Those limits stay active through other quotes, trades and individual timeouts until period end, unless filled, amended or cancelled. Experiment 2 groups state dividends, probabilities, expected dividend and the Clue, alongside trade and personal round records. Teachers can expand or collapse conditions with **実験条件**.
 
 The EMH demo control panel switches between teacher and student views, pauses, advances 30 seconds or to the next period, restarts, and returns to settings. Fast-forward processes virtual trades and deadlines in order; it is disabled during the countdown and while paused. **やり直す** keeps the settings and resets allocation and progress. The screen-size preview places the control panel outside the frame.
 

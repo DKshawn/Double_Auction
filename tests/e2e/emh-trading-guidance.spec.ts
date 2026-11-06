@@ -14,7 +14,7 @@ import type { SessionView } from "../../src/experiments/emh/session-types";
 import type { Action } from "../../src/experiments/emh/types";
 
 for (const experiment of ["exp1", "exp2"] as const) {
-  test(`${experiment} formal market previews order profit, protects identities and distinguishes final earnings`, async ({
+  test(`${experiment} formal market protects identities and distinguishes final earnings`, async ({
     page,
     browser,
     baseURL,
@@ -316,27 +316,11 @@ for (const experiment of ["exp1", "exp2"] as const) {
         student.getByRole("region", { name: "売り注文一覧" }),
       ).toContainText("177");
       await bid.fill("180");
-      const privateView = (await state(contexts[0]!.request, "student"))
-        .market!;
-      const remaining =
-        experiment === "exp1"
-          ? privateView.me!.dividends!.a + privateView.me!.dividends!.b
-          : privateView.exp2!.dividends!.reduce(
-              (total, dividend, index) =>
-                total + dividend * privateView.exp2!.prior[index]!,
-              0,
-            );
-      const expectedProfit = (remaining - 177).toLocaleString("ja-JP", {
-        maximumFractionDigits: 2,
-      });
-      await expect(buy.locator("#order-bid-profit")).toHaveText(
-        `見込利益 ${expectedProfit}円`,
-      );
-      await expect(buy.locator("#order-bid-market-profit")).toHaveText(
-        `見込利益 ${expectedProfit}円`,
+      await expect(student.locator(".emh-conditions")).not.toContainText(
+        "見込利益",
       );
       await student.locator(".emh-conditions").screenshot({
-        path: info.outputPath(`${experiment}-profit-desktop.png`),
+        path: info.outputPath(`${experiment}-orders-desktop.png`),
       });
       await buy
         .getByRole("button", { name: "買い指値注文（即時成立）", exact: true })
@@ -471,8 +455,8 @@ for (const experiment of ["exp1", "exp2"] as const) {
         await expect(bid).toHaveValue("");
         await expect(ask).toHaveValue("");
         await quote(2, "ask", 100);
-        await expect(buy.locator("#order-bid-market-profit")).toHaveText(
-          `見込利益 ${privateView.me!.dividends!.b - 100}円`,
+        await expect(student.locator(".emh-conditions")).not.toContainText(
+          "見込利益",
         );
         await buy
           .getByRole("button", { name: "買い成行注文", exact: true })

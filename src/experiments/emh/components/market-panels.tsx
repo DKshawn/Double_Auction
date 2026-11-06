@@ -5,7 +5,6 @@ import type { Action, RoomView, Side } from "@/experiments/emh/types";
 import { OrderBookPanel } from "@/components/order-book-panel";
 import type { OrderBookSide } from "@/lib/order-book";
 import { canSellAtMarket } from "@/experiments/emh/order-book";
-import { orderProfitPreview } from "@/experiments/emh/order-profit";
 import { PriceChart } from "./price-chart";
 
 export const fmt = (n: number | null | undefined, digits = 0) =>
@@ -81,15 +80,6 @@ export function OrderPanel({
   );
 }
 
-function OrderProfit({ id, profit }: { id: string; profit: number | null }) {
-  if (profit === null) return null;
-  return (
-    <small id={id} className={profit < 0 ? "loss" : "field-help"}>
-      <span>見込利益</span> <span>{fmt(profit, 2)}円</span>
-    </small>
-  );
-}
-
 function StudentOrderEntry({
   room,
   act,
@@ -142,7 +132,6 @@ function StudentOrderEntry({
             room.me!.holdings,
             room.ownQuotes.ask.status === "active",
           );
-        const profit = orderProfitPreview(room, side, price);
         return (
           <div
             key={side}
@@ -172,9 +161,6 @@ function StudentOrderEntry({
                     }
                     disabled={!trading || noHoldings}
                     required
-                    aria-describedby={
-                      profit.limit === null ? undefined : `order-${side}-profit`
-                    }
                   />
                   <span aria-hidden="true">円</span>
                 </div>
@@ -185,27 +171,15 @@ function StudentOrderEntry({
                     className={`button ${buying ? "buy" : "sell"} full`}
                     disabled={cannotQuote}
                     aria-label={`${actionLabel}指値注文${crosses && !ownOffer ? "（即時成立）" : ""}`}
-                    aria-describedby={
-                      profit.limit === null ? undefined : `order-${side}-profit`
-                    }
                   >
                     指値注文{crosses && !ownOffer ? "（即時）" : ""}
                   </button>
-                  <OrderProfit
-                    id={`order-${side}-profit`}
-                    profit={profit.limit}
-                  />
                 </div>
                 <div className="study-market-order">
                   <button
                     type="button"
                     className={`button ${buying ? "buy" : "sell"} full`}
                     aria-label={`${actionLabel}成行注文`}
-                    aria-describedby={
-                      profit.market === null
-                        ? undefined
-                        : `order-${side}-market-profit`
-                    }
                     disabled={
                       !canTrade || !offer || ownOffer || noHoldings || reserved
                     }
@@ -225,10 +199,6 @@ function StudentOrderEntry({
                   >
                     成行注文
                   </button>
-                  <OrderProfit
-                    id={`order-${side}-market-profit`}
-                    profit={profit.market}
-                  />
                 </div>
               </div>
             </form>
@@ -290,7 +260,20 @@ export function PersonalPanel({
                     </div>
                     <div className="exp2-state-line">
                       <span>確率</span>
-                      <small>{fmt(probability * 100)}%</small>
+                      <small>{fmt(probability * 100, 4)}%</small>
+                    </div>
+                    <div className="exp2-state-line exp2-expected-contribution">
+                      <span>期待配当</span>
+                      <strong>
+                        <Yen
+                          value={
+                            room.exp2!.dividends
+                              ? room.exp2!.dividends[index]! * probability
+                              : null
+                          }
+                          digits={4}
+                        />
+                      </strong>
                     </div>
                   </div>
                 ))}

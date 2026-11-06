@@ -179,7 +179,19 @@ test("Exp2 demo runs the default 12-person market with practice information", as
   for (const state of await page.locator(".exp2-state-values > div").all()) {
     await expect(state).toContainText("円");
     await expect(state).toContainText("%");
+    await expect(state).toContainText("期待配当");
   }
+  await expect(page.getByText("期待配当合計")).toHaveCount(0);
+  await expect(page.locator(".emh-conditions")).not.toContainText("見込利益");
+  for (const width of [1366, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
   await expect(page.getByRole("heading", { name: "取引記録" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "配当・得点の記録" }),
@@ -306,6 +318,7 @@ test("Exp1 student demo shows the trading board, prices and records together", a
   await page.getByRole("button", { name: "分け方を確定して受付終了" }).click();
   await page.getByRole("button", { name: "全市場で実験を開始" }).click();
   await page.getByRole("button", { name: "学生画面を見る" }).click();
+  await expect(page.locator(".emh-conditions")).not.toContainText("見込利益");
   for (const name of ["注文板", "取引記録", "配当・得点の記録"]) {
     await expect(page.getByRole("heading", { name })).toBeVisible();
   }
@@ -393,7 +406,8 @@ test("student views use three font sizes and equal state dividend and probabilit
           .locator(".exp2-state-values > div")
           .all()) {
           const dividend = await state
-            .locator("strong")
+            .locator(".exp2-state-line strong")
+            .first()
             .evaluate((el) => getComputedStyle(el).fontSize);
           const probability = await state
             .locator("small")
@@ -402,7 +416,7 @@ test("student views use three font sizes and equal state dividend and probabilit
           const metrics = await state.evaluate((element) => {
             const labels = [
               ...element.querySelectorAll(".exp2-state-line > span"),
-            ];
+            ].slice(0, 2);
             const values = [
               ...element.querySelectorAll(
                 ".exp2-state-line > strong, .exp2-state-line > small",
@@ -523,6 +537,15 @@ test("demo countdown displays private conditions before trading and can be pause
   expect(
     Math.abs(bounds!.y + bounds!.height / 2 - page.viewportSize()!.height / 2),
   ).toBeLessThan(1);
+  for (const width of [1200, 1024, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 768 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.setViewportSize({ width: 1366, height: 768 });
   await expect(page.getByText("状態別の配当 / 確率")).toBeVisible();
   await expect(page.getByLabel("買値（円）", { exact: true })).toBeDisabled();
   const clock = page.locator(".session-bar .timer");

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChartNoAxesCombined } from "lucide-react";
 import { DemoModeBadge } from "@/components/demo-mode-badge";
 import { DemoExitLink } from "@/components/demo-exit-link";
+import { DEMO_SELECTION_HREF } from "@/lib/demo-navigation";
 
 export function Shell({
   children,
@@ -21,7 +22,12 @@ export function Shell({
       <header className={`site-header ${room ? "compact" : ""}`}>
         <div className="header-inner">
           <div className="header-left">
-            <Link href="/" className="brand">
+            <Link
+              href={demo ? DEMO_SELECTION_HREF : "/"}
+              className="brand"
+              aria-label={demo ? "市場実験室 デモの実験選択" : undefined}
+              target={demo ? "_top" : undefined}
+            >
               <span className="brand-mark">
                 <ChartNoAxesCombined size={22} strokeWidth={1.7} />
               </span>

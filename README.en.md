@@ -8,7 +8,7 @@ Student waiting screens share a consistent card design while retaining experimen
 
 [Teacher entry](https://exp-all-in-one.vercel.app/teacher) · [Student entry](https://exp-all-in-one.vercel.app) (the teacher entry has a separate URL)
 
-The EMH order book shows price and quantity and marks your resting orders in both the list and bar chart. Teachers can find buyer and seller numbers in the trade records and CSV export. On each side, the limit and market buttons sit side by side, with estimated profit based on your remaining dividends below each button. Unfilled limits queue by price, then arrival time, until period end. You can amend or cancel them. Draft bid and ask prices also stay in their fields throughout the period.
+The EMH order book shows price and quantity and marks your resting orders in both the list and bar chart. Teachers can find buyer and seller numbers in the trade records and CSV export. On each side, the limit and market buttons sit side by side. Experiment 2 shows each state’s dividend multiplied by its public probability. Unfilled limits queue by price, then arrival time, until period end. You can amend or cancel them. Draft bid and ask prices also stay in their fields throughout the period.
 
 ## Get started
 
@@ -55,7 +55,7 @@ The EMH demo control panel switches between teacher and student views, pauses, a
 
 [Illustrated instructions, re-entry, and room management](docs/guide/en/classroom.md) · [Using Demo Model](docs/guide/en/demo.md)
 
-Teachers sign in once to open **Demo Model**, including direct links to a demo or its screen-size preview. The demo list and screens use a yellow theme, with a demo-mode label beside the site name. The blue-purple **DEMOモードを終了** button returns to the student entry. Each demo setup offers **戻る** to return to the list and **教員用ページへ** to return to the teacher page.
+Teachers sign in once to open **Demo Model**, including direct links to a demo or its screen-size preview. The demo list and screens use a yellow theme, with a demo-mode label beside the site name. Select **市場実験室** to return to the demo experiment list. The blue-purple **DEMOモードを終了** button returns to the student entry. Each demo setup offers **戻る** to return to the list and **教員用ページへ** to return to the teacher page.
 
 Judgement teacher pages and the demo share task cards, the selection list and controls, with Japanese, Chinese and English switching and settings locked during a run.
 

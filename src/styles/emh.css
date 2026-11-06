@@ -2599,11 +2599,6 @@
   justify-content: center;
   text-align: center;
 }
-.emh-app .emh-conditions .study-market-order small {
-  flex-wrap: wrap;
-  column-gap: 4px;
-  text-align: center;
-}
 .emh-app .market-grid.student-market-grid > .cda-order-book,
 .emh-app .market-grid > aside > .cda-order-book {
   align-self: stretch;
@@ -2697,6 +2692,9 @@
 .emh-app .emh-conditions .exp2-state-line :is(strong, small) {
   color: var(--accent);
 }
+.emh-app .emh-conditions .exp2-expected-contribution {
+  grid-column: 1 / -1;
+}
 .emh-app .emh-countdown-view > .emh-account-section {
   display: none;
 }
@@ -2755,7 +2753,7 @@
   }
 }
 
-@media (min-width: 1000px) {
+@media (min-width: 1200px) {
   .emh-app .emh-countdown-view .emh-conditions {
     padding-block: 8px;
   }
@@ -2770,11 +2768,16 @@
   .emh-app .emh-countdown-view .exp2-state-info {
     display: flex;
     flex: 1;
+    min-width: 0;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
-  .emh-app .emh-countdown-view .exp2-state-info > p {
-    margin: 0;
+  .emh-app .emh-countdown-view .exp2-state-info > p:first-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
     white-space: nowrap;
   }
   .emh-app .emh-countdown-view .exp2-state-values {
@@ -2784,16 +2787,19 @@
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 4px;
   }
   .emh-app .emh-countdown-view .exp2-state-line {
     flex-direction: row;
     align-items: baseline;
     gap: 4px;
+    white-space: nowrap;
   }
   .emh-app .emh-countdown-view .exp2-clue {
     margin: 0;
   }
+}
+@media (min-width: 1000px) {
   .emh-app .emh-countdown-view .private-dividends:has(.dividend-grid) {
     display: flex;
     align-items: center;

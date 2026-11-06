@@ -19,6 +19,61 @@ const demos = [
   },
 ];
 
+test("demo brands return to the experiment selection from every view", async ({
+  page,
+}) => {
+  const brand = () =>
+    page.getByRole("link", { name: "市場実験室 デモの実験選択" });
+  const returnsToSelection = async () => {
+    await expect(brand()).toHaveAttribute("href", "/demo/select");
+    await brand().click();
+    await expect(page).toHaveURL(/\/demo\/select$/);
+  };
+
+  await page.goto("/teacher");
+  await enterTeacherPage(page);
+  await page.goto("/");
+  await expect(page.locator("header .brand")).toHaveAttribute("href", "/");
+  await page.goto("/demo/select");
+  await returnsToSelection();
+  for (const path of ["/demo", "/emh/demo", "/judgment/demo"]) {
+    await page.goto(path);
+    await returnsToSelection();
+  }
+
+  for (const [path, create] of [
+    ["/demo", "ルーム作成"],
+    ["/emh/demo", "デモルームを作成"],
+  ]) {
+    for (const view of ["teacher", "student"]) {
+      await page.goto(path);
+      await page.getByRole("button", { name: create, exact: true }).click();
+      if (view === "student") {
+        await page.getByRole("button", { name: "学生画面を見る" }).click();
+      }
+      await returnsToSelection();
+    }
+  }
+
+  await page.goto("/judgment/demo");
+  await page.getByRole("button", { name: "すべて選択" }).click();
+  await page.getByRole("button", { name: "デモを開始" }).click();
+  const dialog = page.getByRole("dialog", { name: "DEMOモード" });
+  await dialog.getByRole("link", { name: "市場実験室 デモの実験選択" }).click();
+  await expect(page).toHaveURL(/\/demo\/select$/);
+
+  for (const path of ["/demo/preview", "/emh/demo/preview"]) {
+    await page.goto(path);
+    await returnsToSelection();
+    await page.goto(path);
+    const frame = page.frameLocator('iframe[title="操作できるひとりデモ"]');
+    await frame
+      .getByRole("link", { name: "市場実験室 デモの実験選択" })
+      .click();
+    await expect(page).toHaveURL(/\/demo\/select$/);
+  }
+});
+
 test("student home omits demo while the teacher hub links to the shared selection", async ({
   page,
 }) => {

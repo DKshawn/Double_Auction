@@ -61,7 +61,11 @@ test("formal teacher and demo brands lead to their settings, with current-room C
     createElement(StudyRoom, { ...props, demo: true }),
   );
   assert.match(demo, /href="\/demo"/);
-  assert.doesNotMatch(demo, /href="\/teacher/);
+  assert.match(
+    demo,
+    /href="\/teacher\?experiment=institutions">DEMOモードを終了<\/a>/,
+  );
+  assert.doesNotMatch(demo, /href="\/teacher\?room=/);
   assert.match(demo, /教員の管理・設定へ/);
   for (const { label } of EXPORTS) {
     assert.ok(formal.includes(label));
